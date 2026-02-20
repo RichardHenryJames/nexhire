@@ -29,6 +29,7 @@ import { ResponsiveContainer, ResponsiveGrid } from '../components/common/Respon
 import { showToast } from '../components/Toast';
 import TabHeader from '../components/TabHeader';
 import EngagementHub from '../components/engagement/EngagementHub';
+import { getCached, hasCached, setCache, CACHE_KEYS } from '../utils/homeCache';
 
 const { width } = Dimensions.get('window');
 
@@ -127,14 +128,14 @@ const [searchResults, setSearchResults] = useState([]);
 const [searchLoading, setSearchLoading] = useState(false);
 const [showSearchResults, setShowSearchResults] = useState(false);
   
-// ⚡ NEW: Separate loading states for lazy loading
-const [loadingStats, setLoadingStats] = useState(true);
-const [loadingJobs, setLoadingJobs] = useState(true);
-const [loadingF500Jobs, setLoadingF500Jobs] = useState(true);
-const [loadingApplications, setLoadingApplications] = useState(true);
+// ⚡ PERF: Loading states initialized from cache — if cache exists, NO loading spinners!
+const [loadingStats, setLoadingStats] = useState(!hasCached(CACHE_KEYS.DASHBOARD_STATS));
+const [loadingJobs, setLoadingJobs] = useState(!hasCached(CACHE_KEYS.RECENT_JOBS));
+const [loadingF500Jobs, setLoadingF500Jobs] = useState(!hasCached(CACHE_KEYS.F500_JOBS));
+const [loadingApplications, setLoadingApplications] = useState(!hasCached(CACHE_KEYS.RECENT_APPLICATIONS));
 
-// 🎯 NEW: Fortune 500 companies for Get Referrals card
-const [fortune500Companies, setFortune500Companies] = useState([]);
+// 🎯 Fortune 500 companies for Get Referrals card — initialized from cache
+const [fortune500Companies, setFortune500Companies] = useState(() => getCached(CACHE_KEYS.F500_COMPANIES) || []);
 const f500LogoScrollRef = useRef(null);
 const f500ScrollPositionRef = useRef(0);
 const scrollIntervalRef = useRef(null);
@@ -153,22 +154,28 @@ const [workExperiences, setWorkExperiences] = useState([]);
 const [showVerifiedOverlay, setShowVerifiedOverlay] = useState(false);
 const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
 
-// 🎯 NEW: Referrer requests (referrals that came to me)
-const [myReferrerRequests, setMyReferrerRequests] = useState([]);
+// 🎯 Referrer requests (referrals that came to me) — initialized from cache
+const [myReferrerRequests, setMyReferrerRequests] = useState(() => getCached(CACHE_KEYS.REFERRER_REQUESTS) || []);
 
-// 🎯 NEW: Social share claims to show/hide Earn Credits button
-const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState([]);
+// 🎯 Social share claims — initialized from cache
+const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState(() => getCached(CACHE_KEYS.SOCIAL_CLAIMS) || []);
 
-// 🎯 NEW: Wallet balance for header badge
-const [walletBalance, setWalletBalance] = useState(null);
+// 🎯 Wallet balance for header badge — initialized from cache
+const [walletBalance, setWalletBalance] = useState(() => getCached(CACHE_KEYS.WALLET_BALANCE) ?? null);
   
-const [dashboardData, setDashboardData] = useState({
-  // Enhanced stats from backend
-  stats: {},
-  recentJobs: [],
-  f500Jobs: [],
-  recentApplications: [],
-  referralStats: {}
+const [dashboardData, setDashboardData] = useState(() => {
+  // ⚡ PERF: Initialize from cache — instant render, no loading spinners
+  const cachedStats = getCached(CACHE_KEYS.DASHBOARD_STATS);
+  const cachedJobs = getCached(CACHE_KEYS.RECENT_JOBS);
+  const cachedF500 = getCached(CACHE_KEYS.F500_JOBS);
+  const cachedApps = getCached(CACHE_KEYS.RECENT_APPLICATIONS);
+  return {
+    stats: cachedStats || {},
+    recentJobs: cachedJobs || [],
+    f500Jobs: cachedF500 || [],
+    recentApplications: cachedApps || [],
+    referralStats: {}
+  };
 });
   
 // ✅ NEW: Scroll ref for scroll-to-top functionality
@@ -217,174 +224,152 @@ const [dashboardData, setDashboardData] = useState({
     return () => clearTimeout(timer);
   }, [searchQuery, searchOrganizations]);
 
-  const fetchDashboardData = useCallback(async () => {
-    // ⚡ Abort any previous in-flight fetch so new fetch (or other screen) gets priority
+  const fetchDashboardData = useCallback(async (isRefresh = false) => {
+    // ⚡ Abort any previous in-flight fetch
     if (abortRef.current) abortRef.current.abort();
     const ac = new AbortController();
     abortRef.current = ac;
-    const sig = { signal: ac.signal }; // pass to every apiCall
+    const sig = { signal: ac.signal };
 
-    // ⚡ Start all fetches in parallel for better performance
+    // Only show loading spinners if NO cache exists (first ever load)
+    // On refresh, we already have data visible — no spinners needed
+    if (isRefresh || hasCached(CACHE_KEYS.DASHBOARD_STATS)) {
+      // Don't show spinners — cached data is already visible
+    } else {
+      setLoadingStats(true);
+      setLoadingJobs(true);
+      setLoadingF500Jobs(true);
+      setLoadingApplications(true);
+    }
+
+    // ⚡ All 8 fetches in parallel — each saves to cache on success
     
     // 1. Dashboard Stats
-    setLoadingStats(true);
     const statsPromise = refopenAPI.apiCall('/users/dashboard-stats', sig)
       .then(res => {
-        const stats = res.success ? res.data : {};
-        setDashboardData(prev => ({ ...prev, stats }));
+        if (res.success) {
+          const stats = res.data || {};
+          setCache(CACHE_KEYS.DASHBOARD_STATS, stats);
+          setDashboardData(prev => ({ ...prev, stats }));
+        }
       })
-      .catch(err => {
-        console.warn('Dashboard stats failed:', err);
-        // Don't alert for stats failure as it's non-critical
-      })
+      .catch(err => { if (err?.name !== 'AbortError') console.warn('Dashboard stats failed:', err); })
       .finally(() => setLoadingStats(false));
 
-    // 2. Recommended Jobs (Job Seekers only)
+    // 2. Recommended Jobs
     let jobsPromise = Promise.resolve();
     if (isJobSeeker) {
-      setLoadingJobs(true);
       jobsPromise = (async () => {
         try {
-          const recentJobsRes = await refopenAPI.getJobs(1, 5, {}, sig);
-          
-          let recentJobs = [];
-          if (recentJobsRes.success) {
-            recentJobs = (recentJobsRes.data || []).slice(0, 5);
+          const res = await refopenAPI.getJobs(1, 5, {}, sig);
+          if (res.success) {
+            const recentJobs = (res.data || []).slice(0, 5);
+            setCache(CACHE_KEYS.RECENT_JOBS, recentJobs);
+            setDashboardData(prev => ({ ...prev, recentJobs }));
           }
-          setDashboardData(prev => ({ ...prev, recentJobs }));
-        } catch (err) {
-          console.warn('Recommended jobs fetch failed:', err);
-        } finally {
-          setLoadingJobs(false);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Jobs failed:', err); }
+        finally { setLoadingJobs(false); }
       })();
-    } else {
-      setLoadingJobs(false);
-    }
+    } else { setLoadingJobs(false); }
 
-    // 3. Jobs from Top MNCs (Fortune 500)
+    // 3. F500 Jobs
     let f500JobsPromise = Promise.resolve();
     if (isJobSeeker) {
-      setLoadingF500Jobs(true);
       f500JobsPromise = (async () => {
         try {
-          const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true }, sig);
-          let f500Jobs = [];
-          if (f500JobsRes.success) {
-            f500Jobs = (f500JobsRes.data || []).slice(0, 5);
+          const res = await refopenAPI.getJobs(1, 5, { isFortune500: true }, sig);
+          if (res.success) {
+            const f500Jobs = (res.data || []).slice(0, 5);
+            setCache(CACHE_KEYS.F500_JOBS, f500Jobs);
+            setDashboardData(prev => ({ ...prev, f500Jobs }));
           }
-          setDashboardData(prev => ({ ...prev, f500Jobs }));
-        } catch (err) {
-          console.warn('F500 jobs fetch failed:', err);
-        } finally {
-          setLoadingF500Jobs(false);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('F500 jobs failed:', err); }
+        finally { setLoadingF500Jobs(false); }
       })();
-    } else {
-      setLoadingF500Jobs(false);
-    }
+    } else { setLoadingF500Jobs(false); }
 
-    // 3. Applications (Job Seeker only)
+    // 4. Applications
     let applicationsPromise = Promise.resolve();
     if (isJobSeeker) {
-      setLoadingApplications(true);
-      applicationsPromise = refopenAPI.getMyApplications(1, 3, sig)
-        .then(res => {
-          const recentApplications = res.success ? res.data.slice(0, 3) : [];
-          setDashboardData(prev => ({ ...prev, recentApplications }));
-        })
-        .catch(err => console.warn('Applications fetch failed:', err))
-        .finally(() => setLoadingApplications(false));
+      applicationsPromise = (async () => {
+        try {
+          const res = await refopenAPI.getMyApplications(1, 3, sig);
+          if (res.success) {
+            const recentApplications = (res.data || []).slice(0, 3);
+            setCache(CACHE_KEYS.RECENT_APPLICATIONS, recentApplications);
+            setDashboardData(prev => ({ ...prev, recentApplications }));
+          }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Applications failed:', err); }
+        finally { setLoadingApplications(false); }
+      })();
     }
 
-    // 🎯 NEW: Fetch Fortune 500 companies for Get Referrals card (job seekers only)
+    // 5. Fortune 500 Companies (logos)
     let f500CompaniesPromise = Promise.resolve();
     if (isJobSeeker) {
       f500CompaniesPromise = (async () => {
         try {
-          // Fetch only Fortune 500 companies with the backend filter
           const result = await refopenAPI.getOrganizations('', 500, 0, { isFortune500: true, ...sig });
           if (result.success && result.data) {
-            // Filter only companies with logos (already F500 from backend)
             const f500WithLogos = result.data
               .filter(org => org.logoURL)
-              .map(org => ({
-                ...org,
-                // Generate random referrer count (0-99, or 99+)
-                referrerCount: Math.floor(Math.random() * 120)
-              }))
-              .sort(() => Math.random() - 0.5); // Shuffle
+              .map(org => ({ ...org, referrerCount: Math.floor(Math.random() * 120) }))
+              .sort(() => Math.random() - 0.5);
+            setCache(CACHE_KEYS.F500_COMPANIES, f500WithLogos);
             setFortune500Companies(f500WithLogos);
           }
-        } catch (err) {
-          console.warn('Fortune 500 companies fetch failed:', err);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('F500 companies failed:', err); }
       })();
     }
 
-    // 🎯 NEW: Fetch social share claims to check if user completed all
+    // 6. Social share claims
     const socialSharePromise = (async () => {
       try {
         const result = await refopenAPI.apiCall('/social-share/my-claims', sig);
         if (result.success) {
-          // Handle both array and object response formats
           const claims = Array.isArray(result.data) ? result.data : (result.data?.claims || []);
-          const approved = claims
-            .filter(c => c.Status === 'Approved')
-            .map(c => c.Platform);
+          const approved = claims.filter(c => c.Status === 'Approved').map(c => c.Platform);
+          setCache(CACHE_KEYS.SOCIAL_CLAIMS, approved);
           setApprovedSocialPlatforms(approved);
         }
-      } catch (err) {
-        console.warn('Social share claims fetch failed:', err);
-      }
+      } catch (err) { if (err?.name !== 'AbortError') console.warn('Social share failed:', err); }
     })();
 
-    // 🎯 NEW: Fetch wallet balance for header badge
+    // 7. Wallet balance
     const walletPromise = (async () => {
       try {
         const result = await refopenAPI.apiCall('/wallet', sig);
         if (result.success && result.data) {
-          setWalletBalance(result.data.Balance ?? result.data.balance ?? 0);
+          const balance = result.data.Balance ?? result.data.balance ?? 0;
+          setCache(CACHE_KEYS.WALLET_BALANCE, balance);
+          setWalletBalance(balance);
         }
-      } catch (err) {
-        console.warn('Wallet balance fetch failed:', err);
-      }
+      } catch (err) { if (err?.name !== 'AbortError') console.warn('Wallet failed:', err); }
     })();
 
-    // 🎯 NEW: Fetch my referrer requests (referrals that came to me)
+    // 8. Referrer requests
     let referrerRequestsPromise = Promise.resolve();
     if (isJobSeeker) {
       referrerRequestsPromise = (async () => {
         try {
           const result = await refopenAPI.getMyReferrerRequests(1, 10, sig);
           if (result.success && result.data) {
-            // Data comes as { requests: [...], total, page, pageSize, totalPages }
             const requests = result.data.requests || result.data || [];
-            // Only show pending requests (Claimed status removed)
             const activeRequests = Array.isArray(requests) 
               ? requests.filter(r => r.StatusID === 1 || r.Status === 'Pending')
               : [];
+            setCache(CACHE_KEYS.REFERRER_REQUESTS, activeRequests);
             setMyReferrerRequests(activeRequests);
           }
-        } catch (err) {
-          console.warn('Referrer requests fetch failed:', err);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Referrer requests failed:', err); }
       })();
     }
 
-    // We don't await here to allow UI to update progressively
-    // But we catch any unhandled promise rejections just in case
     Promise.all([
-      statsPromise, 
-      jobsPromise, 
-      f500JobsPromise, 
-      applicationsPromise,
-      f500CompaniesPromise,
-      referrerRequestsPromise,
-      socialSharePromise,
-      walletPromise
+      statsPromise, jobsPromise, f500JobsPromise, applicationsPromise,
+      f500CompaniesPromise, referrerRequestsPromise, socialSharePromise, walletPromise
     ]).catch(err => {
-      if (err?.name === 'AbortError') return; // Navigation abort — ignore silently
+      if (err?.name === 'AbortError') return;
       console.error('Error in dashboard data fetch:', err);
     });
 
@@ -474,13 +459,7 @@ const [dashboardData, setDashboardData] = useState({
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setDashboardData({
-      stats: {},
-      recentJobs: [],
-      recentApplications: [],
-      referralStats: {}
-    });
-    await fetchDashboardData();
+    await fetchDashboardData(true);
     setRefreshing(false);
   };
 

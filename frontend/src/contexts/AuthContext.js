@@ -8,6 +8,7 @@ import googleAuth from '../services/googleAuth';
 import { frontendConfig } from '../config/appConfig';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
 import { getAndClearRedirectRoute, navigateToRoute } from '../navigation/navigationRef';
+import { warmHomeCache, clearHomeCache } from '../utils/homeCache';
 
 const AuthContext = createContext();
 
@@ -203,6 +204,8 @@ export const AuthProvider = ({ children }) => {
         const result = await refopenAPI.getProfile();
         if (result.success) {
           setUser(result.data);
+          // ⚡ Warm home cache so HomeScreen renders instantly from cache
+          warmHomeCache();
           // Register for push notifications on native after auth
           if (Platform.OS !== 'web') {
             registerForPushNotificationsOnLogin();
@@ -634,6 +637,9 @@ export const AuthProvider = ({ children }) => {
       // Call API logout
       
       const result = await refopenAPI.logout();
+      
+      // ⚡ Clear cached home data
+      clearHomeCache();
       
       if (result.success) {
         
