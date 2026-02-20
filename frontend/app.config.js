@@ -123,6 +123,13 @@ export default ({ config }) => {
     web: {
       bundler: 'metro',
     },
+    runtimeVersion: {
+      policy: 'sdkVersion',
+    },
+    updates: {
+      url: 'https://u.expo.dev/fd95890b-34f4-4da8-a4ca-bc95684b279f',
+      fallbackToCacheTimeout: 0,
+    },
     plugins: [
       'expo-router',
       [
