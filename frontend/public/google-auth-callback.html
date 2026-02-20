@@ -33,13 +33,32 @@
   </div>
   <script>
     (function() {
-      // This page is the Google OAuth redirect target for native (Android/iOS) apps.
-      // Google redirects here with ?code=... after the user signs in.
-      // We then deep-link back into the app with the code.
-      var params = new URLSearchParams(window.location.search);
-      var code = params.get('code');
-      var state = params.get('state');
-      var error = params.get('error');
+      // This page handles Google OAuth redirects for native apps.
+      // TWO FLOWS:
+      //   1. Auth-code flow: Google sends ?code=... in query string
+      //   2. Implicit flow:  Google sends #access_token=... in URL fragment
+      // We handle both — extract whatever we got, then deep-link back to the app.
+
+      var queryParams = {};
+      var qs = window.location.search.substring(1);
+      if (qs) qs.split('&').forEach(function(p) {
+        var kv = p.split('=');
+        queryParams[decodeURIComponent(kv[0])] = decodeURIComponent(kv.slice(1).join('='));
+      });
+
+      var fragmentParams = {};
+      var frag = window.location.hash.substring(1);
+      if (frag) frag.split('&').forEach(function(p) {
+        var kv = p.split('=');
+        fragmentParams[decodeURIComponent(kv[0])] = decodeURIComponent(kv.slice(1).join('='));
+      });
+
+      // Get values from either source
+      var code = queryParams['code'];
+      var accessToken = fragmentParams['access_token'];
+      var idToken = fragmentParams['id_token'];
+      var state = queryParams['state'] || fragmentParams['state'];
+      var error = queryParams['error'] || fragmentParams['error'];
 
       if (error) {
         document.getElementById('spinner').style.display = 'none';
@@ -50,47 +69,41 @@
         return;
       }
 
-      if (!code) {
+      if (!code && !accessToken) {
         document.getElementById('spinner').style.display = 'none';
         document.getElementById('title').textContent = 'Something went wrong';
-        document.getElementById('message').textContent = 'No authorization code received.';
+        document.getElementById('message').textContent = 'No token or code received.';
         document.getElementById('error').textContent = 'Please close this window and try again.';
         document.getElementById('error').style.display = 'block';
         return;
       }
 
       // Read the app scheme from the state parameter
-      // The app encodes { nonce, scheme } as base64url in the state param
-      var scheme = 'com.refopen.app'; // default fallback
+      var scheme = 'com.refopen.app';
       if (state) {
         try {
-          // Decode base64url → base64 → JSON
           var b64 = state.replace(/-/g, '+').replace(/_/g, '/');
           var json = decodeURIComponent(escape(atob(b64)));
           var parsed = JSON.parse(json);
           if (parsed.scheme) scheme = parsed.scheme;
-        } catch(e) {
-          // state might be a plain string (old format), use default scheme
-        }
+        } catch(e) { /* old format or plain string */ }
       }
 
-      var deepLink = scheme + '://auth/callback?code=' + encodeURIComponent(code);
-      if (state) {
-        deepLink += '&state=' + encodeURIComponent(state);
-      }
+      // Build deep link with whatever tokens/code we have
+      var deepLink = scheme + '://auth/callback?';
+      var params = [];
+      if (accessToken) params.push('access_token=' + encodeURIComponent(accessToken));
+      if (idToken) params.push('id_token=' + encodeURIComponent(idToken));
+      if (code) params.push('code=' + encodeURIComponent(code));
+      if (state) params.push('state=' + encodeURIComponent(state));
+      deepLink += params.join('&');
 
-      // Try multiple deep link methods for maximum Android compatibility:
-      // 1. Android Intent URL (most reliable on Chrome for Android)
-      // 2. Regular custom scheme (fallback)
+      // Try Android Intent URL first (more reliable on Chrome for Android)
       var isAndroid = /android/i.test(navigator.userAgent);
       if (isAndroid) {
-        // Intent URL format — Chrome for Android handles this reliably
-        var intentUrl = 'intent://auth/callback?code=' + encodeURIComponent(code);
-        if (state) intentUrl += '&state=' + encodeURIComponent(state);
-        intentUrl += '#Intent;scheme=' + scheme + ';end';
+        var intentUrl = 'intent://auth/callback?' + params.join('&') + '#Intent;scheme=' + scheme + ';end';
         window.location.href = intentUrl;
       } else {
-        // iOS and other platforms — custom scheme works fine
         window.location.href = deepLink;
       }
 
