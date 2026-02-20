@@ -94,7 +94,9 @@ const [dashboardData, setDashboardData] = useState({
 // ✅ NEW: Scroll ref for scroll-to-top functionality
   const scrollViewRef = React.useRef(null);
 
-  // Header always shown — no focus/blur state toggles (was causing expensive re-renders)
+  // ⚡ AbortController: cancel in-flight API calls when user leaves this tab
+  // so the destination screen's API calls get network/JS-thread priority.
+  const abortRef = useRef(null);
 
   // Organization search function with debounce
   const searchOrganizations = useCallback(async (query) => {
@@ -136,11 +138,17 @@ const [dashboardData, setDashboardData] = useState({
   }, [searchQuery, searchOrganizations]);
 
   const fetchDashboardData = useCallback(async () => {
+    // ⚡ Abort any previous in-flight fetch so new fetch (or other screen) gets priority
+    if (abortRef.current) abortRef.current.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const sig = { signal: ac.signal }; // pass to every apiCall
+
     // ⚡ Start all fetches in parallel for better performance
     
     // 1. Dashboard Stats
     setLoadingStats(true);
-    const statsPromise = refopenAPI.apiCall('/users/dashboard-stats')
+    const statsPromise = refopenAPI.apiCall('/users/dashboard-stats', sig)
       .then(res => {
         const stats = res.success ? res.data : {};
         setDashboardData(prev => ({ ...prev, stats }));
@@ -157,7 +165,7 @@ const [dashboardData, setDashboardData] = useState({
       setLoadingJobs(true);
       jobsPromise = (async () => {
         try {
-          const recentJobsRes = await refopenAPI.getJobs(1, 5);
+          const recentJobsRes = await refopenAPI.getJobs(1, 5, {}, sig);
           
           let recentJobs = [];
           if (recentJobsRes.success) {
@@ -180,7 +188,7 @@ const [dashboardData, setDashboardData] = useState({
       setLoadingF500Jobs(true);
       f500JobsPromise = (async () => {
         try {
-          const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true });
+          const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true }, sig);
           let f500Jobs = [];
           if (f500JobsRes.success) {
             f500Jobs = (f500JobsRes.data || []).slice(0, 5);
@@ -200,7 +208,7 @@ const [dashboardData, setDashboardData] = useState({
     let applicationsPromise = Promise.resolve();
     if (isJobSeeker) {
       setLoadingApplications(true);
-      applicationsPromise = refopenAPI.getMyApplications(1, 3)
+      applicationsPromise = refopenAPI.getMyApplications(1, 3, sig)
         .then(res => {
           const recentApplications = res.success ? res.data.slice(0, 3) : [];
           setDashboardData(prev => ({ ...prev, recentApplications }));
@@ -215,7 +223,7 @@ const [dashboardData, setDashboardData] = useState({
       f500CompaniesPromise = (async () => {
         try {
           // Fetch only Fortune 500 companies with the backend filter
-          const result = await refopenAPI.getOrganizations('', 500, 0, { isFortune500: true });
+          const result = await refopenAPI.getOrganizations('', 500, 0, { isFortune500: true, ...sig });
           if (result.success && result.data) {
             // Filter only companies with logos (already F500 from backend)
             const f500WithLogos = result.data
@@ -237,7 +245,7 @@ const [dashboardData, setDashboardData] = useState({
     // 🎯 NEW: Fetch social share claims to check if user completed all
     const socialSharePromise = (async () => {
       try {
-        const result = await refopenAPI.apiCall('/social-share/my-claims');
+        const result = await refopenAPI.apiCall('/social-share/my-claims', sig);
         if (result.success) {
           // Handle both array and object response formats
           const claims = Array.isArray(result.data) ? result.data : (result.data?.claims || []);
@@ -254,7 +262,7 @@ const [dashboardData, setDashboardData] = useState({
     // 🎯 NEW: Fetch wallet balance for header badge
     const walletPromise = (async () => {
       try {
-        const result = await refopenAPI.apiCall('/wallet');
+        const result = await refopenAPI.apiCall('/wallet', sig);
         if (result.success && result.data) {
           setWalletBalance(result.data.Balance ?? result.data.balance ?? 0);
         }
@@ -268,7 +276,7 @@ const [dashboardData, setDashboardData] = useState({
     if (isJobSeeker) {
       referrerRequestsPromise = (async () => {
         try {
-          const result = await refopenAPI.getMyReferrerRequests(1, 10);
+          const result = await refopenAPI.getMyReferrerRequests(1, 10, sig);
           if (result.success && result.data) {
             // Data comes as { requests: [...], total, page, pageSize, totalPages }
             const requests = result.data.requests || result.data || [];
@@ -296,6 +304,7 @@ const [dashboardData, setDashboardData] = useState({
       socialSharePromise,
       walletPromise
     ]).catch(err => {
+      if (err?.name === 'AbortError') return; // Navigation abort — ignore silently
       console.error('Error in dashboard data fetch:', err);
     });
 
@@ -306,7 +315,17 @@ const [dashboardData, setDashboardData] = useState({
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
+  // ⚡ No focus listener for data — mount + pull-to-refresh only.
+  // But we DO abort in-flight fetches on blur so the destination screen gets priority.
+  useFocusEffect(
+    useCallback(() => {
+      // On focus: nothing (data already loaded on mount)
+      return () => {
+        // On blur: abort any in-flight Home API calls
+        if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+      };
+    }, [])
+  );
 
   // ✅ NEW: Scroll to top when navigating to HomeScreen
   useFocusEffect(
