@@ -490,9 +490,12 @@ function MainTabNavigator() {
           paddingVertical: 0,
         },
         headerShown: false,
-        lazy: true, // Only mount tab screens when first focused, then keep alive
+        // ⚡ Production pattern (like LinkedIn/Instagram):
+        // Mount ALL tabs at startup so they prefetch data in the background.
+        // By the time user switches tab → data is already loaded. Instant.
+        lazy: Platform.OS === 'web', // Eager on native (prefetch), lazy on web (SEO/perf)
         freezeOnBlur: true, // Freeze rendering of inactive tabs to save CPU
-        detachInactiveScreens: false, // Keep tabs alive in memory for instant switching (like big apps)
+        detachInactiveScreens: false, // Keep tabs alive in memory for instant switching
         ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}), // Instant tab switch on native
       })}
     >

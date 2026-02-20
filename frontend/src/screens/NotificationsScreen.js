@@ -1,7 +1,7 @@
 /**
  * NotificationsScreen - Full screen notification list for bottom tab
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   RefreshControl,
   Platform,
   Animated,
+  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -116,6 +117,14 @@ export default function NotificationsScreen() {
       setLoadingMore(false);
     }
   }, []);
+
+  // ⚡ Prefetch on mount (deferred so HomeScreen renders first)
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchNotifications(1);
+    });
+    return () => task.cancel();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh on tab focus (only if data is stale)
   useFocusEffect(
