@@ -558,11 +558,17 @@ export default function JobsScreen({ navigation, route }) {
     })();
   }, []);
 
+  // ⚡ Cooldown ref: prevents focus listener from firing within 10s of mount/last focus fetch
+  const lastFocusFetchRef = useRef(Date.now());
+
   // 🔧 Refresh applications + resume when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
+      // ⚡ Skip if fetched < 10s ago (prevents double-fetch on mount + rapid tab switching)
+      if (Date.now() - lastFocusFetchRef.current < 10000) return;
       // ⚡ Defer until navigation animation completes — prevents API calls from blocking tab switch
       InteractionManager.runAfterInteractions(() => {
+        lastFocusFetchRef.current = Date.now();
         refreshApplicationsData();
         // Always re-check resume so uploads from Settings are picked up immediately
         primaryResumeLoadedRef.current = false;
