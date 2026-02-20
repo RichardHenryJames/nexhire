@@ -169,7 +169,11 @@ function ConversationsScreenMobile() {
   // Refresh whenever the screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadConversations();
+      // ⚡ Defer until animation completes
+      const task = InteractionManager.runAfterInteractions(() => {
+        loadConversations();
+      });
+      return () => task.cancel();
     }, [loadConversations])
   );
 

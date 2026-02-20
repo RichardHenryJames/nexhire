@@ -318,7 +318,10 @@ const [dashboardData, setDashboardData] = useState({
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      fetchDashboardData();
+      // ⚡ Defer until navigation animation completes — prevents 8 parallel API calls from blocking UI
+      InteractionManager.runAfterInteractions(() => {
+        fetchDashboardData();
+      });
     });
 
     return unsubscribe;
