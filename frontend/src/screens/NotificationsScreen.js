@@ -12,7 +12,6 @@ import {
   RefreshControl,
   Platform,
   Animated,
-  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
