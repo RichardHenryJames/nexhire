@@ -84,9 +84,16 @@ export default function NotificationsScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // ⚡ Staleness check: only re-fetch if data is older than 30s
+  const lastFetchTimeRef = useRef(0);
+  const FETCH_STALENESS_MS = 30000;
+
   const fetchNotifications = useCallback(async (pageNum = 1, append = false) => {
     if (pageNum === 1 && !append) setLoading(true);
     else if (append) setLoadingMore(true);
+    
+    // ⚡ Record fetch time for staleness checks
+    lastFetchTimeRef.current = Date.now();
 
     try {
       const res = await refopenAPI.apiCall(`/notifications?page=${pageNum}&pageSize=20`);
@@ -110,10 +117,13 @@ export default function NotificationsScreen() {
     }
   }, []);
 
-  // Refresh on tab focus
+  // Refresh on tab focus (only if data is stale)
   useFocusEffect(
     useCallback(() => {
-      fetchNotifications(1);
+      const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
+      if (timeSinceLastFetch > FETCH_STALENESS_MS) {
+        fetchNotifications(1);
+      }
     }, [])
   );
 

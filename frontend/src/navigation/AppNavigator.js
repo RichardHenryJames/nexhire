@@ -490,9 +490,9 @@ function MainTabNavigator() {
           paddingVertical: 0,
         },
         headerShown: false,
-        lazy: true, // Only mount tab screens when first focused
-        freezeOnBlur: true, // Freeze inactive tabs to save memory
-        detachInactiveScreens: true, // Detach off-screen tabs to save memory
+        lazy: true, // Only mount tab screens when first focused, then keep alive
+        freezeOnBlur: true, // Freeze rendering of inactive tabs to save CPU
+        detachInactiveScreens: false, // Keep tabs alive in memory for instant switching (like big apps)
         ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}), // Instant tab switch on native
       })}
     >
