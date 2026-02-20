@@ -163,17 +163,16 @@ function ConversationsScreenMobile() {
     loadConversations();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ⚡ Cooldown ref: prevents double-fetch on mount + rapid tab-switch spam
-  const lastFetchRef = useRef(Date.now());
+  // ⚡ Skip focus on first mount (mount useEffect already fetches)
+  const isInitialMountRef = useRef(true);
 
   // Refresh whenever the screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      // ⚡ Skip if fetched < 10s ago (prevents double-fetch on mount + rapid tab switching)
-      if (Date.now() - lastFetchRef.current < 10000) return;
+      // ⚡ Skip first focus (mount useEffect already fetched)
+      if (isInitialMountRef.current) { isInitialMountRef.current = false; return; }
       // ⚡ Defer until animation completes
       const task = InteractionManager.runAfterInteractions(() => {
-        lastFetchRef.current = Date.now();
         loadConversations();
       });
       return () => task.cancel();
