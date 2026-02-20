@@ -16,13 +16,15 @@
  *  - navigation: navigation object (optional, falls back to useNavigation)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
   StyleSheet,
+  PanResponder,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,6 +54,21 @@ export default function TabHeader({
   const { user } = useAuth();
   const [profileSliderVisible, setProfileSliderVisible] = useState(false);
   const { unreadCount: unreadMessageCount, refreshUnreadCount } = useUnreadMessages();
+
+  // ⚡ Left-edge swipe to open ProfileSlider (like LinkedIn)
+  const edgePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dx > 15 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx > 40 || gs.vx > 0.5) {
+          if (onProfileSliderOpen) onProfileSliderOpen();
+          setProfileSliderVisible(true);
+        }
+      },
+    })
+  ).current;
 
   const profilePhotoUrl = user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
 
@@ -168,6 +185,14 @@ export default function TabHeader({
         </View>
       )}
 
+      {/* ⚡ Left-edge swipe zone — invisible, captures right-swipe to open ProfileSlider */}
+      {Platform.OS !== 'web' && (
+        <View
+          {...edgePanResponder.panHandlers}
+          style={styles.edgeSwipeZone}
+        />
+      )}
+
       {/* Profile Slider — shared, no need to add in each screen */}
       <ProfileSlider
         visible={profileSliderVisible}
@@ -178,6 +203,14 @@ export default function TabHeader({
 }
 
 const styles = StyleSheet.create({
+  edgeSwipeZone: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 20, // 20px invisible strip on left edge
+    zIndex: 100,
+  },
   container: {
     ...HEADER_CONTAINER_BASE,
   },
