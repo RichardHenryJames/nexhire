@@ -18,6 +18,7 @@ import {
   Platform,
   Animated,
   Dimensions,
+  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -224,21 +225,38 @@ export default function ServicesScreen({ navigation }) {
   const { isDesktop } = useResponsive();
   const [interestedServices, setInterestedServices] = useState(new Set());
 
-  // Fetch user's service interests on focus (so badge updates after returning from lock screen)
+  // ⚡ Staleness check: only re-fetch if data is older than 30s
+  const lastFetchTimeRef = useRef(0);
+  const FETCH_STALENESS_MS = 30000;
+
+  const fetchInterests = useCallback(async () => {
+    lastFetchTimeRef.current = Date.now();
+    try {
+      const result = await refopenAPI.apiCall('/services/interests');
+      if (result?.interests) {
+        setInterestedServices(new Set(result.interests));
+      }
+    } catch (err) {
+      // Silently fail — badges just won't show
+    }
+  }, []);
+
+  // ⚡ Prefetch on mount (deferred so HomeScreen renders first)
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchInterests();
+    });
+    return () => task.cancel();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Refresh on focus (only if data is stale)
   useFocusEffect(
     useCallback(() => {
-      const fetchInterests = async () => {
-        try {
-          const result = await refopenAPI.apiCall('/services/interests');
-          if (result?.interests) {
-            setInterestedServices(new Set(result.interests));
-          }
-        } catch (err) {
-          // Silently fail — badges just won't show
-        }
-      };
-      fetchInterests();
-    }, [])
+      const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
+      if (timeSinceLastFetch > FETCH_STALENESS_MS) {
+        fetchInterests();
+      }
+    }, [fetchInterests])
   );
 
   const handleServicePress = (service) => {

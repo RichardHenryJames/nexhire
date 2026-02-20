@@ -11,6 +11,7 @@ import {
   Image,
   Modal,
   Platform,
+  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -163,6 +164,14 @@ function ConversationsScreenMobile() {
       isLoadingMoreRef.current = false;
     }
   }, [pagination.hasMore, pagination.page, pagination.pageSize]);
+
+  // ⚡ Prefetch on mount (deferred so HomeScreen renders first)
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      loadConversations();
+    });
+    return () => task.cancel();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh whenever the screen comes into focus (only if data is stale)
   useFocusEffect(
