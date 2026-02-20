@@ -79,8 +79,20 @@
         deepLink += '&state=' + encodeURIComponent(state);
       }
 
-      // Attempt to open the deep link
-      window.location.href = deepLink;
+      // Try multiple deep link methods for maximum Android compatibility:
+      // 1. Android Intent URL (most reliable on Chrome for Android)
+      // 2. Regular custom scheme (fallback)
+      var isAndroid = /android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        // Intent URL format — Chrome for Android handles this reliably
+        var intentUrl = 'intent://auth/callback?code=' + encodeURIComponent(code);
+        if (state) intentUrl += '&state=' + encodeURIComponent(state);
+        intentUrl += '#Intent;scheme=' + scheme + ';end';
+        window.location.href = intentUrl;
+      } else {
+        // iOS and other platforms — custom scheme works fine
+        window.location.href = deepLink;
+      }
 
       // If the deep link doesn't work (user on desktop browser, etc.),
       // show a fallback message after a short delay
