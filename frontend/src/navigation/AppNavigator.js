@@ -476,21 +476,9 @@ function MainTabNavigator() {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          // Compact styling similar to LinkedIn
-          height: Platform.OS === 'ios' ? 84 : 58,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 6,
-          paddingTop: 6,
-          ...(Platform.OS === 'web'
-            ? {
-                position: 'fixed',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 52, // Very compact for web
-                paddingBottom: 4,
-                paddingTop: 4,
-              }
-            : null),
+          height: Platform.OS === 'ios' ? 84 : Platform.OS === 'web' ? 52 : 58,
+          paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'web' ? 4 : 6,
+          paddingTop: Platform.OS === 'web' ? 4 : 6,
         },
         tabBarLabelStyle: {
           fontSize: 10, // Smaller font for compact look
