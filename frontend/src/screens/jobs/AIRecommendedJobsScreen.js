@@ -49,7 +49,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     if (!user || !isJobSeeker) return;
     if (primaryResumeLoadedRef.current && primaryResume) return;
     try {
-      const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profile = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub);
       if (profile?.success) {
         const resumes = profile.data?.resumes || [];
         const primary = resumes.find(r => r.IsPrimary) || resumes[0];

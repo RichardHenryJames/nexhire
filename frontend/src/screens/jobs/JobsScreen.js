@@ -408,7 +408,7 @@ export default function JobsScreen({ navigation, route }) {
     if (!user || !isJobSeeker) return;
     if (primaryResumeLoadedRef.current && primaryResume) return;
     try {
-      const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profile = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub);
       if (profile?.success) {
         const resumes = profile.data?.resumes || [];
         const primary = resumes.find(r => r.IsPrimary) || resumes[0];
@@ -574,18 +574,21 @@ export default function JobsScreen({ navigation, route }) {
     })();
   }, []);
 
-  // 🔧 NEW: Add focus listener to refresh applications when screen comes into focus
+  // 🔧 NEW: Add focus listener to refresh applications + resume when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       // ⚡ Only refetch if data is stale (older than 30s) to avoid lag on tab switch
       const timeSinceLastRefresh = Date.now() - lastRefreshTimeRef.current;
       if (timeSinceLastRefresh > REFRESH_STALENESS_MS) {
         refreshApplicationsData();
+        // 🔧 Also re-check resume so uploads from Settings/other screens are picked up
+        primaryResumeLoadedRef.current = false;
+        loadPrimaryResume();
       }
     });
 
     return unsubscribe;
-  }, [navigation, refreshApplicationsData]);
+  }, [navigation, refreshApplicationsData, loadPrimaryResume]);
 
   // Load referral data (deferred 100ms)
   useEffect(() => {
@@ -633,7 +636,7 @@ export default function JobsScreen({ navigation, route }) {
   const applySmart = useCallback(async () => {
     try {
       if (!user) return;
-      const profRes = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profRes = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub);
       if (profRes?.success) {
         const profile = profRes.data;
         const years = monthsToYears(profile.TotalExperienceMonths);
