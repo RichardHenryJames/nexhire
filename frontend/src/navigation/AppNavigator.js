@@ -494,7 +494,10 @@ function MainTabNavigator() {
         // Mount ALL tabs at startup so they prefetch data in the background.
         // By the time user switches tab → data is already loaded. Instant.
         lazy: Platform.OS === 'web', // Eager on native (prefetch), lazy on web (SEO/perf)
-        freezeOnBlur: true, // Freeze rendering of inactive tabs to save CPU
+        // freezeOnBlur REMOVED — react-freeze forces full component re-execution on every
+        // unfreeze, which is extremely expensive for Home (1952 lines) and Jobs (1903 lines).
+        // Without it, inactive tabs stay rendered and tab switch is a pure visibility toggle.
+        freezeOnBlur: false,
         detachInactiveScreens: false, // Keep tabs alive in memory for instant switching
         ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}), // Instant tab switch on native
       })}

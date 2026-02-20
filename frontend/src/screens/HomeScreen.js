@@ -39,7 +39,6 @@ const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
 const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
-const [showHeader, setShowHeader] = useState(true);
 const [refreshing, setRefreshing] = useState(false);
 
 // Organization search state
@@ -95,13 +94,7 @@ const [dashboardData, setDashboardData] = useState({
 // ✅ NEW: Scroll ref for scroll-to-top functionality
   const scrollViewRef = React.useRef(null);
 
-  // Ensure the fixed header never overlays stack screens on web.
-  useFocusEffect(
-    useCallback(() => {
-      setShowHeader(true);
-      return () => setShowHeader(false);
-    }, [])
-  );
+  // Header always shown — no focus/blur state toggles (was causing expensive re-renders)
 
   // Organization search function with debounce
   const searchOrganizations = useCallback(async (query) => {
@@ -611,7 +604,6 @@ const [dashboardData, setDashboardData] = useState({
   return (
     <>
       {/* Compact Header with Search - OUTSIDE ScrollView for proper z-index */}
-      {showHeader && (
       <TabHeader
         navigation={navigation}
         showWallet={true}
@@ -682,7 +674,6 @@ const [dashboardData, setDashboardData] = useState({
           </View>
         }
       />
-      )}
 
       <ScrollView
         ref={scrollViewRef}
