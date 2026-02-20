@@ -118,12 +118,16 @@ export default function NotificationsScreen() {
     isMountedRef.current = true;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ⚡ Silently refetch on tab focus — no loading spinner, data swaps in
+  // ⚡ Silently refetch on tab focus + poll every 15s while on screen
+  // When user is ON the screen, new notifications appear automatically
   useFocusEffect(
     useCallback(() => {
       if (isMountedRef.current) {
-        fetchNotifications(1, false, true); // silent=true
+        fetchNotifications(1, false, true); // silent refetch on focus
       }
+      // Poll while user is on this screen
+      const poll = setInterval(() => fetchNotifications(1, false, true), 15000);
+      return () => clearInterval(poll); // Stop polling when user leaves screen
     }, [fetchNotifications])
   );
 
