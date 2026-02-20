@@ -577,14 +577,14 @@ export default function JobsScreen({ navigation, route }) {
   // 🔧 NEW: Add focus listener to refresh applications + resume when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      // ⚡ Only refetch if data is stale (older than 30s) to avoid lag on tab switch
+      // ⚡ Only refetch applications if data is stale (older than 30s) to avoid lag on tab switch
       const timeSinceLastRefresh = Date.now() - lastRefreshTimeRef.current;
       if (timeSinceLastRefresh > REFRESH_STALENESS_MS) {
         refreshApplicationsData();
-        // 🔧 Also re-check resume so uploads from Settings/other screens are picked up
-        primaryResumeLoadedRef.current = false;
-        loadPrimaryResume();
       }
+      // 🔧 Always re-check resume on focus so uploads from Settings are picked up immediately
+      primaryResumeLoadedRef.current = false;
+      loadPrimaryResume();
     });
 
     return unsubscribe;
