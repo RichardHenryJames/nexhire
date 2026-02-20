@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { TouchableOpacity, Platform } from "react-native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -442,9 +442,9 @@ function MainTabNavigator() {
     return () => clearInterval(pollRef.current);
   }, [fetchUnreadCount]);
 
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
+  // ⚡ PERF: Memoize screenOptions — without this, every 30s notification poll
+  // creates a new screenOptions function, causing React Navigation to re-evaluate all tabs.
+  const screenOptions = useMemo(() => ({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
@@ -481,27 +481,22 @@ function MainTabNavigator() {
           paddingTop: Platform.OS === 'web' ? 4 : 6,
         },
         tabBarLabelStyle: {
-          fontSize: 10, // Smaller font for compact look
+          fontSize: 10,
           fontWeight: "600",
           marginBottom: Platform.OS === 'android' ? 2 : 0,
         },
         tabBarItemStyle: {
-          // Tighten up items
           paddingVertical: 0,
         },
         headerShown: false,
-        // ⚡ Production pattern (like LinkedIn/Instagram):
-        // Mount ALL tabs at startup so they prefetch data in the background.
-        // By the time user switches tab → data is already loaded. Instant.
-        lazy: Platform.OS === 'web', // Eager on native (prefetch), lazy on web (SEO/perf)
-        // freezeOnBlur REMOVED — react-freeze forces full component re-execution on every
-        // unfreeze, which is extremely expensive for Home (1952 lines) and Jobs (1903 lines).
-        // Without it, inactive tabs stay rendered and tab switch is a pure visibility toggle.
+        lazy: Platform.OS === 'web',
         freezeOnBlur: false,
-        detachInactiveScreens: false, // Keep tabs alive in memory for instant switching
-        ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}), // Instant tab switch on native
-      })}
-    >
+        detachInactiveScreens: false,
+        ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}),
+      }), [colors]);
+
+  return (
+    <Tab.Navigator screenOptions={screenOptions}>
       {/* Show Home tab for all users including Admin */}
       <Tab.Screen
         name="Home"

@@ -14,7 +14,6 @@ import {
   FlatList,
   Animated,
   Modal,
-  InteractionManager,
 } from 'react-native';
 import AddWorkExperienceModal from '../components/profile/AddWorkExperienceModal';
 import VerifiedReferrerOverlay from '../components/VerifiedReferrerOverlay';
@@ -32,6 +31,87 @@ import TabHeader from '../components/TabHeader';
 import EngagementHub from '../components/engagement/EngagementHub';
 
 const { width } = Dimensions.get('window');
+
+// ⚡ PERF: Extracted OUTSIDE component — React sees stable component types,
+// no unmount/remount of native view subtrees on parent re-render.
+
+const getStatusColor = (statusId, colors) => {
+  switch (statusId) {
+    case 1: return colors.warning;
+    case 2: return colors.primary;
+    case 3: return colors.info;
+    case 4: return colors.success;
+    case 5: return colors.success;
+    case 6: return colors.danger;
+    default: return colors.gray500;
+  }
+};
+
+const getStatusText = (statusId) => {
+  switch (statusId) {
+    case 1: return 'Pending';
+    case 2: return 'Under Review';
+    case 3: return 'Interview';
+    case 4: return 'Offer Extended';
+    case 5: return 'Hired';
+    case 6: return 'Rejected';
+    default: return 'Unknown';
+  }
+};
+
+const formatJobDate = (job) => {
+  const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
+  if (!dateString) return 'Recently posted';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Recently posted';
+  const now = new Date();
+  const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+  if (hours < 1) return 'Just posted';
+  if (hours < 24) return `${hours} hours ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} days ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks} weeks ago`;
+  return date.toLocaleDateString();
+};
+
+const HomeJobCard = React.memo(({ job, styles, colors, onPress }) => (
+  <TouchableOpacity style={styles.jobCard} onPress={onPress}>
+    <View style={styles.jobHeader}>
+      <Text style={styles.jobTitle} numberOfLines={1}>{job.Title}</Text>
+      <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
+    </View>
+    <Text style={styles.jobLocation}>{job.Location}</Text>
+    <View style={styles.jobMeta}>
+      <View style={styles.jobTypeTag}>
+        <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
+      </View>
+      <Text style={styles.jobDate}>{formatJobDate(job)}</Text>
+    </View>
+  </TouchableOpacity>
+));
+
+const HomeApplicationCard = React.memo(({ application, styles, colors, onPress }) => (
+  <TouchableOpacity style={styles.applicationCard} onPress={onPress}>
+    <View style={styles.applicationHeader}>
+      <Text style={styles.applicationTitle} numberOfLines={1}>{application.JobTitle}</Text>
+      <View style={[styles.applicationStatus, { backgroundColor: getStatusColor(application.StatusID, colors) + '20' }]}>
+        <Text style={[styles.applicationStatusText, { color: getStatusColor(application.StatusID, colors) }]}>
+          {getStatusText(application.StatusID)}
+        </Text>
+      </View>
+    </View>
+    <Text style={styles.applicationCompany}>{application.CompanyName}</Text>
+    <Text style={styles.applicationDate}>Applied {new Date(application.SubmittedAt).toLocaleDateString()}</Text>
+  </TouchableOpacity>
+));
+
+const HomeSectionLoader = React.memo(({ styles, colors }) => (
+  <View style={styles.sectionLoader}>
+    <ActivityIndicator size="small" color={colors.primary} />
+    <Text style={styles.sectionLoaderText}>Loading...</Text>
+  </View>
+));
 
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker, isAdmin, isVerifiedUser, currentWork, refreshVerificationStatus } = useAuth();
@@ -55,8 +135,8 @@ const [loadingApplications, setLoadingApplications] = useState(true);
 
 // 🎯 NEW: Fortune 500 companies for Get Referrals card
 const [fortune500Companies, setFortune500Companies] = useState([]);
-const [f500LogoScrollRef] = useState(useRef(null));
-const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
+const f500LogoScrollRef = useRef(null);
+const f500ScrollPositionRef = useRef(0);
 const scrollIntervalRef = useRef(null);
 
 
@@ -327,12 +407,8 @@ const [dashboardData, setDashboardData] = useState({
     }, [])
   );
 
-  // ✅ NEW: Scroll to top when navigating to HomeScreen
-  useFocusEffect(
-    useCallback(() => {
-      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
-  );
+  // ⚡ PERF: scroll-to-top on focus REMOVED — was triggering layout recalculation
+  // of entire ScrollView on every tab switch. Users expect scroll position preserved.
 
   // 🎯 Handler for "Become a Verified Referrer" button
   const handleBecomeVerifiedReferrer = useCallback(async () => {
@@ -373,32 +449,20 @@ const [dashboardData, setDashboardData] = useState({
     }
   }, []);
 
-  // 🎯 NEW: Auto-scroll Fortune 500 logos horizontally
+  // 🎯 Auto-scroll Fortune 500 logos — uses ref.scrollTo instead of setState
+  // to avoid re-rendering the entire 1966-line component every 2 seconds.
   useEffect(() => {
     if (fortune500Companies.length > 3 && isJobSeeker) {
-      // Clear any existing interval
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
-      }
-      
-      const logoItemWidth = 70; // 56px logo + 14px margin
+      if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current);
+      const logoItemWidth = 70;
       const maxScroll = (fortune500Companies.length - 3) * logoItemWidth;
-      
+      f500ScrollPositionRef.current = 0;
       scrollIntervalRef.current = setInterval(() => {
-        setF500ScrollPosition(prev => {
-          const next = prev + logoItemWidth;
-          if (next >= maxScroll) {
-            return 0; // Reset to start
-          }
-          return next;
-        });
-      }, 2000); // Scroll every 2 seconds
-      
-      return () => {
-        if (scrollIntervalRef.current) {
-          clearInterval(scrollIntervalRef.current);
-        }
-      };
+        const next = f500ScrollPositionRef.current + logoItemWidth;
+        f500ScrollPositionRef.current = next >= maxScroll ? 0 : next;
+        f500LogoScrollRef.current?.scrollTo({ x: f500ScrollPositionRef.current, animated: true });
+      }, 2000);
+      return () => clearInterval(scrollIntervalRef.current);
     }
   }, [fortune500Companies.length, isJobSeeker]);
 
@@ -420,201 +484,8 @@ const [dashboardData, setDashboardData] = useState({
     setRefreshing(false);
   };
 
-  // Enhanced StatCard with trends and better styling
-  const StatCard = ({ title, value, icon, color = colors.primary, subtitle, trend, onPress, size = 'normal' }) => {
-    const isLarge = size === 'large';
-    
-    return (
-      <TouchableOpacity 
-        style={[
-          styles.statCard, 
-          { borderLeftColor: color },
-          isLarge && styles.statCardLarge
-        ]}
-        onPress={onPress}
-        disabled={!onPress}
-      >
-        <View style={styles.statContent}>
-          <View style={styles.statHeader}>
-            <Ionicons name={icon} size={isLarge ? 32 : 24} color={color} />
-            <View style={styles.statValueContainer}>
-              <Text style={[styles.statValue, isLarge && styles.statValueLarge]}>{value}</Text>
-              {trend && (
-                <View style={[styles.trendContainer, { backgroundColor: trend.positive ? colors.success + '20' : colors.danger + '20' }]}>
-                  <Ionicons 
-                    name={trend.positive ? 'trending-up' : 'trending-down'} 
-                    size={12} 
-                    color={trend.positive ? colors.success : colors.danger} 
-                  />
-                  <Text style={[styles.trendText, { color: trend.positive ? colors.success : colors.danger }]}>
-                    {trend.value}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-          <Text style={[styles.statTitle, isLarge && styles.statTitleLarge]}>{title}</Text>
-          {subtitle && (
-            <Text style={styles.statSubtitle} numberOfLines={2}>{subtitle}</Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  // Enhanced QuickAction with better styling
-  const QuickAction = ({ title, description, icon, onPress, color = colors.primary, badge, urgent = false }) => (
-    <TouchableOpacity 
-      style={[styles.actionCard, urgent && styles.actionCardUrgent]} 
-      onPress={onPress}
-    >
-      <View style={[styles.actionIcon, { backgroundColor: color + '20' }]}
-      >
-        <Ionicons name={icon} size={24} color={color} />
-        {badge && (
-          <View style={[styles.actionBadge, urgent && styles.actionBadgeUrgent]}>
-            <Text style={styles.actionBadgeText}>{badge}</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.actionContent}>
-        <Text style={[styles.actionTitle, urgent && styles.actionTitleUrgent]}>{title}</Text>
-        <Text style={styles.actionDescription}>{description}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-    </TouchableOpacity>
-  );
-
-  // Attention items component
-  const AttentionItems = () => {
-    const { stats } = dashboardData;
-    const needsAttention = stats.summary?.needsAttention || [];
-    
-    if (needsAttention.length === 0) return null;
-
-    return (
-      <View style={styles.attentionContainer}>
-        <Text style={styles.sectionTitle}>
-          <Ionicons name="alert-circle" size={16} color={colors.warning} /> Needs Attention
-        </Text>
-        {needsAttention.slice(0, 3).map((item, index) => (
-          <View key={index} style={styles.attentionItem}>
-            <Ionicons name="chevron-forward" size={16} color={colors.warning} />
-            <Text style={styles.attentionText}>{item}</Text>
-          </View>
-        ))}
-      </View>
-    );
-  };
-
-  const JobCard = ({ job }) => {
-    const formatDate = (job) => {
-      // Use same date field priority as the actual API response and JobCard component
-      const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
-      
-      if (!dateString) return 'Recently posted';
-      
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Recently posted';
-      
-      const now = new Date();
-      const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-      
-      if (hours < 1) return 'Just posted';
-      if (hours < 24) return `${hours} hours ago`;
-      
-      const days = Math.floor(hours / 24);
-      if (days < 7) return `${days} days ago`;
-      
-      const weeks = Math.floor(days / 7);
-      if (weeks < 4) return `${weeks} weeks ago`;
-      
-      return date.toLocaleDateString();
-    };
-
-    return (
-      <TouchableOpacity
-        style={styles.jobCard}
-        onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-      >
-        <View style={styles.jobHeader}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {job.Title}
-          </Text>
-          <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
-        </View>
-        <Text style={styles.jobLocation}>{job.Location}</Text>
-        <View style={styles.jobMeta}>
-          <View style={styles.jobTypeTag}>
-            <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
-          </View>
-          <Text style={styles.jobDate}>
-            {formatDate(job)}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const ApplicationCard = ({ application }) => (
-    <TouchableOpacity
-      style={styles.applicationCard}
-      onPress={() => navigation.navigate('Applications')}
-    >
-      <View style={styles.applicationHeader}>
-        <Text style={styles.applicationTitle} numberOfLines={1}>
-          {application.JobTitle}
-        </Text>
-        <View style={[
-          styles.applicationStatus,
-          { backgroundColor: getStatusColor(application.StatusID) + '20' }
-        ]}>
-          <Text style={[
-            styles.applicationStatusText,
-            { color: getStatusColor(application.StatusID) }
-          ]}>
-            {getStatusText(application.StatusID)}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.applicationCompany}>{application.CompanyName}</Text>
-      <Text style={styles.applicationDate}>
-        Applied {new Date(application.SubmittedAt).toLocaleDateString()}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const getStatusColor = (statusId) => {
-    switch (statusId) {
-      case 1: return colors.warning;
-      case 2: return colors.primary;
-      case 3: return colors.info;
-      case 4: return colors.success;
-      case 5: return colors.success;
-      case 6: return colors.danger;
-      default: return colors.gray500;
-    }
-  };
-
-  const getStatusText = (statusId) => {
-    switch (statusId) {
-      case 1: return 'Pending';
-      case 2: return 'Under Review';
-      case 3: return 'Interview';
-      case 4: return 'Offer Extended';
-      case 5: return 'Hired';
-      case 6: return 'Rejected';
-      default: return 'Unknown';
-    }
-  };
-
-  // ⚡ NEW: Section loading component
-  const SectionLoader = () => (
-    <View style={styles.sectionLoader}>
-      <ActivityIndicator size="small" color={colors.primary} />
-      <Text style={styles.sectionLoaderText}>Loading...</Text>
-    </View>
-  );
+  // ⚡ PERF: JobCard, ApplicationCard, SectionLoader extracted OUTSIDE
+  // component body (above) — prevents native view unmount/remount on re-render.
 
   // ⚡ Remove the global loading screen - show content immediately
 
@@ -853,9 +724,9 @@ const [dashboardData, setDashboardData] = useState({
                   {fortune500Companies.length > 0 && (
                     <View style={styles.f500LogoContainer}>
                       <ScrollView
+                        ref={f500LogoScrollRef}
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        contentOffset={{ x: f500ScrollPosition, y: 0 }}
                         scrollEnabled={true}
                         style={styles.f500LogoScroll}
                       >
@@ -928,7 +799,7 @@ const [dashboardData, setDashboardData] = useState({
           loadingF500Jobs ? (
             <View style={styles.recentContainer}>
               <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
-              <SectionLoader />
+              <HomeSectionLoader styles={styles} colors={colors} />
             </View>
           ) : dashboardData.f500Jobs?.length > 0 ? (
             <View style={styles.recentContainer}>
@@ -944,7 +815,7 @@ const [dashboardData, setDashboardData] = useState({
                 contentContainerStyle={styles.horizontalScroll}
               >
                 {dashboardData.f500Jobs.map((job, index) => (
-                  <JobCard key={job.JobID || index} job={job} currentUserId={user?.UserID} />
+                  <HomeJobCard key={job.JobID || index} job={job} styles={styles} colors={colors} onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })} />
                 ))}
               </ScrollView>
             </View>
@@ -955,7 +826,7 @@ const [dashboardData, setDashboardData] = useState({
         {isJobSeeker && (loadingJobs ? (
           <View style={styles.recentContainer}>
             <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-            <SectionLoader />
+            <HomeSectionLoader styles={styles} colors={colors} />
           </View>
         ) : recentJobs.length > 0 ? (
           <View style={styles.recentContainer}>
@@ -971,7 +842,7 @@ const [dashboardData, setDashboardData] = useState({
               contentContainerStyle={styles.horizontalScroll}
             >
               {recentJobs.map((job, index) => (
-                <JobCard key={job.JobID || index} job={job} currentUserId={user?.UserID} />
+                <HomeJobCard key={job.JobID || index} job={job} styles={styles} colors={colors} onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })} />
               ))}
             </ScrollView>
           </View>
@@ -982,7 +853,7 @@ const [dashboardData, setDashboardData] = useState({
           loadingApplications ? (
             <View style={styles.recentContainer}>
               <Text style={styles.sectionTitle}>Recent Applications</Text>
-              <SectionLoader />
+              <HomeSectionLoader styles={styles} colors={colors} />
             </View>
           ) : recentApplications.length > 0 ? (
             <View style={styles.recentContainer}>
@@ -993,7 +864,7 @@ const [dashboardData, setDashboardData] = useState({
                 </TouchableOpacity>
               </View>
               {recentApplications.map((application, index) => (
-                <ApplicationCard key={application.ApplicationID || index} application={application} />
+                <HomeApplicationCard key={application.ApplicationID || index} application={application} styles={styles} colors={colors} onPress={() => navigation.navigate('Applications')} />
               ))}
             </View>
           ) : null
