@@ -225,12 +225,7 @@ export default function ServicesScreen({ navigation }) {
   const { isDesktop } = useResponsive();
   const [interestedServices, setInterestedServices] = useState(new Set());
 
-  // ⚡ Staleness check: only re-fetch if data is older than 30s
-  const lastFetchTimeRef = useRef(0);
-  const FETCH_STALENESS_MS = 30000;
-
   const fetchInterests = useCallback(async () => {
-    lastFetchTimeRef.current = Date.now();
     try {
       const result = await refopenAPI.apiCall('/services/interests');
       if (result?.interests) {
@@ -249,13 +244,10 @@ export default function ServicesScreen({ navigation }) {
     return () => task.cancel();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Refresh on focus (only if data is stale)
+  // Refresh on focus
   useFocusEffect(
     useCallback(() => {
-      const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
-      if (timeSinceLastFetch > FETCH_STALENESS_MS) {
-        fetchInterests();
-      }
+      fetchInterests();
     }, [fetchInterests])
   );
 

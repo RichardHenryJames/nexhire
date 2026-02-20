@@ -528,12 +528,8 @@ export default function JobsScreen({ navigation, route }) {
     }
   }, [successMessage, appliedJobId, triggerReload, refreshApplicationsData]);
 
-  // 🔧 NEW: Function to refresh applications data
-  const lastRefreshTimeRef = useRef(0);
-  const REFRESH_STALENESS_MS = 30000; // 30 seconds
-
+  // 🔧 Function to refresh applications data
   const refreshApplicationsData = useCallback(async () => {
-    lastRefreshTimeRef.current = Date.now();
     try {
       const r = await refopenAPI.getMyApplications(1, 500);
       if (r?.success) {
@@ -546,19 +542,7 @@ export default function JobsScreen({ navigation, route }) {
     }
   }, []);
 
-  // Load applied job IDs (needed for heart icon state)
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await refopenAPI.getMyApplications(1, 500);
-        if (r?.success) {
-          const ids = new Set((r.data || []).map(a => a.JobID));
-          setAppliedIds(ids);
-          setAppliedCount(Number(r.meta?.total || r.data?.length || 0));
-        }
-      } catch {}
-    })();
-  }, []);
+  // ⚡ Applied IDs loaded via refreshApplicationsData() on focus — no duplicate mount call
 
   // Load saved job IDs (needed for bookmark icon state)
   useEffect(() => {
@@ -574,15 +558,11 @@ export default function JobsScreen({ navigation, route }) {
     })();
   }, []);
 
-  // 🔧 NEW: Add focus listener to refresh applications + resume when screen comes into focus
+  // 🔧 Refresh applications + resume when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      // ⚡ Only refetch applications if data is stale (older than 30s) to avoid lag on tab switch
-      const timeSinceLastRefresh = Date.now() - lastRefreshTimeRef.current;
-      if (timeSinceLastRefresh > REFRESH_STALENESS_MS) {
-        refreshApplicationsData();
-      }
-      // 🔧 Always re-check resume on focus so uploads from Settings are picked up immediately
+      refreshApplicationsData();
+      // Always re-check resume so uploads from Settings are picked up immediately
       primaryResumeLoadedRef.current = false;
       loadPrimaryResume();
     });
