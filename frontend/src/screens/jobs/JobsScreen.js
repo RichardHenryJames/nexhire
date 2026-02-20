@@ -3,6 +3,7 @@ import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Al
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 import TabHeader from '../../components/TabHeader';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
@@ -278,6 +279,15 @@ export default function JobsScreen({ navigation, route }) {
   const [primaryResume, setPrimaryResume] = useState(null);
   const primaryResumeLoadedRef = useRef(false);
 
+  // ⚡ AbortController: cancel in-flight supporting API calls when user leaves this tab
+  const tabAbortRef = useRef(null);
+  // Create a fresh controller for mount-time calls
+  useEffect(() => {
+    const ac = new AbortController();
+    tabAbortRef.current = ac;
+    return () => { ac.abort(); tabAbortRef.current = null; };
+  }, []);
+
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
@@ -302,7 +312,7 @@ export default function JobsScreen({ navigation, route }) {
 
   const loadWalletBalance = useCallback(async () => {
     try {
-      const result = await refopenAPI.getWalletBalance();
+      const result = await refopenAPI.getWalletBalance(tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (result?.success) {
         // Use availableBalance for hold-based payment system
         setWalletBalance(result.data?.availableBalance ?? result.data?.balance ?? 0);
@@ -315,7 +325,7 @@ export default function JobsScreen({ navigation, route }) {
   const checkAIAccessStatus = useCallback(async () => {
     try {
       // Use unified access API
-      const result = await refopenAPI.apiCall('/access/status?type=ai_jobs');
+      const result = await refopenAPI.apiCall('/access/status?type=ai_jobs', tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (result?.success) {
         setHasActiveAIAccess(!!result.data?.hasActiveAccess);
       } else {
@@ -408,7 +418,7 @@ export default function JobsScreen({ navigation, route }) {
     if (!user || !isJobSeeker) return;
     if (primaryResumeLoadedRef.current && primaryResume) return;
     try {
-      const profile = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub);
+      const profile = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (profile?.success) {
         const resumes = profile.data?.resumes || [];
         const primary = resumes.find(r => r.IsPrimary) || resumes[0];
@@ -531,7 +541,7 @@ export default function JobsScreen({ navigation, route }) {
   // 🔧 Function to refresh applications data
   const refreshApplicationsData = useCallback(async () => {
     try {
-      const r = await refopenAPI.getMyApplications(1, 500);
+      const r = await refopenAPI.getMyApplications(1, 500, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (r?.success) {
         const ids = new Set((r.data || []).map(a => a.JobID));
         setAppliedIds(ids);
@@ -549,7 +559,7 @@ export default function JobsScreen({ navigation, route }) {
   useEffect(() => {
     (async () => {
       try {
-        const r = await refopenAPI.getMySavedJobs(1, 500);
+        const r = await refopenAPI.getMySavedJobs(1, 500, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
         if (r?.success) {
           const ids = new Set((r.data || []).map(s => s.JobID));
           setSavedIds(ids);
@@ -560,6 +570,18 @@ export default function JobsScreen({ navigation, route }) {
   }, []);
 
   // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
+  // But we DO abort in-flight supporting fetches on blur so destination screen gets priority.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // On blur: abort supporting API calls (wallet, applications, saved jobs, etc.)
+        if (tabAbortRef.current) { tabAbortRef.current.abort(); tabAbortRef.current = null; }
+        // Also abort the main job list fetch
+        if (listAbortRef.current) { try { listAbortRef.current.abort(); } catch {} }
+        if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
+      };
+    }, [])
+  );
 
   // Load referral data (deferred 100ms)
   useEffect(() => {
@@ -568,7 +590,7 @@ export default function JobsScreen({ navigation, route }) {
     const timer = setTimeout(() => {
       (async () => {
         try {
-          const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
+          const referralRes = await refopenAPI.getMyReferralRequests(1, 500, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
 
           if (referralRes?.success && referralRes.data?.requests) {
             const activeRequests = referralRes.data.requests.filter(r => r.Status !== 'Cancelled' && r.Status !== 'Expired');
@@ -587,9 +609,10 @@ export default function JobsScreen({ navigation, route }) {
 
   const refreshCounts = useCallback(async () => {
     try {
+      const sig = tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {};
       const [appliedRes, savedRes] = await Promise.all([
-        refopenAPI.getMyApplications(1, 1),
-        refopenAPI.getMySavedJobs(1, 1)
+        refopenAPI.getMyApplications(1, 1, sig),
+        refopenAPI.getMySavedJobs(1, 1, sig)
       ]);
       if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
       if (savedRes?.success) setSavedCount(Number(savedRes.meta?.total || 0));
@@ -607,7 +630,7 @@ export default function JobsScreen({ navigation, route }) {
   const applySmart = useCallback(async () => {
     try {
       if (!user) return;
-      const profRes = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub);
+      const profRes = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (profRes?.success) {
         const profile = profRes.data;
         const years = monthsToYears(profile.TotalExperienceMonths);
@@ -649,9 +672,10 @@ export default function JobsScreen({ navigation, route }) {
     const timer = setTimeout(() => {
       (async () => {
         try {
+          const sig = tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {};
           const [refData, cur] = await Promise.all([
-            refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']),
-            refopenAPI.getCurrencies()
+            refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType'], sig),
+            refopenAPI.getCurrencies(sig)
           ]);
           if (refData?.success && refData.data) {
             // Transform JobType data
@@ -693,7 +717,7 @@ export default function JobsScreen({ navigation, route }) {
         
         (async () => {
           try {
-            const orgs = await refopenAPI.getOrganizations('');
+            const orgs = await refopenAPI.getOrganizations('', null, 0, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
             if (orgs?.success) {
               const filteredOrgs = orgs.data.filter(org => {
                 const hasName = org.name && org.name.trim().length > 0;

@@ -937,10 +937,10 @@ class RefOpenAPI {
     return this.apiCall(`/saved-jobs/${jobId}`, { method: 'DELETE' });
   }
 
-  async getMySavedJobs(page = 1, pageSize = 20) {
+  async getMySavedJobs(page = 1, pageSize = 20, fetchOptions = {}) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    return this.apiCall(`/my/saved-jobs?${params}`);
+    return this.apiCall(`/my/saved-jobs?${params}`, fetchOptions);
   }
 
   // ========================================================================
@@ -965,16 +965,17 @@ class RefOpenAPI {
    * @param {string[]} types - Array of reference types to fetch
    * @returns {Promise} API response with all types
    */
-  async getBulkReferenceMetadata(types) {
+  async getBulkReferenceMetadata(types, fetchOptions = {}) {
     return await this.apiCall('/reference/metadata/bulk', {
       method: 'POST',
       body: JSON.stringify({ types }),
+      ...fetchOptions,
     });
   }
 
-  async getCurrencies() {
+  async getCurrencies(fetchOptions = {}) {
     try {
-      return await this.apiCall('/reference/currencies');
+      return await this.apiCall('/reference/currencies', fetchOptions);
     } catch (error) {
       console.warn('Failed to load currencies:', error.message);
       // Return fallback data
@@ -1078,9 +1079,9 @@ class RefOpenAPI {
   }
 
   // NEW: Job seeker/applicant profile APIs
-  async getApplicantProfile(userId) {
+  async getApplicantProfile(userId, fetchOptions = {}) {
     try {
-      return await this.apiCall(`/applicants/${userId}/profile`);
+      return await this.apiCall(`/applicants/${userId}/profile`, fetchOptions);
     } catch (error) {
       console.warn('Failed to load applicant profile:', error.message);
       // Return empty profile structure for new job seekers
@@ -1892,7 +1893,7 @@ if (!resumeId) {
   // ========================================================================
 
   // 💰 NEW: Get wallet balance
-  async getWalletBalance() {
+  async getWalletBalance(fetchOptions = {}) {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
       await this.init();
@@ -1904,7 +1905,7 @@ if (!resumeId) {
     }
     
     try {
-      return await this.apiCall('/wallet/balance');
+      return await this.apiCall('/wallet/balance', fetchOptions);
     } catch (error) {
       console.error('❌ Failed to load wallet balance:', error);
       return { success: false, error: error.message || 'Failed to load wallet balance' };
@@ -2093,7 +2094,7 @@ if (!resumeId) {
   }
 
   // Get my referral requests (as seeker)
-  async getMyReferralRequests(page = 1, pageSize = 20) {
+  async getMyReferralRequests(page = 1, pageSize = 20, fetchOptions = {}) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     const params = new URLSearchParams({
@@ -2101,7 +2102,7 @@ if (!resumeId) {
       pageSize: pageSize.toString(),
     });
     
-    return this.apiCall(`/referral/my-requests?${params}`);
+    return this.apiCall(`/referral/my-requests?${params}`, fetchOptions);
   }
 
   // Get available referral requests (as potential referrer)
