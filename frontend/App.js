@@ -231,19 +231,30 @@ function ThemedAppRoot() {
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;
-    document.documentElement.style.minHeight = '100vh';
-    document.body.style.minHeight = '100vh';
+    // Use dvh (dynamic viewport height) to account for mobile browser chrome
+    // (address bar, bottom navigation). Falls back to vh for older browsers.
+    document.documentElement.style.height = '100dvh';
+    document.documentElement.style.minHeight = '100dvh';
+    document.body.style.height = '100dvh';
+    document.body.style.minHeight = '100dvh';
     document.body.style.margin = '0';
+    document.body.style.overflow = 'hidden';
 
     const root = document.getElementById('root');
     if (root) {
-      root.style.minHeight = '100vh';
+      root.style.height = '100dvh';
+      root.style.minHeight = '100dvh';
       root.style.background = fallbackGradient;
+      root.style.display = 'flex';
+      root.style.flexDirection = 'column';
     }
 
-    // Hide scrollbars globally but allow scrolling
+    // Hide scrollbars globally but allow scrolling inside scroll containers
     const style = document.createElement('style');
     style.textContent = `
+      @supports not (height: 100dvh) {
+        html, body, #root { height: 100vh !important; min-height: 100vh !important; }
+      }
       * {
         scrollbar-width: none; /* Firefox */
         -ms-overflow-style: none; /* IE and Edge */
