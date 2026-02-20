@@ -361,12 +361,11 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface, // Use surface color for dark theme compatibility
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
     padding: 16,
-    // ? REMOVED: minHeight: 50 - let padding control the height
   },
   buttonError: {
     borderColor: colors.error,
@@ -397,7 +396,7 @@ const createStyles = (colors) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     zIndex: 1000,

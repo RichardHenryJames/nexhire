@@ -287,6 +287,9 @@ function JobSeekerFlow() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       <Stack.Screen
@@ -308,10 +311,15 @@ function JobSeekerFlow() {
 
 // Employer Registration Flow
 function EmployerFlow() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       <Stack.Screen
@@ -353,6 +361,9 @@ function AuthStack() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
       initialRouteName={getInitialRoute()}
     >
@@ -493,6 +504,8 @@ function MainTabNavigator() {
         headerShown: false,
         lazy: true, // Only mount tab screens when first focused
         freezeOnBlur: true, // Freeze inactive tabs to save memory
+        detachInactiveScreens: true, // Detach off-screen tabs to save memory
+        ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}), // Instant tab switch on native
       })}
     >
       {/* Show Home tab for all users including Admin */}
@@ -592,18 +605,16 @@ function MainStack() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} />
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{
-          headerShown: false,
-          gestureEnabled: true,
-          gestureDirection: "horizontal",
-          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="JobDetails"
@@ -839,6 +850,9 @@ export default function AppNavigator() {
       screenOptions={{
         headerShown: false,
         cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       {/* Auth Stack - always present for deep linking */}
