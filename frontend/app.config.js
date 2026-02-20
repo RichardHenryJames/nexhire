@@ -11,7 +11,7 @@ export default ({ config }) => {
       scheme: 'com.refopen.app.dev',
     },
     staging: {
-      name: 'RefOpen',
+      name: 'RefOpen (Staging)',
       scheme: 'com.refopen.app.staging',
     },
     production: {
