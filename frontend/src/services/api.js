@@ -962,20 +962,41 @@ class RefOpenAPI {
 
   /**
    * Get multiple reference types in one call (efficient)
+   * ⚡ CACHED: Static data that rarely changes. In-memory cache avoids
+   * redundant API calls across 10+ screens that all fetch the same data.
+   * Cache is keyed by the sorted types array (e.g. "JobType,WorkplaceType").
    * @param {string[]} types - Array of reference types to fetch
    * @returns {Promise} API response with all types
    */
   async getBulkReferenceMetadata(types, fetchOptions = {}) {
-    return await this.apiCall('/reference/metadata/bulk', {
+    const cacheKey = [...types].sort().join(',');
+    // Return cached if available and not explicitly bypassed
+    if (!fetchOptions._noCache && this._refMetaCache?.[cacheKey]) {
+      return this._refMetaCache[cacheKey];
+    }
+    const result = await this.apiCall('/reference/metadata/bulk', {
       method: 'POST',
       body: JSON.stringify({ types }),
       ...fetchOptions,
     });
+    if (result?.success) {
+      if (!this._refMetaCache) this._refMetaCache = {};
+      this._refMetaCache[cacheKey] = result;
+    }
+    return result;
   }
 
   async getCurrencies(fetchOptions = {}) {
     try {
-      return await this.apiCall('/reference/currencies', fetchOptions);
+      // ⚡ CACHED: Currencies almost never change
+      if (!fetchOptions._noCache && this._currenciesCache) {
+        return this._currenciesCache;
+      }
+      const result = await this.apiCall('/reference/currencies', fetchOptions);
+      if (result?.success) {
+        this._currenciesCache = result;
+      }
+      return result;
     } catch (error) {
       console.warn('Failed to load currencies:', error.message);
       // Return fallback data
@@ -1214,8 +1235,15 @@ class RefOpenAPI {
   }
 
   // NEW: Get organizations for employer registration - Optimized with database index
+  // ⚡ CACHED: Full org list (no search) is cached in-memory. Search queries always hit API.
   async getOrganizations(searchTerm = '', limit = null, offset = 0, options = {}) {
     try {
+      // Cache key: only cache full-list fetches (no search, no F500 filter)
+      const isFullList = !searchTerm && !options.isFortune500 && limit === null && offset === 0;
+      const isF500List = !searchTerm && options.isFortune500 && offset === 0;
+      
+      if (isFullList && this._orgFullCache) return this._orgFullCache;
+      if (isF500List && this._orgF500Cache) return this._orgF500Cache;
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       // 🚀 OPTIMIZED: Only add limit if explicitly provided, otherwise fetch ALL
@@ -1268,10 +1296,14 @@ class RefOpenAPI {
         }
         
         
-        return {
+        const result = {
           success: true,
           data: organizationsArray
         };
+        // ⚡ Cache full-list and F500-list results
+        if (isFullList) this._orgFullCache = result;
+        if (isF500List) this._orgF500Cache = result;
+        return result;
       } else {
         throw new Error(response.error || 'No organizations data received');
       }
