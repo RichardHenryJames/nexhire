@@ -437,7 +437,7 @@ export default function JobsScreen({ navigation, route }) {
   const [jobTypes, setJobTypes] = useState(() => getCached(CACHE_KEYS.JOBS_JOB_TYPES) || []);
   const [workplaceTypes, setWorkplaceTypes] = useState(() => getCached(CACHE_KEYS.JOBS_WORKPLACE_TYPES) || []);
   const [currencies, setCurrencies] = useState(() => getCached(CACHE_KEYS.JOBS_CURRENCIES) || []);
-  const [companies, setCompanies] = useState([]);
+  const [companies, setCompanies] = useState(() => getCached(CACHE_KEYS.JOBS_COMPANIES) || []);
 
   // Smart filter toggle
   const [smartEnabled] = useState(false);
@@ -711,15 +711,17 @@ export default function JobsScreen({ navigation, route }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // 🎯 PRIORITY 4: Preload companies in background after jobs load (2s delay)
+  // 🎯 PRIORITY 4: Preload companies — instant from cache, refresh in bg
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const companiesLoadedRef = useRef(false);
 
   useEffect(() => {
+    // If cache exists, skip the 2s delay — companies already in state
+    const delay = hasCached(CACHE_KEYS.JOBS_COMPANIES) ? 0 : 2000;
     const timer = setTimeout(() => {
       if (!companiesLoadedRef.current) {
         companiesLoadedRef.current = true;
-        setLoadingCompanies(true);
+        if (!hasCached(CACHE_KEYS.JOBS_COMPANIES)) setLoadingCompanies(true);
         
         (async () => {
           try {
@@ -730,6 +732,7 @@ export default function JobsScreen({ navigation, route }) {
                 return hasName;
               });
               setCompanies(filteredOrgs);
+              setCache(CACHE_KEYS.JOBS_COMPANIES, filteredOrgs);
             }
           } catch (e) {
             console.warn('Failed to load organizations:', e.message);
