@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { TouchableOpacity, Platform } from "react-native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
@@ -8,7 +8,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import refopenAPI from "../services/api";
 import LoadingScreen from "../screens/LoadingScreen";
-import SwipeableTabView from "../components/SwipeableTabView";
 
 // Auth Screens
 import LoginScreen from "../screens/auth/LoginScreen";
@@ -506,72 +505,66 @@ function MainTabNavigator() {
       {/* Show Home tab for all users including Admin */}
       <Tab.Screen
         name="Home"
+        component={HomeScreen}
         options={{ title: "Home" }}
-      >
-        {(props) => <SwipeableTabView><HomeScreen {...props} /></SwipeableTabView>}
-      </Tab.Screen>
+      />
 
       {/* FIXED: Use same tab name 'Jobs' for both to avoid deep linking conflicts */}
       {/* Hide Jobs tab for Admin users */}
       {!isAdmin && (
         <Tab.Screen
           name="Jobs"
+          component={isEmployer ? EmployerJobsScreen : JobsScreen}
           options={{ title: "Jobs" }}
-        >
-          {(props) => <SwipeableTabView>{isEmployer ? <EmployerJobsScreen {...props} /> : <JobsScreen {...props} />}</SwipeableTabView>}
-        </Tab.Screen>
+        />
       )}
 
       {isEmployer && (
         <Tab.Screen
           name="CreateJob"
+          component={CreateJobScreen}
           options={{ title: "Post Job" }}
-        >
-          {(props) => <SwipeableTabView><CreateJobScreen {...props} /></SwipeableTabView>}
-        </Tab.Screen>
+        />
       )}
 
       {isJobSeeker && (
         <Tab.Screen
           name="AskReferral"
+          component={AskReferralScreen}
           options={{ title: "Ask Referral" }}
-        >
-          {(props) => <SwipeableTabView><AskReferralScreen {...props} /></SwipeableTabView>}
-        </Tab.Screen>
+        />
       )}
 
       {/* All job seekers see Services tab */}
       {isJobSeeker && (
         <Tab.Screen
           name="Services"
+          component={ServicesScreen}
           options={{ 
             title: "Services",
           }}
-        >
-          {(props) => <SwipeableTabView><ServicesScreen {...props} /></SwipeableTabView>}
-        </Tab.Screen>
+        />
       )}
 
       {isAdmin && (
         <Tab.Screen
           name="ActionCenter"
+          component={AdminActionCenterScreen}
           options={{ title: "Action Center" }}
-        >
-          {(props) => <SwipeableTabView><AdminActionCenterScreen {...props} /></SwipeableTabView>}
-        </Tab.Screen>
+        />
       )}
 
       {isAdmin && (
         <Tab.Screen
           name="Admin"
+          component={AdminDashboardScreen}
           options={{ title: "Analytics" }}
-        >
-          {(props) => <SwipeableTabView><AdminDashboardScreen {...props} /></SwipeableTabView>}
-        </Tab.Screen>
+        />
       )}
 
       <Tab.Screen
         name="Notifications"
+        component={NotificationsScreen}
         options={{
           title: "Notifications",
           tabBarBadge: unreadNotifications > 0 ? (unreadNotifications > 99 ? '99+' : unreadNotifications) : undefined,
@@ -592,9 +585,7 @@ function MainTabNavigator() {
             setTimeout(fetchUnreadCount, 2000);
           },
         }}
-      >
-        {(props) => <SwipeableTabView><NotificationsScreen {...props} /></SwipeableTabView>}
-      </Tab.Screen>
+      />
     </Tab.Navigator>
   );
 }
