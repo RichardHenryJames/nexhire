@@ -115,7 +115,13 @@ export default function NotificationsScreen() {
     fetchNotifications(1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
+  // ⚡ Refetch on tab focus — since lazy:false, component mounts once at startup.
+  // Without this, user taps Notifications tab and sees stale data from boot.
+  useFocusEffect(
+    useCallback(() => {
+      fetchNotifications(1);
+    }, [fetchNotifications])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
