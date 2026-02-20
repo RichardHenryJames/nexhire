@@ -1598,6 +1598,12 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       ) : (
         <TabHeader
           navigation={navigation}
+          onProfileSliderOpen={() => {
+            // Abort Jobs' heavy API calls so ProfileSlider gets network priority
+            if (tabAbortRef.current) { tabAbortRef.current.abort(); tabAbortRef.current = null; }
+            if (listAbortRef.current) { try { listAbortRef.current.abort(); } catch {} }
+            if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
+          }}
           centerContent={
             <View style={styles.searchContainer}>
               <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />

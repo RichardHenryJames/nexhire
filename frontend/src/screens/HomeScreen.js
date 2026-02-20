@@ -627,6 +627,10 @@ const [dashboardData, setDashboardData] = useState({
         navigation={navigation}
         showWallet={true}
         walletBalance={walletBalance}
+        onProfileSliderOpen={() => {
+          // Abort Home's heavy API calls so ProfileSlider gets network priority
+          if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+        }}
         centerContent={
           <View style={styles.searchContainerMain}>
             <View style={styles.searchInputWrapper}>
