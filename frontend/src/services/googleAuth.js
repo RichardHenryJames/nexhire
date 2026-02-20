@@ -123,15 +123,12 @@ class GoogleAuthService {
     return this._handleNonSuccess(result);
   }
 
-  // Native: authorization-code + PKCE through refopen.com redirect page
-  // Flow: App → Chrome → Google OAuth → refopen.com/google-auth-callback.html → deep link back to app
+  // Native: implicit flow through refopen.com redirect page
+  // Flow: App → Chrome → Google OAuth → refopen.com/google-auth-callback.html#access_token=...
+  //        → HTML page reads fragment, deep-links back: scheme://auth/callback?access_token=...&id_token=...
   async _signInNative(clientId) {
     const redirectUri = 'https://www.refopen.com/google-auth-callback.html';
     const appScheme = Constants.expoConfig?.scheme || 'com.refopen.app';
-
-    // Generate PKCE
-    const codeVerifier = this._generateCodeVerifier();
-    const codeChallenge = await this._generateCodeChallenge(codeVerifier);
 
     // Encode app scheme in state so the HTML page knows where to deep-link
     const statePayload = JSON.stringify({
@@ -143,12 +140,11 @@ class GoogleAuthService {
     const authParams = this._buildQueryString({
       client_id: clientId,
       redirect_uri: redirectUri,
-      response_type: 'code',
+      response_type: 'token id_token',
       scope: 'openid profile email',
       prompt: 'select_account',
       state: stateEncoded,
-      code_challenge_method: 'S256',
-      code_challenge: codeChallenge,
+      nonce: Math.random().toString(36).substring(2, 15),
     });
 
     const authUrl = `${this.discovery.authorizationEndpoint}?${authParams}`;
@@ -157,11 +153,7 @@ class GoogleAuthService {
     console.log('[GoogleAuth] Redirect via:', redirectUri);
     console.log('[GoogleAuth] Listening for deep link:', expectedPrefix);
 
-    // Set up a Linking listener as fallback.
-    // Chrome Custom Tabs on Android often don't intercept custom-scheme
-    // redirects from HTML pages — the deep link opens the app via Android's
-    // intent system instead, which openAuthSessionAsync misses (returns 'dismiss').
-    // The Linking listener catches it.
+    // Set up Linking listener as fallback for Android deep link
     let deepLinkUrl = null;
     const linkingPromise = new Promise((resolve) => {
       const handler = (event) => {
@@ -172,46 +164,30 @@ class GoogleAuthService {
           resolve(url);
         }
       };
-      // Add listener
       const subscription = Linking.addEventListener('url', handler);
-      // Store cleanup
-      this._linkingCleanup = () => {
-        subscription?.remove?.();
-      };
-      // Timeout after 120s
+      this._linkingCleanup = () => { subscription?.remove?.(); };
       setTimeout(() => resolve(null), 120000);
     });
 
     // Open browser
     const result = await WebBrowser.openAuthSessionAsync(authUrl, expectedPrefix);
-
     console.log('[GoogleAuth] openAuthSessionAsync result:', result.type);
 
     let authCallbackUrl = null;
 
     if (result.type === 'success' && result.url) {
-      // openAuthSessionAsync caught the redirect directly (ideal case)
       authCallbackUrl = result.url;
-      console.log('[GoogleAuth] Got URL from openAuthSessionAsync:', authCallbackUrl);
     } else if (result.type === 'dismiss' || result.type === 'cancel') {
-      // Custom Tab was closed — check if Linking caught the deep link
-      // Wait a short moment for the Linking event to fire
       console.log('[GoogleAuth] Custom Tab closed, waiting for Linking fallback...');
       const linkedUrl = deepLinkUrl || await Promise.race([
         linkingPromise,
         new Promise((r) => setTimeout(() => r(null), 3000)),
       ]);
-
       if (linkedUrl) {
         authCallbackUrl = linkedUrl;
-        console.log('[GoogleAuth] Got URL from Linking fallback:', authCallbackUrl);
       } else {
-        // Neither caught it — user actually cancelled
-        console.log('[GoogleAuth] No deep link received, user cancelled');
         this._linkingCleanup?.();
-        if (result.type === 'cancel') {
-          return { success: false, error: 'User cancelled', cancelled: true };
-        }
+        if (result.type === 'cancel') return { success: false, error: 'User cancelled', cancelled: true };
         return { success: false, error: 'Authentication popup was closed', dismissed: true };
       }
     } else {
@@ -219,31 +195,29 @@ class GoogleAuthService {
       return this._handleNonSuccess(result);
     }
 
-    // Cleanup Linking listener
     this._linkingCleanup?.();
 
-    // Extract code from the callback URL
+    // The HTML page passes tokens as query params:
+    // scheme://auth/callback?access_token=...&id_token=...&state=...
     const queryString = authCallbackUrl.split('?')[1];
     const params = this._parseQueryString(queryString);
-    const code = params['code'];
+    const accessToken = params['access_token'];
+    const idToken = params['id_token'];
 
-    if (!code) {
-      console.error('[GoogleAuth] No code in redirect URL:', authCallbackUrl);
-      throw new Error('No authorization code received from Google');
+    if (!accessToken) {
+      console.error('[GoogleAuth] No access_token in redirect URL:', authCallbackUrl);
+      throw new Error('No access token received from Google');
     }
 
-    console.log('[GoogleAuth] Got authorization code, exchanging for tokens...');
-
-    // Exchange the code for tokens
-    const tokens = await this._exchangeCodeForTokens(code, codeVerifier, redirectUri, clientId);
-    const userInfo = await this.getUserInfo(tokens.access_token);
+    console.log('[GoogleAuth] Got access token, fetching user info...');
+    const userInfo = await this.getUserInfo(accessToken);
 
     return {
       success: true,
       data: {
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token || null,
-        idToken: tokens.id_token || null,
+        accessToken,
+        refreshToken: null,
+        idToken: idToken || null,
         user: userInfo,
       },
     };
