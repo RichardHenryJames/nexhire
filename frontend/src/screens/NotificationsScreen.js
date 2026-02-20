@@ -116,21 +116,7 @@ export default function NotificationsScreen() {
     fetchNotifications(1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ⚡ Skip focus on first mount (mount useEffect already fetches)
-  const isInitialMountRef = useRef(true);
-
-  // Refresh on tab focus
-  useFocusEffect(
-    useCallback(() => {
-      // ⚡ Skip first focus (mount useEffect already fetched)
-      if (isInitialMountRef.current) { isInitialMountRef.current = false; return; }
-      // ⚡ Defer until animation completes
-      const task = InteractionManager.runAfterInteractions(() => {
-        fetchNotifications(1);
-      });
-      return () => task.cancel();
-    }, [])
-  );
+  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
 
   const onRefresh = () => {
     setRefreshing(true);
