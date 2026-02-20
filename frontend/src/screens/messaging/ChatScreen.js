@@ -18,6 +18,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import ScreenWrapper from '../../components/ScreenWrapper';
 import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
+import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import useResponsive from '../../hooks/useResponsive';
@@ -216,6 +217,7 @@ export default function ChatScreen({
   const route = useRoute();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { refreshUnreadCount } = useUnreadMessages();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const flatListRef = useRef(null);
@@ -324,6 +326,8 @@ export default function ChatScreen({
     const markAsReadOnOpen = async () => {
       try {
         await messagingApi.markConversationAsRead(conversationId);
+        // ⚡ Immediately update the header badge (don't wait for 10s poll)
+        refreshUnreadCount();
         if (isMounted) {
           setMessages((prev) =>
             prev.map((msg) => ({
