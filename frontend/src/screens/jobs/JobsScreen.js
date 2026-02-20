@@ -20,6 +20,7 @@ import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
+import { getCached, hasCached, setCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Ad configuration - Google AdSense
 const AD_CONFIG = {
@@ -248,8 +249,8 @@ export default function JobsScreen({ navigation, route }) {
     return unsubscribe;
   }, [navigation, filterF500]);
 
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState(() => getCached(CACHE_KEYS.JOBS_LIST) || []);
+  const [loading, setLoading] = useState(!hasCached(CACHE_KEYS.JOBS_LIST));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
@@ -433,9 +434,9 @@ export default function JobsScreen({ navigation, route }) {
 
   useEffect(() => { loadPrimaryResume(); }, [loadPrimaryResume]);
 
-  const [jobTypes, setJobTypes] = useState([]);
-  const [workplaceTypes, setWorkplaceTypes] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
+  const [jobTypes, setJobTypes] = useState(() => getCached(CACHE_KEYS.JOBS_JOB_TYPES) || []);
+  const [workplaceTypes, setWorkplaceTypes] = useState(() => getCached(CACHE_KEYS.JOBS_WORKPLACE_TYPES) || []);
+  const [currencies, setCurrencies] = useState(() => getCached(CACHE_KEYS.JOBS_CURRENCIES) || []);
   const [companies, setCompanies] = useState([]);
 
   // Smart filter toggle
@@ -685,6 +686,7 @@ export default function JobsScreen({ navigation, route }) {
                 Type: item.Value
               }));
               setJobTypes(transformedJobTypes);
+              setCache(CACHE_KEYS.JOBS_JOB_TYPES, transformedJobTypes);
             }
             // Transform WorkplaceType data
             if (refData.data.WorkplaceType) {
@@ -693,9 +695,13 @@ export default function JobsScreen({ navigation, route }) {
                 Type: item.Value
               }));
               setWorkplaceTypes(transformedWorkplaceTypes);
+              setCache(CACHE_KEYS.JOBS_WORKPLACE_TYPES, transformedWorkplaceTypes);
             }
           }
-          if (cur?.success) setCurrencies(cur.data);
+          if (cur?.success) {
+            setCurrencies(cur.data);
+            setCache(CACHE_KEYS.JOBS_CURRENCIES, cur.data);
+          }
         } catch (e) {
           console.warn('Failed to load reference data:', e.message);
         }
@@ -764,7 +770,10 @@ export default function JobsScreen({ navigation, route }) {
 
     const run = async () => {
       try {
-        setLoading(true);
+        // ⚡ Only show loading spinner if no cache exists (first ever load)
+        if (!hasCached(CACHE_KEYS.JOBS_LIST) || isFiltersDirty(filters) || debouncedQuery || filterF500) {
+          setLoading(true);
+        }
         const apiFilters = {};
         if (filters.location) apiFilters.location = filters.location;
 if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
@@ -840,6 +849,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
               }
               
        setJobs(list);
+       // ⚡ Cache the initial unfiltered job list for instant next render
+       if (!debouncedQuery && !isFiltersDirty(filters) && !filterF500) {
+         setCache(CACHE_KEYS.JOBS_LIST, list);
+       }
   const meta = result.meta || {};
           setPagination(prev => {
             const nextPageSize = meta.pageSize || prev.pageSize;
