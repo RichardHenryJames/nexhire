@@ -558,25 +558,7 @@ export default function JobsScreen({ navigation, route }) {
     })();
   }, []);
 
-  // ⚡ Skip focus listener on first mount (mount useEffect already fetches)
-  const isInitialMountRef = useRef(true);
-
-  // 🔧 Refresh applications + resume when screen comes into focus
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      // ⚡ Skip first focus (mount useEffect already fetched)
-      if (isInitialMountRef.current) { isInitialMountRef.current = false; return; }
-      // ⚡ Defer until navigation animation completes — prevents API calls from blocking tab switch
-      InteractionManager.runAfterInteractions(() => {
-        refreshApplicationsData();
-        // Always re-check resume so uploads from Settings are picked up immediately
-        primaryResumeLoadedRef.current = false;
-        loadPrimaryResume();
-      });
-    });
-
-    return unsubscribe;
-  }, [navigation, refreshApplicationsData, loadPrimaryResume]);
+  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
 
   // Load referral data (deferred 100ms)
   useEffect(() => {

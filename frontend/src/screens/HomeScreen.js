@@ -60,8 +60,7 @@ const [f500LogoScrollRef] = useState(useRef(null));
 const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
 const scrollIntervalRef = useRef(null);
 
-// ⚡ Skip focus listener on first mount (mount useEffect already fetches)
-  const isInitialMountRef = useRef(true);
+
 
 // 🎯 NEW: Loading state for navigating to verify referrer
 const [navigatingToVerify, setNavigatingToVerify] = useState(false);
@@ -314,18 +313,7 @@ const [dashboardData, setDashboardData] = useState({
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      // ⚡ Skip first focus (mount useEffect already fetched)
-      if (isInitialMountRef.current) { isInitialMountRef.current = false; return; }
-      // ⚡ Defer until navigation animation completes — prevents 8 parallel API calls from blocking UI
-      InteractionManager.runAfterInteractions(() => {
-        fetchDashboardData();
-      });
-    });
-
-    return unsubscribe;
-  }, [navigation, fetchDashboardData]);
+  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
 
   // ✅ NEW: Scroll to top when navigating to HomeScreen
   useFocusEffect(

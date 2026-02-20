@@ -163,21 +163,7 @@ function ConversationsScreenMobile() {
     loadConversations();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ⚡ Skip focus on first mount (mount useEffect already fetches)
-  const isInitialMountRef = useRef(true);
-
-  // Refresh whenever the screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      // ⚡ Skip first focus (mount useEffect already fetched)
-      if (isInitialMountRef.current) { isInitialMountRef.current = false; return; }
-      // ⚡ Defer until animation completes
-      const task = InteractionManager.runAfterInteractions(() => {
-        loadConversations();
-      });
-      return () => task.cancel();
-    }, [loadConversations])
-  );
+  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
 
   // Refresh handler
   const onRefresh = useCallback(() => {
