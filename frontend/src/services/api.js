@@ -1011,7 +1011,12 @@ class RefOpenAPI {
   }
 
   // NEW: Reference data APIs for registration flow
+  // ⚡ CACHED: College list per country rarely changes. Keyed by country.
   async getColleges(country = 'India', searchName = '') {
+    // Only cache full-list fetches (no search)
+    const isFullList = !searchName;
+    const cacheKey = `colleges_${country}`;
+    if (isFullList && this._collegesCache?.[cacheKey]) return this._collegesCache[cacheKey];
     try {
       // Build query parameters for the external API
       const params = new URLSearchParams();
@@ -1019,7 +1024,12 @@ class RefOpenAPI {
       if (searchName) params.append('name', searchName);
       
       const endpoint = `/reference/colleges${params.toString() ? `?${params.toString()}` : ''}`;
-      return await this.apiCall(endpoint);
+      const result = await this.apiCall(endpoint);
+      if (isFullList && result?.success) {
+        if (!this._collegesCache) this._collegesCache = {};
+        this._collegesCache[cacheKey] = result;
+      }
+      return result;
     } catch (error) {
       console.warn('Failed to load colleges:', error.message);
       
@@ -1209,9 +1219,13 @@ class RefOpenAPI {
   }
 
   // NEW: Get countries for education screen
+  // ⚡ CACHED: Country list never changes
   async getCountries() {
+    if (this._countriesCache) return this._countriesCache;
     try {
-      return await this.apiCall('/reference/countries');
+      const result = await this.apiCall('/reference/countries');
+      if (result?.success) this._countriesCache = result;
+      return result;
     } catch (error) {
       console.warn('Failed to load countries:', error.message);
       // Return fallback data with proper flags
@@ -1347,9 +1361,13 @@ class RefOpenAPI {
   }
 
   // ✨ NEW: Salary Components API for new salary structure
+  // ⚡ CACHED: Salary component types never change
   async getSalaryComponents() {
+    if (this._salaryComponentsCache) return this._salaryComponentsCache;
     try {
-      return await this.apiCall('/reference/salary-components');
+      const result = await this.apiCall('/reference/salary-components');
+      if (result?.success) this._salaryComponentsCache = result;
+      return result;
     } catch (error) {
       console.warn('Failed to load salary components:', error.message);
       // Return fallback data
