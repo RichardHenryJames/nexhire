@@ -465,22 +465,9 @@ newErrors.jobTitle = 'Job title is required when company is selected';
       const result = await register(registrationData);
       
       if (result.success) {
-        Alert.alert(
-          'Success', 
-          isGoogleUser 
-            ? 'Your Google account has been linked successfully! Welcome to RefOpen!'
-            : 'Account created successfully! Welcome to RefOpen!',
-          [
-            { 
-              text: 'Get Started', 
-              onPress: () => {
-                // FIXED: No manual navigation needed!
-                // The AuthContext will automatically handle navigation
-                // when isAuthenticated becomes true after successful registration
-              }
-            }
-          ]
-        );
+        // AuthContext will automatically navigate to Main when
+        // isAuthenticated becomes true after successful registration.
+        // No Alert popup needed — it blocks the auto-navigation on native.
 
         // Clear pending Google auth data
         if (isGoogleUser) {
