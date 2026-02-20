@@ -254,11 +254,11 @@ export default function LoginScreen({ navigation }) {
         
       } else {
         console.error('? Google Sign-In failed:', result.error);
-        showToast("Not your fault! We're working on it. Try again soon. ✨", 'error');
+        showToast(result.error || 'Google Sign-In failed', 'error');
       }
     } catch (error) {
       console.error('Google Sign-In error:', error);
-      showToast("Not your fault! We're working on it. Try again soon. ✨", 'error');
+      showToast(error.message || 'Google Sign-In failed', 'error');
     } finally {
       setGoogleLoading(false);
     }
