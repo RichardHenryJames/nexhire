@@ -123,10 +123,13 @@ export default function LoginScreen({ navigation }) {
     }
   }, []);
 
-  // Check auth state when screen mounts or comes into focus
+  // On web, re-check auth state when screen mounts (handles logged in on another tab).
+  // On native, skip this — it triggers global loading which unmounts the navigator
+  // and causes the sign-in screen to flicker.
   useEffect(() => {
-    // Re-check auth state when screen mounts (handles case where logged in on another tab)
-    checkAuthState();
+    if (Platform.OS === 'web') {
+      checkAuthState();
+    }
   }, []);
 
   // Redirect to home if already authenticated (after loading completes)
@@ -153,8 +156,11 @@ export default function LoginScreen({ navigation }) {
     const unsubscribeFocus = navigation.addListener('focus', () => {
       setLoginError(''); // Clear local login error on focus
       clearError();
-      // Re-check auth state when screen comes into focus
-      checkAuthState();
+      // On web, re-check auth state on focus (handles multi-tab login).
+      // On native, skip — it causes the sign-in screen to flicker.
+      if (Platform.OS === 'web') {
+        checkAuthState();
+      }
     });
     
     return () => {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications, clearPushToken } from '../services/pushNotifications';
@@ -90,6 +90,11 @@ export const AuthProvider = ({ children }) => {
     return loadPendingGoogleAuthFromStorage();
   });
 
+  // Track whether the initial auth check has completed
+  // After the first check, subsequent checkAuthState calls should NOT toggle global loading
+  // to prevent the navigator from unmounting (which causes sign-in screen flicker)
+  const initialLoadDone = useRef(false);
+
   // Wrapper to sync with storage (sessionStorage on web, AsyncStorage on native)
   const setPendingGoogleAuth = (data) => {
     setPendingGoogleAuthState(data);
@@ -155,7 +160,13 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthState = async () => {
     try {
-      setLoading(true);
+      // Only show the full-screen loading spinner on the very first auth check.
+      // Subsequent calls (e.g., from LoginScreen mount/focus) must NOT toggle
+      // global loading, because that unmounts the entire navigator and causes
+      // the sign-in screen to flicker on native.
+      if (!initialLoadDone.current) {
+        setLoading(true);
+      }
       // Check if user has valid token
       const token = await refopenAPI.getToken('refopen_token');
       
@@ -189,6 +200,7 @@ export const AuthProvider = ({ children }) => {
       // The user will see the login screen anyway
       setError(null);
     } finally {
+      initialLoadDone.current = true;
       setLoading(false);
     }
   };
