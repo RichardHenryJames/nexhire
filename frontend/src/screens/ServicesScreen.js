@@ -247,7 +247,11 @@ export default function ServicesScreen({ navigation }) {
   // Refresh on focus
   useFocusEffect(
     useCallback(() => {
-      fetchInterests();
+      // ⚡ Defer until animation completes
+      const task = InteractionManager.runAfterInteractions(() => {
+        fetchInterests();
+      });
+      return () => task.cancel();
     }, [fetchInterests])
   );
 

@@ -122,7 +122,11 @@ export default function NotificationsScreen() {
   // Refresh on tab focus
   useFocusEffect(
     useCallback(() => {
-      fetchNotifications(1);
+      // ⚡ Defer until animation completes
+      const task = InteractionManager.runAfterInteractions(() => {
+        fetchNotifications(1);
+      });
+      return () => task.cancel();
     }, [])
   );
 

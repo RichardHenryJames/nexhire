@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet, InteractionManager } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -546,7 +546,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // Load saved job IDs (needed for bookmark icon state)
   useEffect(() => {
-    (async () => {
+    const task = InteractionManager.runAfterInteractions(async () => {
       try {
         const r = await refopenAPI.getMySavedJobs(1, 500);
         if (r?.success) {
@@ -555,16 +555,20 @@ export default function JobsScreen({ navigation, route }) {
           setSavedCount(Number(r.meta?.total || r.data?.length || 0));
         }
       } catch {}
-    })();
+    });
+    return () => task.cancel();
   }, []);
 
   // 🔧 Refresh applications + resume when screen comes into focus
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      refreshApplicationsData();
-      // Always re-check resume so uploads from Settings are picked up immediately
-      primaryResumeLoadedRef.current = false;
-      loadPrimaryResume();
+      // ⚡ Defer until navigation animation completes — prevents API calls from blocking tab switch
+      InteractionManager.runAfterInteractions(() => {
+        refreshApplicationsData();
+        // Always re-check resume so uploads from Settings are picked up immediately
+        primaryResumeLoadedRef.current = false;
+        loadPrimaryResume();
+      });
     });
 
     return unsubscribe;
