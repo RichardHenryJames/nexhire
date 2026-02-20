@@ -80,11 +80,17 @@ class GoogleAuthService {
       const clientId = this.getClientId();
 
       // Create redirect URI
-      const redirectUri = AuthSession.makeRedirectUri({ 
-        scheme: undefined,
-        useProxy: false
+      // On native, use Expo's auth proxy (https://auth.expo.io) so the Web-type
+      // Google client ID works. Custom scheme redirects are blocked by Google
+      // for Web client types (Error 400: invalid_request).
+      const useProxy = Platform.OS !== 'web';
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: Platform.OS !== 'web' ? 'com.refopen.app.staging' : undefined,
+        useProxy,
+        projectNameForProxy: '@parimalkumar/refopen',
       });
 
+      console.log('Google OAuth redirect URI:', redirectUri);
 
       // Manual OAuth URL construction without PKCE
       const authParams = new URLSearchParams({
@@ -97,10 +103,13 @@ class GoogleAuthService {
       });
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${authParams.toString()}`;
-      
 
-      // FIXED: Use WebBrowser.openAuthSessionAsync instead of AuthSession.startAsync
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      // Use WebBrowser.openAuthSessionAsync with proxy on native
+      const result = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        redirectUri,
+        { useProxy }
+      );
 
 
       if (result.type === 'success') {
