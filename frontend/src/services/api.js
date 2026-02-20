@@ -1556,7 +1556,9 @@ class RefOpenAPI {
       if (!mimeType || typeof mimeType !== 'string') {
         throw new Error('Invalid MIME type');
       }
-      if (!userId || typeof userId !== 'string') {
+      // Convert to string in case userId is a number
+      userId = String(userId);
+      if (!userId || userId === 'undefined' || userId === 'null') {
         throw new Error('Invalid user ID');
       }
       if (!resumeLabel || typeof resumeLabel !== 'string') {
