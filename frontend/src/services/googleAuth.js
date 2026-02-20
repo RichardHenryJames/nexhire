@@ -12,16 +12,11 @@ WebBrowser.maybeCompleteAuthSession();
  * GoogleAuthService
  *
  * Handles Google OAuth sign-in on all platforms:
- *   • Web:     implicit flow (token in URL fragment) — works with Web client ID
- *   • Native:  authorization-code + PKCE flow through auth.expo.io proxy —
- *              uses the Web client ID because expo-auth-session is browser-based.
- *              The auth.expo.io proxy relays the ?code= query param back to the
- *              app via deep link (com.refopen.app://expo-auth-session?code=...).
- *
- * IMPORTANT: The original code used response_type=token (implicit) on native,
- * which broke auth.expo.io because tokens arrive in the URL #fragment which
- * the server never receives. Authorization-code flow puts the code in the
- * ?query string, which auth.expo.io CAN relay.
+ *   • Web:     implicit flow (token in URL fragment) — works directly
+ *   • Native:  authorization-code + PKCE flow through refopen.com redirect page.
+ *              Google redirects to https://www.refopen.com/google-auth-callback.html?code=...
+ *              That HTML page deep-links back into the app: com.refopen.app://auth/callback?code=...
+ *              The app then exchanges the code for tokens using PKCE (no client secret needed).
  */
 class GoogleAuthService {
   constructor() {
@@ -128,14 +123,13 @@ class GoogleAuthService {
     return this._handleNonSuccess(result);
   }
 
-  // Native: authorization-code + PKCE through auth.expo.io
-  // auth.expo.io receives ?code=... (query string) and deep-links back to the app
+  // Native: authorization-code + PKCE through refopen.com redirect page
+  // Flow: App → Chrome → Google OAuth → refopen.com/google-auth-callback.html → deep link back to app
   async _signInNative(clientId) {
-    // The auth.expo.io proxy URL (already registered as an HTTPS redirect URI
-    // in the Web-type Google OAuth client)
-    const proxyRedirectUri = `https://auth.expo.io/@${Constants.expoConfig?.owner || 'parimalkumar'}/${Constants.expoConfig?.slug || 'refopen'}`;
+    // Your own HTTPS redirect page — registered in Google Console as a redirect URI
+    const redirectUri = 'https://www.refopen.com/google-auth-callback.html';
 
-    // The app's deep link scheme — auth.expo.io redirects here
+    // The app's deep link scheme — the HTML page redirects here with the code
     const appScheme = Constants.expoConfig?.scheme || 'com.refopen.app';
 
     // Generate PKCE code verifier + challenge
@@ -144,8 +138,8 @@ class GoogleAuthService {
 
     const authParams = new URLSearchParams({
       client_id: clientId,
-      redirect_uri: proxyRedirectUri,        // HTTPS URL registered in Google Console
-      response_type: 'code',                 // Auth-code flow (NOT implicit!)
+      redirect_uri: redirectUri,
+      response_type: 'code',
       scope: 'openid profile email',
       prompt: 'select_account',
       state: Math.random().toString(36).substring(2, 15),
@@ -155,18 +149,17 @@ class GoogleAuthService {
 
     const authUrl = `${this.discovery.authorizationEndpoint}?${authParams.toString()}`;
 
-    console.log('[GoogleAuth] Native redirect via:', proxyRedirectUri);
-    console.log('[GoogleAuth] Listening for deep link:', `${appScheme}://`);
+    console.log('[GoogleAuth] Redirect via:', redirectUri);
+    console.log('[GoogleAuth] Listening for deep link:', `${appScheme}://auth/callback`);
 
-    // Open browser — listen for the deep link from auth.expo.io (NOT the proxy URL)
+    // Open browser — listen for the deep link from google-auth-callback.html
     const result = await WebBrowser.openAuthSessionAsync(
       authUrl,
-      `${appScheme}://`
-      // No useProxy flag — deprecated in SDK 49+
+      `${appScheme}://auth/callback`
     );
 
     if (result.type === 'success') {
-      // auth.expo.io deep-links: com.refopen.app://expo-auth-session?code=...&state=...
+      // The HTML page deep-links: com.refopen.app://auth/callback?code=...&state=...
       const queryString = result.url.split('?')[1];
       const params = queryString ? new URLSearchParams(queryString) : new URLSearchParams();
       const code = params.get('code');
@@ -176,8 +169,8 @@ class GoogleAuthService {
         throw new Error('No authorization code received from Google');
       }
 
-      // Exchange the code for tokens
-      const tokens = await this._exchangeCodeForTokens(code, codeVerifier, proxyRedirectUri, clientId);
+      // Exchange the code for tokens (uses PKCE, no client secret needed)
+      const tokens = await this._exchangeCodeForTokens(code, codeVerifier, redirectUri, clientId);
       const userInfo = await this.getUserInfo(tokens.access_token);
 
       return {
