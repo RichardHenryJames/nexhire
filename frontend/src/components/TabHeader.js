@@ -44,6 +44,7 @@ export default function TabHeader({
   showWallet = false,
   walletBalance = null,
   onProfilePress,
+  onProfileSliderOpen,
   navigation: navProp = null,
 }) {
   const navigation = navProp || useNavigation();
@@ -67,6 +68,8 @@ export default function TabHeader({
     if (onProfilePress) {
       onProfilePress();
     } else {
+      // Notify parent to abort heavy API calls (ProfileSlider needs network priority)
+      if (onProfileSliderOpen) onProfileSliderOpen();
       setProfileSliderVisible(true);
     }
   };
