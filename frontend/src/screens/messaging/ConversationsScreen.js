@@ -69,10 +69,17 @@ function ConversationsScreenMobile() {
   // Refs to prevent duplicate load-more triggers (like JobsScreen)
   const isLoadingMoreRef = useRef(false);
   const lastLoadedPageRef = useRef(0);
+  
+  // ⚡ Staleness check: only re-fetch if data is older than 30s
+  const lastFetchTimeRef = useRef(0);
+  const FETCH_STALENESS_MS = 30000;
 
   // Load conversations
   const loadConversations = useCallback(async () => {
     try {
+      // ⚡ Record fetch time for staleness checks
+      lastFetchTimeRef.current = Date.now();
+      
       // Reset pagination refs for fresh load
       lastLoadedPageRef.current = 0;
       isLoadingMoreRef.current = false;
@@ -157,10 +164,13 @@ function ConversationsScreenMobile() {
     }
   }, [pagination.hasMore, pagination.page, pagination.pageSize]);
 
-  // Refresh whenever the screen comes into focus (also handles initial load)
+  // Refresh whenever the screen comes into focus (only if data is stale)
   useFocusEffect(
     useCallback(() => {
-      loadConversations();
+      const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
+      if (timeSinceLastFetch > FETCH_STALENESS_MS) {
+        loadConversations();
+      }
  }, [loadConversations])
   );
 
