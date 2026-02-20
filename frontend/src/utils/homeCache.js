@@ -39,6 +39,7 @@ export const CACHE_KEYS = {
   JOBS_WORKPLACE_TYPES: 'jobs_workplace_types',
   JOBS_CURRENCIES: 'jobs_currencies',
   JOBS_SAVED_IDS: 'jobs_saved_ids',
+  JOBS_COMPANIES: 'jobs_companies',
 };
 
 /**
