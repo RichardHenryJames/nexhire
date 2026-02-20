@@ -62,7 +62,7 @@ class FrontendConfigService {
           ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
           : getEnvVar('googleClientIdWeb', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB'),
         androidClientId: shouldForceProd
-          ? '179542785325-usj0c06r20nk94lc1ahcfs5pu5alf1i4.apps.googleusercontent.com'
+          ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
           : getEnvVar('googleClientIdAndroid', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID'),
         iosClientId: shouldForceProd
           ? '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'
