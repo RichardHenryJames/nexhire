@@ -16,6 +16,7 @@ import {
   Switch,
   Modal,
   StyleSheet,
+  PanResponder,
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -40,6 +41,34 @@ export default function ProfileSlider({ visible, onClose }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
   const [pendingReferralCount, setPendingReferralCount] = useState(0);
+
+  // ⚡ Swipe-to-close: drag the panel left to dismiss (like LinkedIn)
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dx < -10 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dx < 0) {
+          slideAnim.setValue(gs.dx);
+          overlayAnim.setValue(1 + gs.dx / SLIDER_WIDTH);
+        }
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx < -(SLIDER_WIDTH * 0.3) || gs.vx < -0.5) {
+          Animated.parallel([
+            Animated.timing(slideAnim, { toValue: -SLIDER_WIDTH, duration: 200, useNativeDriver: true }),
+            Animated.timing(overlayAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+          ]).start(() => { setMounted(false); onClose(); });
+        } else {
+          Animated.parallel([
+            Animated.spring(slideAnim, { toValue: 0, useNativeDriver: true, bounciness: 5 }),
+            Animated.spring(overlayAnim, { toValue: 1, useNativeDriver: true, bounciness: 5 }),
+          ]).start();
+        }
+      },
+    })
+  ).current;
 
   useEffect(() => {
     if (visible) {
@@ -321,8 +350,9 @@ export default function ProfileSlider({ visible, onClose }) {
         />
       </Animated.View>
 
-      {/* Slider Panel */}
+      {/* Slider Panel — swipe left to close */}
       <Animated.View
+        {...panResponder.panHandlers}
         style={{
           position: 'absolute',
           top: 0,
