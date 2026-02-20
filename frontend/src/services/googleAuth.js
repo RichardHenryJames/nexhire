@@ -1,7 +1,7 @@
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import * as Crypto from 'expo-crypto';
-import { Platform } from 'react-native';
+import { Platform, Linking } from 'react-native';
 import Constants from 'expo-constants';
 import { frontendConfig } from '../config/appConfig';
 
@@ -95,7 +95,7 @@ class GoogleAuthService {
   async _signInWeb(clientId) {
     const redirectUri = AuthSession.makeRedirectUri({ scheme: undefined });
 
-    const authParams = new URLSearchParams({
+    const authParams = this._buildQueryString({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'token',
@@ -104,14 +104,14 @@ class GoogleAuthService {
       state: Math.random().toString(36).substring(2, 15),
     });
 
-    const authUrl = `${this.discovery.authorizationEndpoint}?${authParams.toString()}`;
+    const authUrl = `${this.discovery.authorizationEndpoint}?${authParams}`;
     const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
 
     if (result.type === 'success') {
       const urlParts = result.url.split('#')[1] || result.url.split('?')[1];
-      const params = urlParts ? new URLSearchParams(urlParts) : new URLSearchParams();
-      const accessToken = params.get('access_token');
-      const idToken = params.get('id_token');
+      const params = this._parseQueryString(urlParts);
+      const accessToken = params['access_token'];
+      const idToken = params['id_token'];
       if (!accessToken) throw new Error('No access token received from Google');
 
       const userInfo = await this.getUserInfo(accessToken);
@@ -126,26 +126,21 @@ class GoogleAuthService {
   // Native: authorization-code + PKCE through refopen.com redirect page
   // Flow: App → Chrome → Google OAuth → refopen.com/google-auth-callback.html → deep link back to app
   async _signInNative(clientId) {
-    // Your own HTTPS redirect page — registered in Google Console as a redirect URI
     const redirectUri = 'https://www.refopen.com/google-auth-callback.html';
-
-    // The app's deep link scheme — the HTML page redirects here with the code
     const appScheme = Constants.expoConfig?.scheme || 'com.refopen.app';
 
-    // Generate PKCE code verifier + challenge
+    // Generate PKCE
     const codeVerifier = this._generateCodeVerifier();
     const codeChallenge = await this._generateCodeChallenge(codeVerifier);
 
-    // Encode the app scheme into the state param so the redirect HTML page
-    // knows which deep link scheme to use (com.refopen.app vs com.refopen.app.dev etc.)
+    // Encode app scheme in state so the HTML page knows where to deep-link
     const statePayload = JSON.stringify({
       nonce: Math.random().toString(36).substring(2, 15),
       scheme: appScheme,
     });
-    // Base64url-encode (safe for URL query string)
     const stateEncoded = this._base64UrlEncode(statePayload);
 
-    const authParams = new URLSearchParams({
+    const authParams = this._buildQueryString({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
@@ -156,43 +151,102 @@ class GoogleAuthService {
       code_challenge: codeChallenge,
     });
 
-    const authUrl = `${this.discovery.authorizationEndpoint}?${authParams.toString()}`;
+    const authUrl = `${this.discovery.authorizationEndpoint}?${authParams}`;
+    const expectedPrefix = `${appScheme}://auth/callback`;
 
     console.log('[GoogleAuth] Redirect via:', redirectUri);
-    console.log('[GoogleAuth] Listening for deep link:', `${appScheme}://auth/callback`);
+    console.log('[GoogleAuth] Listening for deep link:', expectedPrefix);
 
-    // Open browser — listen for the deep link from google-auth-callback.html
-    const result = await WebBrowser.openAuthSessionAsync(
-      authUrl,
-      `${appScheme}://auth/callback`
-    );
-
-    if (result.type === 'success') {
-      // The HTML page deep-links: com.refopen.app://auth/callback?code=...&state=...
-      const queryString = result.url.split('?')[1];
-      const params = queryString ? new URLSearchParams(queryString) : new URLSearchParams();
-      const code = params.get('code');
-
-      if (!code) {
-        console.error('[GoogleAuth] No code in redirect URL:', result.url);
-        throw new Error('No authorization code received from Google');
-      }
-
-      // Exchange the code for tokens (uses PKCE, no client secret needed)
-      const tokens = await this._exchangeCodeForTokens(code, codeVerifier, redirectUri, clientId);
-      const userInfo = await this.getUserInfo(tokens.access_token);
-
-      return {
-        success: true,
-        data: {
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || null,
-          idToken: tokens.id_token || null,
-          user: userInfo,
-        },
+    // Set up a Linking listener as fallback.
+    // Chrome Custom Tabs on Android often don't intercept custom-scheme
+    // redirects from HTML pages — the deep link opens the app via Android's
+    // intent system instead, which openAuthSessionAsync misses (returns 'dismiss').
+    // The Linking listener catches it.
+    let deepLinkUrl = null;
+    const linkingPromise = new Promise((resolve) => {
+      const handler = (event) => {
+        const url = event.url || event;
+        if (url && url.startsWith(expectedPrefix)) {
+          console.log('[GoogleAuth] Caught deep link via Linking:', url);
+          deepLinkUrl = url;
+          resolve(url);
+        }
       };
+      // Add listener
+      const subscription = Linking.addEventListener('url', handler);
+      // Store cleanup
+      this._linkingCleanup = () => {
+        subscription?.remove?.();
+      };
+      // Timeout after 120s
+      setTimeout(() => resolve(null), 120000);
+    });
+
+    // Open browser
+    const result = await WebBrowser.openAuthSessionAsync(authUrl, expectedPrefix);
+
+    console.log('[GoogleAuth] openAuthSessionAsync result:', result.type);
+
+    let authCallbackUrl = null;
+
+    if (result.type === 'success' && result.url) {
+      // openAuthSessionAsync caught the redirect directly (ideal case)
+      authCallbackUrl = result.url;
+      console.log('[GoogleAuth] Got URL from openAuthSessionAsync:', authCallbackUrl);
+    } else if (result.type === 'dismiss' || result.type === 'cancel') {
+      // Custom Tab was closed — check if Linking caught the deep link
+      // Wait a short moment for the Linking event to fire
+      console.log('[GoogleAuth] Custom Tab closed, waiting for Linking fallback...');
+      const linkedUrl = deepLinkUrl || await Promise.race([
+        linkingPromise,
+        new Promise((r) => setTimeout(() => r(null), 3000)),
+      ]);
+
+      if (linkedUrl) {
+        authCallbackUrl = linkedUrl;
+        console.log('[GoogleAuth] Got URL from Linking fallback:', authCallbackUrl);
+      } else {
+        // Neither caught it — user actually cancelled
+        console.log('[GoogleAuth] No deep link received, user cancelled');
+        this._linkingCleanup?.();
+        if (result.type === 'cancel') {
+          return { success: false, error: 'User cancelled', cancelled: true };
+        }
+        return { success: false, error: 'Authentication popup was closed', dismissed: true };
+      }
+    } else {
+      this._linkingCleanup?.();
+      return this._handleNonSuccess(result);
     }
-    return this._handleNonSuccess(result);
+
+    // Cleanup Linking listener
+    this._linkingCleanup?.();
+
+    // Extract code from the callback URL
+    const queryString = authCallbackUrl.split('?')[1];
+    const params = this._parseQueryString(queryString);
+    const code = params['code'];
+
+    if (!code) {
+      console.error('[GoogleAuth] No code in redirect URL:', authCallbackUrl);
+      throw new Error('No authorization code received from Google');
+    }
+
+    console.log('[GoogleAuth] Got authorization code, exchanging for tokens...');
+
+    // Exchange the code for tokens
+    const tokens = await this._exchangeCodeForTokens(code, codeVerifier, redirectUri, clientId);
+    const userInfo = await this.getUserInfo(tokens.access_token);
+
+    return {
+      success: true,
+      data: {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token || null,
+        idToken: tokens.id_token || null,
+        user: userInfo,
+      },
+    };
   }
 
   _handleNonSuccess(result) {
@@ -245,17 +299,34 @@ class GoogleAuthService {
     return result.replace(/\+/g, '-').replace(/\//g, '_');
   }
 
+  // Hermes-safe query string helpers (URLSearchParams is not fully implemented in Hermes)
+  _buildQueryString(params) {
+    return Object.entries(params)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&');
+  }
+
+  _parseQueryString(qs) {
+    const result = {};
+    if (!qs) return result;
+    qs.split('&').forEach((pair) => {
+      const [key, ...rest] = pair.split('=');
+      if (key) result[decodeURIComponent(key)] = decodeURIComponent(rest.join('='));
+    });
+    return result;
+  }
+
   async _exchangeCodeForTokens(code, codeVerifier, redirectUri, clientId) {
     const response = await fetch(this.discovery.tokenEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
+      body: this._buildQueryString({
         client_id: clientId,
         code,
         code_verifier: codeVerifier,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
-      }).toString(),
+      }),
     });
     const data = await response.json();
     if (!response.ok) {

@@ -303,7 +303,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   }, [user, isJobSeeker, navigation, primaryResume, loadPrimaryResume, quickReferral]);
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       {/* AI Premium Header - Modern indigo/violet gradient matching new design system */}
       <LinearGradient
         colors={['#030712', '#0F172A', '#1E1B4B']}
@@ -448,7 +448,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         )}
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
@@ -518,6 +518,7 @@ loadingText: {
 },
 scrollView: {
   flex: 1,
+  ...(Platform.OS === 'web' ? { overflow: 'auto' } : {}),
 },
 scrollContent: {
   padding: 12,
