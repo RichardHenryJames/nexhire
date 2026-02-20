@@ -542,7 +542,8 @@ export default function JobsScreen({ navigation, route }) {
     }
   }, []);
 
-  // ⚡ Applied IDs loaded via refreshApplicationsData() on focus — no duplicate mount call
+  // Load applied IDs on mount (needed for FAB badge + bookmark state)
+  useEffect(() => { refreshApplicationsData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load saved job IDs (needed for bookmark icon state)
   useEffect(() => {
