@@ -308,12 +308,9 @@ const [dashboardData, setDashboardData] = useState({
 
   }, [isJobSeeker, isEmployer, user]);
 
-  // ⚡ Defer initial fetch until after navigation animation completes
+  // Initial data fetch on mount
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      fetchDashboardData();
-    });
-    return () => task.cancel();
+    fetchDashboardData();
   }, [fetchDashboardData]);
 
   useEffect(() => {

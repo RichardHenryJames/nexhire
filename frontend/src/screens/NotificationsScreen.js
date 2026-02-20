@@ -111,12 +111,9 @@ export default function NotificationsScreen() {
     }
   }, []);
 
-  // ⚡ Prefetch on mount (deferred so HomeScreen renders first)
+  // Load notifications on mount
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      fetchNotifications(1);
-    });
-    return () => task.cancel();
+    fetchNotifications(1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh on tab focus

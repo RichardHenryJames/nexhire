@@ -546,7 +546,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // Load saved job IDs (needed for bookmark icon state)
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(async () => {
+    (async () => {
       try {
         const r = await refopenAPI.getMySavedJobs(1, 500);
         if (r?.success) {
@@ -555,8 +555,7 @@ export default function JobsScreen({ navigation, route }) {
           setSavedCount(Number(r.meta?.total || r.data?.length || 0));
         }
       } catch {}
-    });
-    return () => task.cancel();
+    })();
   }, []);
 
   // 🔧 Refresh applications + resume when screen comes into focus
