@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Google from 'expo-auth-session/providers/google';
 import { registerForPushNotifications, clearPushToken } from '../services/pushNotifications';
 import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
-import { frontendConfig } from '../config/appConfig';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
 import { getAndClearRedirectRoute, navigateToRoute } from '../navigation/navigationRef';
 import { warmHomeCache, clearHomeCache } from '../utils/homeCache';
@@ -97,32 +95,6 @@ export const AuthProvider = ({ children }) => {
   // After the first check, subsequent checkAuthState calls should NOT toggle global loading
   // to prevent the navigator from unmounting (which causes sign-in screen flicker)
   const initialLoadDone = useRef(false);
-
-  // ---------- Google Auth Hook (official expo-auth-session/providers/google) ----------
-  // Uses platform-specific OAuth client IDs:
-  //   - Web:     "Web application" type client ID  (HTTPS redirect — works out of the box)
-  //   - Android: "Android" type client ID           (uses package name + SHA-1, no redirect URI registration needed)
-  //   - iOS:     "iOS" type client ID               (uses bundle ID, no redirect URI registration needed)
-  const clientIds = googleAuth.getClientIds();
-  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    webClientId: clientIds.webClientId,
-    androidClientId: clientIds.androidClientId,
-    iosClientId: clientIds.iosClientId,
-    scopes: ['openid', 'profile', 'email'],
-    selectAccount: true,
-  });
-
-  // Promise bridge: lets the imperative loginWithGoogle() await the hook's async response
-  const googleResolverRef = useRef(null);
-
-  useEffect(() => {
-    if (!googleResponse) return;
-    const resolver = googleResolverRef.current;
-    if (resolver) {
-      googleResolverRef.current = null;
-      resolver(googleResponse);
-    }
-  }, [googleResponse]);
 
   // Wrapper to sync with storage (sessionStorage on web, AsyncStorage on native)
   const setPendingGoogleAuth = (data) => {
@@ -260,73 +232,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Google Sign-In Flow — uses the official Google.useAuthRequest() hook.
-  // The hook handles redirect URIs, PKCE, and token exchange per-platform.
+  // Google Sign-In Flow — delegates to googleAuth.signIn() which handles
+  // platform differences (implicit flow on web, auth-code+PKCE on native).
   const loginWithGoogle = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Pre-flight checks
-      if (!frontendConfig.isFeatureEnabled('googleSignIn')) {
-        return { success: false, error: 'Google Sign-In is disabled', featureDisabled: true };
-      }
-      if (!googleRequest) {
-        console.warn('Google OAuth not ready — request is null (missing client ID?)');
-        return { success: false, error: 'Google Sign-In not configured yet.', needsConfig: true };
-      }
+      const googleResult = await googleAuth.signIn();
 
-      // Step 1: Trigger the Google auth prompt and wait for the response
-      //         via the promise bridge (googleResolverRef ↔ useEffect on googleResponse).
-      const response = await new Promise((resolve) => {
-        googleResolverRef.current = resolve;
-        googlePromptAsync().catch((err) => {
-          googleResolverRef.current = null;
-          resolve({ type: 'error', error: err });
-        });
-      });
-
-      // Handle non-success results
-      if (response.type === 'cancel') {
-        return { success: false, cancelled: true, message: 'Google Sign-In was cancelled' };
-      }
-      if (response.type === 'dismiss') {
-        return { success: false, dismissed: true, message: 'Authentication popup was closed' };
-      }
-      if (response.type !== 'success') {
-        console.error('Google auth failed:', response);
-        throw new Error('Google authentication failed');
+      if (!googleResult.success) {
+        if (googleResult.cancelled) return { success: false, cancelled: true, message: 'Google Sign-In was cancelled' };
+        if (googleResult.dismissed) return { success: false, dismissed: true, message: 'Authentication popup was closed' };
+        if (googleResult.needsConfig) return { success: false, error: googleResult.error, needsConfig: true };
+        if (googleResult.featureDisabled) return { success: false, error: googleResult.error, featureDisabled: true };
+        throw new Error(googleResult.error || 'Google authentication failed');
       }
 
-      // Step 2: Extract tokens.
-      //   • On web (implicit flow):  response.authentication has accessToken
-      //   • On native (code flow):   response.authentication has accessToken after auto-exchange
-      //   • Fallback: parse access_token / id_token from response.params
-      const accessToken =
-        response.authentication?.accessToken ||
-        response.params?.access_token;
-      const idToken =
-        response.authentication?.idToken ||
-        response.params?.id_token;
-
-      if (!accessToken) {
-        console.error('No access token in Google response:', response);
-        throw new Error('No access token received from Google');
-      }
-
-      // Step 3: Fetch Google profile
-      const userInfo = await googleAuth.getUserInfo(accessToken);
-
-      const googleData = {
-        accessToken,
-        refreshToken: response.authentication?.refreshToken || null,
-        idToken: idToken || null,
-        user: userInfo,
-      };
-
-      // Step 4: Try to login with existing backend account
+      // Try to login with existing backend account
       try {
-        const loginResult = await refopenAPI.loginWithGoogle(googleData);
+        const loginResult = await refopenAPI.loginWithGoogle(googleResult.data);
 
         if (loginResult.success) {
           setUser(loginResult.data.user);
@@ -335,11 +260,11 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (loginResult.needsRegistration) {
-          setPendingGoogleAuth(googleData);
+          setPendingGoogleAuth(googleResult.data);
           return {
             success: false,
             needsRegistration: true,
-            googleUser: googleData.user,
+            googleUser: googleResult.data.user,
             message: 'New user needs to complete registration',
           };
         }
@@ -350,11 +275,11 @@ export const AuthProvider = ({ children }) => {
           loginError.message.includes('not found') ||
           loginError.message.includes('USER_NOT_FOUND')
         ) {
-          setPendingGoogleAuth(googleData);
+          setPendingGoogleAuth(googleResult.data);
           return {
             success: false,
             needsRegistration: true,
-            googleUser: googleData.user,
+            googleUser: googleResult.data.user,
             message: 'New user needs to complete registration',
           };
         }

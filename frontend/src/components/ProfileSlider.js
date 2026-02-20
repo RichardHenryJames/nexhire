@@ -689,7 +689,7 @@ export default function ProfileSlider({ visible, onClose }) {
             </Text>
           </TouchableOpacity>
 
-          {/* App Version */}
+          {/* App Version with flag */}
           <View style={{
             paddingVertical: 16,
             alignItems: 'center',
@@ -698,7 +698,7 @@ export default function ProfileSlider({ visible, onClose }) {
               fontSize: 11,
               color: colors.textSecondary + '80',
             }}>
-              RefOpen v{Constants.expoConfig?.extra?.appVersion}
+              RefOpen v{Constants.expoConfig?.extra?.appVersion} 🇮🇳
             </Text>
           </View>
         </ScrollView>
