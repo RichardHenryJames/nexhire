@@ -136,13 +136,22 @@ class GoogleAuthService {
     const codeVerifier = this._generateCodeVerifier();
     const codeChallenge = await this._generateCodeChallenge(codeVerifier);
 
+    // Encode the app scheme into the state param so the redirect HTML page
+    // knows which deep link scheme to use (com.refopen.app vs com.refopen.app.dev etc.)
+    const statePayload = JSON.stringify({
+      nonce: Math.random().toString(36).substring(2, 15),
+      scheme: appScheme,
+    });
+    // Base64url-encode (safe for URL query string)
+    const stateEncoded = this._base64UrlEncode(statePayload);
+
     const authParams = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
       response_type: 'code',
       scope: 'openid profile email',
       prompt: 'select_account',
-      state: Math.random().toString(36).substring(2, 15),
+      state: stateEncoded,
       code_challenge_method: 'S256',
       code_challenge: codeChallenge,
     });
@@ -213,6 +222,27 @@ class GoogleAuthService {
       { encoding: Crypto.CryptoEncoding.BASE64 }
     );
     return digest.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  _base64UrlEncode(str) {
+    // Manual base64url encoding that works in Hermes
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    let result = '';
+    const bytes = [];
+    for (let i = 0; i < str.length; i++) {
+      bytes.push(str.charCodeAt(i));
+    }
+    for (let i = 0; i < bytes.length; i += 3) {
+      const b0 = bytes[i];
+      const b1 = i + 1 < bytes.length ? bytes[i + 1] : 0;
+      const b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
+      result += chars[b0 >> 2];
+      result += chars[((b0 & 3) << 4) | (b1 >> 4)];
+      result += i + 1 < bytes.length ? chars[((b1 & 15) << 2) | (b2 >> 6)] : '';
+      result += i + 2 < bytes.length ? chars[b2 & 63] : '';
+    }
+    // Convert to base64url
+    return result.replace(/\+/g, '-').replace(/\//g, '_');
   }
 
   async _exchangeCodeForTokens(code, codeVerifier, redirectUri, clientId) {

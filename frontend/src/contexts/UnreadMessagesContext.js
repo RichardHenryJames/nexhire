@@ -30,7 +30,9 @@ export function UnreadMessagesProvider({ children }) {
     try {
       const res = await refopenAPI.apiCall('/messages/unread-count');
       if (res.success) {
-        setUnreadCount(res.data?.count || 0);
+        // Backend returns { TotalUnread, UnreadConversations } or { count }
+        const count = res.data?.TotalUnread ?? res.data?.UnreadConversations ?? res.data?.count ?? 0;
+        setUnreadCount(count);
       }
     } catch (e) {
       // Silently fail
