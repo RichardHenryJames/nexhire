@@ -87,7 +87,7 @@ class GoogleAuthService {
       }
     } catch (error) {
       console.error('Google Sign-In error:', error);
-      return { success: false, error: "Not your fault! We're working on it. Try again soon. ✨" };
+      return { success: false, error: `Google Sign-In failed: ${error.message || error}` };
     }
   }
 
@@ -197,8 +197,13 @@ class GoogleAuthService {
 
   _generateCodeVerifier() {
     const randomBytes = Crypto.getRandomBytes(32);
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(randomBytes)));
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    // Use manual base64url encoding (btoa may not be available in Hermes)
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    let result = '';
+    for (let i = 0; i < randomBytes.length; i++) {
+      result += chars[randomBytes[i] % chars.length];
+    }
+    return result;
   }
 
   async _generateCodeChallenge(verifier) {
