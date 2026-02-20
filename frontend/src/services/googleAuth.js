@@ -83,12 +83,12 @@ class GoogleAuthService {
       // On native, use Expo's auth proxy (https://auth.expo.io) so the Web-type
       // Google client ID works. Custom scheme redirects are blocked by Google
       // for Web client types (Error 400: invalid_request).
+      // NOTE: makeRedirectUri({ useProxy: true }) is deprecated in SDK 49 and
+      // silently generates a custom scheme URI, so we hardcode the proxy URL.
       const useProxy = Platform.OS !== 'web';
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: Platform.OS !== 'web' ? 'com.refopen.app.staging' : undefined,
-        useProxy,
-        projectNameForProxy: '@parimalkumar/refopen',
-      });
+      const redirectUri = Platform.OS === 'web'
+        ? AuthSession.makeRedirectUri({ scheme: undefined })
+        : 'https://auth.expo.io/@parimalkumar/refopen';
 
       console.log('Google OAuth redirect URI:', redirectUri);
 
