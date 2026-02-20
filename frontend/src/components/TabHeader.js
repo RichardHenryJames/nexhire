@@ -16,7 +16,7 @@
  *  - navigation: navigation object (optional, falls back to useNavigation)
  */
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -31,7 +31,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useFocusEffect } from '@react-navigation/native';
 import { useUnreadMessages } from '../contexts/UnreadMessagesContext';
 import ProfileSlider from './ProfileSlider';
 import { HEADER_CONTAINER_BASE, HEADER_TITLE } from './headerStyles';
@@ -72,14 +71,8 @@ export default function TabHeader({
 
   const profilePhotoUrl = user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
 
-  // Refresh unread count on focus (uses shared context — deduped, throttled)
-  useFocusEffect(
-    useCallback(() => {
-      if (showMessages) {
-        refreshUnreadCount();
-      }
-    }, [showMessages, refreshUnreadCount])
-  );
+  // ⚡ Message badge updates via polling in UnreadMessagesContext (10s interval)
+  // No focus listener needed — polling handles it globally.
 
   const handleProfilePress = () => {
     if (onProfilePress) {

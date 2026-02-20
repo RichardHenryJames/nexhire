@@ -84,8 +84,10 @@ export default function NotificationsScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchNotifications = useCallback(async (pageNum = 1, append = false) => {
-    if (pageNum === 1 && !append) setLoading(true);
+  const isMountedRef = useRef(false);
+
+  const fetchNotifications = useCallback(async (pageNum = 1, append = false, silent = false) => {
+    if (pageNum === 1 && !append && !silent) setLoading(true);
     else if (append) setLoadingMore(true);
 
     try {
@@ -110,16 +112,18 @@ export default function NotificationsScreen() {
     }
   }, []);
 
-  // Load notifications on mount
+  // Load notifications on mount (with loading spinner)
   useEffect(() => {
     fetchNotifications(1);
+    isMountedRef.current = true;
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ⚡ Refetch on tab focus — since lazy:false, component mounts once at startup.
-  // Without this, user taps Notifications tab and sees stale data from boot.
+  // ⚡ Silently refetch on tab focus — no loading spinner, data swaps in
   useFocusEffect(
     useCallback(() => {
-      fetchNotifications(1);
+      if (isMountedRef.current) {
+        fetchNotifications(1, false, true); // silent=true
+      }
     }, [fetchNotifications])
   );
 

@@ -698,7 +698,7 @@ export default function ProfileSlider({ visible, onClose }) {
               fontSize: 11,
               color: colors.textSecondary + '80',
             }}>
-              RefOpen v{Constants.expoConfig?.extra?.appVersion || '1.0.7'}
+              RefOpen v{Constants.expoConfig?.extra?.appVersion || '1.0.8'}
             </Text>
           </View>
         </ScrollView>
