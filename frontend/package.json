@@ -74,7 +74,8 @@
     "react-native-screens": "~3.22.0",
     "react-native-svg": "^13.9.0",
     "react-native-web": "~0.19.6",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "expo-updates": "~0.18.19"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^1.1.7",
