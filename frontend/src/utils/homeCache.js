@@ -24,6 +24,7 @@ const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes — show cached data without 
 
 // Cache keys
 export const CACHE_KEYS = {
+  // HomeScreen
   DASHBOARD_STATS: 'dashboard_stats',
   RECENT_JOBS: 'recent_jobs',
   F500_JOBS: 'f500_jobs',
@@ -32,6 +33,12 @@ export const CACHE_KEYS = {
   SOCIAL_CLAIMS: 'social_claims',
   WALLET_BALANCE: 'wallet_balance',
   REFERRER_REQUESTS: 'referrer_requests',
+  // JobsScreen
+  JOBS_LIST: 'jobs_list',
+  JOBS_JOB_TYPES: 'jobs_job_types',
+  JOBS_WORKPLACE_TYPES: 'jobs_workplace_types',
+  JOBS_CURRENCIES: 'jobs_currencies',
+  JOBS_SAVED_IDS: 'jobs_saved_ids',
 };
 
 /**
