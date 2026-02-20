@@ -14,6 +14,7 @@ import {
   FlatList,
   Animated,
   Modal,
+  InteractionManager,
 } from 'react-native';
 import AddWorkExperienceModal from '../components/profile/AddWorkExperienceModal';
 import VerifiedReferrerOverlay from '../components/VerifiedReferrerOverlay';
@@ -59,9 +60,7 @@ const [f500LogoScrollRef] = useState(useRef(null));
 const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
 const scrollIntervalRef = useRef(null);
 
-// ⚡ Throttle: track last fetch time to avoid refetching on every tab switch
-const lastFetchTimeRef = useRef(0);
-const FETCH_STALENESS_MS = 30000; // 30 seconds
+// (staleness throttle removed — always refresh on focus for instant data)
 
 // 🎯 NEW: Loading state for navigating to verify referrer
 const [navigatingToVerify, setNavigatingToVerify] = useState(false);
@@ -144,9 +143,6 @@ const [dashboardData, setDashboardData] = useState({
   }, [searchQuery, searchOrganizations]);
 
   const fetchDashboardData = useCallback(async () => {
-    // ⚡ Record fetch time for staleness checks
-    lastFetchTimeRef.current = Date.now();
-
     // ⚡ Start all fetches in parallel for better performance
     
     // 1. Dashboard Stats
@@ -312,17 +308,17 @@ const [dashboardData, setDashboardData] = useState({
 
   }, [isJobSeeker, isEmployer, user]);
 
+  // ⚡ Defer initial fetch until after navigation animation completes
   useEffect(() => {
-    fetchDashboardData();
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchDashboardData();
+    });
+    return () => task.cancel();
   }, [fetchDashboardData]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      // ⚡ Only refetch if data is stale (older than 30s) to avoid lag on tab switch
-      const timeSinceLastFetch = Date.now() - lastFetchTimeRef.current;
-      if (timeSinceLastFetch > FETCH_STALENESS_MS) {
-        fetchDashboardData();
-      }
+      fetchDashboardData();
     });
 
     return unsubscribe;

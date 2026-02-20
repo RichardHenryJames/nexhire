@@ -426,4 +426,4 @@ const createStyles = (colors) => StyleSheet.create({
   applyText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
 });
 
-export default JobCard;
+export default React.memo(JobCard);
