@@ -131,12 +131,25 @@ class RefOpenAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
+      // If caller passed an external signal (e.g. navigation abort), forward its
+      // abort to our controller so fetch is cancelled immediately.
+      const externalSignal = options.signal;
+      let onExternalAbort;
+      if (externalSignal) {
+        if (externalSignal.aborted) { controller.abort(); }
+        else {
+          onExternalAbort = () => controller.abort();
+          externalSignal.addEventListener('abort', onExternalAbort);
+        }
+      }
+
       const response = await fetch(`${this.baseURL}${endpoint}`, {
         ...config,
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
+      if (externalSignal && onExternalAbort) externalSignal.removeEventListener('abort', onExternalAbort);
       
       const duration = Date.now() - startTime;
       this.logApiResponse(config.method, endpoint, response, duration);
@@ -163,6 +176,13 @@ class RefOpenAPI {
       const duration = Date.now() - startTime;
       
       if (error.name === 'AbortError') {
+        // Distinguish navigation-abort from timeout-abort
+        if (externalSignal && externalSignal.aborted) {
+          // Caller aborted (e.g. user navigated away) — re-throw as AbortError so caller can ignore silently
+          const abortErr = new Error('Request aborted');
+          abortErr.name = 'AbortError';
+          throw abortErr;
+        }
         console.error(`❌ API timeout (${this.timeout}ms): ${endpoint}`);
         throw new Error(`Request timeout (${this.timeout}ms)`);
       }
@@ -874,12 +894,12 @@ class RefOpenAPI {
     });
   }
 
-  async getMyApplications(page = 1, pageSize = 20) {
+  async getMyApplications(page = 1, pageSize = 20, fetchOptions = {}) {
     const params = new URLSearchParams({
       page: page.toString(),
       pageSize: pageSize.toString(),
     });
-    return this.apiCall(`/my/applications?${params}`);
+    return this.apiCall(`/my/applications?${params}`, fetchOptions);
   }
 
   async getJobApplications(jobId, page = 1, pageSize = 20) {
@@ -1212,7 +1232,7 @@ class RefOpenAPI {
       
       const startTime = performance.now();
       
-      const response = await this.apiCall(endpoint);
+      const response = await this.apiCall(endpoint, options.signal ? { signal: options.signal } : {});
       
       const duration = (performance.now() - startTime).toFixed(2);
       
@@ -2157,7 +2177,7 @@ if (!resumeId) {
   }
 
   // Get my requests as referrer
-  async getMyReferrerRequests(page = 1, pageSize = 20) {
+  async getMyReferrerRequests(page = 1, pageSize = 20, fetchOptions = {}) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     const params = new URLSearchParams({
@@ -2165,7 +2185,7 @@ if (!resumeId) {
       pageSize: pageSize.toString(),
     });
     
-    return this.apiCall(`/referral/my-referrer-requests?${params}`);
+    return this.apiCall(`/referral/my-referrer-requests?${params}`, fetchOptions);
   }
 
   // Get referral analytics
