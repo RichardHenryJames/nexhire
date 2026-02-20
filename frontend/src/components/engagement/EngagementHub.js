@@ -159,14 +159,8 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
     ]).start();
   }, []);
 
-  // Re-fetch profile completeness when user comes back to HomeScreen (e.g. from Settings)
-  useEffect(() => {
-    if (!navigation) return;
-    const unsubscribe = navigation.addListener('focus', () => {
-      fetchProfileCompleteness();
-    });
-    return unsubscribe;
-  }, [navigation]);
+  // ⚡ PERF: Focus listener REMOVED — fetchProfileCompleteness was firing an API call
+  // on every Home tab focus. Profile data changes rarely; loaded on mount is enough.
 
   // Fetch real profile completeness from backend
   const fetchProfileCompleteness = async () => {
