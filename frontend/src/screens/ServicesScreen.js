@@ -236,12 +236,9 @@ export default function ServicesScreen({ navigation }) {
     }
   }, []);
 
-  // ⚡ Prefetch on mount (deferred so HomeScreen renders first)
+  // Load interests on mount
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      fetchInterests();
-    });
-    return () => task.cancel();
+    fetchInterests();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh on focus

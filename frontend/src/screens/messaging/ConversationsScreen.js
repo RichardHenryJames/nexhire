@@ -158,12 +158,9 @@ function ConversationsScreenMobile() {
     }
   }, [pagination.hasMore, pagination.page, pagination.pageSize]);
 
-  // ⚡ Prefetch on mount (deferred so HomeScreen renders first)
+  // Load conversations on mount
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      loadConversations();
-    });
-    return () => task.cancel();
+    loadConversations();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh whenever the screen comes into focus
