@@ -60,7 +60,8 @@ const [f500LogoScrollRef] = useState(useRef(null));
 const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
 const scrollIntervalRef = useRef(null);
 
-// (staleness throttle removed — always refresh on focus for instant data)
+// ⚡ Cooldown ref: prevents double-fetch on mount + rapid tab-switch spam
+  const lastFetchRef = useRef(0);
 
 // 🎯 NEW: Loading state for navigating to verify referrer
 const [navigatingToVerify, setNavigatingToVerify] = useState(false);
@@ -143,6 +144,9 @@ const [dashboardData, setDashboardData] = useState({
   }, [searchQuery, searchOrganizations]);
 
   const fetchDashboardData = useCallback(async () => {
+    // ⚡ Record fetch time for cooldown
+    lastFetchRef.current = Date.now();
+    
     // ⚡ Start all fetches in parallel for better performance
     
     // 1. Dashboard Stats
@@ -315,6 +319,8 @@ const [dashboardData, setDashboardData] = useState({
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
+      // ⚡ Skip if data was fetched < 10s ago (prevents double-fetch on mount + rapid tab switching)
+      if (Date.now() - lastFetchRef.current < 10000) return;
       // ⚡ Defer until navigation animation completes — prevents 8 parallel API calls from blocking UI
       InteractionManager.runAfterInteractions(() => {
         fetchDashboardData();

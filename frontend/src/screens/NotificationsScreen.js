@@ -116,11 +116,17 @@ export default function NotificationsScreen() {
     fetchNotifications(1);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ⚡ Cooldown ref: prevents double-fetch on mount + rapid tab-switch spam
+  const lastFetchRef = useRef(Date.now());
+
   // Refresh on tab focus
   useFocusEffect(
     useCallback(() => {
+      // ⚡ Skip if fetched < 10s ago (prevents double-fetch on mount + rapid tab switching)
+      if (Date.now() - lastFetchRef.current < 10000) return;
       // ⚡ Defer until animation completes
       const task = InteractionManager.runAfterInteractions(() => {
+        lastFetchRef.current = Date.now();
         fetchNotifications(1);
       });
       return () => task.cancel();
