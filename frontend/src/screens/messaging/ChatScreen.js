@@ -1100,6 +1100,7 @@ export default function ChatScreen({
       )}
 
       <FlatList
+        style={{ flex: 1 }}
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}

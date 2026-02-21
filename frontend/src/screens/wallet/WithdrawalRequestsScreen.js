@@ -184,6 +184,7 @@ export default function WithdrawalRequestsScreen({ navigation }) {
           </View>
         ) : (
           <FlatList
+            style={{ flex: 1 }}
             data={withdrawals}
             renderItem={renderWithdrawal}
             keyExtractor={(item) => item.WithdrawalID}

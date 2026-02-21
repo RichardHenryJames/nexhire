@@ -283,6 +283,7 @@ export default function WalletScreen({ navigation, route }) {
         </View>
 
         <FlatList
+          style={{ flex: 1 }}
           data={transactions.slice(0, 5)}
           renderItem={renderTransaction}
           keyExtractor={(item) => item.TransactionID}

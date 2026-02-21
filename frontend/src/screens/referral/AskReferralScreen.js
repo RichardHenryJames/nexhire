@@ -21,6 +21,7 @@ import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal'; // ✅ NEW: Import ResumeUploadModal
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
@@ -28,7 +29,6 @@ import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 import TabHeader from '../../components/TabHeader';
 import CachedImage from '../../components/CachedImage';
-import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker, isAuthenticated } = useAuth();
@@ -522,6 +522,8 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
         
         showToast(message, 'success');
         invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
+
+        // Update local wallet balance to available balance
         if (availableBalance !== undefined) {
           setWalletBalance(availableBalance);
         }

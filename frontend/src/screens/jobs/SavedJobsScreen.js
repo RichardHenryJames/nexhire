@@ -211,6 +211,7 @@ const SavedJobsScreen = ({ navigation }) => {
       <View style={styles.innerContainer}>
         {/* Job list */}
         <FlatList
+          style={{ flex: 1 }}
           data={savedJobs}
           renderItem={renderJobCard}
           keyExtractor={(item) => `saved-${item.JobID}`}
