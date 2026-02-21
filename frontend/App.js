@@ -2,6 +2,22 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, View, AppState } from 'react-native';
+
+// Web layout: inject BEFORE first render so ScrollView/FlatList get bounded height.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const s = document.createElement('style');
+  s.id = 'refopen-web-layout';
+  s.textContent = `
+    html, body, #root { height: 100dvh; margin: 0; padding: 0; }
+    @supports not (height: 100dvh) { html, body, #root { height: 100vh; } }
+    #root { display: flex; flex-direction: column; overflow: hidden; }
+    #root div { min-height: 0; }
+    * { scrollbar-width: none; -ms-overflow-style: none; }
+    *::-webkit-scrollbar { display: none; }
+  `;
+  document.head.appendChild(s);
+}
+
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
@@ -224,47 +240,14 @@ function ThemedAppRoot() {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
 
-    // Always use dark background for web to match auth screens
+    // Only theme-dependent background — layout CSS is injected synchronously above
     const darkBackground = '#0F172A';
     const fallbackGradient = `linear-gradient(135deg, ${darkBackground}, #1E293B, ${darkBackground})`;
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;
-    // Use fixed height (not minHeight) so flex:1 chain resolves properly
-    // and the bottom tab bar stays at the viewport bottom — not pushed below.
-    // dvh accounts for mobile browser chrome (address bar).
-    document.documentElement.style.height = '100dvh';
-    document.body.style.height = '100dvh';
-    document.body.style.margin = '0';
-
     const root = document.getElementById('root');
-    if (root) {
-      root.style.height = '100dvh';
-      root.style.display = 'flex';
-      root.style.flexDirection = 'column';
-      root.style.overflow = 'hidden';
-      root.style.background = fallbackGradient;
-    }
-
-    // Hide scrollbars globally but allow scrolling inside scroll containers
-    const style = document.createElement('style');
-    style.textContent = `
-      @supports not (height: 100dvh) {
-        html, body, #root { height: 100vh !important; }
-      }
-      * {
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE and Edge */
-      }
-      *::-webkit-scrollbar {
-        display: none; /* Chrome, Safari, Opera */
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
+    if (root) root.style.background = fallbackGradient;
   }, [colors, isDark]);
 
   return (
