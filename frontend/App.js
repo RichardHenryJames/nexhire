@@ -22,25 +22,19 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const styleEl = document.createElement('style');
   styleEl.id = 'refopen-layout-critical';
   styleEl.textContent = `
-    html, body, #root {
-      height: 100dvh !important;
+    html, body {
       margin: 0 !important;
       padding: 0 !important;
+      height: 100% !important;
+    }
+    #root {
+      height: 100dvh !important;
+      display: flex !important;
+      flex-direction: column !important;
       overflow: hidden !important;
     }
     @supports not (height: 100dvh) {
-      html, body, #root { height: 100vh !important; }
-    }
-    #root {
-      display: flex !important;
-      flex-direction: column !important;
-    }
-    #root > div {
-      display: flex !important;
-      flex-direction: column !important;
-      flex: 1 !important;
-      min-height: 0 !important;
-      overflow: hidden !important;
+      #root { height: 100vh !important; }
     }
     * { scrollbar-width: none; -ms-overflow-style: none; }
     *::-webkit-scrollbar { display: none; }
@@ -326,11 +320,16 @@ function ThemedAppRoot() {
 }
 
 export default function App() {
+  // GestureHandlerRootView is required on native for @react-navigation/stack gestures.
+  // On web, it intercepts pointer/touch events and kills ScrollView/FlatList scrolling.
+  // Master branch never had it — scrolling worked. Adding it for native broke web scroll.
+  const Wrapper = Platform.OS === 'web' ? View : GestureHandlerRootView;
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <Wrapper style={{ flex: 1 }}>
       <ThemeProvider>
         <ThemedAppRoot />
       </ThemeProvider>
-    </GestureHandlerRootView>
+    </Wrapper>
   );
 }
