@@ -234,6 +234,7 @@ export default function WalletTransactionsScreen({ navigation }) {
       <SubScreenHeader title="Transaction History" directBack="Wallet" />
       <View style={styles.innerContainer}>
         <FlatList
+          style={{ flex: 1 }}
           data={transactions}
           renderItem={renderTransaction}
           keyExtractor={(item) => item.TransactionID}
@@ -266,6 +267,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
+    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   centerContainer: {
     flex: 1,

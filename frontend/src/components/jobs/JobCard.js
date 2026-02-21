@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import CachedImage from '../CachedImage';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -88,7 +89,7 @@ const JobCard = ({
           {/* 🏢 Company Logo */}
           <View style={styles.logoContainer}>
             {logo ? (
-              <Image 
+              <CachedImage 
                 source={{ uri: logo }} 
                 style={styles.logo}
                 

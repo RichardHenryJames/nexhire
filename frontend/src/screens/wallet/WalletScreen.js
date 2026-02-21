@@ -283,6 +283,7 @@ export default function WalletScreen({ navigation, route }) {
         </View>
 
         <FlatList
+          style={{ flex: 1 }}
           data={transactions.slice(0, 5)}
           renderItem={renderTransaction}
           keyExtractor={(item) => item.TransactionID}
@@ -610,6 +611,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
+    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   centerContainer: {
     flex: 1,

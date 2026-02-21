@@ -9,13 +9,13 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from "@react-navigation/native";
 import ScreenWrapper from '../../components/ScreenWrapper';
+import CachedImage from '../../components/CachedImage';
 import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
 import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
@@ -56,7 +56,7 @@ const parseMessageContent = (content, isMine, colors) => {
     } else if (match[3]) {
       // Markdown image: ![alt](url) - render as inline image
       result.push(
-        <Image
+        <CachedImage
           key={`img-${match.index}`}
           source={{ uri: match[5] }}
           style={{ width: 16, height: 16, marginRight: 4 }}
@@ -1082,7 +1082,7 @@ export default function ChatScreen({
           {/* Profile Picture */}
           <View style={styles.profilePicture}>
             {otherUserProfile?.profilePictureUrl ? (
-              <Image
+              <CachedImage
                 source={{ uri: otherUserProfile.profilePictureUrl }}
                 style={styles.profileImage}
               />
@@ -1100,6 +1100,7 @@ export default function ChatScreen({
       )}
 
       <FlatList
+        style={{ flex: 1 }}
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
@@ -1193,6 +1194,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
       display: 'flex',
       flexDirection: 'column',
       minHeight: 0,
+      overflow: 'hidden',
     } : {}),
   },
   loadingContainer: {

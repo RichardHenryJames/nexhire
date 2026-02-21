@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
-  Image,
   Modal,
   Platform,
   InteractionManager,
@@ -18,6 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import CachedImage from '../../components/CachedImage';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
@@ -193,7 +193,7 @@ function ConversationsScreenMobile() {
         {/* Profile Picture */}
   <View style={styles.avatar}>
           {item.OtherUserProfilePic ? (
-     <Image
+     <CachedImage
           source={{ uri: item.OtherUserProfilePic }}
   style={styles.avatarImage}
     />
@@ -456,7 +456,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
                 >
                   <View style={styles.userResultAvatar}>
                     {item.ProfilePictureURL ? (
-                      <Image
+                      <CachedImage
                         source={{ uri: item.ProfilePictureURL }}
                         style={styles.userResultAvatarImage}
                       />

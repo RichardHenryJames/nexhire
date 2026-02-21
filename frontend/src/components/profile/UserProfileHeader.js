@@ -7,9 +7,9 @@ import {
   Alert, 
   ActivityIndicator,
   Platform,
-  Image,
   Modal
 } from 'react-native';
+import CachedImage from '../CachedImage';
 import { showToast } from '../Toast';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -589,7 +589,7 @@ export default function UserProfileHeader({
               >
                 <View style={styles.profileImageInner}>
                   {profile?.profilePictureURL ? (
-                    <Image 
+                    <CachedImage 
                       source={{ uri: profile.profilePictureURL }} 
                       style={styles.profileImage}
                     />
@@ -623,7 +623,7 @@ export default function UserProfileHeader({
               disabled={!onProfileUpdate}
             >
               {profile?.profilePictureURL ? (
-                <Image 
+                <CachedImage 
                   source={{ uri: profile.profilePictureURL }} 
                   style={styles.profileImageStandaloneImg}
                 />
@@ -671,7 +671,7 @@ export default function UserProfileHeader({
                 style={{ marginLeft: 6 }}
               >
                 {currentWorkLogo ? (
-                  <Image
+                  <CachedImage
                     source={{ uri: currentWorkLogo }}
                     style={{
                       width: 22,

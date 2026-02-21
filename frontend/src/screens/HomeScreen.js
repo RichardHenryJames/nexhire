@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
   Platform,
   Dimensions,
-  Image,
   TextInput,
   FlatList,
   Animated,
   Modal,
 } from 'react-native';
+import CachedImage from '../components/CachedImage';
 import AddWorkExperienceModal from '../components/profile/AddWorkExperienceModal';
 import VerifiedReferrerOverlay from '../components/VerifiedReferrerOverlay';
 import { Ionicons } from '@expo/vector-icons';
@@ -522,7 +522,7 @@ const [dashboardData, setDashboardData] = useState(() => {
                       }}
                     >
                       {item.logoURL ? (
-                        <Image 
+                        <CachedImage 
                           source={{ uri: item.logoURL }} 
                           style={styles.orgLogo}
                         />
@@ -730,7 +730,7 @@ const [dashboardData, setDashboardData] = useState(() => {
                                 {formatReferrerCount(company.referrerCount)}
                               </Text>
                             </View>
-                            <Image 
+                            <CachedImage 
                               source={{ uri: company.logoURL }} 
                               style={styles.f500Logo}
                               resizeMode="contain"

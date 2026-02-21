@@ -8,7 +8,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   Animated,
   Dimensions,
   Platform,
@@ -18,6 +17,7 @@ import {
   StyleSheet,
   PanResponder,
 } from 'react-native';
+import CachedImage from './CachedImage';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -404,7 +404,7 @@ export default function ProfileSlider({ visible, onClose }) {
               activeOpacity={0.8}
             >
               {profilePhotoUrl ? (
-                <Image
+                <CachedImage
                   source={{ uri: profilePhotoUrl }}
                   style={{
                     width: 64,
@@ -457,7 +457,7 @@ export default function ProfileSlider({ visible, onClose }) {
                   style={{ marginLeft: 6 }}
                 >
                   {(currentWork.LogoURL || currentWork.logoURL) ? (
-                    <Image
+                    <CachedImage
                       source={{ uri: currentWork.LogoURL || currentWork.logoURL }}
                       style={{
                         width: 22,
@@ -498,7 +498,7 @@ export default function ProfileSlider({ visible, onClose }) {
                 }}
               >
                 {(currentWork.LogoURL || currentWork.logoURL) ? (
-                  <Image
+                  <CachedImage
                     source={{ uri: currentWork.LogoURL || currentWork.logoURL }}
                     style={{
                       width: 24,

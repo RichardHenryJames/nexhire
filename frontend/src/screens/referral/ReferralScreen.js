@@ -7,7 +7,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Image,
   Platform,
   Linking,
 } from 'react-native';
@@ -22,6 +21,7 @@ import useResponsive from '../../hooks/useResponsive';
 import ViewReferralRequestModal from '../../components/ViewReferralRequestModal';
 import { showToast } from '../../components/Toast';
 import ProfileSlider from '../../components/ProfileSlider';
+import CachedImage from '../../components/CachedImage';
 import SubScreenHeader from '../../components/SubScreenHeader';
 
 export default function ReferralScreen({ navigation }) {
@@ -433,7 +433,7 @@ export default function ReferralScreen({ navigation }) {
             }
           >
             {applicantPhotoUrl ? (
-              <Image
+              <CachedImage
                 source={{ uri: applicantPhotoUrl }}
                 style={styles.personAvatar}
                 onError={() => {}}
@@ -769,6 +769,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
+    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   headerCompact: {
     flexDirection: 'row',
