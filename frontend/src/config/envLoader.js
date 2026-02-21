@@ -27,15 +27,15 @@ class EnvironmentLoader {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
       
-      if (hostname.includes('refopen.com') || hostname.includes('refopen.app')) {
+      if (hostname.includes('refopen.com') || hostname.includes('refopen.app') || hostname.includes('refopen-frontend-web')) {
         return 'production';
       }
       
-      if (hostname.includes('staging') || hostname.includes('test')) {
+      if (hostname.includes('staging') || hostname.includes('test') || hostname.includes('refopen-frontend-staging')) {
         return 'staging';
       }
       
-      if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+      if (hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('thankful-pebble') || hostname.includes('refopen-frontend-dev')) {
         return 'development';
       }
     }
@@ -62,7 +62,7 @@ class EnvironmentLoader {
     const configs = {
       development: {
         EXPO_PUBLIC_APP_ENV: 'development',
-        EXPO_PUBLIC_API_URL: 'http://localhost:7071/api',
+        EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:7071/api',
         EXPO_PUBLIC_DEBUG: 'true',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB: '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com',
         EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID: '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com',
