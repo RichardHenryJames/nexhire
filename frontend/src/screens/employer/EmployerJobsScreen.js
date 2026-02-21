@@ -10,9 +10,9 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import { createStyles as createJobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import useResponsive from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
-import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 /*
 EmployerJobsScreen

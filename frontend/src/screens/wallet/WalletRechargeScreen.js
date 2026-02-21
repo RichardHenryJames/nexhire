@@ -13,13 +13,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import { usePricing } from '../../contexts/PricingContext';
-import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Animated percentage badge with fill effect
 const BonusPercentBadge = ({ percent }) => {

@@ -20,10 +20,10 @@ import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 import ViewReferralRequestModal from '../../components/ViewReferralRequestModal';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import ProfileSlider from '../../components/ProfileSlider';
 import CachedImage from '../../components/CachedImage';
 import SubScreenHeader from '../../components/SubScreenHeader';
-import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 export default function ReferralScreen({ navigation }) {
   const { user, userId, isVerifiedReferrer, currentWork, loading: authLoading, refreshVerificationStatus } = useAuth();

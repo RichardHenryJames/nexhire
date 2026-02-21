@@ -25,9 +25,9 @@ import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import AdCard from '../../components/ads/AdCard';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
-import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Ad configuration - Google AdSense
 const AD_CONFIG = {
@@ -352,6 +352,8 @@ export default function ApplicationsScreen({ navigation }) {
           
           showToast(message, 'success');
           invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
+          
+          // 🔧 FIXED: Set the resume directly so next referral doesn't ask for upload
           setPrimaryResume(resumeData);
           await loadPrimaryResume();
         } else {
@@ -787,6 +789,7 @@ export default function ApplicationsScreen({ navigation }) {
         
         {/* Applications List */}
         <FlatList
+          style={{ flex: 1 }}
           data={applications}
           renderItem={({ item, index }) => (
             <>

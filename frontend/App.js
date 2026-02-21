@@ -3,21 +3,50 @@ import 'react-native-gesture-handler';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, View, AppState } from 'react-native';
 
-// Web layout: inject BEFORE first render so ScrollView/FlatList get bounded height.
+/**
+ * CRITICAL: Inject layout CSS synchronously at module load time — BEFORE React renders.
+ *
+ * Without this, html/body/#root have no explicit height on the first render.
+ * The flex chain (root → GestureHandlerRootView → SafeAreaProvider → NavigationContainer
+ * → Stack card → Screen) breaks because flex: 1 children can't resolve their height
+ * when the root has no bounded height.
+ *
+ * Symptom: scrolling works if you navigate from Home → sub-screen (because Home's
+ * useEffect ran first and set the styles), but breaks on a direct page refresh to
+ * a sub-screen (styles aren't applied until after the first render → layout is
+ * already computed with unbounded height → ScrollView/FlatList won't scroll).
+ *
+ * This MUST run at import time, not in useEffect.
+ */
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const s = document.createElement('style');
-  s.id = 'refopen-web-layout';
-  s.textContent = `
-    html, body, #root { height: 100dvh; margin: 0; padding: 0; }
-    @supports not (height: 100dvh) { html, body, #root { height: 100vh; } }
-    #root { display: flex; flex-direction: column; overflow: hidden; }
-    #root div { min-height: 0; }
+  const styleEl = document.createElement('style');
+  styleEl.id = 'refopen-layout-critical';
+  styleEl.textContent = `
+    html, body, #root {
+      height: 100dvh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow: hidden !important;
+    }
+    @supports not (height: 100dvh) {
+      html, body, #root { height: 100vh !important; }
+    }
+    #root {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    #root > div {
+      display: flex !important;
+      flex-direction: column !important;
+      flex: 1 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
     * { scrollbar-width: none; -ms-overflow-style: none; }
     *::-webkit-scrollbar { display: none; }
   `;
-  document.head.appendChild(s);
+  document.head.appendChild(styleEl);
 }
-
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
@@ -240,14 +269,19 @@ function ThemedAppRoot() {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
 
-    // Only theme-dependent background — layout CSS is injected synchronously above
+    // Theme-dependent background color — only this needs to be in useEffect
+    // (layout-critical styles like height/flex/overflow are injected synchronously
+    // at module load time above, so they're available before the first render)
     const darkBackground = '#0F172A';
     const fallbackGradient = `linear-gradient(135deg, ${darkBackground}, #1E293B, ${darkBackground})`;
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;
+
     const root = document.getElementById('root');
-    if (root) root.style.background = fallbackGradient;
+    if (root) {
+      root.style.background = fallbackGradient;
+    }
   }, [colors, isDark]);
 
   return (
