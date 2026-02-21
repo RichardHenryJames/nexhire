@@ -8,6 +8,7 @@ import SubScreenHeader from '../../components/SubScreenHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 const SavedJobsScreen = ({ navigation }) => {
   const { colors } = useTheme();
@@ -137,6 +138,7 @@ const SavedJobsScreen = ({ navigation }) => {
         removeSavedJobLocally(id);
         // Show success message
         showToast('Job removed from saved', 'success');
+        invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
       } else {
         showToast('Failed to remove job from saved. Please try again.', 'error');
       }

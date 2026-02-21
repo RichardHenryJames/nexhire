@@ -19,6 +19,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import CachedImage from '../../components/CachedImage';
 import ScreenWrapper from '../../components/ScreenWrapper';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import { usePricing } from '../../contexts/PricingContext';
 import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
@@ -402,8 +403,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (result.success) {
         setHasApplied(true);
         showToast('Application submitted', 'success');
-        
-        // 🔧 REQUIREMENT 1: Redirect to Jobs screen with appliedJobId for proper refresh
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST);
         setTimeout(() => {
           navigation.navigate('Jobs', { 
             activeTab: 'openings', 
@@ -459,8 +459,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (res?.success) {
         setHasApplied(true);
         showToast('Application submitted', 'success');
-        
-        // 🔧 REQUIREMENT 1: Redirect to Jobs screen with appliedJobId for proper refresh
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST);
         setTimeout(() => {
           navigation.navigate('Jobs', { 
             activeTab: 'openings', 
@@ -490,8 +489,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (res?.success) {
         // Calculate broadcast time
         const broadcastTime = (Date.now() - startTime) / 1000;
-        
-        // 🎉 Store pending - will mark as referred when overlay closes
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
         setPendingReferralSuccess(true);
         
         // 🎉 Show fullscreen success overlay for 1 second
@@ -548,6 +546,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         if (result.success) {
           setIsSaved(false);
           showToast('Job removed from saved', 'success');
+          invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
         } else {
           showToast('Failed to remove job from saved', 'error');
         }
@@ -557,6 +556,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         if (result.success) {
           setIsSaved(true);
           showToast('Job saved successfully', 'success');
+          invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
         } else {
           showToast('Failed to save job', 'error');
         }
@@ -613,6 +613,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (result.success) {
         showToast('Job published successfully!', 'success');
         setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
+        invalidateCache(CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST, CACHE_KEYS.RECENT_JOBS);
         setTimeout(() => {
           navigation.navigate('MainTabs', {
             screen: 'Jobs',

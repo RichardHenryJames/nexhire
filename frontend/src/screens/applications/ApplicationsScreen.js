@@ -27,6 +27,7 @@ import AdCard from '../../components/ads/AdCard';
 import { showToast } from '../../components/Toast';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Ad configuration - Google AdSense
 const AD_CONFIG = {
@@ -350,8 +351,7 @@ export default function ApplicationsScreen({ navigation }) {
           }
           
           showToast(message, 'success');
-          
-          // 🔧 FIXED: Set the resume directly so next referral doesn't ask for upload
+          invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
           setPrimaryResume(resumeData);
           await loadPrimaryResume();
         } else {
@@ -408,6 +408,7 @@ export default function ApplicationsScreen({ navigation }) {
         }
         
         showToast(message, 'success');
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
       } else {
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
@@ -495,6 +496,7 @@ export default function ApplicationsScreen({ navigation }) {
         // Success! Clear rollback data
         optimisticWithdrawRollbackRef.current.delete(applicationId);
         showToast('Application withdrawn successfully', 'success');
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS);
       } else {
         console.error('❌ Withdraw API error:', res.error || res.message);
         throw new Error(res.error || res.message || 'Failed to withdraw application');

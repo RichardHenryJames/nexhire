@@ -23,6 +23,7 @@ import { showToast } from '../../components/Toast';
 import ProfileSlider from '../../components/ProfileSlider';
 import CachedImage from '../../components/CachedImage';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 export default function ReferralScreen({ navigation }) {
   const { user, userId, isVerifiedReferrer, currentWork, loading: authLoading, refreshVerificationStatus } = useAuth();
@@ -247,6 +248,7 @@ export default function ReferralScreen({ navigation }) {
         await loadData();
         
         showToast('Referral submitted successfully! 🎉', 'success');
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE);
       } else {
         throw new Error(result.error || 'Failed to submit referral');
       }
