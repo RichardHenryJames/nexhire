@@ -238,7 +238,6 @@ export default function WalletHoldsScreen({ navigation }) {
       <SubScreenHeader title="Wallet Holds" directBack="Wallet" />
       <View style={styles.innerContainer}>
         <FlatList
-          style={{ flex: 1 }}
           data={holds}
           keyExtractor={(item) => item.HoldID?.toString()}
           renderItem={renderHold}
@@ -268,7 +267,6 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     maxWidth: 700,
     width: '100%',
     alignSelf: 'center',
-    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   centerContainer: {
     flex: 1,

@@ -1100,7 +1100,6 @@ export default function ChatScreen({
       )}
 
       <FlatList
-        style={{ flex: 1 }}
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
@@ -1194,7 +1193,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
       display: 'flex',
       flexDirection: 'column',
       minHeight: 0,
-      overflow: 'hidden',
     } : {}),
   },
   loadingContainer: {

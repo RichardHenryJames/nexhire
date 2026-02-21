@@ -465,9 +465,22 @@ newErrors.jobTitle = 'Job title is required when company is selected';
       const result = await register(registrationData);
       
       if (result.success) {
-        // AuthContext will automatically navigate to Main when
-        // isAuthenticated becomes true after successful registration.
-        // No Alert popup needed — it blocks the auto-navigation on native.
+        Alert.alert(
+          'Success', 
+          isGoogleUser 
+            ? 'Your Google account has been linked successfully! Welcome to RefOpen!'
+            : 'Account created successfully! Welcome to RefOpen!',
+          [
+            { 
+              text: 'Get Started', 
+              onPress: () => {
+                // FIXED: No manual navigation needed!
+                // The AuthContext will automatically handle navigation
+                // when isAuthenticated becomes true after successful registration
+              }
+            }
+          ]
+        );
 
         // Clear pending Google auth data
         if (isGoogleUser) {
@@ -1217,7 +1230,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
     flex: 1,
-    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   scrollContainer: {
     flex: 1,

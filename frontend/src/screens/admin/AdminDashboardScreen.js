@@ -2536,7 +2536,6 @@ const createStyles = (colors, responsive = {}) => {
       flex: 1,
       width: '100%',
       maxWidth: Platform.OS === 'web' && isDesktop ? 1200 : '100%',
-      ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
     },
     loadingContainer: {
       flex: 1,
