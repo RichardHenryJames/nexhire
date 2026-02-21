@@ -390,7 +390,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
     flex: 1,
-    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   scroll: { 
     flex: 1 

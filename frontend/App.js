@@ -2,52 +2,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, View, AppState } from 'react-native';
-
-/**
- * CRITICAL: Inject layout CSS synchronously at module load time — BEFORE React renders.
- *
- * Without this, html/body/#root have no explicit height on the first render.
- * The flex chain (root → GestureHandlerRootView → SafeAreaProvider → NavigationContainer
- * → Stack card → Screen) breaks because flex: 1 children can't resolve their height
- * when the root has no bounded height.
- *
- * Symptom: scrolling works if you navigate from Home → sub-screen (because Home's
- * useEffect ran first and set the styles), but breaks on a direct page refresh to
- * a sub-screen (styles aren't applied until after the first render → layout is
- * already computed with unbounded height → ScrollView/FlatList won't scroll).
- *
- * This MUST run at import time, not in useEffect.
- */
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const styleEl = document.createElement('style');
-  styleEl.id = 'refopen-layout-critical';
-  styleEl.textContent = `
-    html, body, #root {
-      height: 100dvh !important;
-      min-height: 100dvh !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
-    @supports not (height: 100dvh) {
-      html, body, #root { height: 100vh !important; min-height: 100vh !important; }
-    }
-    body { overflow: hidden !important; }
-    #root {
-      display: flex !important;
-      flex-direction: column !important;
-    }
-    /* Ensure Expo/RN wrapper divs don't break the flex chain */
-    #root > div {
-      display: flex !important;
-      flex-direction: column !important;
-      flex: 1 !important;
-      min-height: 0 !important;
-    }
-    * { scrollbar-width: none; -ms-overflow-style: none; }
-    *::-webkit-scrollbar { display: none; }
-  `;
-  document.head.appendChild(styleEl);
-}
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
@@ -270,19 +224,38 @@ function ThemedAppRoot() {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
 
-    // Theme-dependent background color — only this needs to be in useEffect
-    // (layout-critical styles like height/flex/overflow are injected synchronously
-    // at module load time above, so they're available before the first render)
+    // Always use dark background for web to match auth screens
     const darkBackground = '#0F172A';
     const fallbackGradient = `linear-gradient(135deg, ${darkBackground}, #1E293B, ${darkBackground})`;
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;
+    document.documentElement.style.minHeight = '100vh';
+    document.body.style.minHeight = '100vh';
+    document.body.style.margin = '0';
 
     const root = document.getElementById('root');
     if (root) {
+      root.style.minHeight = '100vh';
       root.style.background = fallbackGradient;
     }
+
+    // Hide scrollbars globally but allow scrolling
+    const style = document.createElement('style');
+    style.textContent = `
+      * {
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+      }
+      *::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
   }, [colors, isDark]);
 
   return (

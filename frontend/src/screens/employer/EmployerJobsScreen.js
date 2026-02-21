@@ -435,7 +435,6 @@ const createLocalStyles = (colors, responsive = {}) => {
     flex: 1,
     width: '100%',
     maxWidth: isDesktop ? MAX_CONTENT_WIDTH : '100%',
-    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   actionBtn:{
     flexDirection:'row',
