@@ -21,6 +21,7 @@ import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Assets
 const AILogo = require('../../../assets/ai_logo.png');
@@ -146,6 +147,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
         setAiJobs(prev => prev.filter(j => (j.JobID || j.id) !== id)); // Remove from list
         showToast('Application submitted successfully!', 'success');
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS);
       } else {
         showToast('Failed to submit application. Please try again.', 'error');
       }
@@ -199,6 +201,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         }
 
         showToast(message, 'success');
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
       } else {
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const availableBalance = res.data?.availableBalance || res.data?.currentBalance || 0;

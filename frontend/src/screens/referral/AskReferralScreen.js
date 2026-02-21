@@ -28,6 +28,7 @@ import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 import TabHeader from '../../components/TabHeader';
 import CachedImage from '../../components/CachedImage';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker, isAuthenticated } = useAuth();
@@ -520,8 +521,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
         }
         
         showToast(message, 'success');
-
-        // Update local wallet balance to available balance
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
         if (availableBalance !== undefined) {
           setWalletBalance(availableBalance);
         }

@@ -20,7 +20,7 @@ import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
-import { getCached, hasCached, setCache, CACHE_KEYS } from '../../utils/homeCache';
+import { getCached, hasCached, setCache, invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Ad configuration - Google AdSense
 const AD_CONFIG = {
@@ -1410,6 +1410,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           setShowReferralSuccessOverlay(true);
           
           showToast('Referral request sent successfully', 'success');
+          invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
 
           // 🔧 FIXED: Set the resume directly and reload
           setPrimaryResume(resumeData);
@@ -1432,6 +1433,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             removeSavedJobLocally(id);
           setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
           showToast('Application submitted successfully', 'success');
+          invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
 
           // 🔧 FIXED: Reload primary resume after successful application
           primaryResumeLoadedRef.current = false; // Reset the loaded flag
@@ -1467,6 +1469,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         removeSavedJobLocally(id); // ensure removal if it was saved
         setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
         showToast('Application submitted', 'success');
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
         try {
           const appliedRes = await refopenAPI.getMyApplications(1, 1);
           if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
@@ -1510,6 +1513,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         }
 
         showToast(message, 'success');
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
 
         // 🔧 FIXED: Reload primary resume after successful referral
         await loadPrimaryResume();
@@ -1549,6 +1553,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         });
 
         showToast('Job saved successfully', 'success');
+        invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
       } else {
         showToast('Failed to save job. Please try again.', 'error');
       }
@@ -1569,6 +1574,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (res?.success) {
         removeSavedJobLocally(id);
         showToast('Job removed from saved', 'success');
+        invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
       } else {
         showToast('Failed to remove job from saved. Please try again.', 'error');
       }

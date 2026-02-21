@@ -116,3 +116,20 @@ export async function clearHomeCache() {
     // ignore
   }
 }
+
+/**
+ * Invalidate specific cache keys after a user action.
+ * Removes from both memory (instant) and AsyncStorage (persistent).
+ *
+ * Usage:
+ *   import { invalidateCache, CACHE_KEYS } from '../utils/homeCache';
+ *   invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS);
+ *
+ * @param {...string} keys - CACHE_KEYS values to invalidate
+ */
+export function invalidateCache(...keys) {
+  for (const key of keys) {
+    delete memoryCache[key];
+    AsyncStorage.removeItem(CACHE_PREFIX + key).catch(() => {});
+  }
+}

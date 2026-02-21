@@ -230,19 +230,28 @@ function ThemedAppRoot() {
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;
-    document.documentElement.style.minHeight = '100vh';
-    document.body.style.minHeight = '100vh';
+    // Use fixed height (not minHeight) so flex:1 chain resolves properly
+    // and the bottom tab bar stays at the viewport bottom — not pushed below.
+    // dvh accounts for mobile browser chrome (address bar).
+    document.documentElement.style.height = '100dvh';
+    document.body.style.height = '100dvh';
     document.body.style.margin = '0';
 
     const root = document.getElementById('root');
     if (root) {
-      root.style.minHeight = '100vh';
+      root.style.height = '100dvh';
+      root.style.display = 'flex';
+      root.style.flexDirection = 'column';
+      root.style.overflow = 'hidden';
       root.style.background = fallbackGradient;
     }
 
-    // Hide scrollbars globally but allow scrolling
+    // Hide scrollbars globally but allow scrolling inside scroll containers
     const style = document.createElement('style');
     style.textContent = `
+      @supports not (height: 100dvh) {
+        html, body, #root { height: 100vh !important; }
+      }
       * {
         scrollbar-width: none; /* Firefox */
         -ms-overflow-style: none; /* IE and Edge */

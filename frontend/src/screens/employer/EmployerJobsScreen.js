@@ -12,6 +12,7 @@ import { createStyles as createJobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 import useResponsive from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 /*
 EmployerJobsScreen
@@ -203,6 +204,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
       const res = await refopenAPI.publishJob(jobId);
       if (res?.success) { 
         showToast('Job published! Use Copy Link to share.', 'success');
+        invalidateCache(CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST, CACHE_KEYS.RECENT_JOBS);
         
         // Remove published job from draft list immediately
         setJobs(prevJobs => prevJobs.filter(j => j.JobID !== jobId));

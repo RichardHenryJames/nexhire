@@ -19,6 +19,7 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import { usePricing } from '../../contexts/PricingContext';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Animated percentage badge with fill effect
 const BonusPercentBadge = ({ percent }) => {
@@ -337,6 +338,7 @@ export default function WalletRechargeScreen({ navigation }) {
       });
 
       if (verifyResult.success) {
+        invalidateCache(CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
         setAmount('');
         setSelectedPack(null);
         setPromoCode('');
