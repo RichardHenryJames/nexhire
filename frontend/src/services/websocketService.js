@@ -1,5 +1,6 @@
 import * as signalR from '@microsoft/signalr';
 import { getToken } from './api';
+import { frontendConfig } from '../config/appConfig';
 
 class SignalRService {
   connection = null;
@@ -16,7 +17,7 @@ class SignalRService {
 
     try {
       // Get SignalR connection info from negotiate endpoint
-      const API_URL = process.env.REACT_APP_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
+      const API_URL = frontendConfig.api.baseUrl;
    
       
       const response = await fetch(`${API_URL}/signalr/negotiate`, {

@@ -4,8 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { frontendConfig } from '../config/appConfig';
 import { resetToLogin } from '../navigation/navigationRef';
 
-// FIXED: Use environment variable or fallback to production API
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://refopen-api-func.azurewebsites.net/api';
+// API base URL — sourced from frontendConfig (which reads from .env via EXPO_PUBLIC_API_URL)
 
 class RefOpenAPI {
   constructor() {
@@ -1480,7 +1479,7 @@ class RefOpenAPI {
       }
 
       // IMPORTANT: Build the URL correctly without any query parameters
-      const url = `${API_BASE_URL}/users/profile-image`;
+      const url = `${this.baseURL}/users/profile-image`;
       
       // Prepare headers
       const headers = {
@@ -1646,7 +1645,7 @@ class RefOpenAPI {
 
 
       // ✅ CORRECTED: Use the exact same endpoint as our working PowerShell test
-      const url = `${API_BASE_URL}/users/resume`;
+      const url = `${this.baseURL}/users/resume`;
       
       const headers = {
         'Content-Type': 'application/json',
@@ -1758,7 +1757,7 @@ class RefOpenAPI {
         };
       }
       
-      const url = `${API_BASE_URL}/users/resumes`;
+      const url = `${this.baseURL}/users/resumes`;
       const headers = await this.getAuthHeaders();
       
       
