@@ -30,7 +30,10 @@ class FrontendConfigService {
   loadConfiguration() {
     const extra = Constants.expoConfig?.extra;
     const hasValidExtra = extra && typeof extra === 'object' && Object.keys(extra).length > 0;
-    const shouldForceProd = !hasValidExtra && typeof window !== 'undefined';
+    // Check if EXPO_PUBLIC_* env vars are available (baked in at build time by Expo)
+    const hasEnvVars = !!(process.env.EXPO_PUBLIC_APP_ENV || process.env.EXPO_PUBLIC_API_URL);
+    // Only force prod if we have no extra config AND no env vars AND we're on web
+    const shouldForceProd = !hasValidExtra && !hasEnvVars && typeof window !== 'undefined';
 
     const getEnvVar = (extraKey, processEnvKey, defaultValue = '', prodFallback = '') => {
       if (shouldForceProd) return prodFallback || defaultValue;
