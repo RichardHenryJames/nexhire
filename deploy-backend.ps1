@@ -8,8 +8,8 @@
 # ================================================================
 
 param(
-    [string]$Environment = "production",  # dev, staging, production
-    [string]$FunctionAppName = "refopen-api-func",  # Updated to RefOpen
+    [string]$Environment = "dev",  # dev, staging, production (defaults to dev for safety)
+    [string]$FunctionAppName = "",  # Auto-detected based on environment
     [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb",
     [switch]$SkipBuild,
     [switch]$SkipTest
@@ -72,26 +72,16 @@ Write-Host "   Database: $($dbServer.Substring(0, [Math]::Min(50, $dbServer.Leng
 Write-Host "   Razorpay Mode: $razorpayMode" -ForegroundColor $(if ($razorpayMode -eq "LIVE") { "Red" } else { "Yellow" })
 Write-Host "   Google OAuth: $googleConfigured" -ForegroundColor $(if ($googleConfigured -eq "✅ CONFIGURED") { "Green" } else { "Red" })
 
-# Environment-specific function app name - UPDATED FOR REFOPEN
-$targetFunctionApp = switch ($normalizedEnv) {
-    "dev" {
-        if ($FunctionAppName -eq "refopen-api-func") {
-            "refopen-api-func-dev"  # If you create a dev environment
-        } else {
-            $FunctionAppName
-        }
+# Environment-specific function app name
+$targetFunctionApp = if ($FunctionAppName) {
+    $FunctionAppName  # Use explicit override if provided
+} else {
+    switch ($normalizedEnv) {
+        "dev" { "refopen-api-func-dev" }
+        "staging" { "refopen-api-func-staging" }
+        "prod" { "refopen-api-func" }
+        default { "refopen-api-func-dev" }
     }
-    "staging" { 
-        if ($FunctionAppName -eq "refopen-api-func") { 
-            "refopen-api-func-staging"  # If you create a staging environment
-        } else { 
-            $FunctionAppName 
-        }
-    }
-    "prod" {
-        "refopen-api-func"  # Production Function App
-    }
-    default { $FunctionAppName }
 }
 
 # Environment-specific resource group
@@ -99,7 +89,7 @@ $targetResourceGroup = switch ($normalizedEnv) {
     "dev" { "refopen-dev-rg" }
     "staging" { "refopen-dev-rg" }
     "prod" { "refopen-prod-rg" }
-    default { "refopen-prod-rg" }
+    default { "refopen-dev-rg" }
 }
 
 Write-Host "🎯 Target Function App: $targetFunctionApp" -ForegroundColor Cyan
@@ -302,7 +292,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "📦 Deployment Details:" -ForegroundColor Cyan
     Write-Host "   Environment: $normalizedEnv ($refopenEnv)" -ForegroundColor White
     Write-Host "   Function App: $targetFunctionApp" -ForegroundColor White
-    Write-Host "   Resource Group: refopen-prod-rg" -ForegroundColor White
+    Write-Host "   Resource Group: $targetResourceGroup" -ForegroundColor White
     Write-Host "   Region: Central India" -ForegroundColor White
     Write-Host ""
     Write-Host "🗄️ Database:" -ForegroundColor Cyan

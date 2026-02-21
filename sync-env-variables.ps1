@@ -7,7 +7,7 @@
 # ================================================================
 
 param(
-    [string]$Environment = "production",  # dev, staging, production
+    [string]$Environment = "dev",  # dev, staging, production (defaults to dev for safety)
     [string]$FunctionAppName = "",  # Auto-detected based on environment
     [string]$ResourceGroup = "",  # Auto-detected based on environment
     [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb",

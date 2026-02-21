@@ -1,7 +1,7 @@
 param(
     [string]$ResourceGroup = "",  # Auto-detected based on environment
     [string]$StaticAppName = "",  # Auto-detected based on environment
-    [string]$Environment = "production",  # dev, staging, production
+    [string]$Environment = "dev",  # dev, staging, production (defaults to dev for safety)
     [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb"
 )
 
@@ -14,7 +14,7 @@ $normalizedEnv = switch ($Environment.ToLower()) {
     { $_ -in @("dev", "development") } { "dev" }
     "staging" { "staging" }
     { $_ -in @("prod", "production") } { "prod" }
-    default { "prod" }
+    default { "dev" }
 }
 
 # Env-specific resources
