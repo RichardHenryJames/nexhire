@@ -411,11 +411,10 @@ Write-Host "`nDeploying to Azure Static Web App..." -ForegroundColor Yellow
 Write-Host "   Target: $targetStaticApp" -ForegroundColor Gray
 Write-Host "   Environment: $normalizedEnv" -ForegroundColor Gray
 
-if ($normalizedEnv -eq "prod") {
-    swa deploy --app-location . --output-location web-build --deployment-token $deploymentToken --env production
-} else {
-    swa deploy --app-location . --output-location web-build --deployment-token $deploymentToken
-}
+# Always deploy to the production slot of the target SWA
+# For dev, we target the dev SWA (refopen-frontend-dev) production slot
+# For prod, we target the prod SWA (refopen-frontend-web) production slot
+swa deploy --app-location . --output-location web-build --deployment-token $deploymentToken --env production
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Deployment failed!"
