@@ -28,48 +28,49 @@ class FrontendConfigService {
   }
 
   loadConfiguration() {
+    // Config resolution: Constants.expoConfig.extra (native) → process.env (web) → defaults
+    // On native: app.config.js loads dotenv/config which populates extra via Constants
+    // On web: deployfe.ps1 loads .env into shell env, Metro inlines EXPO_PUBLIC_* into the bundle
     const extra = Constants.expoConfig?.extra;
-    const hasValidExtra = extra && typeof extra === 'object' && Object.keys(extra).length > 0;
-    // Check if EXPO_PUBLIC_* env vars are available (baked in at build time by Expo)
-    const hasEnvVars = !!(process.env.EXPO_PUBLIC_APP_ENV || process.env.EXPO_PUBLIC_API_URL);
-    // Only force prod if we have no extra config AND no env vars AND we're on web
-    const shouldForceProd = !hasValidExtra && !hasEnvVars && typeof window !== 'undefined';
 
-    const getEnvVar = (extraKey, processEnvKey, defaultValue = '', prodFallback = '') => {
-      if (shouldForceProd) return prodFallback || defaultValue;
+    const getEnvVar = (extraKey, processEnvKey, defaultValue = '') => {
       return extra?.[extraKey] || process.env[processEnvKey] || defaultValue;
     };
 
-    const getBooleanEnvVar = (extraKey, processEnvKey, defaultValue = false, prodFallback = true) => {
-      if (shouldForceProd) return prodFallback;
+    const getBooleanEnvVar = (extraKey, processEnvKey, defaultValue = false) => {
       const value = extra?.[extraKey] ?? process.env[processEnvKey];
       if (value === undefined || value === null) return defaultValue;
       return value === true || value === 'true';
     };
 
+    const razorpayKey = getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J');
+
+    // Require API URL — no hardcoded prod fallback. Must come from .env file.
+    const apiUrl = extra?.apiUrl || process.env.EXPO_PUBLIC_API_URL;
+    if (!apiUrl) {
+      console.error('⛔ EXPO_PUBLIC_API_URL is not set! Check your .env file and build process.');
+    }
+
     const config = {
       app: {
-        env: shouldForceProd ? 'production' : getEnvVar('appEnv', 'EXPO_PUBLIC_APP_ENV', 'development'),
+        env: getEnvVar('appEnv', 'EXPO_PUBLIC_APP_ENV', 'development'),
         version: getEnvVar('appVersion', 'EXPO_PUBLIC_APP_VERSION', '1.0.0'),
-        debug: shouldForceProd ? false : getBooleanEnvVar('debug', 'EXPO_PUBLIC_DEBUG', true, false),
+        debug: getBooleanEnvVar('debug', 'EXPO_PUBLIC_DEBUG', false),
       },
 
       api: {
-        baseUrl: getEnvVar('apiUrl', 'EXPO_PUBLIC_API_URL', 'https://refopen-api-func.azurewebsites.net/api'),
+        baseUrl: apiUrl || '',  // Empty string will cause visible failures — never silently hit prod
         timeout: parseInt(getEnvVar('apiTimeout', 'EXPO_PUBLIC_API_TIMEOUT', '30000')),
-        debug: shouldForceProd ? false : getBooleanEnvVar('apiDebug', 'EXPO_PUBLIC_API_DEBUG', true, false),
+        debug: getBooleanEnvVar('apiDebug', 'EXPO_PUBLIC_API_DEBUG', false),
       },
 
       google: {
-        webClientId: shouldForceProd
-          ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
-          : getEnvVar('googleClientIdWeb', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB'),
-        androidClientId: shouldForceProd
-          ? '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'
-          : getEnvVar('googleClientIdAndroid', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID'),
-        iosClientId: shouldForceProd
-          ? '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'
-          : getEnvVar('googleClientIdIos', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS'),
+        webClientId: getEnvVar('googleClientIdWeb', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB',
+          '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'),
+        androidClientId: getEnvVar('googleClientIdAndroid', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID',
+          '179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com'),
+        iosClientId: getEnvVar('googleClientIdIos', 'EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS',
+          '179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com'),
         firebase: {
           projectId: getEnvVar('firebaseProjectId', 'EXPO_PUBLIC_FIREBASE_PROJECT_ID', 'refopen-123'),
           webAppId: getEnvVar('firebaseWebAppId', 'EXPO_PUBLIC_FIREBASE_WEB_APP_ID'),
@@ -79,19 +80,15 @@ class FrontendConfigService {
       },
 
       razorpay: {
-        keyId: shouldForceProd
-          ? 'rzp_live_RHBIO2dq7CFGiW'
-          : getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J', 'rzp_live_RHBIO2dq7CFGiW'),
-        isProduction: shouldForceProd
-          ? true
-          : getEnvVar('razorpayKeyId', 'EXPO_PUBLIC_RAZORPAY_KEY_ID', 'rzp_test_RHBUKjg4k9qx4J').startsWith('rzp_live_'),
+        keyId: razorpayKey,
+        isProduction: razorpayKey.startsWith('rzp_live_'),
       },
 
       features: {
-        googleSignIn: shouldForceProd ? true : getBooleanEnvVar('featureGoogleSignin', 'EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN', true),
-        razorpayPayments: shouldForceProd ? true : getBooleanEnvVar('featureRazorpayPayments', 'EXPO_PUBLIC_FEATURE_RAZORPAY_PAYMENTS', true),
-        referralSystem: shouldForceProd ? true : getBooleanEnvVar('featureReferralSystem', 'EXPO_PUBLIC_FEATURE_REFERRAL_SYSTEM', true),
-        jobScraping: shouldForceProd ? true : getBooleanEnvVar('featureJobScraping', 'EXPO_PUBLIC_FEATURE_JOB_SCRAPING', true),
+        googleSignIn: getBooleanEnvVar('featureGoogleSignin', 'EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN', true),
+        razorpayPayments: getBooleanEnvVar('featureRazorpayPayments', 'EXPO_PUBLIC_FEATURE_RAZORPAY_PAYMENTS', true),
+        referralSystem: getBooleanEnvVar('featureReferralSystem', 'EXPO_PUBLIC_FEATURE_REFERRAL_SYSTEM', true),
+        jobScraping: getBooleanEnvVar('featureJobScraping', 'EXPO_PUBLIC_FEATURE_JOB_SCRAPING', true),
       },
 
       // Legal: current required versions — bump these when T&C or Privacy Policy is updated
@@ -111,9 +108,9 @@ class FrontendConfigService {
       },
 
       development: {
-        devMenu: shouldForceProd ? false : getBooleanEnvVar('devMenu', 'EXPO_PUBLIC_DEV_MENU', true, false),
-        debugLogs: shouldForceProd ? false : getBooleanEnvVar('debugLogs', 'EXPO_PUBLIC_DEBUG_LOGS', true, false),
-        logLevel: shouldForceProd ? 'error' : getEnvVar('logLevel', 'EXPO_PUBLIC_LOG_LEVEL', 'debug', 'error'),
+        devMenu: getBooleanEnvVar('devMenu', 'EXPO_PUBLIC_DEV_MENU', false),
+        debugLogs: getBooleanEnvVar('debugLogs', 'EXPO_PUBLIC_DEBUG_LOGS', false),
+        logLevel: getEnvVar('logLevel', 'EXPO_PUBLIC_LOG_LEVEL', 'error'),
       },
     };
 

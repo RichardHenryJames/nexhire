@@ -52,7 +52,7 @@ export class WalletService {
    */
   static async getOrCreateWallet(userId: string): Promise<Wallet> {
     try {
-      // Check if wallet exists
+      // Try to get existing wallet first
       const walletQuery = `
         SELECT 
           w.WalletID, w.UserID, w.Balance, w.CurrencyID, 
@@ -69,28 +69,29 @@ export class WalletService {
         return result.recordset[0];
       }
       
-      // Create new wallet if doesn't exist
+      // Create new wallet — use try/catch for race condition (duplicate key)
       const walletId = AuthService.generateUniqueId();
-      const createQuery = `
-        INSERT INTO Wallets (WalletID, UserID, Balance, CurrencyID, Status)
-        VALUES (@param0, @param1, 0.00, 4, 'Active');
-        
-        SELECT 
-          w.WalletID, w.UserID, w.Balance, w.CurrencyID, 
-          c.Code as CurrencyCode, w.Status, w.CreatedAt, 
-          w.UpdatedAt, w.LastTransactionAt
-        FROM Wallets w
-        INNER JOIN Currencies c ON w.CurrencyID = c.CurrencyID
-        WHERE w.WalletID = @param0
-      `;
-      
-      const createResult = await dbService.executeQuery(createQuery, [walletId, userId]);
-      
-      if (!createResult.recordset || createResult.recordset.length === 0) {
-        throw new Error('Failed to create wallet');
+      try {
+        const createQuery = `
+          INSERT INTO Wallets (WalletID, UserID, Balance, CurrencyID, Status)
+          VALUES (@param0, @param1, 0.00, 4, 'Active');
+        `;
+        await dbService.executeQuery(createQuery, [walletId, userId]);
+      } catch (insertError: any) {
+        // If duplicate key error, wallet was created by another concurrent request — just fetch it
+        if (insertError.number === 2601 || insertError.number === 2627) {
+          console.log('Wallet already created by concurrent request, fetching existing wallet');
+        } else {
+          throw insertError;
+        }
       }
-      
-      return createResult.recordset[0];
+
+      // Fetch and return the wallet (whether we just created it or it already existed)
+      const fetchResult = await dbService.executeQuery(walletQuery, [userId]);
+      if (!fetchResult.recordset || fetchResult.recordset.length === 0) {
+        throw new Error('Failed to create or fetch wallet');
+      }
+      return fetchResult.recordset[0];
     } catch (error) {
       console.error('Error getting/creating wallet:', error);
       throw error;
