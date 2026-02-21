@@ -26,15 +26,16 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       margin: 0 !important;
       padding: 0 !important;
       height: 100% !important;
+      overflow: auto !important;
     }
     #root {
       height: 100dvh !important;
+      min-height: 100dvh !important;
       display: flex !important;
       flex-direction: column !important;
-      overflow: hidden !important;
     }
     @supports not (height: 100dvh) {
-      #root { height: 100vh !important; }
+      #root { height: 100vh !important; min-height: 100vh !important; }
     }
     * { scrollbar-width: none; -ms-overflow-style: none; }
     *::-webkit-scrollbar { display: none; }
