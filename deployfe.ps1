@@ -90,9 +90,11 @@ if (Test-Path $envFile) {
     
     # Show key configurations
     $envContent = Get-Content ".env" -Raw
-    if ($envContent -match "REACT_APP_API_URL=(.+)") {
-        $apiUrl = $matches[1].Trim()
-        Write-Host "   API URL: $apiUrl" -ForegroundColor Gray
+    if ($envContent -match "EXPO_PUBLIC_API_URL=(.+)") {
+        Write-Host "   API URL: $($matches[1].Trim())" -ForegroundColor Gray
+    }
+    if ($envContent -match "EXPO_PUBLIC_APP_ENV=(.+)") {
+        Write-Host "   App Env: $($matches[1].Trim())" -ForegroundColor Gray
     }
 } else {
     Write-Host " Warning: $envFile not found, using existing .env" -ForegroundColor Yellow
@@ -127,6 +129,24 @@ Write-Host "`nBuilding frontend for $normalizedEnv..." -ForegroundColor Yellow
 Write-Host "   Platform: web" -ForegroundColor Gray
 Write-Host "   Output: web-build/" -ForegroundColor Gray
 
+# Load .env vars into shell environment so Metro can inline EXPO_PUBLIC_* into the web bundle
+# (dotenv/config in app.config.js only loads them for that file; Metro needs actual shell env vars)
+if (Test-Path ".env") {
+    Write-Host "   Loading .env into shell environment..." -ForegroundColor Gray
+    $envVarCount = 0
+    Get-Content ".env" | ForEach-Object {
+        if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+            $key = $Matches[1]
+            $val = $Matches[2].Trim()
+            # Remove surrounding quotes if present
+            if ($val -match '^["''](.*)["'']$') { $val = $Matches[1] }
+            [System.Environment]::SetEnvironmentVariable($key, $val, 'Process')
+            $envVarCount++
+        }
+    }
+    Write-Host "   Loaded $envVarCount env vars for build" -ForegroundColor Gray
+}
+
 npx expo export --platform web --output-dir web-build --clear
 
 if ($LASTEXITCODE -ne 0) {
@@ -146,6 +166,45 @@ if (-not (Test-Path "web-build/index.html")) {
 if (Test-Path "staticwebapp.config.json") {
     Copy-Item "staticwebapp.config.json" "web-build/staticwebapp.config.json" -Force
     Write-Host "Azure SWA config copied to web-build/staticwebapp.config.json" -ForegroundColor Green
+
+    # Replace CSP placeholder tokens with environment-specific hostnames
+    $swaConfigPath = "web-build/staticwebapp.config.json"
+    $swaContent = Get-Content $swaConfigPath -Raw
+
+    # Environment-specific Azure resource hostnames
+    $envHosts = switch ($normalizedEnv) {
+        "dev" {
+            @{
+                API      = "refopen-api-func-dev"
+                Storage  = "refopenstoragedev"
+                SignalR  = "refopen-signalr-dev"
+            }
+        }
+        "staging" {
+            @{
+                API      = "refopen-api-func-staging"
+                Storage  = "refopenstoragedev"
+                SignalR  = "refopen-signalr-dev"
+            }
+        }
+        "prod" {
+            @{
+                API      = "refopen-api-func"
+                Storage  = "refopenstoragesi"
+                SignalR  = "refopen-signalr"
+            }
+        }
+    }
+
+    $swaContent = $swaContent -replace '__API_HOST__',     $envHosts.API
+    $swaContent = $swaContent -replace '__STORAGE_HOST__', $envHosts.Storage
+    $swaContent = $swaContent -replace '__SIGNALR_HOST__', $envHosts.SignalR
+
+    Set-Content $swaConfigPath $swaContent -NoNewline
+    Write-Host "   CSP tokens replaced for $normalizedEnv environment:" -ForegroundColor Gray
+    Write-Host "     API:     $($envHosts.API).azurewebsites.net" -ForegroundColor Gray
+    Write-Host "     Storage: $($envHosts.Storage).blob.core.windows.net" -ForegroundColor Gray
+    Write-Host "     SignalR: $($envHosts.SignalR).service.signalr.net" -ForegroundColor Gray
 } else {
     Write-Host "Warning: staticwebapp.config.json not found in frontend/. SPA deep links may 404." -ForegroundColor Yellow
 }
