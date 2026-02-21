@@ -40,7 +40,7 @@ export default ({ config }) => {
     debug: env !== 'production',
 
     // API
-    apiUrl: process.env.EXPO_PUBLIC_API_URL || 'https://refopen-api-func.azurewebsites.net/api',
+    apiUrl: process.env.EXPO_PUBLIC_API_URL || '',  // Must come from .env — no hardcoded prod fallback
     apiTimeout: process.env.EXPO_PUBLIC_API_TIMEOUT || '30000',
     apiDebug: env !== 'production',
 
