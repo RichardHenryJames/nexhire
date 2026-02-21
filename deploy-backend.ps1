@@ -18,6 +18,9 @@ param(
 # Start time logging
 $scriptStartTime = Get-Date
 
+# Suppress Invoke-WebRequest security prompts and progress bars
+$ProgressPreference = 'SilentlyContinue'
+
 Write-Host "🚀 RefOpen Backend Multi-Environment Deployment" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "🌍 Target Environment: $Environment" -ForegroundColor Green
@@ -192,17 +195,15 @@ if (-not $SkipBuild) {
     Write-Host "⏭️ Skipping build (using existing build)" -ForegroundColor Yellow
 }
 
-# Step 4: Verify Function App exists
+# Step 4: Verify Function App exists (skip interactive prompt by using az CLI instead)
 Write-Host "`n🔍 Verifying Function App exists..." -ForegroundColor Yellow
 try {
-    $funcApp = Get-AzFunctionApp -ResourceGroupName "refopen-prod-rg" -Name $targetFunctionApp -ErrorAction SilentlyContinue
-    if ($funcApp) {
-        Write-Host "✅ Function App found: $targetFunctionApp" -ForegroundColor Green
-        Write-Host "   Status: $($funcApp.State)" -ForegroundColor Gray
+    $funcAppCheck = az functionapp show --name $targetFunctionApp --resource-group $targetResourceGroup --query "state" -o tsv 2>$null
+    if ($funcAppCheck) {
+        Write-Host "✅ Function App found: $targetFunctionApp (State: $funcAppCheck)" -ForegroundColor Green
         Write-Host "   URL: https://$targetFunctionApp.azurewebsites.net" -ForegroundColor Gray
     } else {
         Write-Host "⚠️ Function App not found: $targetFunctionApp" -ForegroundColor Yellow
-        Write-Host "   Deployment will attempt to create it..." -ForegroundColor Gray
     }
 } catch {
     Write-Host "⚠️ Could not verify Function App (will proceed with deployment)" -ForegroundColor Yellow
