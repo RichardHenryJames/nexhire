@@ -21,11 +21,11 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
   PanResponder,
   Platform,
 } from 'react-native';
+import CachedImage from './CachedImage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -106,7 +106,7 @@ export default function TabHeader({
       {/* Left: Profile avatar */}
       <TouchableOpacity activeOpacity={0.8} onPress={handleProfilePress}>
         {profilePhotoUrl ? (
-          <Image
+          <CachedImage
             source={{ uri: profilePhotoUrl }}
             style={[styles.profilePic, { borderColor: profileBorderColor }]}
           />

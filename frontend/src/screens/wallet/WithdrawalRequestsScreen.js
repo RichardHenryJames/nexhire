@@ -184,6 +184,7 @@ export default function WithdrawalRequestsScreen({ navigation }) {
           </View>
         ) : (
           <FlatList
+            style={{ flex: 1 }}
             data={withdrawals}
             renderItem={renderWithdrawal}
             keyExtractor={(item) => item.WithdrawalID}
@@ -213,6 +214,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     width: '100%',
     maxWidth: responsive.isDesktop ? 900 : '100%',
+    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   centerContainer: {
     flex: 1,

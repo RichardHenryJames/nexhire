@@ -785,6 +785,7 @@ export default function ApplicationsScreen({ navigation }) {
         
         {/* Applications List */}
         <FlatList
+          style={{ flex: 1 }}
           data={applications}
           renderItem={({ item, index }) => (
             <>
@@ -807,7 +808,7 @@ export default function ApplicationsScreen({ navigation }) {
           ListEmptyComponent={<EmptyState />}
           ListFooterComponent={<LoadingFooter />}
           showsVerticalScrollIndicator={false}
-          removeClippedSubviews={true}
+          removeClippedSubviews={Platform.OS !== 'web'}
           maxToRenderPerBatch={10}
           windowSize={10}
         />
@@ -977,7 +978,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
-    ...(Platform.OS === 'web' ? { overflow: 'auto' } : {}),
+    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   headerButton: {
     paddingHorizontal: 12,

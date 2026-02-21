@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
   Platform,
   TextInput,
-  Image,
   useWindowDimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import CachedImage from '../../components/CachedImage';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { usePricing } from '../../contexts/PricingContext';
 import { typography } from '../../styles/theme';
@@ -868,7 +868,7 @@ const { jobId, fromReferralRequest } = route.params || {};
               activeOpacity={0.7}
             >
               {job.OrganizationLogo ? (
-                <Image 
+                <CachedImage 
                   source={{ uri: job.OrganizationLogo }} 
                   style={styles.companyLogo}
                   onError={() => {}}

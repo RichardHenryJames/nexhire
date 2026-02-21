@@ -11,7 +11,6 @@ import {
   Platform,
   Modal,
   FlatList,
-  Image,
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +27,7 @@ import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import AdCard from '../../components/ads/AdCard'; // Google AdSense Ad
 import TabHeader from '../../components/TabHeader';
+import CachedImage from '../../components/CachedImage';
 
 export default function AskReferralScreen({ navigation, route }) {
 const { user, isJobSeeker, isAuthenticated } = useAuth();
@@ -655,7 +655,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
                       }}
                     >
                       {item.logoURL ? (
-                        <Image source={{ uri: item.logoURL }} style={styles.orgLogoHeader} />
+                        <CachedImage source={{ uri: item.logoURL }} style={styles.orgLogoHeader} />
                       ) : (
                         <View style={styles.orgLogoPlaceholderHeader}>
                           <Ionicons name="business" size={20} color={colors.gray400} />
@@ -695,7 +695,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
             <Animated.View style={[styles.companyShowcase, { opacity: fadeAnim }]}>
               <View style={styles.showcaseContent}>
                 <View style={styles.showcaseLogoContainer}>
-                  <Image
+                  <CachedImage
                     source={{ uri: fortune500Companies[currentCompanyIndex]?.logoURL }}
                     style={styles.showcaseLogo}
                     resizeMode="contain"
@@ -810,7 +810,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
               {selectedCompany ? (
                 <View style={styles.companySelectorContent}>
                   {selectedCompany.logoURL ? (
-                    <Image
+                    <CachedImage
                       source={{ uri: selectedCompany.logoURL }}
                       style={styles.companySelectorLogo}
                       resizeMode="contain"
@@ -1067,7 +1067,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
                 >
                   {/* Company Logo */}
                   {item.logoURL ? (
-                    <Image
+                    <CachedImage
                       source={{ uri: item.logoURL }}
                       style={styles.companyLogo}
                       resizeMode="contain"
@@ -1250,6 +1250,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
+    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   errorContainer: {
     flex: 1,
