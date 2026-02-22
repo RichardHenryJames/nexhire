@@ -557,6 +557,10 @@ export class ReferralService {
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription,
                     rr.ReferralMessage as ReferralMessage,
+                    -- Job details for internal referrals
+                    j.Location as JobLocation,
+                    j.ExperienceMin as JobExperienceMin,
+                    j.ExperienceMax as JobExperienceMax,
                     -- ✅ AssignedReferrerID now stores UserID directly
                     rr.AssignedReferrerID as AssignedReferrerUserID
                 FROM ReferralRequests rr
