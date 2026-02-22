@@ -378,20 +378,9 @@ export default function ReferralScreen({ navigation }) {
     const applicantName = request.ApplicantName || 'Job Seeker';
     const applicantPhotoUrl = request.ApplicantProfilePictureURL ?? null;
     
-    // For internal jobs, make the card clickable
-    const CardWrapper = isInternalJob ? TouchableOpacity : View;
-    const cardWrapperProps = isInternalJob 
-      ? { 
-          onPress: () => {
-            // Pass fromReferralRequest parameter to hide action buttons
-            navigation.navigate('JobDetails', { 
-              jobId: request.JobID,
-              fromReferralRequest: true // Hide Apply/Ask Referral buttons
-            });
-          },
-          activeOpacity: 0.7
-        }
-      : {};
+    // All cards are plain View (not clickable as a whole)
+    const CardWrapper = View;
+    const cardWrapperProps = {};
     
     // Get initials for avatar
     const getInitials = (name) => {
@@ -448,23 +437,10 @@ export default function ReferralScreen({ navigation }) {
           </TouchableOpacity>
 
           <View style={styles.requestInfo}>
-            {/* Person Name - Primary */}
-            <TouchableOpacity
-              activeOpacity={applicantUserId ? 0.7 : 1}
-              disabled={!applicantUserId}
-              onPress={() =>
-                applicantUserId
-                  ? navigation.navigate('ViewProfile', {
-                      userId: applicantUserId,
-                      userName: applicantName,
-                    })
-                  : undefined
-              }
-            >
-              <Text style={styles.applicantNamePrimary} numberOfLines={1}>
-                {applicantName}
-              </Text>
-            </TouchableOpacity>
+            {/* Person Name - Primary (not clickable) */}
+            <Text style={styles.applicantNamePrimary} numberOfLines={1}>
+              {applicantName}
+            </Text>
             
             {/* "wants referral for Job Title" */}
             <View style={styles.wantsReferralRow}>
@@ -485,30 +461,8 @@ export default function ReferralScreen({ navigation }) {
               </Text>
             </View>
 
-            {/* Quick Actions Row - Resume left, View/Continue right */}
+            {/* Quick Actions Row - View/Continue only */}
             <View style={styles.quickActionsRow}>
-              {/* Resume Button */}
-              <TouchableOpacity
-                style={[styles.quickActionBtn, { backgroundColor: colors.primary + '15' }]}
-                onPress={() => {
-                  const resumeUrl = request.ResumeURL;
-                  if (resumeUrl) {
-                    if (Platform.OS === 'web') {
-                      window.open(resumeUrl, '_blank');
-                    } else {
-                      Linking.openURL(resumeUrl).catch(() => {
-                        showToast('Could not open resume', 'error');
-                      });
-                    }
-                  } else {
-                    showToast('Resume not available', 'error');
-                  }
-                }}
-              >
-                <Ionicons name="document-text-outline" size={14} color={colors.primary} />
-                <Text style={[styles.quickActionText, { color: colors.primary }]}>Resume</Text>
-              </TouchableOpacity>
-
               {/* Spacer */}
               <View style={{ flex: 1 }} />
 
@@ -553,22 +507,6 @@ export default function ReferralScreen({ navigation }) {
                 >
                   <Ionicons name="eye" size={14} color="#fff" />
                   <Text style={styles.viewRequestText}>View Proof</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Message Button - Closed tab, only for ProofUploaded/Completed (pending seeker verification) */}
-              {activeTab === 'closed' && (request.Status === 'ProofUploaded' || request.Status === 'Completed') && request.ApplicantUserID && (
-                <TouchableOpacity 
-                  style={[styles.viewRequestBtn, { backgroundColor: colors.primary, marginLeft: 8 }]}
-                  onPress={() => handleMessageSeeker(request)}
-                  disabled={messagingUserId === request.ApplicantUserID}
-                >
-                  {messagingUserId === request.ApplicantUserID ? (
-                    <ActivityIndicator size={14} color="#fff" />
-                  ) : (
-                    <Ionicons name="chatbubble" size={14} color="#fff" />
-                  )}
-                  <Text style={styles.viewRequestText}>Message</Text>
                 </TouchableOpacity>
               )}
             </View>
