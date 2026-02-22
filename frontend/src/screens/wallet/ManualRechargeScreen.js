@@ -75,50 +75,72 @@ const BonusPercentBadge = ({ percent }) => {
   );
 };
 
-// Animated "Limited Time" badge with fill + shimmer (red variant)
+// Animated "Limited Time" badge — draining liquid countdown effect
 const LimitedTimeBadge = () => {
-  const fillAnim = React.useRef(new Animated.Value(0)).current;
+  const drainAnim = React.useRef(new Animated.Value(1)).current;
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
-  const shimmerAnim = React.useRef(new Animated.Value(0)).current;
+  const flowAnim = React.useRef(new Animated.Value(0)).current;
+  const glowAnim = React.useRef(new Animated.Value(0.3)).current;
 
   React.useEffect(() => {
-    fillAnim.setValue(0);
-    Animated.spring(fillAnim, { toValue: 1, tension: 40, friction: 8, useNativeDriver: false }).start();
+    // Drain: fills full then slowly empties, then refills — looping countdown feel
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(drainAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
+        Animated.timing(drainAnim, { toValue: 0.08, duration: 3000, useNativeDriver: false }),
+        Animated.timing(drainAnim, { toValue: 1, duration: 600, useNativeDriver: false }),
+        Animated.delay(400),
       ])
     ).start();
+    // Pulse — urgent heartbeat
     Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerAnim, { toValue: 1, duration: 1800, useNativeDriver: false }),
-        Animated.timing(shimmerAnim, { toValue: 0, duration: 0, useNativeDriver: false }),
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 400, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.delay(1600),
+      ])
+    ).start();
+    // Flow sweep — liquid flowing across
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(flowAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
+        Animated.timing(flowAnim, { toValue: 0, duration: 0, useNativeDriver: false }),
+        Animated.delay(800),
+      ])
+    ).start();
+    // Glow pulsing border
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 0.8, duration: 1500, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0.3, duration: 1500, useNativeDriver: false }),
       ])
     ).start();
   }, []);
 
-  const fillWidth = fillAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-  const shimmerLeft = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: ['-30%', '130%'] });
+  const drainWidth = drainAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  const flowLeft = flowAnim.interpolate({ inputRange: [0, 1], outputRange: ['-25%', '125%'] });
+  const borderOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: ['#EF444450', '#EF4444CC'] });
 
   return (
     <Animated.View style={{ transform: [{ scale: pulseAnim }], marginLeft: 8 }}>
-      <View style={{ overflow: 'hidden', borderRadius: 10, borderWidth: 1, borderColor: '#EF444440' }}>
-        <View style={{ backgroundColor: '#EF444415', paddingHorizontal: 8, paddingVertical: 3 }}>
+      <Animated.View style={{ overflow: 'hidden', borderRadius: 10, borderWidth: 1.5, borderColor: borderOpacity }}>
+        <View style={{ backgroundColor: '#EF444410', paddingHorizontal: 9, paddingVertical: 3.5 }}>
+          {/* Draining fill — starts full red, empties like a countdown */}
           <Animated.View style={{
-            position: 'absolute', top: 0, left: 0, bottom: 0,
-            width: fillWidth, backgroundColor: '#EF444430', borderRadius: 10,
+            position: 'absolute', top: 0, right: 0, bottom: 0,
+            width: drainWidth, backgroundColor: '#EF444435', borderRadius: 10,
           }} />
+          {/* Liquid flow sweep */}
           <Animated.View style={{
-            position: 'absolute', top: 0, bottom: 0, width: '20%',
-            left: shimmerLeft,
-            backgroundColor: '#EF444418', borderRadius: 10,
+            position: 'absolute', top: 0, bottom: 0, width: '30%',
+            left: flowLeft,
+            backgroundColor: '#EF444420', borderRadius: 10,
           }} />
           <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 9, textAlign: 'center', letterSpacing: 0.5, textTransform: 'uppercase' }}>
-            Limited Time
+            ⏳ Limited Time
           </Text>
         </View>
-      </View>
+      </Animated.View>
     </Animated.View>
   );
 };
