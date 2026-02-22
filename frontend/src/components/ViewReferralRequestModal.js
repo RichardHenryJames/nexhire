@@ -329,121 +329,117 @@ export default function ViewReferralRequestModal({
                 </View>
               )}
               <View style={styles.candidateInfoCompact}>
-                <Text style={styles.candidateNameCompact}>{applicantName}</Text>
+                {/* Name row — name truncates, Message stays at right */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={[styles.candidateNameCompact, { flex: 1 }]} numberOfLines={1}>{applicantName}</Text>
+                  <TouchableOpacity 
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary + '12', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, flexShrink: 0 }}
+                    onPress={handleMessageApplicant}
+                    disabled={startingChat}
+                  >
+                    {startingChat ? (
+                      <ActivityIndicator size={12} color={colors.primary} />
+                    ) : (
+                      <>
+                        <Ionicons name="chatbubble-outline" size={12} color={colors.primary} />
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: colors.primary }}>Message</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
                 <Text style={styles.wantsReferralForText}>
                   wants referral for <Text style={styles.jobTitleInline}>{jobTitle}</Text>
                 </Text>
                 <Text style={styles.companyTimeText}>{companyName}</Text>
               </View>
             </View>
-            
-            {/* Quick Action Buttons */}
-            <View style={styles.candidateActionsCompact}>
-              <TouchableOpacity style={styles.actionPill} onPress={handleOpenResume}>
-                <Ionicons name="document-text-outline" size={14} color={colors.primary} />
-                <Text style={[styles.actionPillText, { color: colors.primary }]}>Resume</Text>
-              </TouchableOpacity>
-              
+          </View>
+
+          {/* Refer for: — compact 2-line layout */}
+          <View style={[styles.section, { padding: 12 }]}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 6 }}>Refer for:</Text>
+
+            {/* Line 1: Resume | View Job | Job ID — all inline */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+              {/* Resume pill */}
               <TouchableOpacity 
-                style={[styles.actionPill, { backgroundColor: colors.gray100 }]} 
-                onPress={handleMessageApplicant}
-                disabled={startingChat}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary + '10', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                onPress={handleOpenResume}
               >
-                {startingChat ? (
-                  <ActivityIndicator size="small" color={colors.textSecondary} />
-                ) : (
-                  <>
-                    <Ionicons name="chatbubble-outline" size={14} color={colors.textSecondary} />
-                    <Text style={[styles.actionPillText, { color: colors.textSecondary }]}>Message</Text>
-                  </>
-                )}
+                <Ionicons name="document-text-outline" size={13} color={colors.primary} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.primary }}>Resume</Text>
               </TouchableOpacity>
-              
-              {/* View Job - Internal only */}
+
+              {/* View Job pill — internal */}
               {referralRequest?.JobID && !referralRequest?.ExtJobID && (
                 <TouchableOpacity 
-                  style={[styles.actionPill, { backgroundColor: '#10B98120' }]} 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
                   onPress={() => {
                     onClose();
-                    navigation.navigate('JobDetails', { 
-                      jobId: referralRequest.JobID,
-                      fromReferralRequest: true
-                    });
+                    navigation.navigate('JobDetails', { jobId: referralRequest.JobID, fromReferralRequest: true });
                   }}
                 >
-                  <Ionicons name="briefcase-outline" size={14} color="#10B981" />
-                  <Text style={[styles.actionPillText, { color: '#10B981' }]}>View Job</Text>
+                  <Ionicons name="briefcase-outline" size={13} color="#10B981" />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#10B981' }}>View Job</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* View Job pill — external */}
+              {referralRequest?.ExtJobID && referralRequest?.JobURL && (
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  onPress={() => {
+                    if (Platform.OS === 'web') { window.open(referralRequest.JobURL, '_blank'); }
+                    else { Linking.openURL(referralRequest.JobURL).catch(() => showToast('Could not open URL', 'error')); }
+                  }}
+                >
+                  <Ionicons name="link-outline" size={13} color="#10B981" />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#10B981' }}>View Job</Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Job ID — external, copyable */}
+              {referralRequest?.ExtJobID && (
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.gray100, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  onPress={async () => {
+                    try {
+                      if (Platform.OS === 'web') await navigator.clipboard.writeText(referralRequest.ExtJobID);
+                      showToast('Job ID copied!', 'success');
+                    } catch (e) { showToast('Failed to copy', 'error'); }
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: colors.gray500 }}>ID:</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }} numberOfLines={1}>{referralRequest.ExtJobID}</Text>
+                  <Ionicons name="copy-outline" size={11} color={colors.primary} />
                 </TouchableOpacity>
               )}
             </View>
-          </View>
 
-          {/* Job Details Section - Only for External jobs (Job ID & URL) */}
-          {referralRequest?.ExtJobID && (
-            <View style={styles.section}>
-              {/* Compact Job Details - single row with Job ID and URL */}
-              <View style={styles.jobDetailsCompact}>
-                {/* Job ID */}
-                <View style={styles.jobDetailInline}>
-                  <Text style={styles.jobDetailLabelInline}>Job ID:</Text>
-                  <Text style={styles.jobDetailValueInline} numberOfLines={1}>
-                    {referralRequest.ExtJobID}
-                  </Text>
-                  <TouchableOpacity 
-                    style={styles.copyBtnSmall}
-                    onPress={async () => {
-                      try {
-                        if (Platform.OS === 'web') {
-                          await navigator.clipboard.writeText(referralRequest.ExtJobID);
-                        }
-                        showToast('Copied!', 'success');
-                      } catch (e) {
-                        showToast('Failed to copy', 'error');
-                      }
-                    }}
-                  >
-                    <Ionicons name="copy-outline" size={14} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Job URL */}
-                {referralRequest?.JobURL && (
-                  <View style={styles.jobDetailInline}>
-                    <TouchableOpacity 
-                      style={styles.jobUrlInline}
-                      onPress={() => {
-                        if (Platform.OS === 'web') {
-                          window.open(referralRequest.JobURL, '_blank');
-                        } else {
-                          Linking.openURL(referralRequest.JobURL).catch(() => {
-                            showToast('Could not open URL', 'error');
-                          });
-                        }
-                      }}
-                    >
-                      <Ionicons name="link-outline" size={14} color={colors.primary} />
-                      <Text style={styles.jobUrlTextInline} numberOfLines={1}>View Job</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.copyBtnSmall}
-                      onPress={async () => {
-                        try {
-                          if (Platform.OS === 'web') {
-                            await navigator.clipboard.writeText(referralRequest.JobURL);
-                          }
-                          showToast('Copied!', 'success');
-                        } catch (e) {
-                          showToast('Failed to copy', 'error');
-                        }
-                      }}
-                    >
-                      <Ionicons name="copy-outline" size={14} color={colors.primary} />
-                    </TouchableOpacity>
+            {/* Line 2: Location • YOE — inline */}
+            {referralRequest?.JobID && !referralRequest?.ExtJobID && (referralRequest.JobLocation || referralRequest.JobExperienceMin != null || referralRequest.JobExperienceMax != null) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 }}>
+                {referralRequest.JobLocation ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Ionicons name="location-outline" size={12} color={colors.gray500} />
+                    <Text style={{ fontSize: 11, color: colors.gray500 }}>{referralRequest.JobLocation}</Text>
                   </View>
-                )}
+                ) : null}
+                {(referralRequest.JobExperienceMin != null || referralRequest.JobExperienceMax != null) ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Ionicons name="time-outline" size={12} color={colors.gray500} />
+                    <Text style={{ fontSize: 11, color: colors.gray500 }}>
+                      {referralRequest.JobExperienceMin != null && referralRequest.JobExperienceMax != null
+                        ? `${referralRequest.JobExperienceMin}-${referralRequest.JobExperienceMax} yrs`
+                        : referralRequest.JobExperienceMin != null
+                        ? `${referralRequest.JobExperienceMin}+ yrs`
+                        : `Up to ${referralRequest.JobExperienceMax} yrs`}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
-            </View>
-          )}
+            )}
+          </View>
 
           {/* Reward Info Banner */}
           <View style={styles.rewardBannerCompact}>
