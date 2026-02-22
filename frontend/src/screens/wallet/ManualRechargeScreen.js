@@ -75,6 +75,54 @@ const BonusPercentBadge = ({ percent }) => {
   );
 };
 
+// Animated "Limited Time" badge with fill + shimmer (red variant)
+const LimitedTimeBadge = () => {
+  const fillAnim = React.useRef(new Animated.Value(0)).current;
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const shimmerAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    fillAnim.setValue(0);
+    Animated.spring(fillAnim, { toValue: 1, tension: 40, friction: 8, useNativeDriver: false }).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.08, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnim, { toValue: 1, duration: 1800, useNativeDriver: false }),
+        Animated.timing(shimmerAnim, { toValue: 0, duration: 0, useNativeDriver: false }),
+      ])
+    ).start();
+  }, []);
+
+  const fillWidth = fillAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  const shimmerLeft = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: ['-30%', '130%'] });
+
+  return (
+    <Animated.View style={{ transform: [{ scale: pulseAnim }], marginLeft: 8 }}>
+      <View style={{ overflow: 'hidden', borderRadius: 10, borderWidth: 1, borderColor: '#EF444440' }}>
+        <View style={{ backgroundColor: '#EF444415', paddingHorizontal: 8, paddingVertical: 3 }}>
+          <Animated.View style={{
+            position: 'absolute', top: 0, left: 0, bottom: 0,
+            width: fillWidth, backgroundColor: '#EF444430', borderRadius: 10,
+          }} />
+          <Animated.View style={{
+            position: 'absolute', top: 0, bottom: 0, width: '20%',
+            left: shimmerLeft,
+            backgroundColor: '#EF444418', borderRadius: 10,
+          }} />
+          <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 9, textAlign: 'center', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+            Limited Time
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
 const ManualRechargeScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const { pricing } = usePricing();
@@ -381,11 +429,15 @@ const ManualRechargeScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* Choose a Pack — horizontal scroll */}
+        {/* ⚡ Booster Packs — horizontal scroll */}
         {bonusPacks.length > 0 && (
           <View style={{ marginBottom: 10 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8, paddingHorizontal: 4 }}>Choose a Pack</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 2, paddingVertical: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, marginBottom: 4 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>⚡ Booster Packs</Text>
+              <LimitedTimeBadge />
+            </View>
+            <Text style={{ fontSize: 11, color: colors.gray500, paddingHorizontal: 4, marginBottom: 8 }}>Pay less, get more</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 2, paddingVertical: 2 }}>
               {bonusPacks.map((pack) => {
                 const isSelected = selectedPack?.PackID === pack.PackID;
                 return (
@@ -394,31 +446,29 @@ const ManualRechargeScreen = ({ navigation }) => {
                     activeOpacity={0.7}
                     onPress={() => handlePackSelect(pack)}
                     style={{
-                      width: 130,
+                      width: 95,
                       borderWidth: isSelected ? 1.5 : 1,
                       borderRadius: 10,
-                      padding: 10,
+                      padding: 8,
                       borderColor: isSelected ? colors.primary : colors.border,
                       backgroundColor: isSelected ? colors.primary + '08' : colors.surface,
                     }}
                   >
-                    <View style={{ flexDirection: 'row', justifyContent: pack.Badge ? 'space-between' : 'flex-end', alignItems: 'center', marginBottom: 3, minHeight: 16 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: pack.Badge ? 'space-between' : 'flex-end', alignItems: 'center', marginBottom: 2, minHeight: 14 }}>
                       {pack.Badge ? (
-                        <View style={{ backgroundColor: pack.Badge === 'Most Popular' ? '#F59E0B' : pack.Badge === 'Best Value' ? '#10B981' : colors.primary, paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3 }}>
-                          <Text style={{ color: '#fff', fontSize: 7, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 }}>{pack.Badge}</Text>
+                        <View style={{ backgroundColor: pack.Badge === 'Most Popular' ? '#F59E0B' : pack.Badge === 'Best Value' ? '#10B981' : colors.primary, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                          <Text style={{ color: '#fff', fontSize: 6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.2 }}>{pack.Badge}</Text>
                         </View>
                       ) : null}
-                      {isSelected && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
+                      {isSelected && <Ionicons name="checkmark-circle" size={14} color={colors.primary} />}
                     </View>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>₹{pack.PayAmount}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>Get ₹{pack.GetAmount}</Text>
-                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>₹{pack.PayAmount}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginTop: 1 }}>Get ₹{pack.GetAmount}</Text>
                     {pack.BonusPercent > 0 && (
-                      <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 11, marginTop: 1 }}>+{Math.round(pack.BonusPercent)}% bonus</Text>
+                      <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 10, marginTop: 1 }}>+{Math.round(pack.BonusPercent)}%</Text>
                     )}
                     {pack.ReferralsWorth > 0 && (
-                      <Text style={{ color: colors.gray500, fontSize: 9, marginTop: 2 }}>≈ {pack.ReferralsWorth} referrals</Text>
+                      <Text style={{ color: colors.gray500, fontSize: 8, marginTop: 1 }}>≈ {pack.ReferralsWorth} referrals</Text>
                     )}
                   </TouchableOpacity>
                 );
