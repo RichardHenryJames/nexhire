@@ -123,11 +123,15 @@ class GoogleAuthService {
     return this._handleNonSuccess(result);
   }
 
-  // Native: implicit flow through refopen.com redirect page
-  // Flow: App → Chrome → Google OAuth → refopen.com/google-auth-callback.html#access_token=...
+  // Native: implicit flow through redirect page
+  // Flow: App → Chrome → Google OAuth → callback.html#access_token=...
   //        → HTML page reads fragment, deep-links back: scheme://auth/callback?access_token=...&id_token=...
   async _signInNative(clientId) {
-    const redirectUri = 'https://www.refopen.com/google-auth-callback.html';
+    // Use dev or prod callback URL based on environment
+    const appEnv = Constants.expoConfig?.extra?.appEnv || 'production';
+    const redirectUri = appEnv === 'production'
+      ? 'https://www.refopen.com/google-auth-callback.html'
+      : 'https://thankful-pebble-07c889000.1.azurestaticapps.net/google-auth-callback.html';
     const appScheme = Constants.expoConfig?.scheme || 'com.refopen.app';
 
     // Encode app scheme in state so the HTML page knows where to deep-link
