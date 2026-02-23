@@ -336,7 +336,7 @@ export const getAdminDashboardReferrals = withAuth(async (
     monthAgo.setMonth(monthAgo.getMonth() - 1);
     const monthAgoStr = monthAgo.toISOString().split('T')[0];
 
-    const [referralStats, recentReferrals, dailyReferrals, topOrgs] = await Promise.all([
+    const [referralStats, recentReferrals, dailyReferrals, topOrgs, eligibleReferrers, companiesWithReferrers] = await Promise.all([
       dbService.executeQuery(`
         SELECT 
           COUNT(*) AS TotalRequests,
@@ -351,15 +351,19 @@ export const getAdminDashboardReferrals = withAuth(async (
       `, [today, weekAgoStr, monthAgoStr]),
       dbService.executeQuery(`
         SELECT TOP 20
-          rr.RequestID, rr.JobTitle, o.Name AS CompanyName, rr.Status,
-          rr.RequestedAt, rr.ReferredAt,
+          rr.RequestID, rr.JobTitle, rr.JobID, rr.ExtJobID, rr.JobURL,
+          o.Name AS CompanyName, rr.Status,
+          rr.RequestedAt, rr.ReferredAt, rr.ReferralMessage,
           u.FirstName + ' ' + u.LastName AS RequesterName, u.Email AS RequesterEmail,
-          ref.FirstName + ' ' + ref.LastName AS ReferrerName
+          u.UserID AS RequesterUserID, u.ProfilePictureURL AS RequesterPhoto,
+          ref.FirstName + ' ' + ref.LastName AS ReferrerName, ref.Email AS ReferrerEmail,
+          ar.ResumeURL, ar.ResumeLabel
         FROM ReferralRequests rr
         JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
         JOIN Users u ON a.UserID = u.UserID
         LEFT JOIN Users ref ON rr.AssignedReferrerID = ref.UserID
         LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
+        LEFT JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
         ORDER BY rr.RequestedAt DESC
       `, []),
       dbService.executeQuery(`
@@ -382,7 +386,44 @@ export const getAdminDashboardReferrals = withAuth(async (
           SELECT OrganizationID, COUNT(*) AS ReferralCount
           FROM ReferralRequests GROUP BY OrganizationID
         ) rc ON rc.OrganizationID = o.OrganizationID
-        ORDER BY jc.JobCount DESC
+        ORDER BY jc.JobCount DESC      `, []),
+      // Get eligible referrers per organization (verified employees)
+      dbService.executeQuery(`
+        SELECT 
+          we.OrganizationID,
+          u.UserID, u.FirstName + ' ' + u.LastName AS ReferrerName, 
+          u.Email AS ReferrerEmail, u.ProfilePictureURL,
+          u.LastActive,
+          we.JobTitle AS CurrentRole
+        FROM WorkExperiences we
+        INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+        INNER JOIN Users u ON a.UserID = u.UserID
+        WHERE we.IsCurrent = 1 AND we.IsActive = 1 AND we.CompanyEmailVerified = 1
+        AND we.OrganizationID IN (
+          SELECT DISTINCT OrganizationID FROM ReferralRequests 
+          WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE())
+        )      `, []),
+      // Companies with verified referrers
+      dbService.executeQuery(`
+        SELECT 
+          o.OrganizationID, o.Name AS CompanyName, o.LogoURL, o.Industry,
+          COUNT(DISTINCT we.ApplicantID) AS ReferrerCount,
+          ISNULL(rc.ReferralCount, 0) AS TotalReferrals,
+          ISNULL(rc.CompletedCount, 0) AS CompletedReferrals,
+          STRING_AGG(CONCAT(u.FirstName, ' ', u.LastName), ', ') AS ReferrerNames
+        FROM Organizations o
+        INNER JOIN WorkExperiences we ON we.OrganizationID = o.OrganizationID
+          AND we.IsCurrent = 1 AND we.IsActive = 1 AND we.CompanyEmailVerified = 1
+        INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+        INNER JOIN Users u ON a.UserID = u.UserID
+        LEFT JOIN (
+          SELECT OrganizationID, 
+            COUNT(*) AS ReferralCount,
+            SUM(CASE WHEN Status IN ('Completed','Verified','ProofUploaded') THEN 1 ELSE 0 END) AS CompletedCount
+          FROM ReferralRequests GROUP BY OrganizationID
+        ) rc ON rc.OrganizationID = o.OrganizationID
+        GROUP BY o.OrganizationID, o.Name, o.LogoURL, o.Industry, rc.ReferralCount, rc.CompletedCount
+        ORDER BY COUNT(DISTINCT we.ApplicantID) DESC
       `, [])
     ]);
 
@@ -392,7 +433,9 @@ export const getAdminDashboardReferrals = withAuth(async (
         referralStats: referralStats.recordset[0] || {},
         recentReferrals: recentReferrals.recordset || [],
         dailyReferrals: dailyReferrals.recordset || [],
-        topOrganizations: topOrgs.recordset || []
+        topOrganizations: topOrgs.recordset || [],
+        eligibleReferrers: eligibleReferrers.recordset || [],
+        companiesWithReferrers: companiesWithReferrers.recordset || []
       }, 'Referrals data loaded')
     };
   } catch (error) {

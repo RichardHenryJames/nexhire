@@ -27,7 +27,7 @@ import { showToast } from '../../components/Toast';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Valid tab names for deep linking
-const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'transactions', 'services', 'emailLogs', 'resumeAnalyzer'];
+const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'companies', 'transactions', 'services', 'emailLogs', 'resumeAnalyzer'];
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
@@ -522,6 +522,8 @@ export default function AdminDashboardScreen() {
     recentUsers = [],
     recentReferrals = [],
     topOrganizations = [],
+    eligibleReferrers = [],
+    companiesWithReferrers = [],
     applicationStats = {},
     messageStats = {},
     verifiedReferrers = []
@@ -552,6 +554,7 @@ export default function AdminDashboardScreen() {
           { key: 'users', label: 'Users', icon: 'people-outline' },
           { key: 'activity', label: 'Activity', icon: 'pulse-outline' },
           { key: 'referrals', label: 'Referrals', icon: 'share-social-outline' },
+          { key: 'companies', label: 'Companies', icon: 'business-outline' },
           { key: 'transactions', label: 'Transactions', icon: 'wallet-outline' },
           { key: 'services', label: 'Services', icon: 'rocket-outline' },
           { key: 'emailLogs', label: 'Emails', icon: 'mail-outline' },
@@ -1152,7 +1155,10 @@ export default function AdminDashboardScreen() {
       {recentReferrals.map((ref, index) => (
         <View key={ref.RequestID || index} style={styles.referralCard}>
           <View style={styles.referralHeader}>
-            <Text style={styles.referralTitle} numberOfLines={1}>{ref.JobTitle}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.referralTitle} numberOfLines={1}>{ref.JobTitle}</Text>
+              <Text style={styles.referralCompany}>{ref.CompanyName}</Text>
+            </View>
             <View style={[
               styles.statusBadge, 
               { backgroundColor: getStatusColor(ref.Status) + '20' }
@@ -1162,20 +1168,187 @@ export default function AdminDashboardScreen() {
               </Text>
             </View>
           </View>
-          <Text style={styles.referralCompany}>{ref.CompanyName}</Text>
-          <View style={styles.referralMeta}>
-            <Text style={styles.referralBy}>By: {ref.RequesterName}</Text>
-            {ref.ReferrerName && (
-              <Text style={styles.referralClaimed}>Referrer: {ref.ReferrerName}</Text>
+
+          {/* Seeker info */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+            {ref.RequesterPhoto ? (
+              <Image source={{ uri: ref.RequesterPhoto }} style={{ width: 28, height: 28, borderRadius: 14 }} />
+            ) : (
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>{ref.RequesterName?.charAt(0)}</Text>
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>{ref.RequesterName}</Text>
+              <Text style={{ fontSize: 10, color: colors.textSecondary }}>{ref.RequesterEmail}</Text>
+            </View>
+          </View>
+
+          {/* Referrer info */}
+          {ref.ReferrerName && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+              <Ionicons name="arrow-forward" size={12} color={colors.textSecondary} />
+              <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '500' }}>Referrer: {ref.ReferrerName}</Text>
+              {ref.ReferrerEmail && <Text style={{ fontSize: 10, color: colors.textSecondary }}>({ref.ReferrerEmail})</Text>}
+            </View>
+          )}
+
+          {/* Quick links row */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+            {/* Resume */}
+            {ref.ResumeURL && (
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primary + '10', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}
+                onPress={() => { if (Platform.OS === 'web') window.open(ref.ResumeURL, '_blank'); else Linking.openURL(ref.ResumeURL); }}
+              >
+                <Ionicons name="document-text-outline" size={12} color={colors.primary} />
+                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.primary }}>{ref.ResumeLabel || 'Resume'}</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Internal Job Link */}
+            {ref.JobID && !ref.ExtJobID && (
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}
+                onPress={() => navigation.navigate('JobDetails', { jobId: ref.JobID })}
+              >
+                <Ionicons name="briefcase-outline" size={12} color="#10B981" />
+                <Text style={{ fontSize: 10, fontWeight: '600', color: '#10B981' }}>View Job</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* External Job Link */}
+            {ref.ExtJobID && ref.JobURL && (
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}
+                onPress={() => { if (Platform.OS === 'web') window.open(ref.JobURL, '_blank'); else Linking.openURL(ref.JobURL); }}
+              >
+                <Ionicons name="link-outline" size={12} color="#10B981" />
+                <Text style={{ fontSize: 10, fontWeight: '600', color: '#10B981' }}>Job Link</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* External Job ID */}
+            {ref.ExtJobID && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontSize: 10, color: colors.textSecondary }}>ID:</Text>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.text }}>{ref.ExtJobID}</Text>
+              </View>
+            )}
+
+            {/* Seeker Profile */}
+            {ref.RequesterUserID && (
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.surface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: colors.border }}
+                onPress={() => navigation.navigate('ViewProfile', { userId: ref.RequesterUserID, userName: ref.RequesterName })}
+              >
+                <Ionicons name="person-outline" size={12} color={colors.textSecondary} />
+                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textSecondary }}>Profile</Text>
+              </TouchableOpacity>
             )}
           </View>
-          <Text style={styles.referralDate}>
-            {new Date(ref.RequestedAt).toLocaleDateString()}
+
+          {/* Date */}
+          <Text style={[styles.referralDate, { marginTop: 6 }]}>
+            {new Date(ref.RequestedAt).toLocaleDateString()} {ref.ReferredAt ? `→ ${new Date(ref.ReferredAt).toLocaleDateString()}` : ''}
           </Text>
+
+          {/* Eligible Referrers at this company */}
+          {(() => {
+            const orgReferrers = eligibleReferrers.filter(r => r.OrganizationID === ref.OrganizationID);
+            if (orgReferrers.length === 0) return null;
+            return (
+              <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border + '30' }}>
+                <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '600', marginBottom: 4 }}>
+                  Eligible Referrers ({orgReferrers.length}):
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                  {orgReferrers.map((er, i) => {
+                    const isAssigned = ref.AssignedReferrerID === er.UserID || ref.ReferrerEmail === er.ReferrerEmail;
+                    const isOnline = er.LastActive && (new Date() - new Date(er.LastActive)) < 24 * 60 * 60 * 1000;
+                    return (
+                      <View key={i} style={{ 
+                        flexDirection: 'row', alignItems: 'center', gap: 4, 
+                        backgroundColor: isAssigned ? '#10B98115' : colors.surface, 
+                        paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8,
+                        borderWidth: isAssigned ? 1 : 0.5, borderColor: isAssigned ? '#10B981' : colors.border 
+                      }}>
+                        {isOnline && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#10B981' }} />}
+                        {er.ProfilePictureURL ? (
+                          <Image source={{ uri: er.ProfilePictureURL }} style={{ width: 16, height: 16, borderRadius: 8 }} />
+                        ) : null}
+                        <Text style={{ fontSize: 9, color: isAssigned ? '#10B981' : colors.text, fontWeight: isAssigned ? '700' : '500' }} numberOfLines={1}>
+                          {er.ReferrerName}
+                        </Text>
+                        {isAssigned && <Ionicons name="checkmark-circle" size={10} color="#10B981" />}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })()}
         </View>
       ))}
     </>
   );
+  };
+
+  const renderCompaniesTab = () => {
+    if (tabLoading.referrals && !companiesWithReferrers.length) {
+      return <TabLoadingSpinner />;
+    }
+    return (
+    <>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Companies with Verified Referrers</Text>
+        <Text style={styles.sectionSubtitle}>{companiesWithReferrers.length} companies</Text>
+      </View>
+      {companiesWithReferrers.map((company, index) => (
+        <View key={company.OrganizationID || index} style={styles.referralCard}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            {company.LogoURL ? (
+              <Image source={{ uri: company.LogoURL }} style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.surface }} />
+            ) : (
+              <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="business" size={18} color={colors.primary} />
+              </View>
+            )}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{company.CompanyName}</Text>
+              {company.Industry && <Text style={{ fontSize: 11, color: colors.textSecondary }}>{company.Industry}</Text>}
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary + '15', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                <Ionicons name="people" size={12} color={colors.primary} />
+                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>{company.ReferrerCount}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Stats row */}
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="share-social" size={12} color={colors.textSecondary} />
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>{company.TotalReferrals} referrals</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="checkmark-done" size={12} color="#10B981" />
+              <Text style={{ fontSize: 11, color: '#10B981' }}>{company.CompletedReferrals} completed</Text>
+            </View>
+          </View>
+
+          {/* Referrer names */}
+          {company.ReferrerNames && (
+            <View style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.border + '30' }}>
+              <Text style={{ fontSize: 10, color: colors.textSecondary, fontWeight: '600', marginBottom: 2 }}>Referrers:</Text>
+              <Text style={{ fontSize: 10, color: colors.text, lineHeight: 16 }}>{company.ReferrerNames}</Text>
+            </View>
+          )}
+        </View>
+      ))}
+    </>
+    );
   };
 
   const renderTransactionsTab = () => {
@@ -2510,6 +2683,7 @@ export default function AdminDashboardScreen() {
           {activeTab === 'activity' && renderActivityTab()}
           {activeTab === 'services' && renderServicesTab()}
           {activeTab === 'referrals' && renderReferralsTab()}
+          {activeTab === 'companies' && renderCompaniesTab()}
           {activeTab === 'transactions' && renderTransactionsTab()}
           {activeTab === 'emailLogs' && renderEmailLogsTab()}
           {activeTab === 'resumeAnalyzer' && renderResumeAnalyzerTab()}
