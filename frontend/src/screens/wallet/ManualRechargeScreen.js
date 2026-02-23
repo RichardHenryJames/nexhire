@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,10 @@ import {
   ActivityIndicator,
   Image,
   Animated,
+  Modal,
+  Pressable,
+  Linking,
+  Platform,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,70 +24,13 @@ import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { usePricing } from '../../contexts/PricingContext';
 
-// Animated percentage badge with fill effect
-const BonusPercentBadge = ({ percent }) => {
-  const fillAnim = React.useRef(new Animated.Value(0)).current;
-  const pulseAnim = React.useRef(new Animated.Value(1)).current;
-  const shimmerAnim = React.useRef(new Animated.Value(0)).current;
-
-  React.useEffect(() => {
-    fillAnim.setValue(0);
-    // Fill animation
-    Animated.spring(fillAnim, { toValue: 1, tension: 40, friction: 8, useNativeDriver: false }).start();
-    // Subtle pulse
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1200, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-      ])
-    ).start();
-    // Shimmer sweep
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmerAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
-        Animated.timing(shimmerAnim, { toValue: 0, duration: 0, useNativeDriver: false }),
-      ])
-    ).start();
-  }, [percent]);
-
-  const fillWidth = fillAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-  const shimmerLeft = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: ['-30%', '130%'] });
-
-  return (
-    <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: '#10B98140', minWidth: 72 }}>
-        {/* Background */}
-        <View style={{ backgroundColor: '#10B98110', paddingHorizontal: 10, paddingVertical: 6 }}>
-          {/* Animated fill */}
-          <Animated.View style={{
-            position: 'absolute', top: 0, left: 0, bottom: 0,
-            width: fillWidth, backgroundColor: '#10B98130', borderRadius: 8,
-          }} />
-          {/* Shimmer */}
-          <Animated.View style={{
-            position: 'absolute', top: 0, bottom: 0, width: '20%',
-            left: shimmerLeft,
-            backgroundColor: '#10B98118', borderRadius: 8,
-          }} />
-          {/* Text */}
-          <Text style={{ color: '#10B981', fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
-            {percent}% extra
-          </Text>
-        </View>
-      </View>
-    </Animated.View>
-  );
-};
-
-// Animated "Limited Time" badge — draining liquid countdown effect
+// ─── Animated "Limited Time" badge ───────────────────────────────
 const LimitedTimeBadge = () => {
-  const drainAnim = React.useRef(new Animated.Value(1)).current;
-  const pulseAnim = React.useRef(new Animated.Value(1)).current;
-  const flowAnim = React.useRef(new Animated.Value(0)).current;
-  const glowAnim = React.useRef(new Animated.Value(0.3)).current;
+  const drainAnim = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
 
-  React.useEffect(() => {
-    // Drain: fills full then slowly empties, then refills — looping countdown feel
+  useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(drainAnim, { toValue: 1, duration: 300, useNativeDriver: false }),
@@ -92,7 +39,6 @@ const LimitedTimeBadge = () => {
         Animated.delay(400),
       ])
     ).start();
-    // Pulse — urgent heartbeat
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.1, duration: 400, useNativeDriver: true }),
@@ -100,15 +46,6 @@ const LimitedTimeBadge = () => {
         Animated.delay(1600),
       ])
     ).start();
-    // Flow sweep — liquid flowing across
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(flowAnim, { toValue: 1, duration: 1200, useNativeDriver: false }),
-        Animated.timing(flowAnim, { toValue: 0, duration: 0, useNativeDriver: false }),
-        Animated.delay(800),
-      ])
-    ).start();
-    // Glow pulsing border
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, { toValue: 0.8, duration: 1500, useNativeDriver: false }),
@@ -118,23 +55,15 @@ const LimitedTimeBadge = () => {
   }, []);
 
   const drainWidth = drainAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-  const flowLeft = flowAnim.interpolate({ inputRange: [0, 1], outputRange: ['-25%', '125%'] });
   const borderOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: ['#EF444450', '#EF4444CC'] });
 
   return (
     <Animated.View style={{ transform: [{ scale: pulseAnim }], marginLeft: 8 }}>
       <Animated.View style={{ overflow: 'hidden', borderRadius: 10, borderWidth: 1.5, borderColor: borderOpacity }}>
         <View style={{ backgroundColor: '#EF444410', paddingHorizontal: 9, paddingVertical: 3.5 }}>
-          {/* Draining fill — starts full red, empties like a countdown */}
           <Animated.View style={{
             position: 'absolute', top: 0, right: 0, bottom: 0,
             width: drainWidth, backgroundColor: '#EF444435', borderRadius: 10,
-          }} />
-          {/* Liquid flow sweep */}
-          <Animated.View style={{
-            position: 'absolute', top: 0, bottom: 0, width: '30%',
-            left: flowLeft,
-            backgroundColor: '#EF444420', borderRadius: 10,
           }} />
           <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 9, textAlign: 'center', letterSpacing: 0.5, textTransform: 'uppercase' }}>
             ⏳ Limited Time
@@ -145,13 +74,66 @@ const LimitedTimeBadge = () => {
   );
 };
 
+// ─── Animated bonus percent badge ────────────────────────────────
+const BonusPercentBadge = ({ percent }) => {
+  const fillAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    fillAnim.setValue(0);
+    Animated.spring(fillAnim, { toValue: 1, tension: 40, friction: 8, useNativeDriver: false }).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [percent]);
+
+  const fillWidth = fillAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+
+  return (
+    <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: '#10B98140', minWidth: 72 }}>
+        <View style={{ backgroundColor: '#10B98110', paddingHorizontal: 10, paddingVertical: 6 }}>
+          <Animated.View style={{
+            position: 'absolute', top: 0, left: 0, bottom: 0,
+            width: fillWidth, backgroundColor: '#10B98130', borderRadius: 8,
+          }} />
+          <Text style={{ color: '#10B981', fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
+            {percent}% extra
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
+// ─── UPI Deep Link helpers ───────────────────────────────────────
+const UPI_PAYEE_VPA = 'rocanafashionaccessoriesprivatelimited.ibz@icici';
+const UPI_PAYEE_NAME = 'Rocana Fashion Accessories Pvt Ltd';
+
+const buildUpiUrl = (appScheme, amount) => {
+  const amt = parseFloat(amount) || 0;
+  const base = `${appScheme}://pay?pa=${encodeURIComponent(UPI_PAYEE_VPA)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&cu=INR`;
+  return amt > 0 ? `${base}&am=${amt.toFixed(2)}` : base;
+};
+
+const UPI_APPS = [
+  { id: 'phonepe', name: 'PhonePe', scheme: 'phonepe', icon: '📱', color: '#5F259F' },
+  { id: 'gpay', name: 'Google Pay', scheme: 'tez', icon: '💳', color: '#4285F4' },
+  { id: 'paytm', name: 'Paytm', scheme: 'paytmmp', icon: '💰', color: '#00BAF2' },
+  { id: 'generic', name: 'Other UPI', scheme: 'upi', icon: '🏦', color: '#2D7D46' },
+];
+
+// ─── Main Component ──────────────────────────────────────────────
 const ManualRechargeScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const { pricing } = usePricing();
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState(null);
-  const [showBankDetails, setShowBankDetails] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState(null);
+  const [showQrFullscreen, setShowQrFullscreen] = useState(false);
 
   // Bonus Packs
   const [bonusPacks, setBonusPacks] = useState([]);
@@ -159,16 +141,14 @@ const ManualRechargeScreen = ({ navigation }) => {
 
   // Promo Code
   const [promoCode, setPromoCode] = useState('');
-  const [promoResult, setPromoResult] = useState(null); // { valid, message, bonusAmount }
+  const [promoResult, setPromoResult] = useState(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
 
   // Form state
   const [amount, setAmount] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
     try {
@@ -177,13 +157,8 @@ const ManualRechargeScreen = ({ navigation }) => {
         refopenAPI.getManualPaymentSettings(),
         refopenAPI.getBonusPacks(),
       ]);
-
-      if (settingsRes?.success) {
-        setSettings(settingsRes.data);
-      }
-      if (packsRes?.success) {
-        setBonusPacks(packsRes.data || []);
-      }
+      if (settingsRes?.success) setSettings(settingsRes.data);
+      if (packsRes?.success) setBonusPacks(packsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -193,190 +168,56 @@ const ManualRechargeScreen = ({ navigation }) => {
 
   const handlePackSelect = (pack) => {
     if (selectedPack?.PackID === pack.PackID) {
-      // Deselect
       setSelectedPack(null);
       setAmount('');
     } else {
       setSelectedPack(pack);
       setAmount(String(pack.PayAmount));
-      // Re-validate promo if one is applied
-      if (promoResult?.valid && promoCode) {
-        handleValidatePromo(promoCode, pack.PayAmount);
-      }
+      if (promoResult?.valid && promoCode) handleValidatePromo(promoCode, pack.PayAmount);
     }
   };
 
   const handleValidatePromo = async (code, rechargeAmount) => {
     const codeToValidate = code || promoCode;
     const amountToValidate = rechargeAmount || parseFloat(amount) || 0;
-    
-    if (!codeToValidate.trim()) {
-      setPromoResult(null);
-      return;
-    }
-
+    if (!codeToValidate.trim()) { setPromoResult(null); return; }
     try {
       setValidatingPromo(true);
       const res = await refopenAPI.validatePromoCode(codeToValidate.trim(), amountToValidate);
-      if (res?.success) {
-        setPromoResult(res.data);
-      } else {
-        setPromoResult({ valid: false, message: 'Unable to validate promo code' });
-      }
+      if (res?.success) setPromoResult(res.data);
+      else setPromoResult({ valid: false, message: 'Unable to validate promo code' });
     } catch (error) {
-      console.error('Error validating promo:', error);
       setPromoResult({ valid: false, message: 'Unable to validate promo code' });
     } finally {
       setValidatingPromo(false);
     }
   };
 
-  const handleRemovePromo = () => {
-    setPromoCode('');
-    setPromoResult(null);
-  };
+  const handleRemovePromo = () => { setPromoCode(''); setPromoResult(null); };
 
-  // Calculate total credit
   const getPayAmount = () => parseFloat(amount) || 0;
   const getPackBonus = () => selectedPack?.BonusAmount || 0;
   const getPromoBonus = () => (promoResult?.valid ? promoResult.bonusAmount || 0 : 0);
   const getTotalCredit = () => getPayAmount() + getPackBonus() + getPromoBonus();
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    content: {
-      flex: 1,
-    },
-    scrollContent: {
-      padding: 16,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    section: {
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 16,
-    },
-    sectionTitle: {
-      fontSize: typography.sizes?.md || 16,
-      fontWeight: typography.weights?.semibold || '600',
-      color: colors.text,
-      marginBottom: 12,
-    },
-    infoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingVertical: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border + '30',
-    },
-    infoLabel: {
-      fontSize: typography.sizes?.sm || 14,
-      color: colors.gray500,
-      flex: 1,
-    },
-    infoValue: {
-      fontSize: typography.sizes?.sm || 14,
-      fontWeight: typography.weights?.medium || '500',
-      color: colors.text,
-      flex: 2,
-      textAlign: 'right',
-    },
-    input: {
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 8,
-      padding: 12,
-      fontSize: typography.sizes?.md || 16,
-      color: colors.text,
-      marginBottom: 16,
-    },
-    submitButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 12,
-      padding: 16,
-      alignItems: 'center',
-      flexDirection: 'row',
-      justifyContent: 'center',
-      marginBottom: 16,
-    },
-    submitButtonText: {
-      color: colors.white,
-      fontSize: typography.sizes?.md || 16,
-      fontWeight: typography.weights?.semibold || '600',
-    },
-    qrContainer: {
-      backgroundColor: '#FFF',
-      padding: 12,
-      borderRadius: 12,
-      marginBottom: 8,
-    },
-    qrImage: {
-      width: 180,
-      height: 180,
-    },
-    upiIdContainer: {
-      backgroundColor: colors.primary + '10',
-      borderRadius: 8,
-      padding: 12,
-      marginVertical: 12,
-      width: '100%',
-    },
-    upiIdLabel: {
-      fontSize: typography.sizes?.xs || 12,
-      color: colors.gray500,
-      marginBottom: 6,
-      textAlign: 'center',
-    },
-    upiIdRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.background,
-      borderRadius: 6,
-      padding: 10,
-    },
-    upiIdText: {
-      fontSize: typography.sizes?.xs || 12,
-      fontWeight: typography.weights?.medium || '500',
-      color: colors.primary,
-      whiteSpace: 'nowrap',
-    },
-    copyUpiBtn: {
-      padding: 6,
-      marginLeft: 8,
-    },
-    poweredByText: {
-      fontSize: typography.sizes?.xs || 12,
-      color: colors.gray500,
-      fontStyle: 'italic',
-    },
-    orDivider: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginVertical: 14,
-      gap: 8,
-    },
-    orDividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: colors.border + '60',
-    },
-    orDividerText: {
-      fontSize: typography.sizes?.xs || 12,
-      color: colors.gray500,
-      fontWeight: typography.weights?.medium || '500',
-    },
-  });
+  const openUpiApp = async (app) => {
+    const url = buildUpiUrl(app.scheme, amount);
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        const genericUrl = buildUpiUrl('upi', amount);
+        const genSupported = await Linking.canOpenURL(genericUrl);
+        if (genSupported) await Linking.openURL(genericUrl);
+        else showToast(`${app.name} not installed. Scan the QR code instead.`, 'info');
+      }
+    } catch (e) {
+      showToast(`Could not open ${app.name}. Scan the QR code instead.`, 'info');
+    }
+  };
+
+  const styles = createStyles(colors);
 
   if (loading) {
     return (
@@ -388,72 +229,18 @@ const ManualRechargeScreen = ({ navigation }) => {
     );
   }
 
+  const payAmt = getPayAmount();
+  const totalBonus = getPackBonus() + getPromoBonus();
+  const bonusPct = totalBonus > 0 && payAmt > 0 ? Math.round((totalBonus / payAmt) * 100) : 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <SubScreenHeader title="Add Money" fallbackTab="Home" />
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
-        {/* QR Payment — prominent at top */}
-        {settings && (
-          <View style={[styles.section, { paddingVertical: 16, paddingHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.primary + '30' }]}>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 10 }}>Scan & Pay</Text>
-              <View style={[styles.qrContainer, { padding: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.border }]}>
-                <Image 
-                  source={require('../../../assets/payment-qr.png')} 
-                  style={{ width: 200, height: 200 }}
-                  resizeMode="contain"
-                />
-              </View>
-              {/* UPI ID inline */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, backgroundColor: colors.primary + '08', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
-                <Text style={{ fontSize: 10, color: colors.gray500, marginRight: 6 }}>UPI:</Text>
-                <Text style={{ fontSize: 10, color: colors.primary, fontWeight: '600' }} selectable numberOfLines={1}>rocanafashionaccessoriesprivatelimited.ibz@icici</Text>
-                <TouchableOpacity 
-                  style={{ marginLeft: 6, padding: 2 }}
-                  onPress={() => {
-                    Clipboard.setStringAsync('rocanafashionaccessoriesprivatelimited.ibz@icici');
-                    showToast('UPI ID copied!', 'success');
-                  }}
-                >
-                  <Ionicons name="copy-outline" size={14} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* Bank Transfer — collapsed */}
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setShowBankDetails(!showBankDetails)}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border + '40' }}
-            >
-              <Ionicons name="business-outline" size={14} color={colors.gray500} />
-              <Text style={{ color: colors.gray500, fontSize: 12, fontWeight: '500', marginLeft: 4 }}>Bank Transfer Details</Text>
-              <Ionicons name={showBankDetails ? 'chevron-up' : 'chevron-down'} size={14} color={colors.gray500} style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-
-            {showBankDetails && (
-              <View style={{ marginTop: 8 }}>
-                {[
-                  { label: 'Bank', value: settings.bankName },
-                  { label: 'Account Name', value: settings.bankAccountName },
-                  { label: 'Account No', value: settings.bankAccountNumber },
-                  { label: 'IFSC Code', value: settings.bankIfsc },
-                ].map((item, idx) => (
-                  <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: idx < 3 ? 1 : 0, borderBottomColor: colors.border + '30' }}>
-                    <Text style={{ fontSize: 12, color: colors.gray500 }}>{item.label}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }}>{item.value}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            <Text style={{ fontSize: 10, color: colors.gray500, fontStyle: 'italic', textAlign: 'center', marginTop: 10 }}>Refopen is powered by Rocana</Text>
-          </View>
-        )}
-
-        {/* ⚡ Booster Packs — horizontal scroll */}
+        {/* ═══ 1. BOOSTER PACKS ═══ */}
         {bonusPacks.length > 0 && (
-          <View style={{ marginBottom: 10 }}>
+          <View style={{ marginBottom: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, marginBottom: 4 }}>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>⚡ Booster Packs</Text>
               <LimitedTimeBadge />
@@ -499,7 +286,7 @@ const ManualRechargeScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* Custom Amount + Promo — compact row */}
+        {/* ═══ 2. CUSTOM AMOUNT ═══ */}
         <View style={[styles.section, { padding: 10, marginBottom: 10 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <Text style={{ fontSize: 13, color: colors.gray500, fontWeight: '500' }}>Custom</Text>
@@ -525,7 +312,7 @@ const ManualRechargeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* Promo Code — compact */}
+        {/* ═══ 3. PROMO CODE ═══ */}
         <View style={[styles.section, { paddingVertical: showPromoInput ? 10 : 8, paddingHorizontal: 12, marginBottom: 10 }]}>
           {!showPromoInput ? (
             <TouchableOpacity
@@ -577,23 +364,20 @@ const ManualRechargeScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Credit Summary — compact */}
-        {getPayAmount() > 0 && (() => {
-          const totalBonus = getPackBonus() + getPromoBonus();
-          const bonusPct = totalBonus > 0 ? Math.round((totalBonus / getPayAmount()) * 100) : 0;
-          return (
-          <View style={[styles.section, { 
-            backgroundColor: totalBonus > 0 ? '#10B981' + '08' : colors.surface, 
-            borderWidth: totalBonus > 0 ? 1 : 0, 
-            borderColor: '#10B981' + '25',
+        {/* ═══ 4. CREDIT SUMMARY ═══ */}
+        {payAmt > 0 && (
+          <View style={[styles.section, {
+            backgroundColor: totalBonus > 0 ? '#10B98108' : colors.surface,
+            borderWidth: totalBonus > 0 ? 1 : 0,
+            borderColor: '#10B98125',
             paddingVertical: 10,
             paddingHorizontal: 12,
-            marginBottom: 10,
+            marginBottom: 14,
           }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.gray500, fontSize: 11 }}>If you pay</Text>
-                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 1 }}>₹{getPayAmount()}</Text>
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 1 }}>₹{payAmt}</Text>
                 <View style={{ height: 1, backgroundColor: colors.border + '40', marginVertical: 6 }} />
                 <Text style={{ color: colors.gray500, fontSize: 11 }}>You will get</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 1 }}>
@@ -606,10 +390,71 @@ const ManualRechargeScreen = ({ navigation }) => {
               {bonusPct > 0 && <BonusPercentBadge percent={bonusPct} />}
             </View>
           </View>
-          );
-        })()}
+        )}
 
-        {/* Already Paid — navigates to Submit Payment screen */}
+        {/* ═══ 5. PAYMENT SECTION — QR + UPI Apps ═══ */}
+        <View style={[styles.section, { padding: 16, marginBottom: 14, borderWidth: 1, borderColor: colors.primary + '25' }]}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 12, textAlign: 'center' }}>
+            Pay {payAmt > 0 ? `₹${payAmt} ` : ''}via UPI
+          </Text>
+
+          <View style={{ flexDirection: 'row', gap: 16, alignItems: 'flex-start' }}>
+            {/* QR Code — left, blue tint, clickable for fullscreen */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setShowQrFullscreen(true)}
+              style={{
+                backgroundColor: '#FFFFFF',
+                padding: 8,
+                borderRadius: 12,
+                borderWidth: 2,
+                borderColor: colors.primary + '40',
+                alignItems: 'center',
+              }}
+            >
+              <Image
+                source={require('../../../assets/payment-qr.png')}
+                style={{ width: 110, height: 110 }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 8, color: colors.primary, fontWeight: '600', marginTop: 4 }}>Tap to enlarge</Text>
+            </TouchableOpacity>
+
+            {/* UPI App Deep Links — right */}
+            <View style={{ flex: 1, gap: 8 }}>
+              <Text style={{ fontSize: 11, color: colors.gray500, fontWeight: '500', marginBottom: 2 }}>
+                Or pay with UPI app
+              </Text>
+              {UPI_APPS.map((app) => (
+                <TouchableOpacity
+                  key={app.id}
+                  activeOpacity={0.7}
+                  onPress={() => openUpiApp(app)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: app.color + '12',
+                    borderRadius: 10,
+                    paddingVertical: 10,
+                    paddingHorizontal: 12,
+                    borderWidth: 1,
+                    borderColor: app.color + '30',
+                  }}
+                >
+                  <Text style={{ fontSize: 18, marginRight: 8 }}>{app.icon}</Text>
+                  <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>{app.name}</Text>
+                  <Ionicons name="open-outline" size={14} color={app.color} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <Text style={{ fontSize: 9, color: colors.gray500, fontStyle: 'italic', textAlign: 'center', marginTop: 12 }}>
+            Refopen is powered by Rocana
+          </Text>
+        </View>
+
+        {/* ═══ 6. ALREADY PAID ═══ */}
         <TouchableOpacity
           style={styles.submitButton}
           onPress={() => navigation.navigate('SubmitPayment')}
@@ -627,50 +472,19 @@ const ManualRechargeScreen = ({ navigation }) => {
           <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Need Help?</Text>
         </TouchableOpacity>
 
-        {/* FAQ Section */}
+        {/* ═══ 7. FAQ ═══ */}
         <View style={{ marginBottom: 32 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 10, paddingHorizontal: 4 }}>Frequently Asked Questions</Text>
           {[
-            {
-              q: 'Can I withdraw my added wallet balance?',
-              a: 'No. Recharged balance and bonuses are non-withdrawable and can only be used for services on RefOpen such as referral requests, AI Job Recommendations, profile views, and other RefOpen services.',
-            },
-            {
-              q: 'How does manual recharge work?',
-              a: 'Scan the QR code or transfer to our UPI/bank account, then tap "Already Paid? Submit Details" to upload your payment proof. We\'ll verify and credit your wallet.',
-            },
-            {
-              q: 'How long does it take to credit my wallet?',
-              a: 'Manual payments are usually verified within 1 minute to 24 hours. You\'ll receive a notification once your wallet is credited.',
-            },
-            {
-              q: 'What details do I need to submit after paying?',
-              a: 'Your payment amount and a screenshot or UTR/transaction reference number from your payment app.',
-            },
-            {
-              q: 'Do I still get pack bonuses with manual payment?',
-              a: 'Yes! Select a pack before paying, and the bonus will be applied when your payment is verified.',
-            },
-            {
-              q: 'Can I recharge a custom amount?',
-              a: `Yes. Enter any custom amount — the minimum is ₹${settings?.minAmount || 1}.`,
-            },
-            {
-              q: 'What can I spend wallet balance on?',
-              a: `• Referral request at a specific company — ₹${pricing.referralRequestCost}\n• Open-to-any-company referral — ₹${pricing.openToAnyReferralCost}\n• AI Job Recommendations (${pricing.aiAccessDurationDays} days) — ₹${pricing.aiJobsCost}\n• Profile Views (${pricing.profileViewAccessDurationDays} days) — ₹${pricing.profileViewCost}`,
-            },
-            {
-              q: 'What happens when I request a referral?',
-              a: `When you request a referral, ₹${pricing.referralRequestCost} is placed on hold (not deducted). If a referrer picks up your request, the hold converts to a debit. If no one picks it up within 14 days, the full amount is automatically released back to your wallet.`,
-            },
-            {
-              q: 'Who is Rocana?',
-              a: 'Rocana is our payment processing partner. All bank/UPI transfers go through Rocana\'s verified accounts.',
-            },
-            {
-              q: 'My payment was not credited?',
-              a: 'Make sure you\'ve submitted payment proof via "Already Paid? Submit Details". If already submitted and not credited within 24 hours, contact us via "Need Help?".',
-            },
+            { q: 'Can I withdraw my added wallet balance?', a: 'No. Recharged balance and bonuses are non-withdrawable and can only be used for services on RefOpen such as referral requests, AI Job Recommendations, profile views, and other RefOpen services.' },
+            { q: 'How does manual recharge work?', a: 'Select a booster pack or enter a custom amount. Pay via any UPI app or scan the QR code, then tap "Already Paid? Submit Details" to upload your payment proof. We\'ll verify and credit your wallet.' },
+            { q: 'How long does it take to credit my wallet?', a: 'Manual payments are usually verified within 1 minute to 24 hours. You\'ll receive a notification once your wallet is credited.' },
+            { q: 'Do I still get pack bonuses with manual payment?', a: 'Yes! Select a pack before paying, and the bonus will be applied when your payment is verified.' },
+            { q: 'Can I recharge a custom amount?', a: `Yes. Enter any custom amount — the minimum is ₹${settings?.minAmount || 1}.` },
+            { q: 'What can I spend wallet balance on?', a: `• Referral request at a specific company — ₹${pricing.referralRequestCost}\n• Open-to-any-company referral — ₹${pricing.openToAnyReferralCost}\n• AI Job Recommendations (${pricing.aiAccessDurationDays} days) — ₹${pricing.aiJobsCost}\n• Profile Views (${pricing.profileViewAccessDurationDays} days) — ₹${pricing.profileViewCost}` },
+            { q: 'What happens when I request a referral?', a: `When you request a referral, ₹${pricing.referralRequestCost} is placed on hold (not deducted). If a referrer picks up your request, the hold converts to a debit. If no one picks it up within 14 days, the full amount is automatically released back to your wallet.` },
+            { q: 'Who is Rocana?', a: 'Rocana is our payment processing partner. All UPI transfers go through Rocana\'s verified accounts.' },
+            { q: 'My payment was not credited?', a: 'Make sure you\'ve submitted payment proof via "Already Paid? Submit Details". If already submitted and not credited within 24 hours, contact us via "Need Help?".' },
           ].map((item, idx) => (
             <View key={idx} style={{ backgroundColor: colors.surface, borderRadius: 10, marginBottom: 6, borderWidth: 1, borderColor: colors.border + '40' }}>
               <TouchableOpacity
@@ -690,10 +504,73 @@ const ManualRechargeScreen = ({ navigation }) => {
             </View>
           ))}
         </View>
-
       </ScrollView>
+
+      {/* ═══ QR FULLSCREEN MODAL ═══ */}
+      <Modal
+        visible={showQrFullscreen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowQrFullscreen(false)}
+      >
+        <Pressable
+          style={styles.qrModalOverlay}
+          onPress={() => setShowQrFullscreen(false)}
+        >
+          <Pressable style={styles.qrModalContent} onPress={() => {}}>
+            <View style={styles.qrModalCard}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#1E293B', marginBottom: 4, textAlign: 'center' }}>Scan to Pay</Text>
+              {payAmt > 0 && (
+                <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600', marginBottom: 12, textAlign: 'center' }}>₹{payAmt}</Text>
+              )}
+              <Image
+                source={require('../../../assets/payment-qr.png')}
+                style={{ width: 260, height: 260 }}
+                resizeMode="contain"
+              />
+              <Text style={{ fontSize: 10, color: '#64748B', marginTop: 12, textAlign: 'center' }}>
+                Scan with any UPI app to pay
+              </Text>
+              <Text style={{ fontSize: 9, color: '#94A3B8', fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
+                Powered by Rocana
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowQrFullscreen(false)}
+              style={styles.qrModalClose}
+            >
+              <Ionicons name="close-circle" size={40} color="rgba(255,255,255,0.9)" />
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 };
+
+// ─── Styles ──────────────────────────────────────────────────────
+const createStyles = (colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { flex: 1 },
+  scrollContent: { padding: 16 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  section: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 16 },
+  input: {
+    backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border,
+    borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 16,
+  },
+  submitButton: {
+    backgroundColor: colors.primary, borderRadius: 12, padding: 16,
+    alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginBottom: 16,
+  },
+  submitButtonText: { color: colors.white, fontSize: typography.sizes?.md || 16, fontWeight: typography.weights?.semibold || '600' },
+  qrModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center' },
+  qrModalContent: { alignItems: 'center' },
+  qrModalCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20,
+  },
+  qrModalClose: { marginTop: 20 },
+});
 
 export default ManualRechargeScreen;

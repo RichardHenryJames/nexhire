@@ -1,0 +1,334 @@
+[
+  {
+    "name": "ENABLE_REFERRAL_SYSTEM",
+    "value": "true"
+  },
+  {
+    "name": "ENABLE_WALLET_SYSTEM",
+    "value": "true"
+  },
+  {
+    "name": "DB_PASSWORD",
+    "value": "@Microsoft.KeyVault(SecretUri=https://refopen-kv-dev.vault.azure.net/secrets/SqlPassword/)"
+  },
+  {
+    "name": "WEBSITE_RUN_FROM_PACKAGE",
+    "value": "1"
+  },
+  {
+    "name": "RATE_LIMIT_MAX_REQUESTS",
+    "value": "1000"
+  },
+  {
+    "name": "AUTO_START_SCHEDULER",
+    "value": "false"
+  },
+  {
+    "name": "DB_CONNECTION_TIMEOUT",
+    "value": "30"
+  },
+  {
+    "name": "RATE_LIMIT_WINDOW_MS",
+    "value": "900000"
+  },
+  {
+    "name": "DB_TRUST_SERVER_CERTIFICATE",
+    "value": "false"
+  },
+  {
+    "name": "ENABLE_JOB_SCRAPING",
+    "value": "true"
+  },
+  {
+    "name": "FEATURE_FLAG_REFERRAL_SYSTEM",
+    "value": "true"
+  },
+  {
+    "name": "MIN_WALLET_RECHARGE",
+    "value": "100"
+  },
+  {
+    "name": "API_VERSION",
+    "value": "v1"
+  },
+  {
+    "name": "AZURE_STORAGE_CONTAINER_PROFILE_IMAGES",
+    "value": "profile-images"
+  },
+  {
+    "name": "FEATURE_FLAG_GOOGLE_SIGNIN",
+    "value": "true"
+  },
+  {
+    "name": "DB_ENCRYPT",
+    "value": "true"
+  },
+  {
+    "name": "EMAIL_SENDER_ADDRESS",
+    "value": "noreply@refopen.com"
+  },
+  {
+    "name": "RAZORPAY_WEBHOOK_SECRET",
+    "value": "YOUR_TEST_WEBHOOK_SECRET"
+  },
+  {
+    "name": "FRONTEND_URL",
+    "value": "https://thankful-pebble-07c889000.1.azurestaticapps.net"
+  },
+  {
+    "name": "FEATURE_FLAG_JOB_SCRAPING",
+    "value": "true"
+  },
+  {
+    "name": "API_BASE_URL",
+    "value": "https://refopen-api-func-dev.azurewebsites.net/api"
+  },
+  {
+    "name": "ADMIN_NOTIFICATION_EMAILS",
+    "value": "parimalkumar261@gmail.com"
+  },
+  {
+    "name": "APP_NAME",
+    "value": "RefOpen"
+  },
+  {
+    "name": "AZURE_STORAGE_CONTAINER_ARCHIVED_JOBS",
+    "value": "archived-jobs"
+  },
+  {
+    "name": "INIT_SCHEDULER",
+    "value": "false"
+  },
+  {
+    "name": "AWS_REGION",
+    "value": "ap-south-1"
+  },
+  {
+    "name": "REFERRAL_BONUS_AMOUNT",
+    "value": "50"
+  },
+  {
+    "name": "AZURE_STORAGE_CONTAINER_REFERRAL_PROOFS",
+    "value": "referral-proofs"
+  },
+  {
+    "name": "RAZORPAY_KEY_ID",
+    "value": "rzp_test_YOUR_TEST_KEY_ID"
+  },
+  {
+    "name": "SCHEDULER_ENABLED",
+    "value": "false"
+  },
+  {
+    "name": "JOB_ARCHIVAL_DAYS_OLD",
+    "value": "60"
+  },
+  {
+    "name": "FUNCTIONS_EXTENSION_VERSION",
+    "value": "~4"
+  },
+  {
+    "name": "AZURE_STORAGE_ACCOUNT_NAME",
+    "value": "refopenstoragedev"
+  },
+  {
+    "name": "FEATURE_FLAG_PAYMENT_SYSTEM",
+    "value": "true"
+  },
+  {
+    "name": "SCM_DO_BUILD_DURING_DEPLOYMENT",
+    "value": "false"
+  },
+  {
+    "name": "FUNCTIONS_WORKER_RUNTIME",
+    "value": "node"
+  },
+  {
+    "name": "CORS_ALLOWED_ORIGINS",
+    "value": "https://thankful-pebble-07c889000.1.azurestaticapps.net,http://localhost:8081,http://localhost:19006,http://localhost:3000"
+  },
+  {
+    "name": "GOOGLE_CLIENT_ID_ANDROID",
+    "value": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com"
+  },
+  {
+    "name": "LOG_LEVEL",
+    "value": "debug"
+  },
+  {
+    "name": "JWT_REFRESH_EXPIRES_IN",
+    "value": "30d"
+  },
+  {
+    "name": "DB_NAME",
+    "value": "refopen-sql-db-dev"
+  },
+  {
+    "name": "WELCOME_BONUS_AMOUNT",
+    "value": "100"
+  },
+  {
+    "name": "JWT_ACCESS_TOKEN_EXPIRY",
+    "value": "7d"
+  },
+  {
+    "name": "ADZUNA_APP_KEY",
+    "value": "YOUR_ADZUNA_APP_KEY"
+  },
+  {
+    "name": "EMAIL_FROM_NAME",
+    "value": "RefOpen Dev"
+  },
+  {
+    "name": "CORS_ORIGINS",
+    "value": "*"
+  },
+  {
+    "name": "ACS_CONNECTION_STRING",
+    "value": "endpoint=https://refopen-acs-dev.india.communication.azure.com/;accesskey=YOUR_ACS_KEY"
+  },
+  {
+    "name": "PORT",
+    "value": "8080"
+  },
+  {
+    "name": "GOOGLE_CLIENT_ID_IOS",
+    "value": "179542785325-c1mhgrhu0mhmjj896h6c7ateuucmp2nc.apps.googleusercontent.com"
+  },
+  {
+    "name": "RAZORPAY_KEY_SECRET",
+    "value": "YOUR_TEST_KEY_SECRET"
+  },
+  {
+    "name": "ENABLE_ORYX_BUILD",
+    "value": "false"
+  },
+  {
+    "name": "CLEARBIT_API_KEY",
+    "value": ""
+  },
+  {
+    "name": "JWT_SECRET",
+    "value": "@Microsoft.KeyVault(SecretUri=https://refopen-kv-dev.vault.azure.net/secrets/JwtSecret/)"
+  },
+  {
+    "name": "ENABLE_PERFORMANCE_MONITORING",
+    "value": "true"
+  },
+  {
+    "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+    "value": "@Microsoft.KeyVault(SecretUri=https://refopen-kv-dev.vault.azure.net/secrets/AzureStorageConnectionString/)"
+  },
+  {
+    "name": "ENABLE_GOOGLE_OAUTH",
+    "value": "true"
+  },
+  {
+    "name": "AzureWebJobsStorage",
+    "value": "@Microsoft.KeyVault(SecretUri=https://refopen-kv-dev.vault.azure.net/secrets/AzureStorageConnectionString/)"
+  },
+  {
+    "name": "DB_SERVER",
+    "value": "refopen-sqlserver-dev.database.windows.net"
+  },
+  {
+    "name": "JWT_EXPIRES_IN",
+    "value": "7d"
+  },
+  {
+    "name": "GOOGLE_CLIENT_ID_WEB",
+    "value": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com"
+  },
+  {
+    "name": "EMAIL_FROM",
+    "value": "noreply@refopen.com"
+  },
+  {
+    "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+    "value": "a27f6b07-8db6-46fc-bbfc-0b9f31530ef2"
+  },
+  {
+    "name": "NODE_ENV",
+    "value": "development"
+  },
+  {
+    "name": "AZURE_STORAGE_CONTAINER_DOCUMENTS",
+    "value": "documents"
+  },
+  {
+    "name": "MAX_WALLET_RECHARGE",
+    "value": "100000"
+  },
+  {
+    "name": "AZURE_STORAGE_CONNECTION_STRING",
+    "value": "@Microsoft.KeyVault(SecretUri=https://refopen-kv-dev.vault.azure.net/secrets/AzureStorageConnectionString/)"
+  },
+  {
+    "name": "DB_USER",
+    "value": "sqladmin"
+  },
+  {
+    "name": "DB_DATABASE",
+    "value": "refopen-sql-db-dev"
+  },
+  {
+    "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+    "value": "InstrumentationKey=a27f6b07-8db6-46fc-bbfc-0b9f31530ef2;IngestionEndpoint=https://centralindia-0.in.applicationinsights.azure.com/;LiveEndpoint=https://centralindia.livediagnostics.monitor.azure.com/"
+  },
+  {
+    "name": "JOB_ARCHIVAL_ENABLED",
+    "value": "true"
+  },
+  {
+    "name": "ENABLE_REQUEST_LOGGING",
+    "value": "true"
+  },
+  {
+    "name": "DB_PORT",
+    "value": "1433"
+  },
+  {
+    "name": "ADZUNA_APP_ID",
+    "value": "f88adc65"
+  },
+  {
+    "name": "SCRAPING_INTERVAL_HOURS",
+    "value": "24"
+  },
+  {
+    "name": "APP_ENV",
+    "value": "development"
+  },
+  {
+    "name": "WEBSITE_NODE_DEFAULT_VERSION",
+    "value": "~20"
+  },
+  {
+    "name": "DB_CONNECTION_STRING",
+    "value": "@Microsoft.KeyVault(SecretUri=https://refopen-kv-dev.vault.azure.net/secrets/DbConnectionString/)"
+  },
+  {
+    "name": "AZURE_STORAGE_CONTAINER_RESUMES",
+    "value": "resumes"
+  },
+  {
+    "name": "BCRYPT_SALT_ROUNDS",
+    "value": "12"
+  },
+  {
+    "name": "AZURE_STORAGE_ACCOUNT_KEY",
+    "value": "@Microsoft.KeyVault(SecretUri=https://refopen-kv-dev.vault.azure.net/secrets/AzureStorageAccountKey/)"
+  },
+  {
+    "name": "JWT_REFRESH_TOKEN_EXPIRY",
+    "value": "30d"
+  },
+  {
+    "name": "WEBSITE_CONTENTSHARE",
+    "value": "refopen-api-func-dev-content"
+  },
+  {
+    "name": "AZURE_STORAGE_CONTAINER_NAME",
+    "value": "refopen-files"
+  }
+]
