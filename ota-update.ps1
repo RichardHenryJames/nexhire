@@ -1,6 +1,7 @@
 param(
     [string]$Environment = "dev",  # dev, staging, production
-    [string]$Message = ""          # OTA update message
+    [string]$Message = "",         # OTA update message
+    [switch]$Force  # Bypass master branch check (emergency only)
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,14 +19,23 @@ $normalizedEnv = switch ($Environment.ToLower()) {
 if ($normalizedEnv -eq "prod") {
     $currentBranch = (git rev-parse --abbrev-ref HEAD 2>$null).Trim()
     if ($currentBranch -ne "master") {
-        Write-Host ""
-        Write-Host "❌ BLOCKED: Production deployment must be from 'master' branch!" -ForegroundColor Red
-        Write-Host "   Current branch: $currentBranch" -ForegroundColor Yellow
-        Write-Host "   Switch to master first: git checkout master" -ForegroundColor Yellow
-        Write-Host ""
-        exit 1
+        if ($Force) {
+            Write-Host ""
+            Write-Host "⚠️  WARNING: Force-deploying to production from '$currentBranch' branch!" -ForegroundColor Yellow
+            Write-Host "   This bypasses the master branch safety check." -ForegroundColor Yellow
+            Write-Host ""
+        } else {
+            Write-Host ""
+            Write-Host "❌ BLOCKED: Production deployment must be from 'master' branch!" -ForegroundColor Red
+            Write-Host "   Current branch: $currentBranch" -ForegroundColor Yellow
+            Write-Host "   Switch to master first: git checkout master" -ForegroundColor Yellow
+            Write-Host "   Or use -Force to bypass (emergency only)" -ForegroundColor Yellow
+            Write-Host ""
+            exit 1
+        }
+    } else {
+        Write-Host "✅ Branch check: master" -ForegroundColor Green
     }
-    Write-Host "✅ Branch check: master" -ForegroundColor Green
 }
 
 # Map environment to EAS branch and env file
