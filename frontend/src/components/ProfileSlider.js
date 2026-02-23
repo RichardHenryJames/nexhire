@@ -25,7 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { showToast } from './Toast';
 import refopenAPI from '../services/api';
-import Constants from 'expo-constants';
+import { frontendConfig } from '../config/appConfig';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SLIDER_WIDTH = Math.min(SCREEN_WIDTH * 0.78, 340);
@@ -698,7 +698,7 @@ export default function ProfileSlider({ visible, onClose }) {
               fontSize: 11,
               color: colors.textSecondary + '80',
             }}>
-              RefOpen v{Constants.expoConfig?.extra?.appVersion || '1.0.8'}
+              RefOpen v{frontendConfig.app.version}{frontendConfig.app.env !== 'production' ? `-${frontendConfig.app.env || 'dev'}` : ''}
             </Text>
           </View>
         </ScrollView>
