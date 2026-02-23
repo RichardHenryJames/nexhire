@@ -1133,8 +1133,8 @@ const { jobId, fromReferralRequest } = route.params || {};
         </View>
       )}
 
-      {/* About Company — show org description for F500 or any org with description */}
-      {job.OrganizationDescription && job.OrganizationDescription.length > 20 && (
+      {/* About Company — only show for F500 companies with description */}
+      {job.OrganizationIsFortune500 && job.OrganizationDescription && job.OrganizationDescription.length > 20 && (
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <Text style={styles.sectionTitle}>About {job.OrganizationName || 'Company'}</Text>
