@@ -3375,7 +3375,7 @@ app.timer("becomeVerifiedReferrerEmail", {
 // ========================================================================
 
 app.timer("dailyReferrerNotificationEmail", {
-  schedule: "0 0 6 */3 * *", // 11:30 AM IST (6:00 AM UTC) every 3 days
+  schedule: "0 0 6 * * *", // 11:30 AM IST (6:00 AM UTC) daily
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `referrer_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -3385,7 +3385,7 @@ app.timer("dailyReferrerNotificationEmail", {
     context.log("========================================================================");
     context.log(`Execution ID: ${executionId}`);
     context.log(`Triggered at: ${new Date().toISOString()}`);
-    context.log(`Schedule: 11:30 AM IST (6:00 AM UTC) - Every 3 days`);
+    context.log(`Schedule: 11:30 AM IST (6:00 AM UTC) - Daily`);
     context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
 
     if (myTimer.isPastDue) {
