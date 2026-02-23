@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -465,27 +464,11 @@ newErrors.jobTitle = 'Job title is required when company is selected';
       const result = await register(registrationData);
       
       if (result.success) {
-        Alert.alert(
-          'Success', 
-          isGoogleUser 
-            ? 'Your Google account has been linked successfully! Welcome to RefOpen!'
-            : 'Account created successfully! Welcome to RefOpen!',
-          [
-            { 
-              text: 'Get Started', 
-              onPress: () => {
-                // FIXED: No manual navigation needed!
-                // The AuthContext will automatically handle navigation
-                // when isAuthenticated becomes true after successful registration
-              }
-            }
-          ]
-        );
-
         // Clear pending Google auth data
         if (isGoogleUser) {
           clearPendingGoogleAuth();
         }
+        // AuthContext automatically navigates to home when isAuthenticated becomes true
       } else {
         // ✅ NEW: Check if error is "User already exists"
         const errorMessage = result.error || 'Unable to create account. Please try again.';
@@ -497,32 +480,8 @@ newErrors.jobTitle = 'Job title is required when company is selected';
             clearPendingGoogleAuth();
           }
           
-          Alert.alert(
-            'Account Already Exists', 
-            `An account with ${formData.email} already exists. Would you like to sign in instead?`,
-            [
-              { 
-                text: 'Cancel', 
-                style: 'cancel'
-              },
-              { 
-                text: 'Sign In', 
-                onPress: () => {
-                  // Navigate to login screen
-                  if (typeof window !== 'undefined') {
-                    // For web
-                    window.location.href = '/login';
-                  } else {
-                    // For native
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'Login' }],
-                    });
-                  }
-                }
-              }
-            ]
-          );
+          showToast('Account already exists. Please sign in.', 'info');
+          navigation.navigate('Login');
         } else {
           showToast(errorMessage, 'error');
         }
@@ -540,32 +499,8 @@ newErrors.jobTitle = 'Job title is required when company is selected';
           clearPendingGoogleAuth();
         }
         
-        Alert.alert(
-          'Account Already Exists', 
-          `An account with ${formData.email} already exists. Would you like to sign in instead?`,
-          [
-            { 
-              text: 'Cancel', 
-              style: 'cancel'
-            },
-            { 
-              text: 'Sign In', 
-              onPress: () => {
-                // Navigate to login screen
-                if (typeof window !== 'undefined') {
-                  // For web
-                  window.location.href = '/login';
-                } else {
-                  // For native
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Login' }],
-                  });
-                }
-              }
-            }
-          ]
-        );
+        showToast('Account already exists. Please sign in.', 'info');
+        navigation.navigate('Login');
       } else {
         showToast(errorMessage, 'error');
       }

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Platform,
   Image,
 } from 'react-native';
@@ -121,9 +120,8 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         setError({ type: 'insufficient-balance', message: `You need ₹${pricing.aiJobsCost} in your wallet to access AI-recommended jobs.` });
       } else if (error.message?.includes('404') || error.message?.includes('not found')) {
         // Hard refresh - redirect to home if context lost
-        Alert.alert('Session Lost', 'Redirecting to home screen...', [
-          { text: 'OK', onPress: () => navigation.navigate('Home') }
-        ]);
+        showToast('Session expired, redirecting...', 'error');
+        navigation.navigate('Home');
       } else {
         setError({ type: 'error', message: 'Failed to load AI recommendations. Please try again.' });
       }
@@ -160,10 +158,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   const handleApply = useCallback(async (job) => {
     if (!job) return;
     if (!user) {
-      Alert.alert('Login Required', 'Please login to apply for jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -204,15 +199,8 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
       } else {
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
-          const availableBalance = res.data?.availableBalance || res.data?.currentBalance || 0;
-          Alert.alert(
-            'Insufficient Balance',
-            `You need ₹${pricing.referralRequestCost} available to request a referral.\n\nYour available balance: ₹${availableBalance.toFixed(2)}`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Recharge Wallet', onPress: () => navigation.navigate('Wallet') }
-            ]
-          );
+          showToast('Insufficient balance. Recharging...', 'info');
+          navigation.navigate('Wallet');
         } else {
           showToast('Failed to send referral request. Please try again.', 'error');
         }
@@ -230,16 +218,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     
     if (!job) return;
     if (!user) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
-          navigation.navigate('Auth');
-        }
-        return;
-      }
-      Alert.alert('Login Required', 'Please login to ask for referrals', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -251,16 +230,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
     // Check if already referred
     if (referredJobIds.has(jobId)) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-          navigation.navigate('Referrals');
-        }
-        return;
-      }
-      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-        { text: 'OK' }
-      ]);
+      showToast('Already requested a referral for this job', 'info');
       return;
     }
 

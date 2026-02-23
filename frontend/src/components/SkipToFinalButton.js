@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../styles/theme';
 import { showToast } from './Toast';
+import { useCustomAlert } from './CustomAlert';
 
 export default function SkipToFinalButton({ 
   onSkip, 
@@ -13,6 +14,7 @@ export default function SkipToFinalButton({
   requiredMessage = 'Please make a selection first'
 }) {
   const { colors } = useTheme();
+  const { showConfirm } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleSkip = () => {
@@ -23,17 +25,13 @@ export default function SkipToFinalButton({
 
     const flowType = userType === 'JobSeeker' ? 'registration' : 'employer setup';
     
-    Alert.alert(
-      `Skip ${flowType} Steps?`,
-      `You can complete your profile details now and add ${userType === 'JobSeeker' ? 'work/education' : 'organization'} information later.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Skip to Profile',
-          onPress: onSkip
-        }
-      ]
-    );
+    showConfirm({
+      title: `Skip ${flowType} Steps?`,
+      message: `You can complete your profile details now and add ${userType === 'JobSeeker' ? 'work/education' : 'organization'} information later.`,
+      icon: 'play-skip-forward',
+      confirmText: 'Skip',
+      onConfirm: onSkip,
+    });
   };
 
   return (

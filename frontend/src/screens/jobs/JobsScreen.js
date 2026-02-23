@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, ActivityIndicator, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -345,16 +345,7 @@ export default function JobsScreen({ navigation, route }) {
 
   const handleSearchWithAI = useCallback(async () => {
     if (!user) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('Please login to view AI recommended jobs.\n\nWould you like to login now?')) {
-          navigation.navigate('Auth');
-        }
-        return;
-      }
-      Alert.alert('Login Required', 'Please login to view AI recommended jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') },
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -1289,10 +1280,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   const handleApply = useCallback(async (job) => {
     if (!job) return;
     if (!user) {
-      Alert.alert('Login Required', 'Please login to apply for jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -1312,17 +1300,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       return;
     }
     if (!user) {
-      // Web-compatible alert
-      if (Platform.OS === 'web') {
-        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
-          navigation.navigate('Auth');
-        }
-        return;
-      }
-      Alert.alert('Login Required', 'Please login to ask for referrals', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -1334,16 +1312,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
     // Check if already referred
     if (referredJobIds.has(jobId)) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-          navigation.navigate('Referrals');
-        }
-        return;
-      }
-      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-        { text: 'OK' }
-      ]);
+      showToast('Already requested a referral for this job', 'info');
       return;
     }
 

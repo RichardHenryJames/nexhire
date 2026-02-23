@@ -12,7 +12,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Modal,
   StyleSheet,
@@ -24,6 +23,7 @@ import refopenAPI from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../styles/theme';
 import { showToast } from './Toast';
+import { useCustomAlert } from './CustomAlert';
 
 const ResumeUploadModal = ({ 
   visible, 
@@ -33,6 +33,7 @@ const ResumeUploadModal = ({
   jobTitle 
 }) => {
   const { colors } = useTheme();
+  const { showAlert } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
   
   const [uploading, setUploading] = useState(false);
@@ -203,11 +204,11 @@ const ResumeUploadModal = ({
     return new Promise((resolve) => {
       const defaultLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
       
-      // WEB FIX: Use regular Alert with default label since Alert.prompt doesn't work on web
-      Alert.alert(
-        'Resume Label',
-        `Give this resume a name. Default: "${defaultLabel}"`,
-        [
+      showAlert({
+        title: 'Resume Label',
+        message: `Give this resume a name. Default: "${defaultLabel}"`,
+        icon: 'document-text',
+        buttons: [
           { text: 'Use Default', onPress: () => {
             resolve(defaultLabel);
           }},
@@ -222,7 +223,7 @@ const ResumeUploadModal = ({
             }
           }}
         ]
-      );
+      });
     });
   };
 

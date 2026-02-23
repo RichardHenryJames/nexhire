@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
-  Alert,
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +22,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
+import { useCustomAlert } from '../../components/CustomAlert';
 
 // Regex patterns for detecting links in messages
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
@@ -220,6 +220,7 @@ export default function ChatScreen({
   const { refreshUnreadCount } = useUnreadMessages();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const { showAlert } = useCustomAlert();
   const flatListRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -495,24 +496,31 @@ export default function ChatScreen({
             : msg
         )
       );
-      Alert.alert("Failed to send", "Message could not be sent.", [
-        {
-          text: "Delete",
-          onPress: () =>
-            setMessages((prev) =>
-              prev.filter((m) => m.MessageID !== optimisticMessageId)
-            ),
-        },
-        {
-          text: "Retry",
-          onPress: () => {
-            setMessages((prev) =>
-              prev.filter((m) => m.MessageID !== optimisticMessageId)
-            );
-            setMessageText(textToSend);
+      showAlert({
+        title: "Failed to send",
+        message: "Message could not be sent.",
+        icon: "alert-circle",
+        buttons: [
+          {
+            text: "Delete",
+            onPress: () =>
+              setMessages((prev) =>
+                prev.filter((m) => m.MessageID !== optimisticMessageId)
+              ),
+            icon: "trash",
           },
-        },
-      ]);
+          {
+            text: "Retry",
+            onPress: () => {
+              setMessages((prev) =>
+                prev.filter((m) => m.MessageID !== optimisticMessageId)
+              );
+              setMessageText(textToSend);
+            },
+            icon: "refresh",
+          },
+        ],
+      });
     } finally {
       setSending(false);
     }
@@ -526,22 +534,25 @@ export default function ChatScreen({
 
   const handleDeleteMessage = (messageId, senderId) => {
     const isMine = senderId === currentUserId;
-    Alert.alert(
-      "Delete Message",
-      "How would you like to delete this message?",
-      [
+    showAlert({
+      title: "Delete Message",
+      message: "How would you like to delete this message?",
+      icon: "trash",
+      buttons: [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete for me",
           onPress: () => deleteMessage(messageId, "Sender"),
+          icon: "person-remove",
         },
         isMine && {
           text: "Delete for everyone",
           style: "destructive",
           onPress: () => deleteMessage(messageId, "Both"),
+          icon: "trash",
         },
-      ].filter(Boolean)
-    );
+      ].filter(Boolean),
+    });
   };
 
   const deleteMessage = async (messageId, deleteFor) => {

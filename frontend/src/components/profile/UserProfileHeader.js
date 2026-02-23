@@ -4,13 +4,13 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  Alert, 
   ActivityIndicator,
   Platform,
   Modal
 } from 'react-native';
 import CachedImage from '../CachedImage';
 import { showToast } from '../Toast';
+import { useCustomAlert } from '../CustomAlert';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -96,6 +96,7 @@ export default function UserProfileHeader({
   profileCompletenessFromBackend = null // Backend-driven profile completeness
 }) {
   const { colors } = useTheme();
+  const { showAlert } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
@@ -263,41 +264,39 @@ export default function UserProfileHeader({
 
   // CROSS-PLATFORM IMAGE PICKER
   const showImagePicker = () => {
-    const options = [
-      {
-        text: 'Take Photo',
-        onPress: () => {
-          setShowImagePickerModal(false);
-          pickImage('camera');
-        },
-        icon: 'camera-alt'
-      },
-      {
-        text: 'Choose from Library', 
-        onPress: () => {
-          setShowImagePickerModal(false);
-          pickImage('library');
-        },
-        icon: 'photo-library'
-      },
-      {
-        text: 'Cancel',
-        style: 'cancel',
-        onPress: () => setShowImagePickerModal(false),
-        icon: 'cancel'
-      }
-    ];
-
     if (Platform.OS === 'web') {
       // Web: Direct to library picker
       pickImage('library'); 
     } else {
-      // Mobile: Show action sheet
-      Alert.alert(
-        'Select Profile Picture',
-        'Choose how you want to update your profile picture',
-        options
-      );
+      showAlert({
+        title: 'Update Profile Picture',
+        message: 'Choose a source',
+        icon: 'camera',
+        buttons: [
+          {
+            text: 'Take Photo',
+            onPress: () => {
+              setShowImagePickerModal(false);
+              pickImage('camera');
+            },
+            icon: 'camera',
+          },
+          {
+            text: 'Choose from Library',
+            onPress: () => {
+              setShowImagePickerModal(false);
+              pickImage('library');
+            },
+            icon: 'images',
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setShowImagePickerModal(false),
+            icon: 'close',
+          },
+        ],
+      });
     }
   };
 
