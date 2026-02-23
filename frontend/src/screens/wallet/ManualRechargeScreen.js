@@ -23,6 +23,7 @@ import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { usePricing } from '../../contexts/PricingContext';
+import useResponsive from '../../hooks/useResponsive';
 
 // ─── Animated "Limited Time" badge ───────────────────────────────
 const LimitedTimeBadge = () => {
@@ -138,6 +139,7 @@ const UPI_APPS = [
 const ManualRechargeScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const { pricing } = usePricing();
+  const { isMobile } = useResponsive();
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState(null);
   const [expandedFaq, setExpandedFaq] = useState(null);
@@ -432,85 +434,121 @@ const ManualRechargeScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* ═══ 5. PAYMENT SECTION — QR left + UPI apps right ═══ */}
+        {/* ═══ 5. PAYMENT SECTION — responsive ═══ */}
         <View style={[styles.section, { padding: 0, marginBottom: 14, borderWidth: 1, borderColor: colors.primary + '30', overflow: 'hidden' }]}>
           {/* Header */}
           <View style={{ backgroundColor: colors.primary + '10', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border + '40' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="shield-checkmark" size={14} color={colors.primary} style={{ marginRight: 6 }} />
               <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>
-                Pay {payAmt > 0 ? `₹${payAmt} ` : ''}via UPI
+                {isMobile ? (payAmt > 0 ? `Pay ₹${payAmt} via UPI` : 'Pay via UPI') : 'Scan QR to Pay'}
               </Text>
             </View>
           </View>
 
           <View style={{ padding: 14 }}>
-            <View style={{ flexDirection: 'row', gap: 14 }}>
-              {/* LEFT — Static QR (blue border, clickable fullscreen) */}
+            {isMobile ? (
+              /* ── MOBILE: QR left + UPI apps right ── */
+              <View style={{ flexDirection: 'row', gap: 14 }}>
+                {/* LEFT — QR (blue border, clickable fullscreen) */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setShowQrFullscreen(true)}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: 6,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: '#3B82F6',
+                    alignItems: 'center',
+                    alignSelf: 'flex-start',
+                    shadowColor: '#3B82F6',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                >
+                  <Image
+                    source={require('../../../assets/payment-qr.png')}
+                    style={{ width: 120, height: 120 }}
+                    resizeMode="contain"
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <Ionicons name="scan-outline" size={10} color="#3B82F6" style={{ marginRight: 3 }} />
+                    <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* RIGHT — UPI App deep links */}
+                <View style={{ flex: 1, gap: 6 }}>
+                  {UPI_APPS.map((app) => (
+                    <TouchableOpacity
+                      key={app.id}
+                      activeOpacity={0.7}
+                      onPress={() => openUpiApp(app)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: colors.surface,
+                        borderRadius: 10,
+                        paddingVertical: 10,
+                        paddingHorizontal: 10,
+                        borderWidth: 1,
+                        borderColor: colors.border + '80',
+                      }}
+                    >
+                      {app.logo ? (
+                        <Image
+                          source={{ uri: app.logo }}
+                          style={{ width: 24, height: 24, borderRadius: 4, marginRight: 8 }}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <View style={{ width: 24, height: 24, borderRadius: 4, backgroundColor: app.color + '20', justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
+                          <Ionicons name="apps-outline" size={14} color={app.color} />
+                        </View>
+                      )}
+                      <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>{app.name}</Text>
+                      <Ionicons name="chevron-forward" size={16} color={app.color} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            ) : (
+              /* ── DESKTOP: QR centered only (no UPI buttons) ── */
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setShowQrFullscreen(true)}
                 style={{
+                  alignSelf: 'center',
                   backgroundColor: '#FFFFFF',
-                  padding: 6,
-                  borderRadius: 12,
+                  padding: 16,
+                  borderRadius: 16,
                   borderWidth: 2,
                   borderColor: '#3B82F6',
                   alignItems: 'center',
-                  alignSelf: 'flex-start',
                   shadowColor: '#3B82F6',
-                  shadowOffset: { width: 0, height: 2 },
+                  shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.15,
-                  shadowRadius: 8,
-                  elevation: 4,
+                  shadowRadius: 12,
+                  elevation: 6,
                 }}
               >
                 <Image
                   source={require('../../../assets/payment-qr.png')}
-                  style={{ width: 120, height: 120 }}
+                  style={{ width: 200, height: 200 }}
                   resizeMode="contain"
                 />
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                  <Ionicons name="scan-outline" size={10} color="#3B82F6" style={{ marginRight: 3 }} />
-                  <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
+                {payAmt > 0 && (
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#3B82F6', marginTop: 8 }}>₹{payAmt}</Text>
+                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Ionicons name="scan-outline" size={12} color="#3B82F6" style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 10, color: '#3B82F6', fontWeight: '600' }}>Click to enlarge</Text>
                 </View>
               </TouchableOpacity>
-
-              {/* RIGHT — UPI App deep links with logos */}
-              <View style={{ flex: 1, gap: 6 }}>
-                {UPI_APPS.map((app) => (
-                  <TouchableOpacity
-                    key={app.id}
-                    activeOpacity={0.7}
-                    onPress={() => openUpiApp(app)}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: colors.surface,
-                      borderRadius: 10,
-                      paddingVertical: 10,
-                      paddingHorizontal: 10,
-                      borderWidth: 1,
-                      borderColor: colors.border + '80',
-                    }}
-                  >
-                    {app.logo ? (
-                      <Image
-                        source={{ uri: app.logo }}
-                        style={{ width: 24, height: 24, borderRadius: 4, marginRight: 8 }}
-                        resizeMode="contain"
-                      />
-                    ) : (
-                      <View style={{ width: 24, height: 24, borderRadius: 4, backgroundColor: app.color + '20', justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
-                        <Ionicons name="apps-outline" size={14} color={app.color} />
-                      </View>
-                    )}
-                    <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>{app.name}</Text>
-                    <Ionicons name="chevron-forward" size={16} color={app.color} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+            )}
           </View>
 
           {/* Footer */}
