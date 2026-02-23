@@ -495,6 +495,18 @@ const ManualRechargeScreen = ({ navigation }) => {
                   </View>
                 </TouchableOpacity>
 
+                {/* UPI ID below QR — mobile */}
+                <TouchableOpacity
+                  onPress={() => {
+                    Clipboard.setStringAsync(UPI_PAYEE_VPA);
+                    showToast('UPI ID copied!', 'success');
+                  }}
+                  style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: colors.primary + '08', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 4, marginTop: 6 }}
+                >
+                  <Text style={{ fontSize: 7, color: colors.primary, fontWeight: '500' }} numberOfLines={1}>UPI: {UPI_PAYEE_VPA.substring(0, 18)}...</Text>
+                  <Ionicons name="copy-outline" size={10} color={colors.primary} style={{ marginLeft: 3 }} />
+                </TouchableOpacity>
+
                 {/* RIGHT — UPI App deep links */}
                 <View style={{ flex: 1, gap: 6 }}>
                   {UPI_APPS.map((app) => (
@@ -562,6 +574,18 @@ const ManualRechargeScreen = ({ navigation }) => {
                   <Ionicons name="scan-outline" size={12} color="#3B82F6" style={{ marginRight: 4 }} />
                   <Text style={{ fontSize: 10, color: '#3B82F6', fontWeight: '600' }}>Click to enlarge</Text>
                 </View>
+              </TouchableOpacity>
+
+              {/* UPI ID below QR — desktop */}
+              <TouchableOpacity
+                onPress={() => {
+                  Clipboard.setStringAsync(UPI_PAYEE_VPA);
+                  showToast('UPI ID copied!', 'success');
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'center', backgroundColor: colors.primary + '08', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginTop: 10 }}
+              >
+                <Text style={{ fontSize: 11, color: colors.primary, fontWeight: '500', marginRight: 6 }} selectable>UPI: {UPI_PAYEE_VPA}</Text>
+                <Ionicons name="copy-outline" size={14} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
