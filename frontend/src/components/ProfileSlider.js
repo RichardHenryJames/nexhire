@@ -698,7 +698,7 @@ export default function ProfileSlider({ visible, onClose }) {
               fontSize: 11,
               color: colors.textSecondary + '80',
             }}>
-              RefOpen v{frontendConfig.app.version}{frontendConfig.app.env !== 'production' ? `-${frontendConfig.app.env || 'dev'}` : ''}
+              RefOpen v{process.env.EXPO_PUBLIC_APP_VERSION || '1.1.0'}{(process.env.EXPO_PUBLIC_APP_ENV || 'development') !== 'production' ? `-${process.env.EXPO_PUBLIC_APP_ENV || 'dev'}` : ''}
             </Text>
           </View>
         </ScrollView>
