@@ -494,17 +494,26 @@ const ManualRechargeScreen = ({ navigation }) => {
                     <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
                   </View>
                 </TouchableOpacity>
-
-                {/* UPI ID below QR — mobile */}
+                {/* Copy UPI ID button below QR */}
                 <TouchableOpacity
+                  activeOpacity={0.7}
                   onPress={() => {
                     Clipboard.setStringAsync(UPI_PAYEE_VPA);
                     showToast('UPI ID copied!', 'success');
                   }}
-                  style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: colors.primary + '08', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 4, marginTop: 6 }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    alignSelf: 'flex-start',
+                    backgroundColor: colors.primary + '10',
+                    borderRadius: 6,
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    marginTop: 6,
+                  }}
                 >
-                  <Text style={{ fontSize: 7, color: colors.primary, fontWeight: '500' }} numberOfLines={1}>UPI: {UPI_PAYEE_VPA.substring(0, 18)}...</Text>
-                  <Ionicons name="copy-outline" size={10} color={colors.primary} style={{ marginLeft: 3 }} />
+                  <Ionicons name="copy-outline" size={11} color={colors.primary} style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 9, color: colors.primary, fontWeight: '600' }}>Copy UPI ID</Text>
                 </TouchableOpacity>
 
                 {/* RIGHT — UPI App deep links */}
@@ -575,17 +584,26 @@ const ManualRechargeScreen = ({ navigation }) => {
                   <Text style={{ fontSize: 10, color: '#3B82F6', fontWeight: '600' }}>Click to enlarge</Text>
                 </View>
               </TouchableOpacity>
-
-              {/* UPI ID below QR — desktop */}
+              {/* Copy UPI ID button below desktop QR */}
               <TouchableOpacity
+                activeOpacity={0.7}
                 onPress={() => {
                   Clipboard.setStringAsync(UPI_PAYEE_VPA);
                   showToast('UPI ID copied!', 'success');
                 }}
-                style={{ flexDirection: 'row', alignItems: 'center', alignSelf: 'center', backgroundColor: colors.primary + '08', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginTop: 10 }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  alignSelf: 'center',
+                  backgroundColor: colors.primary + '10',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  marginTop: 10,
+                }}
               >
-                <Text style={{ fontSize: 11, color: colors.primary, fontWeight: '500', marginRight: 6 }} selectable>UPI: {UPI_PAYEE_VPA}</Text>
-                <Ionicons name="copy-outline" size={14} color={colors.primary} />
+                <Ionicons name="copy-outline" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+                <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '600' }}>Copy UPI ID</Text>
               </TouchableOpacity>
             )}
           </View>
