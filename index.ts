@@ -3456,6 +3456,13 @@ app.timer("dailyReferrerNotificationEmail", {
 app.timer("jobScraperTimer", {
   schedule: "0 0 */6 * * *", // Every 6 hours
   handler: async (myTimer: Timer, context: InvocationContext) => {
+    // Skip scraping on dev/staging — only run on production
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') {
+      context.log(`[JobScraper] Skipping — not production (env: ${appEnv})`);
+      return;
+    }
+
     const startTime = Date.now();
     const executionId = `timer_${Date.now()}_${Math.random()
       .toString(36)
