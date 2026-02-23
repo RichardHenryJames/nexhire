@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
-  Alert,
   Image 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -158,32 +157,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
             // Clear any pending Google auth data
             clearPendingGoogleAuth();
             
-            Alert.alert(
-              'Account Already Exists', 
-              `An account with ${email} already exists. Would you like to sign in instead?`,
-              [
-                { 
-                  text: 'Cancel', 
-                  style: 'cancel'
-                },
-                { 
-                  text: 'Sign In', 
-                  onPress: () => {
-                    // Navigate to login screen
-                    if (typeof window !== 'undefined') {
-                      // For web
-                      window.location.href = '/login';
-                    } else {
-                      // For native
-                      navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'Login' }],
-                      });
-                    }
-                  }
-                }
-              ]
-            );
+            showToast('Account already exists. Please sign in.', 'info');
+            navigation.navigate('Login');
             return;
           }
           
@@ -215,32 +190,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
           
           if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
             
-            Alert.alert(
-              'Account Already Exists', 
-              `An account with ${email} already exists. Would you like to sign in instead?`,
-              [
-                { 
-                  text: 'Cancel', 
-                  style: 'cancel'
-                },
-                { 
-                  text: 'Sign In', 
-                  onPress: () => {
-                    // Navigate to login screen
-                    if (typeof window !== 'undefined') {
-                      // For web
-                      window.location.href = '/login';
-                    } else {
-                      // For native
-                      navigation.reset({
-                        index: 0,
-                        routes: [{ name: 'Login' }],
-                      });
-                    }
-                  }
-                }
-              ]
-            );
+            showToast('Account already exists. Please sign in.', 'info');
+            navigation.navigate('Login');
             return;
           }
           
@@ -251,9 +202,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         const login = await refopenAPI.login(email.trim().toLowerCase(), password);
         if (!login?.success) throw new Error(login?.error || 'Login failed');
 
-        Alert.alert('Welcome', 'Your employer account is ready.', [
-          { text: 'Continue', onPress: () => navigation.replace('Main') }
-        ]);
+        // AuthContext will handle navigation when isAuthenticated becomes true
         return;
       }
 
@@ -266,9 +215,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
         await refopenAPI.updateProfile({ firstName, lastName, phone });
       }
 
-      Alert.alert('All set!', 'Employer onboarding steps completed.', [
-        { text: 'Continue', onPress: () => navigation.replace('Main') }
-      ]);
+      // AuthContext will handle navigation when onboarding is complete
     } catch (e) {
       console.error('Employer account creation error:', e);
       
@@ -282,32 +229,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
           clearPendingGoogleAuth();
         }
         
-        Alert.alert(
-          'Account Already Exists', 
-          `An account with ${email} already exists. Would you like to sign in instead?`,
-          [
-            { 
-              text: 'Cancel', 
-              style: 'cancel'
-            },
-            { 
-              text: 'Sign In', 
-              onPress: () => {
-                // Navigate to login screen
-                if (typeof window !== 'undefined') {
-                  // For web
-                  window.location.href = '/login';
-                } else {
-                  // For native
-                  navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Login' }],
-                  });
-                }
-              }
-            }
-          ]
-        );
+        showToast('Account already exists. Please sign in.', 'info');
+        navigation.navigate('Login');
       } else {
         showToast(errorMessage, 'error');
       }

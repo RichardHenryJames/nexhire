@@ -12,7 +12,6 @@ import {
   Image,
   TextInput,
   Linking,
-  Alert,
   Modal,
   KeyboardAvoidingView,
 } from 'react-native';
@@ -342,7 +341,7 @@ export default function AdminDashboardScreen() {
   // Verification rejection handlers
   const confirmVerificationReject = async () => {
     if (!verificationRejectionReason.trim()) {
-      Alert.alert('Error', 'Please enter a rejection reason');
+      showToast('Please enter a rejection reason', 'error');
       return;
     }
     try {
@@ -357,11 +356,11 @@ export default function AdminDashboardScreen() {
         loadedTabs.current.verifications = false;
         loadVerifications();
       } else {
-        Alert.alert('Error', response.error || 'Failed to reject verification');
+        showToast(response.error || 'Failed to reject verification', 'error');
       }
     } catch (error) {
       console.error('Error rejecting verification:', error);
-      Alert.alert('Error', 'Failed to reject verification');
+      showToast('Failed to reject verification', 'error');
     }
   };
 
@@ -372,7 +371,7 @@ export default function AdminDashboardScreen() {
   };
   const confirmSocialReject = async () => {
     if (!socialRejectionReason.trim()) {
-      Alert.alert('Error', 'Please enter a rejection reason');
+      showToast('Please enter a rejection reason', 'error');
       return;
     }
     
@@ -388,11 +387,11 @@ export default function AdminDashboardScreen() {
         loadedTabs.current.socialShare = false;
         loadSocialShare();
       } else {
-        Alert.alert('Error', response.error || 'Failed to reject claim');
+        showToast(response.error || 'Failed to reject claim', 'error');
       }
     } catch (error) {
       console.error('Error rejecting claim:', error);
-      Alert.alert('Error', 'Failed to reject claim');
+      showToast('Failed to reject claim', 'error');
     }
   };
 
@@ -2057,11 +2056,11 @@ export default function AdminDashboardScreen() {
           loadedTabs.current.socialShare = false;
           loadSocialShare();
         } else {
-          Alert.alert('Error', response.error || 'Failed to approve claim');
+          showToast(response.error || 'Failed to approve claim', 'error');
         }
       } catch (error) {
         console.error('Error approving claim:', error);
-        Alert.alert('Error', 'Failed to approve claim');
+        showToast('Failed to approve claim', 'error');
       }
     };
 
@@ -2285,10 +2284,10 @@ export default function AdminDashboardScreen() {
           loadVerifications();
           showToast('Verification approved! User now has blue tick.', 'success');
         } else {
-          Alert.alert('Error', response.error || 'Failed to approve');
+          showToast(response.error || 'Failed to approve', 'error');
         }
       } catch (error) {
-        Alert.alert('Error', 'Failed to approve verification');
+        showToast('Failed to approve verification', 'error');
       }
     };
 

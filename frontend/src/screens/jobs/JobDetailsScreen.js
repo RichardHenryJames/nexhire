@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Platform,
   TextInput,
@@ -27,6 +26,7 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { showToast } from '../../components/Toast';
+import { useCustomAlert } from '../../components/CustomAlert';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
@@ -38,6 +38,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet, contentWidth } = responsive;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const { showConfirm } = useCustomAlert();
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -226,16 +227,7 @@ const { jobId, fromReferralRequest } = route.params || {};
     }
     
     if (hasReferred) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-          navigation.navigate('Referrals');
-        }
-        return;
-      }
-      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-        { text: 'OK' }
-      ]);
+      showToast('Already requested a referral for this job', 'info');
       return;
     }
     
@@ -291,16 +283,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (existing.success && existing.data?.requests) {
         const already = existing.data.requests.some(r => r.JobID === jobId && r.Status !== 'Cancelled' && r.Status !== 'Expired');
         if (already) {
-          if (Platform.OS === 'web') {
-            if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-              navigation.navigate('Referrals');
-            }
-            return;
-          }
-          Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-            { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-            { text: 'OK' }
-          ]);
+          showToast('Already requested a referral for this job', 'info');
           return;
         }
       }
@@ -414,14 +397,13 @@ const { jobId, fromReferralRequest } = route.params || {};
         
       } else {
         if (result.error?.includes('No resume found')) {
-          Alert.alert(
-            'Resume Required', 
-            'A resume is required to apply for jobs. Please upload one and try again.',
-            [
-              { text: 'Upload Resume', onPress: () => setShowResumeModal(true) },
-              { text: 'Cancel', style: 'cancel' }
-            ]
-          );
+          showConfirm({
+            title: 'Resume Required',
+            message: 'A resume is required to apply for jobs. Please upload one and try again.',
+            icon: 'document-text-outline',
+            confirmText: 'Upload Resume',
+            onConfirm: () => setShowResumeModal(true),
+          });
         } else {
           showToast('Failed to submit application. Please try again.', 'error');
         }
@@ -430,14 +412,13 @@ const { jobId, fromReferralRequest } = route.params || {};
       console.error('Application error:', error);
       
       if (error.message?.includes('No resume found')) {
-        Alert.alert(
-          'Resume Required', 
-          'A resume is required to apply for jobs. Please upload one and try again.',
-          [
-            { text: 'Upload Resume', onPress: () => setShowResumeModal(true) },
-            { text: 'Cancel', style: 'cancel' }
-          ]
-        );
+        showConfirm({
+          title: 'Resume Required',
+          message: 'A resume is required to apply for jobs. Please upload one and try again.',
+          icon: 'document-text-outline',
+          confirmText: 'Upload Resume',
+          onConfirm: () => setShowResumeModal(true),
+        });
       } else {
         showToast('Failed to submit application. Please try again.', 'error');
       }
@@ -532,10 +513,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   // REQUIREMENT 4: Implement save/unsave functionality
   const handleSaveJob = async () => {
     if (!user || !isJobSeeker) {
-      Alert.alert('Login Required', 'Please login to save jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
 

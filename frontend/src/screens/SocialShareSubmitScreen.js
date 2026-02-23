@@ -11,7 +11,6 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Image,
   Linking,
   Platform,
@@ -159,7 +158,7 @@ export default function SocialShareSubmitScreen() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant permission to access photos');
+        showToast('Please grant permission to access photos', 'error');
         return;
       }
 
@@ -181,7 +180,7 @@ export default function SocialShareSubmitScreen() {
         }
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image');
+      showToast('Failed to pick image', 'error');
     }
   };
 

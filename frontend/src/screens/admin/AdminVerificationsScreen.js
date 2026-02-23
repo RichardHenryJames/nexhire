@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, RefreshControl, ActivityIndicator,
-  Image, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
+  Image, Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -59,10 +59,10 @@ export default function AdminVerificationsScreen() {
         showToast('Verification approved! User now has blue tick.', 'success');
         fetchData();
       } else {
-        Alert.alert('Error', res.error || 'Failed to approve');
+        showToast(res.error || 'Failed to approve', 'error');
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to approve verification');
+      showToast('Failed to approve verification', 'error');
     }
   };
 
@@ -73,7 +73,7 @@ export default function AdminVerificationsScreen() {
   };
 
   const confirmReject = async () => {
-    if (!rejectionReason.trim()) { Alert.alert('Error', 'Please enter a rejection reason'); return; }
+    if (!rejectionReason.trim()) { showToast('Please enter a rejection reason', 'error'); return; }
     try {
       const res = await refopenAPI.apiCall(`/management/verifications/${selectedItem.VerificationID}/reject`, {
         method: 'POST', body: JSON.stringify({ reason: rejectionReason })
@@ -84,10 +84,10 @@ export default function AdminVerificationsScreen() {
         showToast('Verification rejected', 'info');
         fetchData();
       } else {
-        Alert.alert('Error', res.error || 'Failed to reject');
+        showToast(res.error || 'Failed to reject', 'error');
       }
     } catch (err) {
-      Alert.alert('Error', 'Failed to reject verification');
+      showToast('Failed to reject verification', 'error');
     }
   };
 

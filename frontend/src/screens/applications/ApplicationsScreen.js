@@ -8,7 +8,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Modal,
   Platform,
   Image,
@@ -25,6 +24,7 @@ import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import AdCard from '../../components/ads/AdCard';
 import { showToast } from '../../components/Toast';
+import { useCustomAlert } from '../../components/CustomAlert';
 import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
@@ -40,6 +40,7 @@ export default function ApplicationsScreen({ navigation }) {
   const { colors } = useTheme();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
   const responsive = useResponsive();
+  const { showConfirm } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   
   const [applications, setApplications] = useState([]);
@@ -249,16 +250,7 @@ export default function ApplicationsScreen({ navigation }) {
   const handleAskReferral = async (job) => {
     if (!job) return;
     if (!user) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
-          navigation.navigate('Auth');
-        }
-        return;
-      }
-      Alert.alert('Login Required', 'Please login to ask for referrals', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -270,16 +262,7 @@ export default function ApplicationsScreen({ navigation }) {
 
     // Check if already referred
     if (referredJobIds.has(jobId)) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-          navigation.navigate('Referrals');
-        }
-        return;
-      }
-      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-        { text: 'OK' }
-      ]);
+      showToast('Already requested a referral for this job', 'info');
       return;
     }
 
@@ -436,14 +419,15 @@ export default function ApplicationsScreen({ navigation }) {
       setWithdrawTarget(application);
       return;
     }
-    Alert.alert(
-      'Withdraw Application',
-      `Are you sure you want to withdraw your application for ${application.JobTitle || 'this job'}? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Withdraw', style: 'destructive', onPress: () => withdrawApplication(application) }
-      ]
-    );
+    showConfirm({
+      title: 'Withdraw Application',
+      message: `Are you sure you want to withdraw your application for ${application.JobTitle || 'this job'}? This action cannot be undone.`,
+      icon: 'close-circle',
+      iconColor: '#EF4444',
+      confirmText: 'Withdraw',
+      confirmStyle: 'destructive',
+      onConfirm: () => withdrawApplication(application),
+    });
   };
 
   // Withdraw application function with immediate optimistic UI update
@@ -873,16 +857,7 @@ export default function ApplicationsScreen({ navigation }) {
             if (existing.success && existing.data?.requests) {
               const already = existing.data.requests.some(r => r.JobID === jobId && r.Status !== 'Cancelled' && r.Status !== 'Expired');
               if (already) {
-                if (Platform.OS === 'web') {
-                  if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-                    navigation.navigate('Referrals');
-                  }
-                  return;
-                }
-                Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-                  { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-                  { text: 'OK' }
-                ]);
+                showToast('Already requested a referral for this job', 'info');
                 return;
               }
             }

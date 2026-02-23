@@ -52,6 +52,7 @@ import { JobProvider } from './src/contexts/JobContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { PricingProvider } from './src/contexts/PricingContext';
 import { UnreadMessagesProvider } from './src/contexts/UnreadMessagesContext';
+import { AlertProvider } from './src/components/CustomAlert';
 import AppNavigator, { linking } from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
 import { ToastHost } from './src/components/Toast';
@@ -307,7 +308,9 @@ function ThemedAppRoot() {
                 }}
               >
                 <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+                <AlertProvider>
                 <AppNavigator />
+                </AlertProvider>
                 <ConsentGate />
                 <ToastHost />
               </NavigationContainer>
