@@ -121,11 +121,11 @@ const buildUpiUrl = (appScheme, amount) => {
 
 const UPI_APPS = [
   { id: 'phonepe', name: 'PhonePe', scheme: 'phonepe', color: '#5F259F',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/PhonePe_Logo.svg/512px-PhonePe_Logo.svg.png' },
+    logo: 'https://www.google.com/s2/favicons?sz=64&domain=phonepe.com' },
   { id: 'gpay', name: 'Google Pay', scheme: 'tez', color: '#4285F4',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Google_Pay_Logo.svg/512px-Google_Pay_Logo.svg.png' },
+    logo: 'https://www.google.com/s2/favicons?sz=64&domain=pay.google.com' },
   { id: 'paytm', name: 'Paytm', scheme: 'paytmmp', color: '#00BAF2',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Paytm_Logo_%28standalone%29.svg/512px-Paytm_Logo_%28standalone%29.svg.png' },
+    logo: 'https://www.google.com/s2/favicons?sz=64&domain=paytm.com' },
   { id: 'generic', name: 'Any UPI App', scheme: 'upi', color: '#2D7D46',
     logo: null },
 ];
@@ -406,106 +406,89 @@ const ManualRechargeScreen = ({ navigation }) => {
           </View>
         )}
 
-        {/* ═══ 5. PAYMENT SECTION — Razorpay-style UPI ═══ */}
-        <View style={[styles.section, { padding: 0, marginBottom: 14, borderWidth: 1, borderColor: colors.border + '60', overflow: 'hidden' }]}>
-          {/* Header bar — Razorpay-style */}
-          <View style={{ backgroundColor: colors.primary + '10', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border + '40' }}>
+        {/* ═══ 5. PAYMENT SECTION — QR left + UPI apps right ═══ */}
+        <View style={[styles.section, { padding: 0, marginBottom: 14, borderWidth: 1, borderColor: colors.primary + '30', overflow: 'hidden' }]}>
+          {/* Header */}
+          <View style={{ backgroundColor: colors.primary + '10', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border + '40' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="shield-checkmark" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+              <Ionicons name="shield-checkmark" size={14} color={colors.primary} style={{ marginRight: 6 }} />
               <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>
                 Pay {payAmt > 0 ? `₹${payAmt} ` : ''}via UPI
               </Text>
             </View>
-            {payAmt > 0 && totalBonus > 0 && (
-              <Text style={{ fontSize: 10, color: '#10B981', fontWeight: '600', textAlign: 'center', marginTop: 2 }}>
-                You'll get ₹{getTotalCredit()} (incl. ₹{totalBonus} bonus)
-              </Text>
-            )}
           </View>
 
-          <View style={{ padding: 16 }}>
-            {/* UPI App buttons — Razorpay-style radio list */}
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.gray500, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Choose UPI App
-            </Text>
+          <View style={{ padding: 14 }}>
+            <View style={{ flexDirection: 'row', gap: 14 }}>
+              {/* LEFT — Static QR (blue border, clickable fullscreen) */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => setShowQrFullscreen(true)}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  padding: 6,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: '#3B82F6',
+                  alignItems: 'center',
+                  alignSelf: 'flex-start',
+                  shadowColor: '#3B82F6',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                  elevation: 4,
+                }}
+              >
+                <Image
+                  source={require('../../../assets/payment-qr.png')}
+                  style={{ width: 120, height: 120 }}
+                  resizeMode="contain"
+                />
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                  <Ionicons name="scan-outline" size={10} color="#3B82F6" style={{ marginRight: 3 }} />
+                  <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
+                </View>
+              </TouchableOpacity>
 
-            <View style={{ gap: 6 }}>
-              {UPI_APPS.map((app) => (
-                <TouchableOpacity
-                  key={app.id}
-                  activeOpacity={0.7}
-                  onPress={() => openUpiApp(app)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: colors.surface,
-                    borderRadius: 10,
-                    paddingVertical: 12,
-                    paddingHorizontal: 14,
-                    borderWidth: 1,
-                    borderColor: colors.border + '80',
-                  }}
-                >
-                  {/* App logo or icon */}
-                  {app.logo ? (
-                    <Image
-                      source={{ uri: app.logo }}
-                      style={{ width: 28, height: 28, borderRadius: 6, marginRight: 12 }}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <View style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: app.color + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                      <Ionicons name="apps-outline" size={16} color={app.color} />
-                    </View>
-                  )}
-                  <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>{app.name}</Text>
-                  <View style={{ backgroundColor: app.color, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 5 }}>
-                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Pay</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Divider */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 14, gap: 8 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: colors.border + '60' }} />
-              <Text style={{ fontSize: 11, color: colors.gray500, fontWeight: '500' }}>OR SCAN QR</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: colors.border + '60' }} />
-            </View>
-
-            {/* QR Code — centered, clean card */}
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => setShowQrFullscreen(true)}
-              style={{
-                alignSelf: 'center',
-                backgroundColor: '#FFFFFF',
-                padding: 12,
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: colors.primary + '30',
-                alignItems: 'center',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.08,
-                shadowRadius: 8,
-                elevation: 3,
-              }}
-            >
-              <Image
-                source={require('../../../assets/payment-qr.png')}
-                style={{ width: 140, height: 140 }}
-                resizeMode="contain"
-              />
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name="scan-outline" size={12} color={colors.primary} style={{ marginRight: 4 }} />
-                <Text style={{ fontSize: 10, color: colors.primary, fontWeight: '600' }}>Tap to enlarge</Text>
+              {/* RIGHT — UPI App deep links with logos */}
+              <View style={{ flex: 1, gap: 6 }}>
+                {UPI_APPS.map((app) => (
+                  <TouchableOpacity
+                    key={app.id}
+                    activeOpacity={0.7}
+                    onPress={() => openUpiApp(app)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: colors.surface,
+                      borderRadius: 10,
+                      paddingVertical: 10,
+                      paddingHorizontal: 10,
+                      borderWidth: 1,
+                      borderColor: colors.border + '80',
+                    }}
+                  >
+                    {app.logo ? (
+                      <Image
+                        source={{ uri: app.logo }}
+                        style={{ width: 24, height: 24, borderRadius: 4, marginRight: 8 }}
+                        resizeMode="contain"
+                      />
+                    ) : (
+                      <View style={{ width: 24, height: 24, borderRadius: 4, backgroundColor: app.color + '20', justifyContent: 'center', alignItems: 'center', marginRight: 8 }}>
+                        <Ionicons name="apps-outline" size={14} color={app.color} />
+                      </View>
+                    )}
+                    <Text style={{ flex: 1, fontSize: 13, fontWeight: '600', color: colors.text }}>{app.name}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={app.color} />
+                  </TouchableOpacity>
+                ))}
               </View>
-            </TouchableOpacity>
+            </View>
           </View>
 
           {/* Footer */}
-          <View style={{ backgroundColor: colors.background, paddingVertical: 8, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: colors.border + '30' }}>
+          <View style={{ backgroundColor: colors.background, paddingVertical: 6, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: colors.border + '30' }}>
             <Text style={{ fontSize: 9, color: colors.gray500, fontStyle: 'italic', textAlign: 'center' }}>
               🔒 Secure payments powered by Rocana
             </Text>
