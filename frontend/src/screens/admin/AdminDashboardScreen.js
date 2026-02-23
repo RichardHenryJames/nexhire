@@ -413,6 +413,7 @@ export default function AdminDashboardScreen() {
         loadUsers();
         break;
       case 'referrals':
+      case 'companies':
         loadReferrals();
         break;
       case 'transactions':
@@ -460,6 +461,7 @@ export default function AdminDashboardScreen() {
         loadUsers(1, usersFilters);
         break;
       case 'referrals':
+      case 'companies':
         loadReferrals(true);
         break;
       case 'transactions':

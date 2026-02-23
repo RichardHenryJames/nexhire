@@ -48,7 +48,7 @@ const templates: Record<string, { subject: string; html: string }> = {
     // ========================================
 
     'new_referral_request': {
-        subject: 'New Referral Request - {{seekerName}} for {{jobTitle}}',
+        subject: '🚀 {{seekerName}} needs your referral for {{jobTitle}} — Earn up to ₹100!',
         html: `
 <!DOCTYPE html>
 <html>
@@ -64,9 +64,9 @@ const templates: Record<string, { subject: string; html: string }> = {
                     
                     <!-- Header -->
                     <tr>
-                        <td style="background: #4F46E5; padding: 40px; text-align: center;">
-                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">New Referral Request</h1>
-                            <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 15px;">Someone needs your help getting referred</p>
+                        <td style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 40px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">🚀 Someone Needs Your Referral!</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Refer early, earn more — don't let this request expire</p>
                         </td>
                     </tr>
                     
@@ -78,8 +78,8 @@ const templates: Record<string, { subject: string; html: string }> = {
                             </p>
                             
                             <p style="color: #4a4a4a; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
-                                <strong style="color: #1a1a1a;">{{seekerName}}</strong> is looking for a referral at 
-                                <strong style="color: #1a1a1a;">{{companyName}}</strong> and has requested your help.
+                                <strong style="color: #1a1a1a;">{{seekerName}}</strong> just requested a referral at 
+                                <strong style="color: #1a1a1a;">{{companyName}}</strong> for the <strong style="color: #1a1a1a;">{{jobTitle}}</strong> role — and you're one of the few people who can help.
                             </p>
                             
                             <!-- Job Card -->
@@ -93,34 +93,54 @@ const templates: Record<string, { subject: string; html: string }> = {
                                 </tr>
                             </table>
                             
-                            <!-- Rewards Section -->
+                            <!-- Why Refer Section -->
                             <table width="100%" cellpadding="0" cellspacing="0" style="background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: 8px; margin: 0 0 24px 0;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0 0 8px 0; color: #065F46; font-size: 15px; font-weight: 600;">
-                                            Earn up to ₹100 for this referral
-                                        </p>
-                                        <p style="margin: 0; color: #047857; font-size: 14px;">
-                                            Quick response bonus available if you refer within 24 hours.
-                                        </p>
+                                        <p style="margin: 0 0 12px 0; color: #065F46; font-size: 15px; font-weight: 700;">💰 Why Refer?</p>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #047857; font-size: 14px;">💵 <strong>Cash Reward</strong> — Earn <strong>up to ₹100</strong> for a successful referral</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #047857; font-size: 14px;">⚡ <strong>Speed Bonus</strong> — Refer within <strong>24 hours</strong> to unlock bonus rewards</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #047857; font-size: 14px;">🏆 <strong>RefOpen Rewards</strong> — Earn points, unlock badges & climb the leaderboard</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #047857; font-size: 14px;">🤝 <strong>Make an Impact</strong> — Your 2-minute effort could change someone's career</td>
+                                            </tr>
+                                        </table>
                                     </td>
                                 </tr>
                             </table>
                             
+                            <p style="color: #4a4a4a; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
+                                Referring takes less than 2 minutes — just forward their resume through your company's portal. <strong>The sooner you refer, the higher your reward.</strong>
+                            </p>
+                            
                             <!-- CTA Button -->
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
-                                    <td align="center" style="padding: 8px 0 32px 0;">
-                                        <a href="{{actionUrl}}" style="display: inline-block; background: #4F46E5; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px;">
-                                            View Request
+                                    <td align="center" style="padding: 8px 0 24px 0;">
+                                        <a href="{{actionUrl}}" style="display: inline-block; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(79,70,229,0.3);">
+                                            Open RefOpen Now → Refer {{seekerName}}
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             
-                            <p style="color: #64748B; font-size: 14px; line-height: 1.6; margin: 0;">
-                                Your referral could help someone start their dream career. It only takes a few minutes.
-                            </p>
+                            <!-- Urgency Note -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 8px;">
+                                <tr>
+                                    <td style="padding: 14px 20px; text-align: center;">
+                                        <p style="margin: 0; color: #92400E; font-size: 13px; font-weight: 500;">
+                                            ⏰ Requests that go unclaimed for too long may expire. Be the first to help!
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
                     
@@ -1059,7 +1079,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
     // ========================================
 
     'referrer_open_requests': {
-        subject: '{{openCount}} {{candidateWord}} {{needWord}} Your Referral at {{companyName}}',
+        subject: '⏰ {{openCount}} {{candidateWord}} {{isAre}} waiting for YOUR referral at {{companyName}}!',
         html: `
 <!DOCTYPE html>
 <html>
@@ -1075,9 +1095,9 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
                     
                     <!-- Header -->
                     <tr>
-                        <td style="background: #10B981; padding: 40px; text-align: center;">
-                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Open Referral {{requestWord}}</h1>
-                            <p style="color: rgba(255,255,255,0.85); margin: 12px 0 0 0; font-size: 15px;">Help {{candidateWordLower}} at {{companyName}}</p>
+                        <td style="background: linear-gradient(135deg, #059669 0%, #10B981 100%); padding: 40px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">⏰ Candidates Are Waiting for You!</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Open RefOpen now — refer them before someone else does</p>
                         </td>
                     </tr>
                     
@@ -1089,11 +1109,11 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
                             </p>
                             
                             <p style="color: #4a4a4a; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
-                                <strong style="color: #10B981;">{{openCount}} {{candidateWordLower}}</strong> {{isAre}} looking for a referral at <strong style="color: #1a1a1a;">{{companyName}}</strong>. 
-                                Your help can make a difference in someone's career.
+                                <strong style="color: #059669;">{{openCount}} {{candidateWordLower}}</strong> {{isAre}} actively waiting for a referral at <strong style="color: #1a1a1a;">{{companyName}}</strong> right now. 
+                                They've uploaded their resumes and are counting on employees like you to help them get in.
                             </p>
                             
-                            <p style="color: #1a1a1a; margin: 0 0 16px 0; font-size: 15px; font-weight: 600;">Referral Requests</p>
+                            <p style="color: #1a1a1a; margin: 0 0 16px 0; font-size: 15px; font-weight: 600;">📋 Referral Requests Waiting:</p>
                             
                             <!-- Request Cards -->
                             {{requestCardsHtml}}
@@ -1102,30 +1122,47 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td align="center" style="padding: 24px 0;">
-                                        <a href="{{appUrl}}/referrals" style="display: inline-block; background: #10B981; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px;">
-                                            View All Requests
+                                        <a href="{{appUrl}}/referrals" style="display: inline-block; background: linear-gradient(135deg, #059669 0%, #10B981 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 12px rgba(16,185,129,0.3);">
+                                            Open RefOpen Now → View All Requests
                                         </a>
                                     </td>
                                 </tr>
                             </table>
                             
-                            <!-- Benefits Section -->
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px;">
+                            <!-- What's In It For You Section -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; margin: 0 0 20px 0;">
                                 <tr>
                                     <td style="padding: 20px;">
-                                        <p style="margin: 0 0 12px 0; color: #92400E; font-size: 14px; font-weight: 600;">Referrer Benefits</p>
+                                        <p style="margin: 0 0 12px 0; color: #92400E; font-size: 15px; font-weight: 700;">💰 What's In It For You?</p>
+                                        <p style="margin: 0 0 12px 0; color: #A16207; font-size: 13px;">Every successful referral earns you <strong>real cash + RefOpen rewards</strong>:</p>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 4px 0; color: #A16207; font-size: 13px;">• Earn up to ₹100 per successful referral</td></tr>
-                                            <tr><td style="padding: 4px 0; color: #A16207; font-size: 13px;">• Quick response bonus rewards</td></tr>
-                                            <tr><td style="padding: 4px 0; color: #A16207; font-size: 13px;">• Unlock badges as you help more candidates</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">💵 <strong>Up to ₹100 cash</strong> — Paid directly to your wallet per verified referral</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">⚡ <strong>Speed bonus</strong> — Refer early = higher rewards</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">🎯 <strong>RefOpen Points</strong> — Earn 50+ points per referral — redeem for rewards</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">🏅 <strong>Badges & Rank</strong> — Top referrers get featured on the leaderboard</td></tr>
                                         </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #4a4a4a; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
+                                <strong>It takes just 2 minutes</strong> — open your company's referral portal, paste their resume, done. You earn cash, they get a career opportunity. Win-win.
+                            </p>
+                            
+                            <!-- Urgency Note -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px;">
+                                <tr>
+                                    <td style="padding: 14px 20px; text-align: center;">
+                                        <p style="margin: 0; color: #991B1B; font-size: 13px; font-weight: 500;">
+                                            🔥 The longer you wait, the more likely another referrer claims the reward first. Act now!
+                                        </p>
                                     </td>
                                 </tr>
                             </table>
                         </td>
                     </tr>
                     
-${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a verified referrer at {{companyName}}.")}
+${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a verified referrer at {{companyName}} on RefOpen.")}
                     
                 </table>
             </td>
