@@ -493,27 +493,26 @@ const ManualRechargeScreen = ({ navigation }) => {
                     <Ionicons name="scan-outline" size={10} color="#3B82F6" style={{ marginRight: 3 }} />
                     <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
                   </View>
-                </TouchableOpacity>
-                {/* Copy UPI ID button below QR */}
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Clipboard.setStringAsync(UPI_PAYEE_VPA);
-                    showToast('UPI ID copied!', 'success');
-                  }}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    alignSelf: 'flex-start',
-                    backgroundColor: colors.primary + '10',
-                    borderRadius: 6,
-                    paddingHorizontal: 8,
-                    paddingVertical: 4,
-                    marginTop: 6,
-                  }}
-                >
-                  <Ionicons name="copy-outline" size={11} color={colors.primary} style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 9, color: colors.primary, fontWeight: '600' }}>Copy UPI ID</Text>
+                  {/* Copy UPI ID — inside QR card, below "Tap to enlarge" */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      Clipboard.setStringAsync(UPI_PAYEE_VPA);
+                      showToast('UPI ID copied!', 'success');
+                    }}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: colors.primary + '10',
+                      borderRadius: 4,
+                      paddingHorizontal: 6,
+                      paddingVertical: 3,
+                      marginTop: 4,
+                    }}
+                  >
+                    <Ionicons name="copy-outline" size={10} color={colors.primary} style={{ marginRight: 3 }} />
+                    <Text style={{ fontSize: 8, color: colors.primary, fontWeight: '600' }}>Copy UPI ID</Text>
+                  </TouchableOpacity>
                 </TouchableOpacity>
 
                 {/* RIGHT — UPI App deep links */}
