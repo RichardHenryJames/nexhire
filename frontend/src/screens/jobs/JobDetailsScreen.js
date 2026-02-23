@@ -1133,6 +1133,24 @@ const { jobId, fromReferralRequest } = route.params || {};
         </View>
       )}
 
+      {/* About Company — show org description for F500 or any org with description */}
+      {job.OrganizationDescription && job.OrganizationDescription.length > 20 && (
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <Text style={styles.sectionTitle}>About {job.OrganizationName || 'Company'}</Text>
+          </View>
+          {job.OrganizationIndustry && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+              <Ionicons name="business-outline" size={13} color={colors.textSecondary} />
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>{job.OrganizationIndustry}</Text>
+            </View>
+          )}
+          <Text style={{ fontSize: 13, color: colors.text, lineHeight: 20 }}>
+            {job.OrganizationDescription}
+          </Text>
+        </View>
+      )}
+
       {/* 🆕 MOVED: Referral Message Section - now appears ABOVE action buttons */}
       {/* Show for job seekers OR public users (not logged in), but NOT for own posted jobs */}
       {(isJobSeeker || !user) && !hasReferred && !isOwnPostedJob && (
