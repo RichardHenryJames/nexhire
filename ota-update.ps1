@@ -14,6 +14,20 @@ $normalizedEnv = switch ($Environment.ToLower()) {
     default { "dev" }
 }
 
+# Safety: Production deployments must be from master branch
+if ($normalizedEnv -eq "prod") {
+    $currentBranch = (git rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    if ($currentBranch -ne "master") {
+        Write-Host ""
+        Write-Host "❌ BLOCKED: Production deployment must be from 'master' branch!" -ForegroundColor Red
+        Write-Host "   Current branch: $currentBranch" -ForegroundColor Yellow
+        Write-Host "   Switch to master first: git checkout master" -ForegroundColor Yellow
+        Write-Host ""
+        exit 1
+    }
+    Write-Host "✅ Branch check: master" -ForegroundColor Green
+}
+
 # Map environment to EAS branch and env file
 $config = switch ($normalizedEnv) {
     "dev" {
