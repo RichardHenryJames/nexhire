@@ -82,9 +82,9 @@ export default ({ config }) => {
     userInterfaceStyle: 'light',
     scheme: currentEnvConfig.scheme,
     splash: {
-      image: './assets/splash.png',
+      image: './assets/refopen-logo.png',
       resizeMode: 'contain',
-      backgroundColor: '#0066FF',
+      backgroundColor: '#0A0E17',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
