@@ -121,12 +121,16 @@ const buildUpiUrl = (appScheme, amount) => {
 
 const UPI_APPS = [
   { id: 'phonepe', name: 'PhonePe', scheme: 'phonepe', color: '#5F259F',
+    pkg: 'com.phonepe.app',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=phonepe.com' },
-  { id: 'gpay', name: 'Google Pay', scheme: 'tez', color: '#4285F4',
+  { id: 'gpay', name: 'Google Pay', scheme: 'gpay', color: '#4285F4',
+    pkg: 'com.google.android.apps.nbu.paisa.user',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=pay.google.com' },
   { id: 'paytm', name: 'Paytm', scheme: 'paytmmp', color: '#00BAF2',
+    pkg: 'net.one97.paytm',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=paytm.com' },
   { id: 'generic', name: 'Any UPI App', scheme: 'upi', color: '#2D7D46',
+    pkg: null,
     logo: null },
 ];
 
@@ -216,42 +220,34 @@ const ManualRechargeScreen = ({ navigation }) => {
 
   const openUpiApp = async (app) => {
     const amt = parseFloat(amount) || 0;
+    const params = `pa=${encodeURIComponent(UPI_PAYEE_VPA)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&cu=INR${amt > 0 ? `&am=${amt.toFixed(2)}` : ''}`;
 
     if (Platform.OS === 'web') {
-      // On mobile web, Linking.canOpenURL always returns false for custom schemes.
-      // Use window.location.href to trigger the OS intent handler directly.
-      // Always use upi:// scheme on web — it opens the system UPI app chooser on Android.
-      // For specific apps, try their scheme first, fall back to upi://.
-      const url = buildUpiUrl(app.id === 'generic' ? 'upi' : app.scheme, amount);
-      const fallbackUrl = buildUpiUrl('upi', amount);
+      // On Android mobile web, use intent:// URL to open specific UPI apps.
+      // This prevents wrong apps (WhatsApp etc) from intercepting the link.
+      // intent:// URLs specify the exact Android package, so only that app opens.
+      // For "Any UPI App", use upi:// which shows the system UPI chooser.
 
-      try {
-        // Try app-specific scheme first
-        window.location.href = url;
-
-        // If nothing happened after 2s (app not installed), try generic upi://
-        if (app.id !== 'generic') {
-          setTimeout(() => {
-            window.location.href = fallbackUrl;
-          }, 2000);
-        }
-      } catch (e) {
-        // Last resort: generic UPI
-        try { window.location.href = fallbackUrl; } catch (_) {
-          showToast('Could not open UPI app. Scan the QR code instead.', 'info');
-        }
+      if (app.pkg) {
+        // Android intent URL — opens ONLY the specified app
+        const intentUrl = `intent://pay?${params}#Intent;scheme=upi;package=${app.pkg};end`;
+        window.location.href = intentUrl;
+      } else {
+        // Generic — use upi:// scheme (system chooser)
+        window.location.href = `upi://pay?${params}`;
       }
       return;
     }
 
     // Native (Android/iOS) — use Linking API
-    const url = buildUpiUrl(app.scheme, amount);
+    const url = `${app.scheme}://pay?${params}`;
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
         await Linking.openURL(url);
       } else {
-        const genericUrl = buildUpiUrl('upi', amount);
+        // Fall back to generic upi:// scheme
+        const genericUrl = `upi://pay?${params}`;
         const genSupported = await Linking.canOpenURL(genericUrl);
         if (genSupported) await Linking.openURL(genericUrl);
         else showToast(`${app.name} not installed. Scan the QR code instead.`, 'info');
