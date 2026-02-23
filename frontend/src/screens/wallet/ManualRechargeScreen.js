@@ -553,6 +553,7 @@ const ManualRechargeScreen = ({ navigation }) => {
               </View>
             ) : (
               /* ── DESKTOP: QR centered only (no UPI buttons) ── */
+              <>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setShowQrFullscreen(true)}
@@ -605,6 +606,7 @@ const ManualRechargeScreen = ({ navigation }) => {
                 <Ionicons name="copy-outline" size={14} color={colors.primary} style={{ marginRight: 6 }} />
                 <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '600' }}>Copy UPI ID</Text>
               </TouchableOpacity>
+              </>
             )}
           </View>
 
