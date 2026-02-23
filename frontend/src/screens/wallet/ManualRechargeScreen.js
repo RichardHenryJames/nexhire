@@ -124,7 +124,7 @@ const UPI_APPS = [
   { id: 'phonepe', name: 'PhonePe', scheme: 'phonepe', color: '#5F259F',
     pkg: 'com.phonepe.app',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=phonepe.com' },
-  { id: 'gpay', name: 'Google Pay', scheme: 'gpay', color: '#4285F4',
+  { id: 'gpay', name: 'Google Pay', scheme: 'tez', color: '#4285F4',
     pkg: 'com.google.android.apps.nbu.paisa.user',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=pay.google.com' },
   { id: 'paytm', name: 'Paytm', scheme: 'paytmmp', color: '#00BAF2',
@@ -225,12 +225,35 @@ const ManualRechargeScreen = ({ navigation }) => {
     const params = `pa=${encodeURIComponent(UPI_PAYEE_VPA)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&cu=INR${amt > 0 ? `&am=${amt.toFixed(2)}` : ''}`;
 
     if (Platform.OS === 'web') {
-      // On mobile web, use app-specific schemes — they open the correct app directly.
-      // phonepe:// → PhonePe, paytmmp:// → Paytm (both confirmed working)
-      // gpay:// → Google Pay (modern scheme, replaces old tez://)
-      // upi:// → system chooser (for "Any UPI App" button)
+      // On mobile web, use app-specific deep link schemes.
+      // phonepe:// → PhonePe, tez:// → Google Pay, paytmmp:// → Paytm
+      // If the app isn't installed, the browser will error silently.
+      // We detect this with a visibility change listener — if the page
+      // stays visible after 1.5s, the app didn't open → fall back to
+      // generic upi:// which shows the system UPI app chooser.
       const scheme = app.scheme;
-      window.location.href = `${scheme}://pay?${params}`;
+      const appUrl = `${scheme}://pay?${params}`;
+      const fallbackUrl = `upi://pay?${params}`;
+
+      if (scheme === 'upi') {
+        // "Any UPI App" button — go straight to system chooser
+        window.location.href = fallbackUrl;
+        return;
+      }
+
+      // Try app-specific scheme first
+      const beforeTime = Date.now();
+      window.location.href = appUrl;
+
+      // If the app opened, the browser tab loses focus (goes to background).
+      // If it didn't open (app not installed), page stays visible.
+      // After 2s, if page is still visible and not much time has passed,
+      // fall back to generic upi:// chooser.
+      setTimeout(() => {
+        if (document.visibilityState !== 'hidden' && (Date.now() - beforeTime) < 3000) {
+          window.location.href = fallbackUrl;
+        }
+      }, 2000);
       return;
     }
 
