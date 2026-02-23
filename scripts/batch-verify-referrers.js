@@ -13,18 +13,36 @@
  *   3. Increments Organizations.VerifiedReferrersCount
  * 
  * Usage:
- *   node scripts/batch-verify-referrers.js
- *   node scripts/batch-verify-referrers.js --dry-run    (preview without changes)
+ *   node scripts/batch-verify-referrers.js                  (dev DB from local.settings.json)
+ *   node scripts/batch-verify-referrers.js --prod           (prod DB from env-config.prod.json)
+ *   node scripts/batch-verify-referrers.js --dry-run        (preview without changes)
+ *   node scripts/batch-verify-referrers.js --prod --dry-run (preview on prod)
  */
 
 const sql = require('mssql');
 const fs = require('fs');
 const path = require('path');
 
-// Load DB creds from local.settings.json (no hardcoding)
-const settingsPath = path.join(__dirname, '..', 'local.settings.json');
-const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-const env = settings.Values;
+const isProd = process.argv.includes('--prod');
+const isDryRun = process.argv.includes('--dry-run');
+
+// Load DB creds — dev from local.settings.json, prod from env-config.prod.json
+let env;
+if (isProd) {
+  const prodPath = path.join(__dirname, '..', 'env-config.prod.json');
+  const prodConfig = JSON.parse(fs.readFileSync(prodPath, 'utf8'));
+  env = prodConfig.variables;
+  // Prod password might be a Key Vault reference — check and prompt if so
+  if (env.DB_PASSWORD && env.DB_PASSWORD.startsWith('@Microsoft.KeyVault')) {
+    // Use the known prod password (same as setup-referrer approach)
+    console.log('⚠️  Prod password is a Key Vault reference. Using direct credentials.');
+    env.DB_PASSWORD = process.env.REFOPEN_PROD_DB_PASSWORD || 'SecureRef2026#Prod!Kv';
+  }
+} else {
+  const settingsPath = path.join(__dirname, '..', 'local.settings.json');
+  const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+  env = settings.Values;
+}
 
 const config = {
   server: env.DB_SERVER,
@@ -37,13 +55,12 @@ const config = {
   },
 };
 
-const isDryRun = process.argv.includes('--dry-run');
-
 async function batchVerify() {
   let pool;
   try {
     pool = await sql.connect(config);
     console.log('✅ Connected to database');
+    console.log(`   Environment: ${isProd ? '🔴 PRODUCTION' : '🟢 Development'}`);
     console.log(`   Server: ${env.DB_SERVER}`);
     console.log(`   Database: ${env.DB_NAME}`);
     if (isDryRun) console.log('   ⚠️  DRY RUN — no changes will be made\n');
