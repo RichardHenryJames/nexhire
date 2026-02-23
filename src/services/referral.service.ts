@@ -674,13 +674,13 @@ export class ReferralService {
                 const hasQuickBonus = quickBonusResult.recordset?.[0]?.HasQuickBonus > 0;
 
                 // Random verification reward amounts (in rupees):
-                // - Fast referrers (responded < 24hrs): ₹25-35 — rewarding speed
-                // - Normal referrers (responded > 24hrs): ₹12-24 — still worthwhile
+                // - Fast referrers (responded < 24hrs): ₹30-40 — rewarding speed
+                // - Normal referrers (responded > 24hrs): ₹20-30 — still worthwhile
                 let verificationAmount: number;
                 if (hasQuickBonus) {
-                    verificationAmount = Math.floor(Math.random() * 11) + 25; // ₹25-35
+                    verificationAmount = Math.floor(Math.random() * 11) + 30; // ₹30-40
                 } else {
-                    verificationAmount = Math.floor(Math.random() * 13) + 12; // ₹12-24
+                    verificationAmount = Math.floor(Math.random() * 11) + 20; // ₹20-30
                 }
 
                 // Add money to referrer's wallet (actual earnings - WITHDRAWABLE)
@@ -1588,7 +1588,7 @@ export class ReferralService {
             }
             
             // Award points for proof submission with quick response bonus
-            let baseProofPoints = 15; // Base points for submitting proof
+            let baseProofPoints = 50; // Base points for submitting proof
             
             // Award base proof submission points first
             await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
@@ -1599,7 +1599,7 @@ export class ReferralService {
             const hoursFromRequest = (completedTime.getTime() - requestedTime.getTime()) / (1000 * 60 * 60);
             
             if (hoursFromRequest <= 24) {
-                const quickBonusPoints = 10; // Quick response bonus
+                const quickBonusPoints = 25; // Quick response bonus
                 await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
             }
             
