@@ -465,46 +465,35 @@ const ManualRechargeScreen = ({ navigation }) => {
             {isMobile ? (
               /* ── MOBILE: QR left + UPI apps right ── */
               <View style={{ flexDirection: 'row', gap: 14 }}>
-                {/* LEFT — QR + UPI ID below */}
-                <View style={{ alignSelf: 'flex-start' }}>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => setShowQrFullscreen(true)}
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      padding: 6,
-                      borderRadius: 12,
-                      borderWidth: 2,
-                      borderColor: '#3B82F6',
-                      alignItems: 'center',
-                      shadowColor: '#3B82F6',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.15,
-                      shadowRadius: 8,
-                      elevation: 4,
-                    }}
-                  >
-                    <Image
-                      source={require('../../../assets/payment-qr.png')}
-                      style={{ width: 120, height: 120 }}
-                      resizeMode="contain"
-                    />
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                      <Ionicons name="scan-outline" size={10} color="#3B82F6" style={{ marginRight: 3 }} />
-                      <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
-                    </View>
-                  </TouchableOpacity>
-                  {/* UPI ID — same width as QR */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 6, backgroundColor: colors.surface, borderRadius: 6, paddingVertical: 4, paddingHorizontal: 6, borderWidth: 1, borderColor: colors.border + '60' }}>
-                    <Text style={{ fontSize: 6, color: colors.gray500, flex: 1 }} numberOfLines={1} ellipsizeMode="middle">{UPI_PAYEE_VPA}</Text>
-                    <TouchableOpacity
-                      onPress={() => { Clipboard.setStringAsync(UPI_PAYEE_VPA); showToast('UPI ID copied!', 'success'); }}
-                      style={{ marginLeft: 4, padding: 2 }}
-                    >
-                      <Ionicons name="copy-outline" size={12} color={colors.primary} />
-                    </TouchableOpacity>
+                {/* LEFT — QR (blue border, clickable fullscreen) */}
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setShowQrFullscreen(true)}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: 6,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: '#3B82F6',
+                    alignItems: 'center',
+                    alignSelf: 'flex-start',
+                    shadowColor: '#3B82F6',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                >
+                  <Image
+                    source={require('../../../assets/payment-qr.png')}
+                    style={{ width: 120, height: 120 }}
+                    resizeMode="contain"
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
+                    <Ionicons name="scan-outline" size={10} color="#3B82F6" style={{ marginRight: 3 }} />
+                    <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 {/* RIGHT — UPI App deep links */}
                 <View style={{ flex: 1, gap: 6 }}>
@@ -543,7 +532,6 @@ const ManualRechargeScreen = ({ navigation }) => {
               </View>
             ) : (
               /* ── DESKTOP: QR centered only (no UPI buttons) ── */
-              <>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setShowQrFullscreen(true)}
@@ -575,17 +563,6 @@ const ManualRechargeScreen = ({ navigation }) => {
                   <Text style={{ fontSize: 10, color: '#3B82F6', fontWeight: '600' }}>Click to enlarge</Text>
                 </View>
               </TouchableOpacity>
-              {/* UPI ID — below QR, centered */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 10, backgroundColor: colors.surface, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.border + '60', maxWidth: 240 }}>
-                <Text style={{ fontSize: 9, color: colors.gray500, flex: 1 }} numberOfLines={1} ellipsizeMode="middle">{UPI_PAYEE_VPA}</Text>
-                <TouchableOpacity
-                  onPress={() => { Clipboard.setStringAsync(UPI_PAYEE_VPA); showToast('UPI ID copied!', 'success'); }}
-                  style={{ marginLeft: 6, padding: 2 }}
-                >
-                  <Ionicons name="copy-outline" size={14} color={colors.primary} />
-                </TouchableOpacity>
-              </View>
-              </>
             )}
           </View>
 
