@@ -225,30 +225,28 @@ const ManualRechargeScreen = ({ navigation }) => {
     const params = `pa=${encodeURIComponent(UPI_PAYEE_VPA)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&cu=INR${amt > 0 ? `&am=${amt.toFixed(2)}` : ''}`;
 
     if (Platform.OS === 'web') {
-      // On mobile web, use app-specific deep link schemes.
-      // phonepe:// → PhonePe, tez:// → Google Pay, paytmmp:// → Paytm
-      // If the app isn't installed, the browser will error silently.
-      // We detect this with a visibility change listener — if the page
-      // stays visible after 1.5s, the app didn't open → fall back to
-      // generic upi:// which shows the system UPI app chooser.
-      const scheme = app.scheme;
-      const appUrl = `${scheme}://pay?${params}`;
       const fallbackUrl = `upi://pay?${params}`;
 
       if (scheme === 'upi') {
-        // "Any UPI App" button — go straight to system chooser
         window.location.href = fallbackUrl;
         return;
       }
 
-      // Try app-specific scheme first
+      // Google Pay special handling — tez:// and gpay:// don't prefill amount.
+      // Use intent:// with GPay's package name — this is the ONLY way to open
+      // GPay specifically with amount prefilled from mobile web.
+      if (app.id === 'gpay') {
+        const intentUrl = `intent://pay?${params}#Intent;scheme=upi;package=com.google.android.apps.nbu.paisa.user;end`;
+        window.location.href = intentUrl;
+        return;
+      }
+
+      // PhonePe, Paytm — app-specific schemes work with amount prefill
+      const appUrl = `${scheme}://pay?${params}`;
       const beforeTime = Date.now();
       window.location.href = appUrl;
 
-      // If the app opened, the browser tab loses focus (goes to background).
-      // If it didn't open (app not installed), page stays visible.
-      // After 2s, if page is still visible and not much time has passed,
-      // fall back to generic upi:// chooser.
+      // Fallback: if app not installed, page stays visible → open system chooser
       setTimeout(() => {
         if (document.visibilityState !== 'hidden' && (Date.now() - beforeTime) < 3000) {
           window.location.href = fallbackUrl;
