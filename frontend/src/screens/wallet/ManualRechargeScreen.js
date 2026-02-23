@@ -215,6 +215,36 @@ const ManualRechargeScreen = ({ navigation }) => {
   const getTotalCredit = () => getPayAmount() + getPackBonus() + getPromoBonus();
 
   const openUpiApp = async (app) => {
+    const amt = parseFloat(amount) || 0;
+
+    if (Platform.OS === 'web') {
+      // On mobile web, Linking.canOpenURL always returns false for custom schemes.
+      // Use window.location.href to trigger the OS intent handler directly.
+      // Always use upi:// scheme on web — it opens the system UPI app chooser on Android.
+      // For specific apps, try their scheme first, fall back to upi://.
+      const url = buildUpiUrl(app.id === 'generic' ? 'upi' : app.scheme, amount);
+      const fallbackUrl = buildUpiUrl('upi', amount);
+
+      try {
+        // Try app-specific scheme first
+        window.location.href = url;
+
+        // If nothing happened after 2s (app not installed), try generic upi://
+        if (app.id !== 'generic') {
+          setTimeout(() => {
+            window.location.href = fallbackUrl;
+          }, 2000);
+        }
+      } catch (e) {
+        // Last resort: generic UPI
+        try { window.location.href = fallbackUrl; } catch (_) {
+          showToast('Could not open UPI app. Scan the QR code instead.', 'info');
+        }
+      }
+      return;
+    }
+
+    // Native (Android/iOS) — use Linking API
     const url = buildUpiUrl(app.scheme, amount);
     try {
       const supported = await Linking.canOpenURL(url);
