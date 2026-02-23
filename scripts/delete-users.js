@@ -176,15 +176,16 @@ async function run() {
                     // Applicant profile data
                     `DELETE FROM ApplicantProfileViews WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM ApplicantReferralSubscriptions WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
-                    `DELETE FROM ApplicantResumes WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM ApplicantSalaries WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM WorkExperiences WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM ResumeMetadata WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
-                    // Jobs & applications
+                    // Jobs & applications (MUST delete before ApplicantResumes due to FK on ResumeID)
                     `DELETE FROM ApplicationAttachments WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid))`,
                     `DELETE FROM ApplicationTracking WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid))`,
                     `DELETE FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM SavedJobs WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
+                    // Now safe to delete resumes (no more FK references from JobApplications)
+                    `DELETE FROM ApplicantResumes WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM Applicants WHERE UserID = @uid`,
                     // Employer data
                     // JobArchiveLogs is a system table — no user FK
