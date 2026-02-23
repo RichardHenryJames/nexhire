@@ -36,7 +36,7 @@ export default ({ config }) => {
   // Extra runtime config for app
   const extraConfig = {
     appEnv: env,
-    appVersion: '1.0.9',
+    appVersion: '1.1.0',
     debug: env !== 'production',
 
     // API
@@ -76,7 +76,7 @@ export default ({ config }) => {
     name: currentEnvConfig.name,
     slug: 'refopen',
     owner: 'parimalkumar',
-    version: '1.0.9',
+    version: '1.1.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
