@@ -694,7 +694,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       .slice(0, 10); // Limit to 10 tags
   };
 
-  // Clean up truncated descriptions - if ends with "..." cut back to last full stop
+  // Clean up truncated descriptions and convert markdown to HTML
   const cleanDescription = (description) => {
     if (!description) return '';
     
@@ -702,21 +702,41 @@ const { jobId, fromReferralRequest } = route.params || {};
     
     // Check if description ends with truncation indicators
     if (cleaned.endsWith('...') || cleaned.endsWith('…') || cleaned.endsWith('a...') || cleaned.endsWith('a…')) {
-      // Remove the truncation marker
       cleaned = cleaned.replace(/\.{3}$|…$/, '').trim();
-      
-      // Find the last full stop (sentence end)
       const lastPeriod = cleaned.lastIndexOf('.');
       const lastExclamation = cleaned.lastIndexOf('!');
       const lastQuestion = cleaned.lastIndexOf('?');
-      
-      // Get the position of the last sentence-ending punctuation
       const lastSentenceEnd = Math.max(lastPeriod, lastExclamation, lastQuestion);
-      
       if (lastSentenceEnd > 0) {
-        // Cut at the last complete sentence
         cleaned = cleaned.substring(0, lastSentenceEnd + 1);
       }
+    }
+    
+    // If it's already HTML (contains tags), return as-is
+    if (/<[a-z][\s\S]*>/i.test(cleaned)) return cleaned;
+    
+    // Convert markdown-style text to HTML
+    // **bold** → <strong>bold</strong>
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert bullet points: • text → <li>text</li>
+    // Split by bullet markers and wrap in list
+    const bulletPattern = /(?:^|\s)(?:•|▪|▸|►|→|‣|-)\s*/;
+    if (bulletPattern.test(cleaned)) {
+      const parts = cleaned.split(/(?:•|▪|▸|►|→|‣)\s*/);
+      const intro = parts[0]?.trim();
+      const bullets = parts.slice(1).filter(b => b.trim());
+      
+      if (bullets.length > 0) {
+        cleaned = (intro ? `<p>${intro}</p>` : '') + 
+          '<ul>' + bullets.map(b => `<li>${b.trim()}</li>`).join('') + '</ul>';
+      }
+    }
+    
+    // Convert newlines to <br> if no HTML structure was added
+    if (!cleaned.includes('<ul>') && !cleaned.includes('<p>')) {
+      cleaned = cleaned.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>');
+      cleaned = `<p>${cleaned}</p>`;
     }
     
     return cleaned;
