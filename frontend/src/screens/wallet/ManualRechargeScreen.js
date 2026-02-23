@@ -225,11 +225,12 @@ const ManualRechargeScreen = ({ navigation }) => {
     const params = `pa=${encodeURIComponent(UPI_PAYEE_VPA)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&cu=INR${amt > 0 ? `&am=${amt.toFixed(2)}` : ''}`;
 
     if (Platform.OS === 'web') {
-      // On mobile web, use upi:// deep link — Android shows native UPI app chooser.
-      // All buttons use the same upi:// scheme since individual app schemes
-      // (phonepe://, gpay://) don't work reliably from mobile web browsers.
-      // The user picks their preferred app from the system chooser.
-      window.location.href = `upi://pay?${params}`;
+      // On mobile web, use app-specific schemes — they open the correct app directly.
+      // phonepe:// → PhonePe, paytmmp:// → Paytm (both confirmed working)
+      // gpay:// → Google Pay (modern scheme, replaces old tez://)
+      // upi:// → system chooser (for "Any UPI App" button)
+      const scheme = app.scheme;
+      window.location.href = `${scheme}://pay?${params}`;
       return;
     }
 
