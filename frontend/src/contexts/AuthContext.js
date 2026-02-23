@@ -525,6 +525,12 @@ export const AuthProvider = ({ children }) => {
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
+      // CRITICAL: Clear pending Google auth BEFORE setLoading(false)
+      // setLoading(false) remounts the navigator — if hasPendingGoogleAuth is still true,
+      // it shows Auth stack (ExperienceTypeScreen) instead of Main stack (HomeScreen)
+      if (pendingGoogleAuth) {
+        clearPendingGoogleAuth();
+      }
       setLoading(false);
     }
   };
