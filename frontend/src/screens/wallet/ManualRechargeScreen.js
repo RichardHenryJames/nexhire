@@ -225,30 +225,21 @@ const ManualRechargeScreen = ({ navigation }) => {
     const params = `pa=${encodeURIComponent(UPI_PAYEE_VPA)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&cu=INR${amt > 0 ? `&am=${amt.toFixed(2)}` : ''}`;
 
     if (Platform.OS === 'web') {
-      // On Android mobile web, use intent:// URL to open specific UPI apps.
-      // This prevents wrong apps (WhatsApp etc) from intercepting the link.
-      // intent:// URLs specify the exact Android package, so only that app opens.
-      // For "Any UPI App", use upi:// which shows the system UPI chooser.
-
-      if (app.pkg) {
-        // Android intent URL — opens ONLY the specified app
-        const intentUrl = `intent://pay?${params}#Intent;scheme=upi;package=${app.pkg};end`;
-        window.location.href = intentUrl;
-      } else {
-        // Generic — use upi:// scheme (system chooser)
-        window.location.href = `upi://pay?${params}`;
-      }
+      // On mobile web, use upi:// deep link — Android shows native UPI app chooser.
+      // All buttons use the same upi:// scheme since individual app schemes
+      // (phonepe://, gpay://) don't work reliably from mobile web browsers.
+      // The user picks their preferred app from the system chooser.
+      window.location.href = `upi://pay?${params}`;
       return;
     }
 
-    // Native (Android/iOS) — use Linking API
+    // Native (Android/iOS) — use Linking API with app-specific scheme
     const url = `${app.scheme}://pay?${params}`;
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) {
         await Linking.openURL(url);
       } else {
-        // Fall back to generic upi:// scheme
         const genericUrl = `upi://pay?${params}`;
         const genSupported = await Linking.canOpenURL(genericUrl);
         if (genSupported) await Linking.openURL(genericUrl);
