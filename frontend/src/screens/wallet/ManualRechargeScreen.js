@@ -543,6 +543,7 @@ const ManualRechargeScreen = ({ navigation }) => {
               </View>
             ) : (
               /* ── DESKTOP: QR centered only (no UPI buttons) ── */
+              <>
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => setShowQrFullscreen(true)}
@@ -584,6 +585,7 @@ const ManualRechargeScreen = ({ navigation }) => {
                   <Ionicons name="copy-outline" size={14} color={colors.primary} />
                 </TouchableOpacity>
               </View>
+              </>
             )}
           </View>
 
