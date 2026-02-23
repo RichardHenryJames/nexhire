@@ -154,7 +154,7 @@ Write-Host "   Platform: web" -ForegroundColor Gray
 Write-Host "   Output: web-build/" -ForegroundColor Gray
 
 # Load .env vars into shell environment so Metro can inline EXPO_PUBLIC_* into the web bundle
-# (dotenv/config in app.config.js only loads them for that file; Metro needs actual shell env vars)
+# CRITICAL: Must use $env: syntax (not [System.Environment]) for child process inheritance
 if (Test-Path ".env") {
     Write-Host "   Loading .env into shell environment..." -ForegroundColor Gray
     $envVarCount = 0
@@ -164,11 +164,14 @@ if (Test-Path ".env") {
             $val = $Matches[2].Trim()
             # Remove surrounding quotes if present
             if ($val -match '^["''](.*)["'']$') { $val = $Matches[1] }
-            [System.Environment]::SetEnvironmentVariable($key, $val, 'Process')
+            Set-Item -Path "env:$key" -Value $val
             $envVarCount++
         }
     }
     Write-Host "   Loaded $envVarCount env vars for build" -ForegroundColor Gray
+    # Verify critical vars
+    Write-Host "   APP_ENV: $($env:EXPO_PUBLIC_APP_ENV)" -ForegroundColor Gray
+    Write-Host "   APP_VERSION: $($env:EXPO_PUBLIC_APP_VERSION)" -ForegroundColor Gray
 }
 
 npx expo export --platform web --output-dir web-build --clear
