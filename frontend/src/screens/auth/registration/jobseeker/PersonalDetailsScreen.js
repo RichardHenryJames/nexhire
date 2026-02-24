@@ -840,8 +840,6 @@ styles.selectionButton,
                       </Text>
                     </TouchableOpacity>
                   </View>
-                )}
-              </View>
             )}
 
             {/* 🎁 NEW: Invite Code Input (Optional) */}
