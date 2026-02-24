@@ -110,6 +110,7 @@ export default function ResumeBuilderScreen({ navigation }) {
 
   // Template picker
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [pickerMode, setPickerMode] = useState('create'); // 'create' or 'switch'
 
   // ATS check
   const [atsResult, setAtsResult] = useState(null);
@@ -169,6 +170,24 @@ export default function ResumeBuilderScreen({ navigation }) {
       showAlert('Error', 'Failed to create project');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── Switch Template on existing project ───────────────────
+  const handleSwitchTemplate = async (templateId) => {
+    if (!activeProject) return;
+    try {
+      setSaving(true);
+      await refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}`, {
+        method: 'PUT',
+        body: JSON.stringify({ templateId }),
+      });
+      // Reload project to pick up new template
+      await openProject(activeProject.ProjectID);
+    } catch (e) {
+      showAlert('Error', 'Failed to switch template');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -470,7 +489,7 @@ export default function ResumeBuilderScreen({ navigation }) {
               </Text>
               <TouchableOpacity
                 style={styles.heroCta}
-                onPress={() => setShowTemplatePicker(true)}
+                onPress={() => { setPickerMode('create'); setShowTemplatePicker(true); }}
                 activeOpacity={0.8}
               >
                 <Ionicons name="add-circle" size={20} color="#7C3AED" />
@@ -540,19 +559,30 @@ export default function ResumeBuilderScreen({ navigation }) {
           <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
             <View style={[styles.modalContent, { backgroundColor: colors.surface, maxWidth: isDesktop ? 700 : '95%' }]}>
               <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>Choose a Template</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>{pickerMode === 'switch' ? 'Switch Template' : 'Choose a Template'}</Text>
                 <TouchableOpacity onPress={() => setShowTemplatePicker(false)}>
                   <Ionicons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
+              {pickerMode === 'switch' && (
+                <Text style={{ color: colors.textSecondary, fontSize: 13, paddingHorizontal: 20, marginBottom: 12 }}>Your content stays the same — only the design changes.</Text>
+              )}
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.templateGrid}>
                 {templates.map(template => (
                   <TouchableOpacity
                     key={template.TemplateID}
-                    style={[styles.templateCard, { backgroundColor: colors.background, borderColor: colors.border }]}
+                    style={[
+                      styles.templateCard,
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                      pickerMode === 'switch' && activeProject?.TemplateID === template.TemplateID && { borderColor: colors.primary, borderWidth: 2 },
+                    ]}
                     onPress={() => {
                       setShowTemplatePicker(false);
-                      handleCreateProject(template.TemplateID);
+                      if (pickerMode === 'switch') {
+                        handleSwitchTemplate(template.TemplateID);
+                      } else {
+                        handleCreateProject(template.TemplateID);
+                      }
                     }}
                     activeOpacity={0.7}
                   >
@@ -592,6 +622,13 @@ export default function ResumeBuilderScreen({ navigation }) {
           rightContent={
             <View style={styles.headerActions}>
               {saving && <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />}
+              <TouchableOpacity
+                style={[styles.headerBtn, { backgroundColor: colors.primary + '15' }]}
+                onPress={() => { setPickerMode('switch'); setShowTemplatePicker(true); }}
+              >
+                <Ionicons name="color-palette" size={16} color={colors.primary} />
+                {!isMobile && <Text style={[styles.headerBtnText, { color: colors.primary }]}>Template</Text>}
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.headerBtn, { backgroundColor: colors.primary + '15' }]}
                 onPress={() => setShowAtsModal(true)}
