@@ -677,8 +677,8 @@ export default function ResumeBuilderScreen({ navigation }) {
                     <Ionicons name="trash-outline" size={16} color={colors.error} />
                   </TouchableOpacity>
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[styles.projectTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={[styles.projectTitle, { color: colors.text }]} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
                   <TouchableOpacity
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     onPress={(e) => {
