@@ -40,12 +40,6 @@ import { useResponsive } from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import refopenAPI from '../../services/api';
 
-// html2pdf.js — client-side HTML→PDF (web only, lazy loaded)
-let html2pdf = null;
-if (Platform.OS === 'web') {
-  try { html2pdf = require('html2pdf.js'); } catch (e) { /* not available */ }
-}
-
 // expo-print + expo-sharing — native HTML→PDF (Android/iOS)
 let Print = null;
 let Sharing = null;
@@ -960,62 +954,44 @@ export default function ResumeBuilderScreen({ navigation }) {
               style={[styles.saveBtn, { backgroundColor: '#059669' }]}
               onPress={async () => {
                 if (Platform.OS === 'web') {
-                  // Web: use html2pdf.js — render in hidden iframe, capture as PDF
-                  if (!previewHtml || !html2pdf) {
+                  if (!previewHtml) {
                     showAlert('Error', 'Preview not available.');
                     return;
                   }
                   try {
-                    const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume.pdf';
+                    const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume';
 
-                    // Create a hidden iframe to render the full HTML with styles
-                    const iframe = document.createElement('iframe');
-                    iframe.style.position = 'fixed';
-                    iframe.style.left = '-9999px';
-                    iframe.style.top = '0';
-                    iframe.style.width = '8.5in';
-                    iframe.style.height = '11in';
-                    iframe.style.border = 'none';
-                    document.body.appendChild(iframe);
+                    // Inject auto-print script + filename into the HTML
+                    const printHtml = previewHtml.replace('</head>',
+                      `<title>${fileName}</title>
+                       <style>@media print { @page { margin: 0; size: A4; } }</style>
+                       </head>`
+                    );
 
-                    // Write HTML into iframe
-                    iframe.contentDocument.open();
-                    iframe.contentDocument.write(previewHtml);
-                    iframe.contentDocument.close();
+                    // Open in new window — browser renders it perfectly (same as preview)
+                    const printWindow = window.open('', '_blank');
+                    if (!printWindow) {
+                      showAlert('Popup Blocked', 'Please allow popups for this site, then try again.');
+                      return;
+                    }
+                    printWindow.document.write(printHtml);
+                    printWindow.document.close();
 
-                    // Wait for fonts and styles to load, then capture
-                    setTimeout(async () => {
-                      try {
-                        const element = iframe.contentDocument.body;
-
-                        await html2pdf()
-                          .set({
-                            margin: 0,
-                            filename: fileName,
-                            image: { type: 'jpeg', quality: 0.98 },
-                            html2canvas: {
-                              scale: 2,
-                              useCORS: true,
-                              letterRendering: true,
-                              logging: false,
-                              windowWidth: 816, // 8.5in at 96dpi
-                            },
-                            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-                            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-                          })
-                          .from(element)
-                          .save();
-
-                        document.body.removeChild(iframe);
-                      } catch (innerErr) {
-                        console.error('PDF capture error:', innerErr);
-                        document.body.removeChild(iframe);
-                        showAlert('Error', 'PDF generation failed.');
-                      }
-                    }, 1500); // 1.5s for Google Fonts to load
+                    // Wait for fonts to load, then auto-trigger print
+                    printWindow.onload = () => {
+                      setTimeout(() => {
+                        printWindow.focus();
+                        printWindow.print();
+                      }, 800);
+                    };
+                    // Fallback if onload doesn't fire
+                    setTimeout(() => {
+                      printWindow.focus();
+                      printWindow.print();
+                    }, 2000);
                   } catch (e) {
-                    console.error('PDF generation error:', e);
-                    showAlert('Error', 'PDF generation failed.');
+                    console.error('PDF error:', e);
+                    showAlert('Error', 'Failed to generate PDF.');
                   }
                 } else {
                   // Native (Android/iOS): use expo-print → expo-sharing
