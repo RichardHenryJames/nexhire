@@ -71,7 +71,91 @@ const SECTION_ICONS = {
   custom: 'list',
 };
 
-// ── TEMPLATE THUMBNAILS (fallback gradients) ───────────────
+// ── TEMPLATE MINI-PREVIEWS (visual wireframes) ─────────────
+const TEMPLATE_PREVIEWS = {
+  classic: (c) => (
+    <View style={[tpStyles.page, { borderColor: c.border }]}>
+      <View style={{ alignItems: 'center', marginBottom: 4 }}>
+        <View style={[tpStyles.bar, { width: '50%', height: 6, backgroundColor: '#1a1a1a' }]} />
+        <View style={[tpStyles.bar, { width: '40%', height: 2, backgroundColor: '#999', marginTop: 2 }]} />
+        <View style={[tpStyles.divider, { backgroundColor: '#1a1a1a', marginTop: 3 }]} />
+      </View>
+      <View style={[tpStyles.bar, { width: '70%', height: 2, backgroundColor: '#ddd', alignSelf: 'center', marginBottom: 4 }]} />
+      <View style={[tpStyles.sectionTitle, { borderBottomColor: '#1a1a1a' }]} />
+      {[1,2].map(i => <View key={i} style={tpStyles.entryBlock} />)}
+    </View>
+  ),
+  modern: (c) => (
+    <View style={[tpStyles.page, { borderColor: c.border }]}>
+      <View style={{ borderBottomWidth: 2, borderBottomColor: '#2563EB', paddingBottom: 3, marginBottom: 4 }}>
+        <View style={[tpStyles.bar, { width: '55%', height: 5, backgroundColor: '#111827' }]} />
+        <View style={[tpStyles.bar, { width: '35%', height: 2, backgroundColor: '#9CA3AF', marginTop: 2 }]} />
+      </View>
+      <View style={{ backgroundColor: '#F0F7FF', padding: 3, borderLeftWidth: 2, borderLeftColor: '#2563EB', marginBottom: 4, borderRadius: 2 }}>
+        <View style={[tpStyles.bar, { width: '90%', height: 2, backgroundColor: '#93C5FD' }]} />
+      </View>
+      <View style={[tpStyles.sectionTitle, { borderBottomColor: '#2563EB' }]} />
+      {[1,2].map(i => <View key={i} style={tpStyles.entryBlock} />)}
+    </View>
+  ),
+  minimal: (c) => (
+    <View style={[tpStyles.page, { borderColor: c.border }]}>
+      <View style={{ marginBottom: 6 }}>
+        <View style={[tpStyles.bar, { width: '45%', height: 7, backgroundColor: '#000' }]} />
+        <View style={[tpStyles.bar, { width: '30%', height: 2, backgroundColor: '#ccc', marginTop: 3 }]} />
+      </View>
+      <View style={[tpStyles.bar, { width: '15%', height: 2, backgroundColor: '#bbb', marginBottom: 4 }]} />
+      {[1,2,3].map(i => <View key={i} style={[tpStyles.bar, { width: `${70+i*5}%`, height: 2, backgroundColor: '#ddd', marginBottom: 3 }]} />)}
+    </View>
+  ),
+  executive: (c) => (
+    <View style={[tpStyles.page, { borderColor: c.border, padding: 0, overflow: 'hidden' }]}>
+      <View style={{ backgroundColor: '#111827', padding: 6, alignItems: 'center' }}>
+        <View style={[tpStyles.bar, { width: '50%', height: 5, backgroundColor: '#fff' }]} />
+        <View style={[tpStyles.bar, { width: '35%', height: 2, backgroundColor: 'rgba(255,255,255,0.5)', marginTop: 2 }]} />
+      </View>
+      <View style={{ padding: 6 }}>
+        <View style={[tpStyles.sectionTitle, { borderBottomColor: '#1E40AF' }]} />
+        {[1,2].map(i => <View key={i} style={tpStyles.entryBlock} />)}
+      </View>
+    </View>
+  ),
+  'ats-optimized': (c) => (
+    <View style={[tpStyles.page, { borderColor: c.border }]}>
+      <View style={{ borderBottomWidth: 2, borderBottomColor: '#000', paddingBottom: 3, marginBottom: 4 }}>
+        <View style={[tpStyles.bar, { width: '45%', height: 5, backgroundColor: '#000' }]} />
+        <View style={[tpStyles.bar, { width: '50%', height: 2, backgroundColor: '#666', marginTop: 2 }]} />
+      </View>
+      <View style={[tpStyles.sectionTitle, { borderBottomColor: '#000' }]} />
+      {[1,2,3].map(i => <View key={i} style={[tpStyles.bar, { width: `${80-i*5}%`, height: 2, backgroundColor: '#333', marginBottom: 3 }]} />)}
+    </View>
+  ),
+  tech: (c) => (
+    <View style={[tpStyles.page, { borderColor: '#21262D', backgroundColor: '#0D1117' }]}>
+      <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+        <View style={{ width: 3, backgroundColor: '#58A6FF', borderRadius: 1, marginRight: 4 }} />
+        <View>
+          <View style={[tpStyles.bar, { width: 50, height: 5, backgroundColor: '#F0F6FC' }]} />
+          <View style={[tpStyles.bar, { width: 35, height: 2, backgroundColor: '#484F58', marginTop: 2 }]} />
+        </View>
+      </View>
+      <View style={{ backgroundColor: '#161B22', padding: 3, borderRadius: 3, borderLeftWidth: 2, borderLeftColor: '#58A6FF', marginBottom: 4 }}>
+        <View style={[tpStyles.bar, { width: '80%', height: 2, backgroundColor: '#484F58' }]} />
+      </View>
+      {[1,2].map(i => <View key={i} style={[tpStyles.entryBlock, { backgroundColor: '#161B22', borderRadius: 3, borderWidth: 1, borderColor: '#21262D', padding: 3 }]}>
+        <View style={[tpStyles.bar, { width: '60%', height: 2, backgroundColor: '#C9D1D9' }]} />
+      </View>)}
+    </View>
+  ),
+};
+
+const tpStyles = StyleSheet.create({
+  page: { width: '100%', height: 130, borderRadius: 6, borderWidth: 1, padding: 8, backgroundColor: '#fff' },
+  bar: { height: 3, borderRadius: 1, marginBottom: 1 },
+  divider: { width: '100%', height: 1, marginVertical: 2 },
+  sectionTitle: { width: '30%', height: 2, borderBottomWidth: 1, marginBottom: 4, paddingBottom: 2 },
+  entryBlock: { marginBottom: 4 },
+});
 const TEMPLATE_GRADIENTS = {
   classic: ['#1E3A5F', '#2C5F8A'],
   modern: ['#7C3AED', '#A78BFA'],
@@ -488,19 +572,22 @@ export default function ResumeBuilderScreen({ navigation }) {
                 }}
                 activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
-                  style={styles.templateThumb}
-                >
-                  <Ionicons name="document-text" size={32} color="rgba(255,255,255,0.7)" />
-                  {template.IsPremium && (
-                    <View style={styles.premiumBadge}>
-                      <Ionicons name="star" size={10} color="#FBBF24" />
-                    </View>
-                  )}
-                </LinearGradient>
+                {/* Visual wireframe preview */}
+                {TEMPLATE_PREVIEWS[template.Slug] ? TEMPLATE_PREVIEWS[template.Slug](colors) : (
+                  <LinearGradient
+                    colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
+                    style={styles.templateThumb}
+                  >
+                    <Ionicons name="document-text" size={32} color="rgba(255,255,255,0.7)" />
+                  </LinearGradient>
+                )}
+                {template.IsPremium && (
+                  <View style={[styles.premiumBadge, { position: 'absolute', top: 8, right: 8 }]}>
+                    <Ionicons name="star" size={10} color="#FBBF24" />
+                  </View>
+                )}
                 <Text style={[styles.templateName, { color: colors.text }]} numberOfLines={1}>{template.Name}</Text>
-                <Text style={[styles.templateCat, { color: colors.textSecondary }]} numberOfLines={1}>{template.Category}</Text>
+                <Text style={[styles.templateCat, { color: colors.textSecondary }]} numberOfLines={2}>{template.Description || template.Category}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -1226,11 +1313,11 @@ const styles = StyleSheet.create({
 
   // Templates
   templateGrid: { flexDirection: 'row', flexWrap: 'wrap', padding: 16, gap: 12 },
-  templateCard: { width: '47%', borderRadius: 12, borderWidth: 1, padding: 10, alignItems: 'center' },
+  templateCard: { width: '47%', borderRadius: 12, borderWidth: 1, padding: 10, position: 'relative' },
   templateThumb: { width: '100%', height: 120, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 8, position: 'relative' },
   premiumBadge: { position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
   templateName: { fontSize: 14, fontWeight: '600' },
-  templateCat: { fontSize: 12, marginTop: 2 },
+  templateCat: { fontSize: 11, marginTop: 2, lineHeight: 15 },
 
   // Editor
   editorScroll: { paddingBottom: 40 },
