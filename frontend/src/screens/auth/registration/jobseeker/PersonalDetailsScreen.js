@@ -807,44 +807,44 @@ styles.selectionButton,
             
             {/* EMAIL VERIFICATION OTP input */}
             {!isGoogleUser && showOtpInput && !emailVerified && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.otpLabel}>Enter the 4-digit code sent to your email</Text>
-                <View style={styles.emailRow}>
-                  <TextInput
-                    style={[styles.input, { flex: 1, textAlign: 'center', letterSpacing: 6, fontSize: 20, fontWeight: typography.weights.bold }]}
-                    placeholder="0000"
-                    placeholderTextColor={colors.gray500}
-                    value={otpCode}
-                    onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
-                    keyboardType="number-pad"
-                    maxLength={4}
-                    autoFocus={true}
-                  />
-                  <TouchableOpacity
-                    style={[
-                      styles.verifyEmailButtonInline,
-                      (otpCode.length !== 4 || otpLoading) && styles.verifyEmailButtonDisabled
-                    ]}
-                    onPress={handleVerifyOTP}
-                    disabled={otpCode.length !== 4 || otpLoading}
-                  >
-                    {otpLoading ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.verifyEmailButtonText}>Verify</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  onPress={handleSendOTP}
-                  disabled={otpCooldown > 0 || otpLoading}
-                  style={{ marginTop: 8 }}
-                >
-                  <Text style={[styles.resendText, otpCooldown > 0 && { color: colors.gray500 }]}>
-                    {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : 'Resend code'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                  <View style={styles.otpSection}>
+                    <Text style={styles.otpLabel}>Enter the 4-digit code sent to your email</Text>
+                    <View style={styles.otpRow}>
+                      <TextInput
+                        style={styles.otpInput}
+                        placeholder="0000"
+                        placeholderTextColor={colors.gray500}
+                        value={otpCode}
+                        onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        autoFocus={true}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.verifyOtpButton,
+                          (otpCode.length !== 4 || otpLoading) && styles.verifyEmailButtonDisabled
+                        ]}
+                        onPress={handleVerifyOTP}
+                        disabled={otpCode.length !== 4 || otpLoading}
+                      >
+                        {otpLoading ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={styles.verifyEmailButtonText}>Verify</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity
+                      onPress={handleSendOTP}
+                      disabled={otpCooldown > 0 || otpLoading}
+                      style={{ marginTop: 8 }}
+                    >
+                      <Text style={[styles.resendText, otpCooldown > 0 && { color: colors.gray500 }]}>
+                        {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : 'Resend code'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
             )}
 
             {/* 🎁 NEW: Invite Code Input (Optional) */}
