@@ -114,7 +114,13 @@ export default function EmployerAccountScreen({ navigation, route }) {
         }
       }
     } catch (e) {
-      showToast('Failed to send verification code', 'error');
+      const msg = e?.data?.message || e?.data?.error || e?.message || 'Failed to send verification code';
+      if (msg.includes('already exists')) {
+        showToast('Account already exists. Please sign in.', 'info');
+        navigation.navigate('Login');
+      } else {
+        showToast(msg, 'error');
+      }
     } finally {
       setOtpLoading(false);
     }
