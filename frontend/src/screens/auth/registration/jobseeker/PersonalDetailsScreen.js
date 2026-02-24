@@ -332,7 +332,12 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         }
       }
     } catch (e) {
-      showToast('Failed to send verification code', 'error');
+      const msg = e?.data?.message || e?.data?.error || e?.message || 'Failed to send verification code';
+      if (msg.includes('already exists')) {
+        setErrors(prev => ({ ...prev, email: 'Account already exists. Please sign in.' }));
+      } else {
+        showToast(msg, 'error');
+      }
     } finally {
       setOtpLoading(false);
     }
