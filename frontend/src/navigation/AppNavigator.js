@@ -93,6 +93,7 @@ import NotificationsScreen from "../screens/NotificationsScreen";
 
 // Tools Screen (Public AI-powered utilities)
 import ResumeAnalyzerScreen from "../screens/tools/ResumeAnalyzerScreen";
+import ResumeBuilderScreen from "../screens/tools/ResumeBuilderScreen";
 
 // Services Screen (Career tools hub for job seekers)
 import ServicesScreen from "../screens/ServicesScreen";
@@ -127,9 +128,10 @@ const linking = {
       // Public Tools screens - accessible without auth
       // Primary SEO-friendly path (short and memorable)
       ResumeAnalyzer: "resume-analyzer",
+      ResumeBuilder: "resume-builder",
       
       // Service sub-screens (public Stack.Screens at root)
-      ATSBeatSheet: "services/resume-builder",
+      ATSBeatSheet: "services/ats-beat-sheet",
       InterviewDecoded: "services/interview-prep",
       SalarySpy: "services/salary-spy",
       OfferCoach: "services/offer-coach",
@@ -912,6 +914,16 @@ export default function AppNavigator() {
           headerShown: false,
           title: "Resume Analyzer - AI Job Match Tool",
           headerBackTitleVisible: false,
+        }}
+      />
+
+      {/* Resume Builder - Full AI-powered resume creation tool */}
+      <Stack.Screen
+        name="ResumeBuilder"
+        component={ResumeBuilderScreen}
+        options={{
+          headerShown: false,
+          title: "Resume Builder - AI Resume Maker | RefOpen",
         }}
       />
 

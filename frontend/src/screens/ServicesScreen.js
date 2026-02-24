@@ -48,8 +48,8 @@ const SERVICES = [
     description: 'AI creates a polished, job-ready resume from your work experience — tailored to any role with ATS-optimized formatting.',
     icon: 'create',
     gradient: ['#7C3AED', '#A78BFA'],
-    ready: false,
-    screen: 'ATSBeatSheet',
+    ready: true,
+    screen: 'ResumeBuilder',
   },
   {
     id: 'interview-prep',

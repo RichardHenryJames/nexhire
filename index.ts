@@ -4214,3 +4214,113 @@ app.http("admin-reject-verification", {
   route: "management/verifications/{verificationId}/reject",
   handler: adminRejectVerification,
 });
+
+// ========================================================================
+// RESUME BUILDER ENDPOINTS - State-of-the-art resume builder
+// ========================================================================
+
+import {
+  getTemplates as rbGetTemplates,
+  createProject as rbCreateProject,
+  getProjects as rbGetProjects,
+  getProjectById as rbGetProjectById,
+  updateProject as rbUpdateProject,
+  deleteProject as rbDeleteProject,
+  updateSection as rbUpdateSection,
+  addSection as rbAddSection,
+  deleteSection as rbDeleteSection,
+  autoFillProject as rbAutoFillProject,
+  aiSummary as rbAiSummary,
+  aiBullets as rbAiBullets,
+  aiATSCheck as rbAiATSCheck,
+  previewResume as rbPreviewResume,
+} from "./src/controllers/resume-builder.controller";
+
+// Templates (public)
+app.http("rb-templates", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/templates",
+  handler: withErrorHandling(rbGetTemplates),
+});
+
+// Projects CRUD
+app.http("rb-projects", {
+  methods: ["GET", "POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects",
+  handler: withErrorHandling(async (req, context) => {
+    if (req.method === "GET") return rbGetProjects(req, context);
+    if (req.method === "POST") return rbCreateProject(req, context);
+    return { status: 405, jsonBody: { success: false, error: "Method not allowed" } };
+  }),
+});
+
+app.http("rb-project-by-id", {
+  methods: ["GET", "PUT", "DELETE", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}",
+  handler: withErrorHandling(async (req, context) => {
+    if (req.method === "GET") return rbGetProjectById(req, context);
+    if (req.method === "PUT") return rbUpdateProject(req, context);
+    if (req.method === "DELETE") return rbDeleteProject(req, context);
+    return { status: 405, jsonBody: { success: false, error: "Method not allowed" } };
+  }),
+});
+
+// Sections
+app.http("rb-sections", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}/sections",
+  handler: withErrorHandling(rbAddSection),
+});
+
+app.http("rb-section-by-id", {
+  methods: ["PUT", "DELETE", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}/sections/{sectionId}",
+  handler: withErrorHandling(async (req, context) => {
+    if (req.method === "PUT") return rbUpdateSection(req, context);
+    if (req.method === "DELETE") return rbDeleteSection(req, context);
+    return { status: 405, jsonBody: { success: false, error: "Method not allowed" } };
+  }),
+});
+
+// Auto-fill from profile
+app.http("rb-auto-fill", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}/auto-fill",
+  handler: withErrorHandling(rbAutoFillProject),
+});
+
+// AI features
+app.http("rb-ai-summary", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}/ai/summary",
+  handler: withErrorHandling(rbAiSummary),
+});
+
+app.http("rb-ai-bullets", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}/ai/bullets",
+  handler: withErrorHandling(rbAiBullets),
+});
+
+app.http("rb-ai-ats-check", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}/ai/ats-check",
+  handler: withErrorHandling(rbAiATSCheck),
+});
+
+// HTML preview
+app.http("rb-preview", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/projects/{projectId}/preview",
+  handler: withErrorHandling(rbPreviewResume),
+});
