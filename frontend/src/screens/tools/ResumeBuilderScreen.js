@@ -237,6 +237,7 @@ export default function ResumeBuilderScreen({ navigation }) {
   // List view
   const [projects, setProjects] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [templatePreviews, setTemplatePreviews] = useState({}); // { slug: htmlString }
 
   // Editor view
   const [activeProject, setActiveProject] = useState(null);
@@ -283,7 +284,22 @@ export default function ResumeBuilderScreen({ navigation }) {
   const loadTemplates = async () => {
     try {
       const result = await refopenAPI.apiCall('/resume-builder/templates');
-      setTemplates(result?.data || []);
+      const tpls = result?.data || [];
+      setTemplates(tpls);
+
+      // Fetch preview HTML for each template (for thumbnail iframes)
+      if (Platform.OS === 'web') {
+        const previews = {};
+        await Promise.all(tpls.map(async (t) => {
+          try {
+            const previewResult = await refopenAPI.apiCall(`/resume-builder/templates/${t.Slug}/preview`);
+            previews[t.Slug] = previewResult?.message || previewResult || '';
+          } catch (e) {
+            previews[t.Slug] = '';
+          }
+        }));
+        setTemplatePreviews(previews);
+      }
     } catch (e) {
       console.error('Failed to load templates:', e);
     }
@@ -623,8 +639,17 @@ export default function ResumeBuilderScreen({ navigation }) {
                 }}
                 activeOpacity={0.7}
               >
-                {/* Visual wireframe preview */}
-                {TEMPLATE_PREVIEWS[template.Slug] ? TEMPLATE_PREVIEWS[template.Slug](colors) : (
+                {/* Real template preview — DB-driven via iframe */}
+                {Platform.OS === 'web' && templatePreviews[template.Slug] ? (
+                  <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
+                    <iframe
+                      srcDoc={templatePreviews[template.Slug]}
+                      style={{ border: 'none', width: '100%', height: '100%', pointerEvents: 'none', transform: 'scale(1)', transformOrigin: 'top left' }}
+                      title={template.Name}
+                      scrolling="no"
+                    />
+                  </View>
+                ) : TEMPLATE_PREVIEWS[template.Slug] ? TEMPLATE_PREVIEWS[template.Slug](colors) : (
                   <LinearGradient
                     colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
                     style={styles.templateThumb}

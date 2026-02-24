@@ -4221,6 +4221,7 @@ app.http("admin-reject-verification", {
 
 import {
   getTemplates as rbGetTemplates,
+  getTemplatePreview as rbGetTemplatePreview,
   createProject as rbCreateProject,
   getProjects as rbGetProjects,
   getProjectById as rbGetProjectById,
@@ -4242,6 +4243,14 @@ app.http("rb-templates", {
   authLevel: "anonymous",
   route: "resume-builder/templates",
   handler: withErrorHandling(rbGetTemplates),
+});
+
+// Template preview with dummy data (public, for thumbnail)
+app.http("rb-template-preview", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "resume-builder/templates/{slug}/preview",
+  handler: withErrorHandling(rbGetTemplatePreview),
 });
 
 // Projects CRUD

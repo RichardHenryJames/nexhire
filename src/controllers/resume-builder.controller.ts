@@ -55,6 +55,30 @@ export async function getTemplates(req: HttpRequest, context: InvocationContext)
   };
 }
 
+/**
+ * GET /api/resume-builder/templates/{slug}/preview
+ * Public - returns full HTML preview of template with dummy data
+ * Used for template picker thumbnails
+ */
+export async function getTemplatePreview(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  const slug = req.params.slug;
+  const html = await ResumeBuilderService.generateTemplatePreview(slug);
+
+  if (!html) {
+    return {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ success: false, error: 'Template not found' }),
+    };
+  }
+
+  return {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' },
+    body: html,
+  };
+}
+
 // ── PROJECTS CRUD ────────────────────────────────────────────
 
 /**

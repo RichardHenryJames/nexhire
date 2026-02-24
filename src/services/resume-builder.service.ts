@@ -150,6 +150,63 @@ export class ResumeBuilderService {
     };
   }
 
+  /**
+   * Generate a preview HTML for a template using dummy data.
+   * Used for template picker thumbnails — 100% DB-driven.
+   * To add a new template: just INSERT into DB. Thumbnail auto-appears.
+   */
+  static async generateTemplatePreview(slug: string): Promise<string | null> {
+    const result = await dbService.executeQuery(
+      `SELECT * FROM ResumeBuilderTemplates WHERE Slug = @param0 AND IsActive = 1`,
+      [slug]
+    );
+    if (result.recordset.length === 0) return null;
+    const template = result.recordset[0];
+    const config = template.DefaultConfig ? JSON.parse(template.DefaultConfig) : {};
+
+    // Dummy data sections
+    const dummyExperience = this.renderExperienceHtml('Work Experience', [
+      { title: 'Senior Software Engineer', company: 'Google', location: 'Mountain View, CA', startDate: '2021-01', current: true, bullets: ['Led development of microservices platform serving 10M+ daily users, reducing latency by 40%', 'Architected real-time data pipeline processing 5TB/day using Kafka and Apache Spark', 'Mentored 4 junior engineers, conducted code reviews and established team best practices'] },
+      { title: 'Software Engineer', company: 'Meta', location: 'Menlo Park, CA', startDate: '2019-06', endDate: '2020-12', bullets: ['Built React Native features used by 2B+ monthly active users across iOS and Android', 'Reduced app crash rate by 35% through systematic debugging and performance optimization'] },
+    ]);
+
+    const dummyEducation = this.renderEducationHtml('Education', [
+      { institution: 'Massachusetts Institute of Technology', degree: 'B.S.', field: 'Computer Science', graduationYear: '2019', gpa: '3.9/4.0' },
+    ]);
+
+    const dummySkills = this.renderSkillsHtml('Skills', [
+      { category: 'Technical Skills', skills: ['React', 'Node.js', 'TypeScript', 'Python', 'AWS', 'Docker', 'PostgreSQL', 'GraphQL', 'Kubernetes', 'Redis'] },
+    ], config);
+
+    const dummyCerts = this.renderCertificationsHtml('Certifications', [
+      { certName: 'AWS Solutions Architect', issuer: 'Amazon Web Services', date: '2023' },
+    ]);
+
+    const isModern = config.layout === 'two-column';
+    const mainHtml = dummyExperience + dummyEducation + (isModern ? '' : dummySkills) + dummyCerts;
+    const sidebarHtml = isModern ? dummySkills : '';
+
+    const contactHtml = ['john.smith@email.com', '+1 (555) 123-4567', 'San Francisco, CA'].join('<span class="sep">|</span>');
+    const linksHtml = ['<a href="#">LinkedIn</a>', '<a href="#">GitHub</a>', '<a href="#">Portfolio</a>'].join('<span class="sep">·</span>');
+    const summaryText = 'Results-driven Full-Stack Engineer with 5+ years of experience building scalable web applications. Specialized in React, Node.js, and cloud infrastructure. Led development of platforms serving millions of users with a focus on performance and reliability.';
+
+    let html = template.HtmlTemplate || '';
+    const css = template.CssTemplate || '';
+
+    html = html
+      .replace(/\{\{STYLES\}\}/g, css)
+      .replace(/\{\{FULL_NAME\}\}/g, 'John Smith')
+      .replace(/\{\{CONTACT_HTML\}\}/g, contactHtml)
+      .replace(/\{\{LINKS_HTML\}\}/g, linksHtml)
+      .replace(/\{\{SUMMARY_TEXT\}\}/g, summaryText)
+      .replace(/\{\{SECTIONS_HTML\}\}/g, mainHtml + sidebarHtml)
+      .replace(/\{\{MAIN_SECTIONS_HTML\}\}/g, mainHtml)
+      .replace(/\{\{SIDEBAR_SECTIONS_HTML\}\}/g, sidebarHtml)
+      .replace(/\{\{TITLE\}\}/g, 'John Smith - Resume');
+
+    return html;
+  }
+
   // ============================================================
   // PROJECTS CRUD
   // ============================================================
