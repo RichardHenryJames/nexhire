@@ -626,7 +626,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                 style={[styles.headerBtn, { backgroundColor: colors.primary + '15' }]}
                 onPress={() => { setPickerMode('switch'); setShowTemplatePicker(true); }}
               >
-                <Ionicons name="color-palette" size={16} color={colors.primary} />
+                <Ionicons name="brush-outline" size={16} color={colors.primary} />
                 {!isMobile && <Text style={[styles.headerBtnText, { color: colors.primary }]}>Template</Text>}
               </TouchableOpacity>
               <TouchableOpacity
@@ -647,7 +647,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                 style={[styles.saveBtn, { backgroundColor: colors.primary }]}
                 onPress={saveProject}
               >
-                <Ionicons name="save" size={16} color="#FFFFFF" />
+                <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
                 <Text style={styles.saveBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -696,7 +696,7 @@ export default function ResumeBuilderScreen({ navigation }) {
               <View style={[styles.editorCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.editorCardHeader}>
                   <View style={styles.editorCardHeaderLeft}>
-                    <Ionicons name="text" size={18} color={colors.primary} />
+                    <Ionicons name="create-outline" size={18} color={colors.primary} />
                     <Text style={[styles.editorCardTitle, { color: colors.text }]}>Professional Summary</Text>
                   </View>
                   <TouchableOpacity
@@ -708,7 +708,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                       <ActivityIndicator size="small" color="#7C3AED" />
                     ) : (
                       <>
-                        <Ionicons name="sparkles" size={14} color="#7C3AED" />
+                        <Ionicons name="flash" size={14} color="#7C3AED" />
                         <Text style={[styles.aiBtnText, { color: '#7C3AED' }]}>AI Write</Text>
                       </>
                     )}
@@ -763,7 +763,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                                   onPress={() => handleAiBullets(section.SectionID, idx)}
                                   disabled={aiLoading === 'bullets'}
                                 >
-                                  <Ionicons name="sparkles" size={12} color="#7C3AED" />
+                                  <Ionicons name="flash" size={12} color="#7C3AED" />
                                   <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '600' }}>AI Rewrite</Text>
                                 </TouchableOpacity>
                               )}
@@ -871,7 +871,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
                       <>
-                        <Ionicons name="sparkles" size={16} color="#FFFFFF" />
+                        <Ionicons name="flash" size={16} color="#FFFFFF" />
                         <Text style={styles.saveBtnText}>Analyze Match</Text>
                       </>
                     )}
@@ -915,7 +915,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                     style={[styles.addItemBtn, { borderColor: colors.primary, marginTop: 16, alignSelf: 'center' }]}
                     onPress={() => setAtsResult(null)}
                   >
-                    <Ionicons name="refresh" size={16} color={colors.primary} />
+                    <Ionicons name="reload" size={16} color={colors.primary} />
                     <Text style={[styles.addItemText, { color: colors.primary }]}>Check Again</Text>
                   </TouchableOpacity>
                 </ScrollView>
