@@ -684,17 +684,29 @@ export default function ResumeBuilderScreen({ navigation }) {
 
         {/* Action toolbar — below header */}
         <View style={[styles.editorToolbar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8, alignItems: 'center' }}>
-            {/* Current template indicator + switch */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8, alignItems: 'center', flexGrow: 1, justifyContent: 'center' }}>
+            {/* Preview + Template name combined */}
             <TouchableOpacity
               style={[styles.toolbarBtn, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}
+              onPress={handlePreview}
+            >
+              <Ionicons name="eye-outline" size={15} color={colors.primary} />
+              <Text style={[styles.toolbarBtnText, { color: colors.primary }]}>Preview</Text>
+              <View style={{ backgroundColor: colors.primary + '20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, marginLeft: 2 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>{templateName}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Change Template */}
+            <TouchableOpacity
+              style={[styles.toolbarBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
               onPress={() => { setPickerMode('switch'); setShowTemplatePicker(true); }}
             >
-              <Ionicons name="brush-outline" size={15} color={colors.primary} />
+              <Ionicons name="brush-outline" size={15} color={colors.textSecondary} />
               {!isMobile ? (
-                <Text style={[styles.toolbarBtnText, { color: colors.primary }]}>Template: {templateName}</Text>
+                <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>Change Template</Text>
               ) : (
-                <Text style={[styles.toolbarBtnText, { color: colors.primary }]}>{templateName}</Text>
+                <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>Theme</Text>
               )}
             </TouchableOpacity>
 
@@ -705,15 +717,6 @@ export default function ResumeBuilderScreen({ navigation }) {
             >
               <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
               {!isMobile && <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>ATS Check</Text>}
-            </TouchableOpacity>
-
-            {/* Preview */}
-            <TouchableOpacity
-              style={[styles.toolbarBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
-              onPress={handlePreview}
-            >
-              <Ionicons name="eye-outline" size={15} color={colors.textSecondary} />
-              {!isMobile && <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>Preview</Text>}
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -1299,7 +1302,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 
   // Editor toolbar (below header)
-  editorToolbar: { paddingVertical: 8, borderBottomWidth: 1 },
+  editorToolbar: { paddingVertical: 8, borderBottomWidth: 1, alignItems: 'center' },
   toolbarBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   toolbarBtnText: { fontSize: 12, fontWeight: '600' },
   headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
