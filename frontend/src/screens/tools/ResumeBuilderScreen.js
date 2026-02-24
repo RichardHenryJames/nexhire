@@ -967,7 +967,14 @@ export default function ResumeBuilderScreen({ navigation }) {
         />
         {Platform.OS === 'web' ? (
           <View style={styles.previewWrapper}>
-            <View style={styles.previewPaper}>
+            <View style={[
+              styles.previewPaper,
+              // Scale down on mobile to fit within viewport
+              screenWidth < 850 && {
+                transform: [{ scale: Math.min(1, (screenWidth - 32) / 816) }],
+                transformOrigin: 'top center',
+              },
+            ]}>
               <iframe
                 srcDoc={previewHtml}
                 style={{ border: 'none', width: '100%', height: '100%', backgroundColor: '#FFFFFF' }}
@@ -1209,7 +1216,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#E5E7EB',
     alignItems: 'center',
-    paddingVertical: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     overflow: 'auto',
   },
   previewPaper: {
