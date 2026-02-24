@@ -969,8 +969,24 @@ BEGIN
 
     ('Tech', 'tech', 'Creative', 'GitHub-inspired layout with monospace accents and skill tags.', 0, 6,
      '{"fontFamily":"JetBrains Mono, Fira Code, monospace","fontSize":"10pt","lineHeight":"1.4","primaryColor":"#0D1117","accentColor":"#58A6FF","marginTop":"0.5in","marginSide":"0.6in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Elegant', 'elegant', 'Professional', 'Sophisticated design with teal accents and clean typography. Perfect for creative professionals.', 0, 7,
+     '{"fontFamily":"Lora, Georgia, serif","fontSize":"9.5pt","lineHeight":"1.35","primaryColor":"#1a1a1a","accentColor":"#0D9488","marginTop":"0.4in","marginSide":"0.7in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Bold', 'bold', 'Creative', 'Strong left accent bar with bold section headers. Stands out while staying professional.', 0, 8,
+     '{"fontFamily":"Poppins, sans-serif","fontSize":"9.5pt","lineHeight":"1.35","primaryColor":"#111","accentColor":"#E11D48","marginTop":"0.4in","marginSide":"0.65in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Compact', 'compact', 'ATS-Friendly', 'Maximum content in minimum space. Two-column layout with inline skills. Great for experienced professionals.', 0, 9,
+     '{"fontFamily":"Roboto, sans-serif","fontSize":"9pt","lineHeight":"1.3","primaryColor":"#222","accentColor":"#4F46E5","marginTop":"0.35in","marginSide":"0.5in","showPhoto":false,"layout":"two-column"}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Professional', 'professional', 'Professional', 'Navy blue header with gold accents. Polished and corporate-ready for senior roles.', 1, 10,
+     '{"fontFamily":"Crimson Pro, Georgia, serif","fontSize":"9.5pt","lineHeight":"1.35","primaryColor":"#1B2A4A","accentColor":"#B8860B","marginTop":"0in","marginSide":"0.6in","showPhoto":false}',
      '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */');
 
-    PRINT 'Seeded 6 default resume builder templates';
+    PRINT 'Seeded 10 default resume builder templates';
 END
 GO
