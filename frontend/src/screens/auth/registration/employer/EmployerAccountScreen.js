@@ -397,44 +397,49 @@ export default function EmployerAccountScreen({ navigation, route }) {
             Email Address <Text style={styles.required}>*</Text>
             {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
           </Text>
-          <TextInput 
-            style={[styles.input, isGoogleUser && styles.inputPrefilled]} 
-            value={email} 
-            onChangeText={setEmail} 
-            autoCapitalize="none"
-            editable={true}
-            placeholder="Enter email address"
-            placeholderTextColor={colors.gray400}
-          />
+          <View style={styles.emailRow}>
+            <TextInput 
+              style={[
+                styles.input,
+                { flex: 1 },
+                isGoogleUser && styles.inputPrefilled,
+                emailVerified && { borderColor: colors.success, borderWidth: 1.5 },
+              ]} 
+              value={email} 
+              onChangeText={setEmail} 
+              autoCapitalize="none"
+              editable={true}
+              placeholder="Enter email address"
+              placeholderTextColor={colors.gray400}
+            />
+            {!isGoogleUser && !showOtpInput && (
+              emailVerified ? (
+                <View style={styles.emailVerifiedInline}>
+                  <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[
+                    styles.verifyEmailButtonInline,
+                    (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || otpLoading) && styles.verifyEmailButtonDisabled
+                  ]}
+                  onPress={handleSendOTP}
+                  disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || otpLoading}
+                >
+                  {otpLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text style={styles.verifyEmailButtonText}>Verify</Text>
+                  )}
+                </TouchableOpacity>
+              )
+            )}
+          </View>
         </View>
 
-        {/* EMAIL VERIFICATION for non-Google users */}
-        {!isGoogleUser && (
+        {/* EMAIL VERIFICATION OTP input */}
+        {!isGoogleUser && showOtpInput && !emailVerified && (
           <View style={styles.emailVerifyContainer}>
-            {emailVerified ? (
-              <View style={styles.emailVerifiedBadge}>
-                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                <Text style={styles.emailVerifiedText}>Email verified</Text>
-              </View>
-            ) : !showOtpInput ? (
-              <TouchableOpacity
-                style={[
-                  styles.verifyEmailButton,
-                  (!email.trim() || otpLoading) && styles.verifyEmailButtonDisabled
-                ]}
-                onPress={handleSendOTP}
-                disabled={!email.trim() || otpLoading}
-              >
-                {otpLoading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="mail-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
-                    <Text style={styles.verifyEmailButtonText}>Verify Email</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            ) : (
               <View style={styles.otpSection}>
                 <Text style={styles.otpLabel}>Enter the 4-digit code sent to your email</Text>
                 <View style={styles.otpRow}>
@@ -780,6 +785,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   // EMAIL VERIFICATION styles
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emailVerifiedInline: {
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  verifyEmailButtonInline: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
   emailVerifyContainer: {
     marginTop: -4,
     marginBottom: 12,
