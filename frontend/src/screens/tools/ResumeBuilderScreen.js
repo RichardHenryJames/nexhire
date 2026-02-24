@@ -927,8 +927,8 @@ export default function ResumeBuilderScreen({ navigation }) {
                 <ScrollView style={{ padding: 16, maxHeight: 400 }}>
                   {/* Score */}
                   <View style={[styles.atsScoreCard, { backgroundColor: colors.background }]}>
-                    <Text style={[styles.atsScoreNumber, { color: atsResult.matchScore >= 70 ? '#059669' : atsResult.matchScore >= 40 ? '#F59E0B' : colors.error }]}>
-                      {atsResult.matchScore}%
+                    <Text style={[styles.atsScoreNumber, { color: atsResult.score >= 70 ? '#059669' : atsResult.score >= 40 ? '#F59E0B' : colors.error }]}>
+                      {atsResult.score}%
                     </Text>
                     <Text style={[styles.atsScoreLabel, { color: colors.textSecondary }]}>ATS Match Score</Text>
                   </View>

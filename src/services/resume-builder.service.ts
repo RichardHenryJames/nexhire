@@ -671,9 +671,11 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
           tips: parsed.tips || [],
         };
       }
-    } catch { /* fallback */ }
+    } catch (parseErr) {
+      console.error('ATS check - failed to parse AI response:', parseErr, 'Raw response:', response?.substring(0, 200));
+    }
 
-    return { score: 50, missingKeywords: [], tips: ['Could not analyze. Try again.'] };
+    return { score: 0, missingKeywords: [], tips: ['AI analysis failed. Please ensure your resume has content and try again.'] };
   }
 
   // ============================================================
