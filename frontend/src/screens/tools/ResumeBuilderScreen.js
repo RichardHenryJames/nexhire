@@ -1022,10 +1022,21 @@ export default function ResumeBuilderScreen({ navigation }) {
               }}
             >
               <Ionicons name="download-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.saveBtnText}>Download PDF</Text>
+              <Text style={styles.saveBtnText}>Save as PDF</Text>
             </TouchableOpacity>
           }
         />
+
+        {/* Quick instruction */}
+        {Platform.OS === 'web' && (
+          <View style={{ backgroundColor: colors.primary + '10', paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 12, flex: 1 }}>
+              Tap "Save as PDF" → Select <Text style={{ fontWeight: '700', color: colors.text }}>Save as PDF</Text> as destination → Save. Works on desktop &amp; mobile.
+            </Text>
+          </View>
+        )}
+
         {Platform.OS === 'web' ? (
           <View style={styles.previewWrapper}>
             <View style={[
