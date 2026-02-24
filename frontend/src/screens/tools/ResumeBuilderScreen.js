@@ -979,6 +979,17 @@ export default function ResumeBuilderScreen({ navigation }) {
                 srcDoc={previewHtml}
                 style={{ border: 'none', width: '100%', height: '100%', backgroundColor: '#FFFFFF' }}
                 title="Resume Preview"
+                onLoad={(e) => {
+                  // Auto-size iframe to show full content (so user sees all pages)
+                  try {
+                    const iframe = e.target;
+                    const contentHeight = iframe.contentDocument?.documentElement?.scrollHeight;
+                    if (contentHeight && contentHeight > 1056) {
+                      iframe.style.height = contentHeight + 'px';
+                      iframe.parentElement.style.minHeight = contentHeight + 'px';
+                    }
+                  } catch (err) { /* cross-origin safety */ }
+                }}
               />
             </View>
           </View>
