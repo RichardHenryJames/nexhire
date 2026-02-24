@@ -671,7 +671,27 @@ export default function ResumeBuilderScreen({ navigation }) {
                     <Ionicons name="trash-outline" size={16} color={colors.error} />
                   </TouchableOpacity>
                 </View>
-                <Text style={[styles.projectTitle, { color: colors.text }]} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.projectTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
+                  <TouchableOpacity
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      if (Platform.OS === 'web') {
+                        const newTitle = window.prompt('Rename resume:', project.Title || 'My Resume');
+                        if (newTitle && newTitle.trim()) {
+                          setProjects(prev => prev.map(p => p.ProjectID === project.ProjectID ? { ...p, Title: newTitle.trim() } : p));
+                          refopenAPI.apiCall(`/resume-builder/projects/${project.ProjectID}`, {
+                            method: 'PUT',
+                            body: JSON.stringify({ title: newTitle.trim() }),
+                          }).catch(() => {});
+                        }
+                      }
+                    }}
+                  >
+                    <Ionicons name="create-outline" size={14} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
                 <Text style={[styles.projectMeta, { color: colors.textSecondary }]}>
                   {project.TemplateName || 'Classic'} • Updated {new Date(project.UpdatedAt).toLocaleDateString()}
                 </Text>
