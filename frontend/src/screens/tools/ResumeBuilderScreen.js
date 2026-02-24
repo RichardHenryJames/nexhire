@@ -477,21 +477,63 @@ export default function ResumeBuilderScreen({ navigation }) {
   // ══════════════════════════════════════════════════════════
 
   // ── Template Picker Modal (shared across all views) ──────
+  const [templateSearch, setTemplateSearch] = useState('');
+
+  const filteredTemplates = useMemo(() => {
+    if (!templateSearch.trim()) return templates;
+    const q = templateSearch.toLowerCase().trim();
+    return templates.filter(t => {
+      const searchable = [
+        t.Name, t.Slug, t.Category, t.Description,
+        t.SearchTags || '',
+      ].join(' ').toLowerCase();
+      return q.split(/\s+/).every(word => searchable.includes(word));
+    });
+  }, [templates, templateSearch]);
+
   const templatePickerModal = (
     <Modal visible={showTemplatePicker} animationType="slide" transparent>
       <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
         <View style={[styles.modalContent, { backgroundColor: colors.surface, maxWidth: isDesktop ? 700 : '95%' }]}>
           <View style={styles.modalHeader}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>{pickerMode === 'switch' ? 'Switch Template' : 'Choose a Template'}</Text>
-            <TouchableOpacity onPress={() => setShowTemplatePicker(false)}>
+            <TouchableOpacity onPress={() => { setShowTemplatePicker(false); setTemplateSearch(''); }}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
-          {pickerMode === 'switch' && (
+
+          {/* Search bar */}
+          <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.inputBackground || colors.gray50, borderRadius: 10, paddingHorizontal: 12, height: 40, borderWidth: 1, borderColor: colors.border }}>
+              <Ionicons name="search" size={16} color={colors.gray400} />
+              <TextInput
+                style={{ flex: 1, marginLeft: 8, fontSize: 14, color: colors.text }}
+                placeholder="Search templates... (e.g. serif, dark, ATS, creative)"
+                placeholderTextColor={colors.gray400}
+                value={templateSearch}
+                onChangeText={setTemplateSearch}
+                autoCapitalize="none"
+              />
+              {templateSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setTemplateSearch('')}>
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {pickerMode === 'switch' && !templateSearch && (
             <Text style={{ color: colors.textSecondary, fontSize: 13, paddingHorizontal: 20, marginBottom: 12 }}>Your content stays the same — only the design changes.</Text>
           )}
+
+          {filteredTemplates.length === 0 ? (
+            <View style={{ padding: 40, alignItems: 'center' }}>
+              <Ionicons name="search-outline" size={36} color={colors.gray400} />
+              <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 14 }}>No templates match "{templateSearch}"</Text>
+            </View>
+          ) : (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.templateGrid}>
-            {templates.map(template => (
+            {filteredTemplates.map(template => (
               <TouchableOpacity
                 key={template.TemplateID}
                 style={[
@@ -539,6 +581,7 @@ export default function ResumeBuilderScreen({ navigation }) {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          )}
         </View>
       </View>
     </Modal>

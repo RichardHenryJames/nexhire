@@ -123,7 +123,7 @@ export class ResumeBuilderService {
   static async getTemplates(): Promise<any[]> {
     const result = await dbService.executeQuery(`
       SELECT TemplateID, Name, Slug, Category, Description, ThumbnailURL,
-             DefaultConfig, IsPremium, SortOrder
+             DefaultConfig, IsPremium, SortOrder, SearchTags
       FROM ResumeBuilderTemplates
       WHERE IsActive = 1
       ORDER BY SortOrder ASC
