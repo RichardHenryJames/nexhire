@@ -332,8 +332,9 @@ export default function ResumeBuilderScreen({ navigation }) {
       setLoading(true);
       await saveProject();
       const result = await refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}/preview`);
-      // The preview endpoint returns HTML as text
-      setPreviewHtml(typeof result === 'string' ? result : (result?.data || '<p>Preview unavailable</p>'));
+      // API returns { message: "<html>..." } for non-JSON content types
+      const html = typeof result === 'string' ? result : (result?.data || result?.message || '<p>Preview unavailable</p>');
+      setPreviewHtml(html);
       setCurrentView(VIEW.PREVIEW);
     } catch (e) {
       showAlert('Error', 'Failed to generate preview');
