@@ -873,8 +873,14 @@ export default function ResumeBuilderScreen({ navigation }) {
                                   onPress={() => handleAiBullets(section.SectionID, idx)}
                                   disabled={aiLoading === 'bullets'}
                                 >
-                                  <Ionicons name="flash" size={12} color="#7C3AED" />
-                                  <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '600' }}>AI Rewrite</Text>
+                                  {aiLoading === 'bullets' ? (
+                                    <ActivityIndicator size={12} color="#7C3AED" />
+                                  ) : (
+                                    <Ionicons name="flash" size={12} color="#7C3AED" />
+                                  )}
+                                  <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '600' }}>
+                                    {aiLoading === 'bullets' ? 'Rewriting...' : 'AI Rewrite'}
+                                  </Text>
                                 </TouchableOpacity>
                               )}
                               <TouchableOpacity

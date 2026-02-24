@@ -482,7 +482,15 @@ export class ResumeBuilderService {
           startDate: w.StartDate ? new Date(w.StartDate).toISOString().split('T')[0] : '',
           endDate: w.EndDate ? new Date(w.EndDate).toISOString().split('T')[0] : '',
           current: w.IsCurrent || false,
-          bullets: (w.Description || '').split('\n').filter((b: string) => b.trim()),
+          bullets: (() => {
+            const desc = (w.Description || '').trim();
+            // Try parsing as JSON array first (AI rewrite stores as JSON)
+            try {
+              const parsed = JSON.parse(desc);
+              if (Array.isArray(parsed)) return parsed.map((b: string) => String(b).trim()).filter(Boolean);
+            } catch { /* not JSON, split by newlines */ }
+            return desc.split('\n').filter((b: string) => b.trim());
+          })(),
         }));
 
         await dbService.executeQuery(`

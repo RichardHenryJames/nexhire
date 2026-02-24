@@ -3050,3 +3050,98 @@ BEGIN
     VALUES ('CAMPUS100', 'FLAT_BONUS', 100, 399, 100, 500, 1, '2026-06-30', 1, 'Campus recruitment special — ₹100 extra');
 END
 GO
+
+-- ============================================================
+-- Table: ResumeBuilderTemplates
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ResumeBuilderTemplates')
+BEGIN
+    CREATE TABLE ResumeBuilderTemplates (
+        TemplateID INT NOT NULL IDENTITY(1,1),
+        Name NVARCHAR(100) NOT NULL,
+        Slug NVARCHAR(100) NOT NULL,
+        Category NVARCHAR(50) NOT NULL DEFAULT ('Professional'),
+        Description NVARCHAR(500) NULL,
+        ThumbnailURL NVARCHAR(1000) NULL,
+        HtmlTemplate NVARCHAR(MAX) NOT NULL,
+        CssTemplate NVARCHAR(MAX) NOT NULL,
+        DefaultConfig NVARCHAR(MAX) NULL,
+        SearchTags NVARCHAR(500) NULL,
+        IsPremium BIT NOT NULL DEFAULT (0),
+        IsActive BIT NOT NULL DEFAULT (1),
+        SortOrder INT NOT NULL DEFAULT (0),
+        CreatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        UpdatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        CONSTRAINT PK_ResumeBuilderTemplates PRIMARY KEY (TemplateID)
+    );
+END
+GO
+
+-- ============================================================
+-- Table: ResumeBuilderProjects
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ResumeBuilderProjects')
+BEGIN
+    CREATE TABLE ResumeBuilderProjects (
+        ProjectID UNIQUEIDENTIFIER NOT NULL DEFAULT (NEWID()),
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        TemplateID INT NOT NULL,
+        Title NVARCHAR(200) NOT NULL DEFAULT ('Untitled Resume'),
+        Status NVARCHAR(20) NOT NULL DEFAULT ('Draft'),
+        TargetJobTitle NVARCHAR(200) NULL,
+        TargetJobDescription NVARCHAR(MAX) NULL,
+        CustomConfig NVARCHAR(MAX) NULL,
+        PersonalInfo NVARCHAR(MAX) NULL,
+        Summary NVARCHAR(MAX) NULL,
+        MatchScore INT NULL,
+        LastExportedAt DATETIME2(7) NULL,
+        IsDeleted BIT NOT NULL DEFAULT (0),
+        CreatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        UpdatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        CONSTRAINT PK_ResumeBuilderProjects PRIMARY KEY (ProjectID),
+        CONSTRAINT FK_ResumeBuilderProjects_Users FOREIGN KEY (UserID) REFERENCES Users(UserID),
+        CONSTRAINT FK_ResumeBuilderProjects_Templates FOREIGN KEY (TemplateID) REFERENCES ResumeBuilderTemplates(TemplateID)
+    );
+END
+GO
+
+-- ============================================================
+-- Table: ResumeBuilderSections
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ResumeBuilderSections')
+BEGIN
+    CREATE TABLE ResumeBuilderSections (
+        SectionID UNIQUEIDENTIFIER NOT NULL DEFAULT (NEWID()),
+        ProjectID UNIQUEIDENTIFIER NOT NULL,
+        SectionType NVARCHAR(50) NOT NULL,
+        SectionTitle NVARCHAR(200) NOT NULL,
+        Content NVARCHAR(MAX) NOT NULL DEFAULT ('[]'),
+        SortOrder INT NOT NULL DEFAULT (0),
+        IsVisible BIT NOT NULL DEFAULT (1),
+        CreatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        UpdatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        CONSTRAINT PK_ResumeBuilderSections PRIMARY KEY (SectionID),
+        CONSTRAINT FK_ResumeBuilderSections_Projects FOREIGN KEY (ProjectID) REFERENCES ResumeBuilderProjects(ProjectID)
+    );
+END
+GO
+
+-- ============================================================
+-- Table: ResumeBuilderExports
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ResumeBuilderExports')
+BEGIN
+    CREATE TABLE ResumeBuilderExports (
+        ExportID UNIQUEIDENTIFIER NOT NULL DEFAULT (NEWID()),
+        ProjectID UNIQUEIDENTIFIER NOT NULL,
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        Format NVARCHAR(10) NOT NULL DEFAULT ('pdf'),
+        FileURL NVARCHAR(1000) NULL,
+        FileSizeBytes INT NULL,
+        CreatedAt DATETIME2(7) NOT NULL DEFAULT (GETUTCDATE()),
+        CONSTRAINT PK_ResumeBuilderExports PRIMARY KEY (ExportID),
+        CONSTRAINT FK_ResumeBuilderExports_Projects FOREIGN KEY (ProjectID) REFERENCES ResumeBuilderProjects(ProjectID),
+        CONSTRAINT FK_ResumeBuilderExports_Users FOREIGN KEY (UserID) REFERENCES Users(UserID)
+    );
+END
+GO
