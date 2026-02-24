@@ -13,8 +13,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import { usePricing } from '../../contexts/PricingContext';
@@ -200,14 +202,51 @@ export default function WalletRechargeScreen({ navigation }) {
       if (Platform.OS === 'web') {
         loadRazorpayScript(orderResult.data, rechargeAmount);
       } else {
-        // For mobile, you'll need to integrate react-native-razorpay
-        showToast('Razorpay mobile integration pending. Please use web version for now.', 'info');
-        setLoading(false);
+        // Native: use react-native-razorpay SDK
+        openRazorpayNative(orderResult.data, rechargeAmount);
       }
     } catch (error) {
       console.error('Recharge error:', error);
       showToast('Failed to process recharge. Please try again.', 'error');
       setLoading(false);
+    }
+  };
+
+  // Native Razorpay checkout using react-native-razorpay SDK
+  const openRazorpayNative = async (orderData, rechargeAmount) => {
+    try {
+      const RazorpayCheckout = require('react-native-razorpay').default;
+      if (!orderData.razorpayKeyId) {
+        showToast('Payment gateway configuration is missing.', 'error');
+        setLoading(false);
+        return;
+      }
+
+      const options = {
+        key: orderData.razorpayKeyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'RefOpen',
+        description: 'Wallet Recharge',
+        order_id: orderData.orderId,
+        prefill: {
+          name: '',
+          email: '',
+          contact: '',
+        },
+        theme: { color: '#007AFF' },
+      };
+
+      const response = await RazorpayCheckout.open(options);
+      await verifyPayment(response, rechargeAmount);
+    } catch (error) {
+      if (error?.code === 'PAYMENT_CANCELLED' || error?.description?.includes('cancelled')) {
+        setLoading(false);
+      } else {
+        console.error('Native Razorpay error:', error);
+        showToast('Payment failed. Please try again.', 'error');
+        setLoading(false);
+      }
     }
   };
 
@@ -299,6 +338,7 @@ export default function WalletRechargeScreen({ navigation }) {
       });
 
       if (verifyResult.success) {
+        invalidateCache(CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
         setAmount('');
         setSelectedPack(null);
         setPromoCode('');
@@ -324,6 +364,7 @@ export default function WalletRechargeScreen({ navigation }) {
   };
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       <SubScreenHeader title="Add Money" fallbackTab="Home" />
       <View style={styles.innerContainer}>
@@ -635,6 +676,7 @@ export default function WalletRechargeScreen({ navigation }) {
         </ScrollView>
       </View>
     </View>
+    </ScreenWrapper>
   );
 }
 

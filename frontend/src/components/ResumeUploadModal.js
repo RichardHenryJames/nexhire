@@ -12,7 +12,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Modal,
   StyleSheet,
@@ -24,6 +23,7 @@ import refopenAPI from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { typography } from '../styles/theme';
 import { showToast } from './Toast';
+import { useCustomAlert } from './CustomAlert';
 
 const ResumeUploadModal = ({ 
   visible, 
@@ -33,6 +33,7 @@ const ResumeUploadModal = ({
   jobTitle 
 }) => {
   const { colors } = useTheme();
+  const { showAlert } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
   
   const [uploading, setUploading] = useState(false);
@@ -46,6 +47,10 @@ const ResumeUploadModal = ({
     if (visible && !hasCheckedResumes) {
       
       checkExistingResumes();
+    }
+    // Reset when modal closes so we re-fetch next time
+    if (!visible) {
+      setHasCheckedResumes(false);
     }
   }, [visible]);
 
@@ -159,12 +164,19 @@ const ResumeUploadModal = ({
         // Use actual file name as the resume label
         const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
         const resumeLabel = fileNameWithoutExt.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'My Resume';
+        // ENSURE we have a valid user ID (same fallback chain as web path)
+        const actualUserId = user.userId || user.UserID || user.id || user.sub;
+        if (!actualUserId) {
+          showToast('User ID not found. Please log in again.', 'error');
+          setUploading(false);
+          return;
+        }
         const uploadResult = await refopenAPI.uploadResume({
           name: file.name,
           size: file.size,
           uri: file.uri,
           type: file.mimeType
-        }, user.userId, resumeLabel);
+        }, actualUserId, resumeLabel);
         if (uploadResult.success) {
           const resumeData = {
             ResumeID: uploadResult.data.resumeID || uploadResult.data.ResumeID,
@@ -176,12 +188,13 @@ const ResumeUploadModal = ({
           // ✅ FIX: Don't call onClose() here - let the parent handle closing
           // onResumeSelected callback will close the modal and handle cleanup
         } else {
-          showToast('Failed to upload resume. Please try again.', 'error');
+          console.error('Upload response not success:', JSON.stringify(uploadResult));
+          showToast(uploadResult?.message || 'Failed to upload resume. Please try again.', 'error');
         }
       }
     } catch (error) {
-      console.error('Resume upload error:', error);
-      showToast('Failed to upload resume. Please try again.', 'error');
+      console.error('Resume upload error:', error?.message || error);
+      showToast(error?.message || 'Failed to upload resume. Please try again.', 'error');
     } finally {
       setUploading(false);
     }
@@ -191,11 +204,11 @@ const ResumeUploadModal = ({
     return new Promise((resolve) => {
       const defaultLabel = jobTitle ? `Resume for ${jobTitle}` : 'Application Resume';
       
-      // WEB FIX: Use regular Alert with default label since Alert.prompt doesn't work on web
-      Alert.alert(
-        'Resume Label',
-        `Give this resume a name. Default: "${defaultLabel}"`,
-        [
+      showAlert({
+        title: 'Resume Label',
+        message: `Give this resume a name. Default: "${defaultLabel}"`,
+        icon: 'document-text',
+        buttons: [
           { text: 'Use Default', onPress: () => {
             resolve(defaultLabel);
           }},
@@ -210,7 +223,7 @@ const ResumeUploadModal = ({
             }
           }}
         ]
-      );
+      });
     });
   };
 

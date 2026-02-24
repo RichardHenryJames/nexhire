@@ -8,15 +8,17 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
-  Image,
   Modal,
   Platform,
+  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import CachedImage from '../../components/CachedImage';
+import ScreenWrapper from '../../components/ScreenWrapper';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import messagingApi from '../../services/messagingApi';
@@ -156,12 +158,12 @@ function ConversationsScreenMobile() {
     }
   }, [pagination.hasMore, pagination.page, pagination.pageSize]);
 
-  // Refresh whenever the screen comes into focus (also handles initial load)
-  useFocusEffect(
-    useCallback(() => {
-      loadConversations();
- }, [loadConversations])
-  );
+  // Load conversations on mount
+  useEffect(() => {
+    loadConversations();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
 
   // Refresh handler
   const onRefresh = useCallback(() => {
@@ -191,7 +193,7 @@ function ConversationsScreenMobile() {
         {/* Profile Picture */}
   <View style={styles.avatar}>
           {item.OtherUserProfilePic ? (
-     <Image
+     <CachedImage
           source={{ uri: item.OtherUserProfilePic }}
   style={styles.avatarImage}
     />
@@ -331,6 +333,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
 
   // Same structure as JobsScreen - search header fixed, list scrolls
   return (
+    <ScreenWrapper withKeyboard>
     <View style={styles.container}>
       {/* Header */}
       <SubScreenHeader
@@ -373,6 +376,10 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
             }
             onEndReached={loadMoreConversations}
             onEndReachedThreshold={0.3}
+            windowSize={11}
+            maxToRenderPerBatch={10}
+            initialNumToRender={15}
+            removeClippedSubviews={Platform.OS !== 'web'}
             ListFooterComponent={loadingMore ? (
               <View style={{ paddingVertical: 20, alignItems: 'center' }}>
                 <ActivityIndicator size="small" color={colors.primary} />
@@ -449,7 +456,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
                 >
                   <View style={styles.userResultAvatar}>
                     {item.ProfilePictureURL ? (
-                      <Image
+                      <CachedImage
                         source={{ uri: item.ProfilePictureURL }}
                         style={styles.userResultAvatarImage}
                       />
@@ -486,6 +493,7 @@ style={[styles.messagePreview, hasUnread && styles.messagePreviewUnread]}
         </View>
       </Modal>
     </View>
+    </ScreenWrapper>
   );
 }
 

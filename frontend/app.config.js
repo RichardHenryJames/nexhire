@@ -36,7 +36,7 @@ export default ({ config }) => {
   // Extra runtime config for app
   const extraConfig = {
     appEnv: env,
-    appVersion: '1.0.0',
+    appVersion: '1.1.0',
     debug: env !== 'production',
 
     // API
@@ -75,17 +75,40 @@ export default ({ config }) => {
     ...config,
     name: currentEnvConfig.name,
     slug: 'refopen',
-    version: '1.0.0',
+    owner: 'parimalkumar',
+    version: '1.1.0',
     orientation: 'portrait',
+    icon: './assets/icon.png',
     userInterfaceStyle: 'light',
     scheme: currentEnvConfig.scheme,
+    splash: {
+      image: './assets/refopen-logo.png',
+      resizeMode: 'contain',
+      backgroundColor: '#0A0E17',
+    },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
       bundleIdentifier: currentEnvConfig.scheme,
+      infoPlist: {
+        NSCameraUsageDescription: 'RefOpen needs camera access to take profile photos.',
+        NSPhotoLibraryUsageDescription: 'RefOpen needs photo library access to upload profile images and documents.',
+        NSDocumentsFolderUsageDescription: 'RefOpen needs document access to upload your resume.',
+      },
     },
     android: {
       package: currentEnvConfig.scheme,
+      permissions: [
+        'CAMERA',
+        'READ_EXTERNAL_STORAGE',
+        'WRITE_EXTERNAL_STORAGE',
+        'INTERNET',
+        'ACCESS_NETWORK_STATE',
+      ],
+      adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#3B82F6',
+      },
       intentFilters: [
         {
           action: 'VIEW',
@@ -100,10 +123,32 @@ export default ({ config }) => {
     web: {
       bundler: 'metro',
     },
-    plugins: ['expo-router'],
+    runtimeVersion: {
+      policy: 'sdkVersion',
+    },
+    updates: {
+      url: 'https://u.expo.dev/fd95890b-34f4-4da8-a4ca-bc95684b279f',
+      fallbackToCacheTimeout: 0,
+    },
+    plugins: [
+      'expo-router',
+      [
+        'expo-notifications',
+        {
+          icon: './assets/icon.png',
+          color: '#3B82F6',
+          sounds: [],
+        },
+      ],
+    ],
     experiments: {
       typedRoutes: true,
     },
-    extra: extraConfig, // Exposed to app at runtime
+    extra: {
+      ...extraConfig,
+      eas: {
+        projectId: 'fd95890b-34f4-4da8-a4ca-bc95684b279f',
+      },
+    },
   };
 };

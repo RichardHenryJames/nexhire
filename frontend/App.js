@@ -1,7 +1,50 @@
+// gesture-handler MUST be the very first import for @react-navigation/stack on native
+import 'react-native-gesture-handler';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Platform, View, AppState } from 'react-native';
+
+/**
+ * CRITICAL: Inject layout CSS synchronously at module load time — BEFORE React renders.
+ *
+ * Without this, html/body/#root have no explicit height on the first render.
+ * The flex chain (root → GestureHandlerRootView → SafeAreaProvider → NavigationContainer
+ * → Stack card → Screen) breaks because flex: 1 children can't resolve their height
+ * when the root has no bounded height.
+ *
+ * Symptom: scrolling works if you navigate from Home → sub-screen (because Home's
+ * useEffect ran first and set the styles), but breaks on a direct page refresh to
+ * a sub-screen (styles aren't applied until after the first render → layout is
+ * already computed with unbounded height → ScrollView/FlatList won't scroll).
+ *
+ * This MUST run at import time, not in useEffect.
+ */
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const styleEl = document.createElement('style');
+  styleEl.id = 'refopen-layout-critical';
+  styleEl.textContent = `
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: 100% !important;
+      overflow: auto !important;
+    }
+    #root {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+    @supports not (height: 100dvh) {
+      #root { height: 100vh !important; min-height: 100vh !important; }
+    }
+    * { scrollbar-width: none; -ms-overflow-style: none; }
+    *::-webkit-scrollbar { display: none; }
+  `;
+  document.head.appendChild(styleEl);
+}
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
@@ -9,12 +52,18 @@ import { JobProvider } from './src/contexts/JobContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { PricingProvider } from './src/contexts/PricingContext';
 import { UnreadMessagesProvider } from './src/contexts/UnreadMessagesContext';
+import { AlertProvider } from './src/components/CustomAlert';
 import AppNavigator, { linking } from './src/navigation/AppNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
 import { ToastHost } from './src/components/Toast';
 import TermsConsentModal from './src/components/modals/TermsConsentModal';
 import refopenAPI from './src/services/api';
 import { frontendConfig } from './src/config/appConfig';
+import {
+  configureForegroundHandler,
+  setupNotificationResponseListener,
+  registerForPushNotifications,
+} from './src/services/pushNotifications';
 
 // Activity Tracking Helper Functions
 const generateSessionId = () => `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -106,6 +155,18 @@ function ThemedAppRoot() {
   const currentActivityIdRef = useRef(null);
   const appState = useRef(AppState.currentState);
 
+  // Build navigation theme to prevent white flash on screen transitions
+  const navigationTheme = React.useMemo(() => ({
+    ...(isDark ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(isDark ? DarkTheme.colors : DefaultTheme.colors),
+      background: colors.background,
+      card: colors.surface || colors.background,
+      border: colors.border || '#E0E0E0',
+      text: colors.textPrimary || colors.text,
+    },
+  }), [isDark, colors]);
+
   // Track screen view
   const trackScreenView = useCallback(async (screenName, previousScreen = null) => {
     try {
@@ -187,43 +248,36 @@ function ThemedAppRoot() {
     return () => subscription?.remove();
   }, [trackScreenView, trackScreenExit]);
 
+  // Set up push notifications on native (foreground handler + tap routing)
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    // Configure how notifications display when app is in foreground
+    configureForegroundHandler();
+
+    // Set up notification tap handler (routes to correct screen)
+    const cleanup = setupNotificationResponseListener(navigationRef);
+
+    return cleanup;
+  }, []);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     if (typeof document === 'undefined') return;
 
-    // Always use dark background for web to match auth screens
-    // Auth screens always use dark mode, so we use dark colors for consistency
-    const darkBackground = '#0F172A'; // Same as auth screen gradient start
+    // Theme-dependent background color — only this needs to be in useEffect
+    // (layout-critical styles like height/flex/overflow are injected synchronously
+    // at module load time above, so they're available before the first render)
+    const darkBackground = '#0F172A';
     const fallbackGradient = `linear-gradient(135deg, ${darkBackground}, #1E293B, ${darkBackground})`;
 
     document.documentElement.style.background = fallbackGradient;
     document.body.style.background = fallbackGradient;
-    document.documentElement.style.minHeight = '100vh';
-    document.body.style.minHeight = '100vh';
-    document.body.style.margin = '0';
 
     const root = document.getElementById('root');
     if (root) {
-      root.style.minHeight = '100vh';
       root.style.background = fallbackGradient;
     }
-
-    // Hide scrollbars globally but allow scrolling
-    const style = document.createElement('style');
-    style.textContent = `
-      * {
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* IE and Edge */
-      }
-      *::-webkit-scrollbar {
-        display: none; /* Chrome, Safari, Opera */
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
   }, [colors, isDark]);
 
   return (
@@ -235,6 +289,7 @@ function ThemedAppRoot() {
             <JobProvider>
               <NavigationContainer
                 ref={navigationRef}
+                theme={navigationTheme}
                 linking={linking}
                 onStateChange={onNavigationStateChange}
                 onReady={() => {
@@ -253,7 +308,9 @@ function ThemedAppRoot() {
                 }}
               >
                 <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+                <AlertProvider>
                 <AppNavigator />
+                </AlertProvider>
                 <ConsentGate />
                 <ToastHost />
               </NavigationContainer>
@@ -267,9 +324,16 @@ function ThemedAppRoot() {
 }
 
 export default function App() {
+  // GestureHandlerRootView is required on native for @react-navigation/stack gestures.
+  // On web, it intercepts pointer/touch events and kills ScrollView/FlatList scrolling.
+  // Master branch never had it — scrolling worked. Adding it for native broke web scroll.
+  const Wrapper = Platform.OS === 'web' ? View : GestureHandlerRootView;
+
   return (
-    <ThemeProvider>
-      <ThemedAppRoot />
-    </ThemeProvider>
+    <Wrapper style={{ flex: 1 }}>
+      <ThemeProvider>
+        <ThemedAppRoot />
+      </ThemeProvider>
+    </Wrapper>
   );
 }

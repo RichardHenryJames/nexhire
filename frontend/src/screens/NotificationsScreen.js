@@ -1,7 +1,7 @@
 /**
  * NotificationsScreen - Full screen notification list for bottom tab
  */
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -84,8 +84,24 @@ export default function NotificationsScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const fetchNotifications = useCallback(async (pageNum = 1, append = false) => {
-    if (pageNum === 1 && !append) setLoading(true);
+  const isMountedRef = useRef(false);
+
+  // ⚡ Refresh the tab badge immediately (calls API, updates this tab's badge)
+  const refreshTabBadge = useCallback(async () => {
+    try {
+      const res = await refopenAPI.apiCall('/notifications/unread-count');
+      if (res.success) {
+        const count = res.data?.count || 0;
+        // Update THIS tab's badge directly via navigation.setOptions
+        navigation.setOptions({
+          tabBarBadge: count > 0 ? (count > 99 ? '99+' : count) : undefined,
+        });
+      }
+    } catch (e) { /* silent */ }
+  }, [navigation]);
+
+  const fetchNotifications = useCallback(async (pageNum = 1, append = false, silent = false) => {
+    if (pageNum === 1 && !append && !silent) setLoading(true);
     else if (append) setLoadingMore(true);
 
     try {
@@ -110,11 +126,23 @@ export default function NotificationsScreen() {
     }
   }, []);
 
-  // Refresh on tab focus
+  // Load notifications on mount (with loading spinner)
+  useEffect(() => {
+    fetchNotifications(1);
+    isMountedRef.current = true;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ⚡ Silently refetch on tab focus + poll every 15s while on screen
+  // When user is ON the screen, new notifications appear automatically
   useFocusEffect(
     useCallback(() => {
-      fetchNotifications(1);
-    }, [])
+      if (isMountedRef.current) {
+        fetchNotifications(1, false, true); // silent refetch on focus
+      }
+      // Poll while user is on this screen
+      const poll = setInterval(() => fetchNotifications(1, false, true), 15000);
+      return () => clearInterval(poll); // Stop polling when user leaves screen
+    }, [fetchNotifications])
   );
 
   const onRefresh = () => {
@@ -127,6 +155,7 @@ export default function NotificationsScreen() {
       await refopenAPI.apiCall('/notifications/read-all', { method: 'PATCH' });
       setUnreadCount(0);
       setNotifications(prev => prev.map(n => ({ ...n, IsRead: true })));
+      refreshTabBadge(); // ⚡ Immediately clear tab badge
     } catch (e) {
       console.error('Failed to mark all as read:', e);
     }
@@ -156,8 +185,14 @@ export default function NotificationsScreen() {
         Animated.timing(anim.height, { toValue: 0, duration: 200, useNativeDriver: false }),
       ]),
     ]).start(() => {
+      // Check if deleted notification was unread
+      const deleted = notifications.find(n => n.NotificationID === notificationId);
+      if (deleted && !deleted.IsRead) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
       setNotifications(prev => prev.filter(n => n.NotificationID !== notificationId));
       delete deleteAnims[notificationId];
+      refreshTabBadge(); // ⚡ Immediately update tab badge
     });
     try {
       await refopenAPI.apiCall(`/notifications/${notificationId}`, { method: 'DELETE' });
@@ -174,6 +209,7 @@ export default function NotificationsScreen() {
         setNotifications(prev => prev.map(n =>
           n.NotificationID === notification.NotificationID ? { ...n, IsRead: true } : n
         ));
+        refreshTabBadge(); // ⚡ Immediately update tab badge
       } catch (e) {}
     }
 

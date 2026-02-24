@@ -2,7 +2,8 @@ param(
     [string]$ResourceGroup = "",  # Auto-detected based on environment
     [string]$StaticAppName = "",  # Auto-detected based on environment
     [string]$Environment = "dev",  # dev, staging, production (defaults to dev for safety)
-    [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb"
+    [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb",
+    [switch]$Force  # Bypass master branch check (emergency only)
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,6 +16,29 @@ $normalizedEnv = switch ($Environment.ToLower()) {
     "staging" { "staging" }
     { $_ -in @("prod", "production") } { "prod" }
     default { "dev" }
+}
+
+# Safety: Production deployments must be from master branch
+if ($normalizedEnv -eq "prod") {
+    $currentBranch = (git rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    if ($currentBranch -ne "master") {
+        if ($Force) {
+            Write-Host ""
+            Write-Host "⚠️  WARNING: Force-deploying to production from '$currentBranch' branch!" -ForegroundColor Yellow
+            Write-Host "   This bypasses the master branch safety check." -ForegroundColor Yellow
+            Write-Host ""
+        } else {
+            Write-Host ""
+            Write-Host "❌ BLOCKED: Production deployment must be from 'master' branch!" -ForegroundColor Red
+            Write-Host "   Current branch: $currentBranch" -ForegroundColor Yellow
+            Write-Host "   Switch to master first: git checkout master" -ForegroundColor Yellow
+            Write-Host "   Or use -Force to bypass (emergency only)" -ForegroundColor Yellow
+            Write-Host ""
+            exit 1
+        }
+    } else {
+        Write-Host "✅ Branch check: master" -ForegroundColor Green
+    }
 }
 
 # Env-specific resources
@@ -130,7 +154,7 @@ Write-Host "   Platform: web" -ForegroundColor Gray
 Write-Host "   Output: web-build/" -ForegroundColor Gray
 
 # Load .env vars into shell environment so Metro can inline EXPO_PUBLIC_* into the web bundle
-# (dotenv/config in app.config.js only loads them for that file; Metro needs actual shell env vars)
+# CRITICAL: Must use $env: syntax (not [System.Environment]) for child process inheritance
 if (Test-Path ".env") {
     Write-Host "   Loading .env into shell environment..." -ForegroundColor Gray
     $envVarCount = 0
@@ -140,11 +164,14 @@ if (Test-Path ".env") {
             $val = $Matches[2].Trim()
             # Remove surrounding quotes if present
             if ($val -match '^["''](.*)["'']$') { $val = $Matches[1] }
-            [System.Environment]::SetEnvironmentVariable($key, $val, 'Process')
+            Set-Item -Path "env:$key" -Value $val
             $envVarCount++
         }
     }
     Write-Host "   Loaded $envVarCount env vars for build" -ForegroundColor Gray
+    # Verify critical vars
+    Write-Host "   APP_ENV: $($env:EXPO_PUBLIC_APP_ENV)" -ForegroundColor Gray
+    Write-Host "   APP_VERSION: $($env:EXPO_PUBLIC_APP_VERSION)" -ForegroundColor Gray
 }
 
 npx expo export --platform web --output-dir web-build --clear

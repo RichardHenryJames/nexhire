@@ -234,6 +234,7 @@ export default function WalletTransactionsScreen({ navigation }) {
       <SubScreenHeader title="Transaction History" directBack="Wallet" />
       <View style={styles.innerContainer}>
         <FlatList
+          style={{ flex: 1 }}
           data={transactions}
           renderItem={renderTransaction}
           keyExtractor={(item) => item.TransactionID}
@@ -244,6 +245,10 @@ export default function WalletTransactionsScreen({ navigation }) {
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={styles.listContent}
+          windowSize={11}
+          maxToRenderPerBatch={10}
+          initialNumToRender={15}
+          removeClippedSubviews={Platform.OS !== 'web'}
         />
       </View>
     </View>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, Alert, Platform, ActivityIndicator, Modal, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, ActivityIndicator, Modal, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 import TabHeader from '../../components/TabHeader';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
@@ -19,6 +20,7 @@ import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
+import { getCached, hasCached, setCache, invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
 // Ad configuration - Google AdSense
 const AD_CONFIG = {
@@ -247,8 +249,8 @@ export default function JobsScreen({ navigation, route }) {
     return unsubscribe;
   }, [navigation, filterF500]);
 
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState(() => getCached(CACHE_KEYS.JOBS_LIST) || []);
+  const [loading, setLoading] = useState(!hasCached(CACHE_KEYS.JOBS_LIST));
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, 350);
@@ -278,6 +280,15 @@ export default function JobsScreen({ navigation, route }) {
   const [primaryResume, setPrimaryResume] = useState(null);
   const primaryResumeLoadedRef = useRef(false);
 
+  // ⚡ AbortController: cancel in-flight supporting API calls when user leaves this tab
+  const tabAbortRef = useRef(null);
+  // Create a fresh controller for mount-time calls
+  useEffect(() => {
+    const ac = new AbortController();
+    tabAbortRef.current = ac;
+    return () => { ac.abort(); tabAbortRef.current = null; };
+  }, []);
+
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
@@ -302,7 +313,7 @@ export default function JobsScreen({ navigation, route }) {
 
   const loadWalletBalance = useCallback(async () => {
     try {
-      const result = await refopenAPI.getWalletBalance();
+      const result = await refopenAPI.getWalletBalance(tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (result?.success) {
         // Use availableBalance for hold-based payment system
         setWalletBalance(result.data?.availableBalance ?? result.data?.balance ?? 0);
@@ -315,7 +326,7 @@ export default function JobsScreen({ navigation, route }) {
   const checkAIAccessStatus = useCallback(async () => {
     try {
       // Use unified access API
-      const result = await refopenAPI.apiCall('/access/status?type=ai_jobs');
+      const result = await refopenAPI.apiCall('/access/status?type=ai_jobs', tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (result?.success) {
         setHasActiveAIAccess(!!result.data?.hasActiveAccess);
       } else {
@@ -334,16 +345,7 @@ export default function JobsScreen({ navigation, route }) {
 
   const handleSearchWithAI = useCallback(async () => {
     if (!user) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('Please login to view AI recommended jobs.\n\nWould you like to login now?')) {
-          navigation.navigate('Auth');
-        }
-        return;
-      }
-      Alert.alert('Login Required', 'Please login to view AI recommended jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') },
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -408,7 +410,7 @@ export default function JobsScreen({ navigation, route }) {
     if (!user || !isJobSeeker) return;
     if (primaryResumeLoadedRef.current && primaryResume) return;
     try {
-      const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profile = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (profile?.success) {
         const resumes = profile.data?.resumes || [];
         const primary = resumes.find(r => r.IsPrimary) || resumes[0];
@@ -423,10 +425,10 @@ export default function JobsScreen({ navigation, route }) {
 
   useEffect(() => { loadPrimaryResume(); }, [loadPrimaryResume]);
 
-  const [jobTypes, setJobTypes] = useState([]);
-  const [workplaceTypes, setWorkplaceTypes] = useState([]);
-  const [currencies, setCurrencies] = useState([]);
-  const [companies, setCompanies] = useState([]);
+  const [jobTypes, setJobTypes] = useState(() => getCached(CACHE_KEYS.JOBS_JOB_TYPES) || []);
+  const [workplaceTypes, setWorkplaceTypes] = useState(() => getCached(CACHE_KEYS.JOBS_WORKPLACE_TYPES) || []);
+  const [currencies, setCurrencies] = useState(() => getCached(CACHE_KEYS.JOBS_CURRENCIES) || []);
+  const [companies, setCompanies] = useState(() => getCached(CACHE_KEYS.JOBS_COMPANIES) || []);
 
   // Smart filter toggle
   const [smartEnabled] = useState(false);
@@ -528,10 +530,10 @@ export default function JobsScreen({ navigation, route }) {
     }
   }, [successMessage, appliedJobId, triggerReload, refreshApplicationsData]);
 
-  // 🔧 NEW: Function to refresh applications data
+  // 🔧 Function to refresh applications data
   const refreshApplicationsData = useCallback(async () => {
     try {
-      const r = await refopenAPI.getMyApplications(1, 500);
+      const r = await refopenAPI.getMyApplications(1, 500, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (r?.success) {
         const ids = new Set((r.data || []).map(a => a.JobID));
         setAppliedIds(ids);
@@ -542,25 +544,14 @@ export default function JobsScreen({ navigation, route }) {
     }
   }, []);
 
-  // Load applied job IDs (needed for heart icon state)
-  useEffect(() => {
-    (async () => {
-      try {
-        const r = await refopenAPI.getMyApplications(1, 500);
-        if (r?.success) {
-          const ids = new Set((r.data || []).map(a => a.JobID));
-          setAppliedIds(ids);
-          setAppliedCount(Number(r.meta?.total || r.data?.length || 0));
-        }
-      } catch {}
-    })();
-  }, []);
+  // Load applied IDs on mount (needed for FAB badge + bookmark state)
+  useEffect(() => { refreshApplicationsData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load saved job IDs (needed for bookmark icon state)
   useEffect(() => {
     (async () => {
       try {
-        const r = await refopenAPI.getMySavedJobs(1, 500);
+        const r = await refopenAPI.getMySavedJobs(1, 500, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
         if (r?.success) {
           const ids = new Set((r.data || []).map(s => s.JobID));
           setSavedIds(ids);
@@ -570,14 +561,19 @@ export default function JobsScreen({ navigation, route }) {
     })();
   }, []);
 
-  // 🔧 NEW: Add focus listener to refresh applications when screen comes into focus
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      refreshApplicationsData();
-    });
-
-    return unsubscribe;
-  }, [navigation, refreshApplicationsData]);
+  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
+  // But we DO abort in-flight supporting fetches on blur so destination screen gets priority.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        // On blur: abort supporting API calls (wallet, applications, saved jobs, etc.)
+        if (tabAbortRef.current) { tabAbortRef.current.abort(); tabAbortRef.current = null; }
+        // Also abort the main job list fetch
+        if (listAbortRef.current) { try { listAbortRef.current.abort(); } catch {} }
+        if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
+      };
+    }, [])
+  );
 
   // Load referral data (deferred 100ms)
   useEffect(() => {
@@ -586,7 +582,7 @@ export default function JobsScreen({ navigation, route }) {
     const timer = setTimeout(() => {
       (async () => {
         try {
-          const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
+          const referralRes = await refopenAPI.getMyReferralRequests(1, 500, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
 
           if (referralRes?.success && referralRes.data?.requests) {
             const activeRequests = referralRes.data.requests.filter(r => r.Status !== 'Cancelled' && r.Status !== 'Expired');
@@ -605,9 +601,10 @@ export default function JobsScreen({ navigation, route }) {
 
   const refreshCounts = useCallback(async () => {
     try {
+      const sig = tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {};
       const [appliedRes, savedRes] = await Promise.all([
-        refopenAPI.getMyApplications(1, 1),
-        refopenAPI.getMySavedJobs(1, 1)
+        refopenAPI.getMyApplications(1, 1, sig),
+        refopenAPI.getMySavedJobs(1, 1, sig)
       ]);
       if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
       if (savedRes?.success) setSavedCount(Number(savedRes.meta?.total || 0));
@@ -625,7 +622,7 @@ export default function JobsScreen({ navigation, route }) {
   const applySmart = useCallback(async () => {
     try {
       if (!user) return;
-      const profRes = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+      const profRes = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
       if (profRes?.success) {
         const profile = profRes.data;
         const years = monthsToYears(profile.TotalExperienceMonths);
@@ -667,9 +664,10 @@ export default function JobsScreen({ navigation, route }) {
     const timer = setTimeout(() => {
       (async () => {
         try {
+          const sig = tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {};
           const [refData, cur] = await Promise.all([
-            refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']),
-            refopenAPI.getCurrencies()
+            refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType'], sig),
+            refopenAPI.getCurrencies(sig)
           ]);
           if (refData?.success && refData.data) {
             // Transform JobType data
@@ -679,6 +677,7 @@ export default function JobsScreen({ navigation, route }) {
                 Type: item.Value
               }));
               setJobTypes(transformedJobTypes);
+              setCache(CACHE_KEYS.JOBS_JOB_TYPES, transformedJobTypes);
             }
             // Transform WorkplaceType data
             if (refData.data.WorkplaceType) {
@@ -687,9 +686,13 @@ export default function JobsScreen({ navigation, route }) {
                 Type: item.Value
               }));
               setWorkplaceTypes(transformedWorkplaceTypes);
+              setCache(CACHE_KEYS.JOBS_WORKPLACE_TYPES, transformedWorkplaceTypes);
             }
           }
-          if (cur?.success) setCurrencies(cur.data);
+          if (cur?.success) {
+            setCurrencies(cur.data);
+            setCache(CACHE_KEYS.JOBS_CURRENCIES, cur.data);
+          }
         } catch (e) {
           console.warn('Failed to load reference data:', e.message);
         }
@@ -699,25 +702,28 @@ export default function JobsScreen({ navigation, route }) {
     return () => clearTimeout(timer);
   }, []);
 
-  // 🎯 PRIORITY 4: Preload companies in background after jobs load (2s delay)
+  // 🎯 PRIORITY 4: Preload companies — instant from cache, refresh in bg
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const companiesLoadedRef = useRef(false);
 
   useEffect(() => {
+    // If cache exists, skip the 2s delay — companies already in state
+    const delay = hasCached(CACHE_KEYS.JOBS_COMPANIES) ? 0 : 2000;
     const timer = setTimeout(() => {
       if (!companiesLoadedRef.current) {
         companiesLoadedRef.current = true;
-        setLoadingCompanies(true);
+        if (!hasCached(CACHE_KEYS.JOBS_COMPANIES)) setLoadingCompanies(true);
         
         (async () => {
           try {
-            const orgs = await refopenAPI.getOrganizations('');
+            const orgs = await refopenAPI.getOrganizations('', null, 0, tabAbortRef.current ? { signal: tabAbortRef.current.signal } : {});
             if (orgs?.success) {
               const filteredOrgs = orgs.data.filter(org => {
                 const hasName = org.name && org.name.trim().length > 0;
                 return hasName;
               });
               setCompanies(filteredOrgs);
+              setCache(CACHE_KEYS.JOBS_COMPANIES, filteredOrgs);
             }
           } catch (e) {
             console.warn('Failed to load organizations:', e.message);
@@ -758,7 +764,10 @@ export default function JobsScreen({ navigation, route }) {
 
     const run = async () => {
       try {
-        setLoading(true);
+        // ⚡ Only show loading spinner if no cache exists (first ever load)
+        if (!hasCached(CACHE_KEYS.JOBS_LIST) || isFiltersDirty(filters) || debouncedQuery || filterF500) {
+          setLoading(true);
+        }
         const apiFilters = {};
         if (filters.location) apiFilters.location = filters.location;
 if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
@@ -834,6 +843,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
               }
               
        setJobs(list);
+       // ⚡ Cache the initial unfiltered job list for instant next render
+       if (!debouncedQuery && !isFiltersDirty(filters) && !filterF500) {
+         setCache(CACHE_KEYS.JOBS_LIST, list);
+       }
   const meta = result.meta || {};
           setPagination(prev => {
             const nextPageSize = meta.pageSize || prev.pageSize;
@@ -1267,10 +1280,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   const handleApply = useCallback(async (job) => {
     if (!job) return;
     if (!user) {
-      Alert.alert('Login Required', 'Please login to apply for jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -1290,17 +1300,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       return;
     }
     if (!user) {
-      // Web-compatible alert
-      if (Platform.OS === 'web') {
-        if (window.confirm('Please login to ask for referrals.\n\nWould you like to login now?')) {
-          navigation.navigate('Auth');
-        }
-        return;
-      }
-      Alert.alert('Login Required', 'Please login to ask for referrals', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
     if (!isJobSeeker) {
@@ -1312,16 +1312,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
     // Check if already referred
     if (referredJobIds.has(jobId)) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-          navigation.navigate('Referrals');
-        }
-        return;
-      }
-      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-        { text: 'OK' }
-      ]);
+      showToast('Already requested a referral for this job', 'info');
       return;
     }
 
@@ -1388,6 +1379,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           setShowReferralSuccessOverlay(true);
           
           showToast('Referral request sent successfully', 'success');
+          invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
 
           // 🔧 FIXED: Set the resume directly and reload
           setPrimaryResume(resumeData);
@@ -1410,6 +1402,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             removeSavedJobLocally(id);
           setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
           showToast('Application submitted successfully', 'success');
+          invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
 
           // 🔧 FIXED: Reload primary resume after successful application
           primaryResumeLoadedRef.current = false; // Reset the loaded flag
@@ -1445,6 +1438,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         removeSavedJobLocally(id); // ensure removal if it was saved
         setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
         showToast('Application submitted', 'success');
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
         try {
           const appliedRes = await refopenAPI.getMyApplications(1, 1);
           if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
@@ -1488,6 +1482,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         }
 
         showToast(message, 'success');
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
 
         // 🔧 FIXED: Reload primary resume after successful referral
         await loadPrimaryResume();
@@ -1527,6 +1522,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         });
 
         showToast('Job saved successfully', 'success');
+        invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
       } else {
         showToast('Failed to save job. Please try again.', 'error');
       }
@@ -1547,6 +1543,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (res?.success) {
         removeSavedJobLocally(id);
         showToast('Job removed from saved', 'success');
+        invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
       } else {
         showToast('Failed to remove job from saved. Please try again.', 'error');
       }
@@ -1592,6 +1589,12 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       ) : (
         <TabHeader
           navigation={navigation}
+          onProfileSliderOpen={() => {
+            // Abort Jobs' heavy API calls so ProfileSlider gets network priority
+            if (tabAbortRef.current) { tabAbortRef.current.abort(); tabAbortRef.current = null; }
+            if (listAbortRef.current) { try { listAbortRef.current.abort(); } catch {} }
+            if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
+          }}
           centerContent={
             <View style={styles.searchContainer}>
               <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />

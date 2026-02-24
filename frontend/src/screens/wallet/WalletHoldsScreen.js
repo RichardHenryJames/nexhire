@@ -238,6 +238,7 @@ export default function WalletHoldsScreen({ navigation }) {
       <SubScreenHeader title="Wallet Holds" directBack="Wallet" />
       <View style={styles.innerContainer}>
         <FlatList
+          style={{ flex: 1 }}
           data={holds}
           keyExtractor={(item) => item.HoldID?.toString()}
           renderItem={renderHold}
@@ -247,6 +248,10 @@ export default function WalletHoldsScreen({ navigation }) {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
+          windowSize={11}
+          maxToRenderPerBatch={10}
+          initialNumToRender={15}
+          removeClippedSubviews={Platform.OS !== 'web'}
         />
       </View>
     </View>

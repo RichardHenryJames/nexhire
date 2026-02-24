@@ -5,11 +5,9 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   Platform,
   TextInput,
-  Image,
   useWindowDimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +16,9 @@ import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import CachedImage from '../../components/CachedImage';
+import ScreenWrapper from '../../components/ScreenWrapper';
+import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import { usePricing } from '../../contexts/PricingContext';
 import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
@@ -25,6 +26,7 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { showToast } from '../../components/Toast';
+import { useCustomAlert } from '../../components/CustomAlert';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
@@ -36,6 +38,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet, contentWidth } = responsive;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const { showConfirm } = useCustomAlert();
   const { width } = useWindowDimensions();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,7 +109,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   const loadPrimaryResume = useCallback(async () => {
     if (user && isJobSeeker) {
       try {
-        const profile = await refopenAPI.getApplicantProfile(user.userId || user.id || user.sub || user.UserID);
+        const profile = await refopenAPI.getApplicantProfile(user.UserID || user.userId || user.id || user.sub);
         if (profile?.success) {
           const resumes = profile.data?.resumes || [];
           const primary = resumes.find(r => r.IsPrimary) || resumes[0];
@@ -224,16 +227,7 @@ const { jobId, fromReferralRequest } = route.params || {};
     }
     
     if (hasReferred) {
-      if (Platform.OS === 'web') {
-        if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-          navigation.navigate('Referrals');
-        }
-        return;
-      }
-      Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-        { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-        { text: 'OK' }
-      ]);
+      showToast('Already requested a referral for this job', 'info');
       return;
     }
     
@@ -289,16 +283,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (existing.success && existing.data?.requests) {
         const already = existing.data.requests.some(r => r.JobID === jobId && r.Status !== 'Cancelled' && r.Status !== 'Expired');
         if (already) {
-          if (Platform.OS === 'web') {
-            if (window.confirm('You have already requested a referral for this job.\n\nWould you like to view your referrals?')) {
-              navigation.navigate('Referrals');
-            }
-            return;
-          }
-          Alert.alert('Already Requested', 'You have already requested a referral for this job', [
-            { text: 'View Referrals', onPress: () => navigation.navigate('Referrals') },
-            { text: 'OK' }
-          ]);
+          showToast('Already requested a referral for this job', 'info');
           return;
         }
       }
@@ -401,8 +386,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (result.success) {
         setHasApplied(true);
         showToast('Application submitted', 'success');
-        
-        // 🔧 REQUIREMENT 1: Redirect to Jobs screen with appliedJobId for proper refresh
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST);
         setTimeout(() => {
           navigation.navigate('Jobs', { 
             activeTab: 'openings', 
@@ -413,14 +397,13 @@ const { jobId, fromReferralRequest } = route.params || {};
         
       } else {
         if (result.error?.includes('No resume found')) {
-          Alert.alert(
-            'Resume Required', 
-            'A resume is required to apply for jobs. Please upload one and try again.',
-            [
-              { text: 'Upload Resume', onPress: () => setShowResumeModal(true) },
-              { text: 'Cancel', style: 'cancel' }
-            ]
-          );
+          showConfirm({
+            title: 'Resume Required',
+            message: 'A resume is required to apply for jobs. Please upload one and try again.',
+            icon: 'document-text-outline',
+            confirmText: 'Upload Resume',
+            onConfirm: () => setShowResumeModal(true),
+          });
         } else {
           showToast('Failed to submit application. Please try again.', 'error');
         }
@@ -429,14 +412,13 @@ const { jobId, fromReferralRequest } = route.params || {};
       console.error('Application error:', error);
       
       if (error.message?.includes('No resume found')) {
-        Alert.alert(
-          'Resume Required', 
-          'A resume is required to apply for jobs. Please upload one and try again.',
-          [
-            { text: 'Upload Resume', onPress: () => setShowResumeModal(true) },
-            { text: 'Cancel', style: 'cancel' }
-          ]
-        );
+        showConfirm({
+          title: 'Resume Required',
+          message: 'A resume is required to apply for jobs. Please upload one and try again.',
+          icon: 'document-text-outline',
+          confirmText: 'Upload Resume',
+          onConfirm: () => setShowResumeModal(true),
+        });
       } else {
         showToast('Failed to submit application. Please try again.', 'error');
       }
@@ -458,8 +440,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (res?.success) {
         setHasApplied(true);
         showToast('Application submitted', 'success');
-        
-        // 🔧 REQUIREMENT 1: Redirect to Jobs screen with appliedJobId for proper refresh
+        invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST);
         setTimeout(() => {
           navigation.navigate('Jobs', { 
             activeTab: 'openings', 
@@ -489,8 +470,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (res?.success) {
         // Calculate broadcast time
         const broadcastTime = (Date.now() - startTime) / 1000;
-        
-        // 🎉 Store pending - will mark as referred when overlay closes
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
         setPendingReferralSuccess(true);
         
         // 🎉 Show fullscreen success overlay for 1 second
@@ -533,10 +513,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   // REQUIREMENT 4: Implement save/unsave functionality
   const handleSaveJob = async () => {
     if (!user || !isJobSeeker) {
-      Alert.alert('Login Required', 'Please login to save jobs', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => navigation.navigate('Auth') }
-      ]);
+      navigation.navigate('Auth');
       return;
     }
 
@@ -547,6 +524,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         if (result.success) {
           setIsSaved(false);
           showToast('Job removed from saved', 'success');
+          invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
         } else {
           showToast('Failed to remove job from saved', 'error');
         }
@@ -556,6 +534,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         if (result.success) {
           setIsSaved(true);
           showToast('Job saved successfully', 'success');
+          invalidateCache(CACHE_KEYS.JOBS_SAVED_IDS);
         } else {
           showToast('Failed to save job', 'error');
         }
@@ -612,6 +591,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       if (result.success) {
         showToast('Job published successfully!', 'success');
         setJob(prevJob => ({ ...prevJob, Status: 'Published' }));
+        invalidateCache(CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST, CACHE_KEYS.RECENT_JOBS);
         setTimeout(() => {
           navigation.navigate('MainTabs', {
             screen: 'Jobs',
@@ -714,7 +694,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       .slice(0, 10); // Limit to 10 tags
   };
 
-  // Clean up truncated descriptions - if ends with "..." cut back to last full stop
+  // Clean up truncated descriptions and convert markdown to HTML
   const cleanDescription = (description) => {
     if (!description) return '';
     
@@ -722,21 +702,41 @@ const { jobId, fromReferralRequest } = route.params || {};
     
     // Check if description ends with truncation indicators
     if (cleaned.endsWith('...') || cleaned.endsWith('…') || cleaned.endsWith('a...') || cleaned.endsWith('a…')) {
-      // Remove the truncation marker
       cleaned = cleaned.replace(/\.{3}$|…$/, '').trim();
-      
-      // Find the last full stop (sentence end)
       const lastPeriod = cleaned.lastIndexOf('.');
       const lastExclamation = cleaned.lastIndexOf('!');
       const lastQuestion = cleaned.lastIndexOf('?');
-      
-      // Get the position of the last sentence-ending punctuation
       const lastSentenceEnd = Math.max(lastPeriod, lastExclamation, lastQuestion);
-      
       if (lastSentenceEnd > 0) {
-        // Cut at the last complete sentence
         cleaned = cleaned.substring(0, lastSentenceEnd + 1);
       }
+    }
+    
+    // If it's already HTML (contains tags), return as-is
+    if (/<[a-z][\s\S]*>/i.test(cleaned)) return cleaned;
+    
+    // Convert markdown-style text to HTML
+    // **bold** → <strong>bold</strong>
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert bullet points: • text → <li>text</li>
+    // Split by bullet markers and wrap in list
+    const bulletPattern = /(?:^|\s)(?:•|▪|▸|►|→|‣|-)\s*/;
+    if (bulletPattern.test(cleaned)) {
+      const parts = cleaned.split(/(?:•|▪|▸|►|→|‣)\s*/);
+      const intro = parts[0]?.trim();
+      const bullets = parts.slice(1).filter(b => b.trim());
+      
+      if (bullets.length > 0) {
+        cleaned = (intro ? `<p>${intro}</p>` : '') + 
+          '<ul>' + bullets.map(b => `<li>${b.trim()}</li>`).join('') + '</ul>';
+      }
+    }
+    
+    // Convert newlines to <br> if no HTML structure was added
+    if (!cleaned.includes('<ul>') && !cleaned.includes('<p>')) {
+      cleaned = cleaned.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>');
+      cleaned = `<p>${cleaned}</p>`;
     }
     
     return cleaned;
@@ -838,6 +838,7 @@ const { jobId, fromReferralRequest } = route.params || {};
     : [];
 
   return (
+    <ScreenWrapper withKeyboard>
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <SubScreenHeader
         title="Job Details"
@@ -866,7 +867,7 @@ const { jobId, fromReferralRequest } = route.params || {};
               activeOpacity={0.7}
             >
               {job.OrganizationLogo ? (
-                <Image 
+                <CachedImage 
                   source={{ uri: job.OrganizationLogo }} 
                   style={styles.companyLogo}
                   onError={() => {}}
@@ -1132,6 +1133,24 @@ const { jobId, fromReferralRequest } = route.params || {};
         </View>
       )}
 
+      {/* About Company — only show for F500 companies with description */}
+      {job.OrganizationIsFortune500 && job.OrganizationDescription && job.OrganizationDescription.length > 20 && (
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <Text style={styles.sectionTitle}>About {job.OrganizationName || 'Company'}</Text>
+          </View>
+          {job.OrganizationIndustry && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+              <Ionicons name="business-outline" size={13} color={colors.textSecondary} />
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>{job.OrganizationIndustry}</Text>
+            </View>
+          )}
+          <Text style={{ fontSize: 13, color: colors.text, lineHeight: 20 }}>
+            {job.OrganizationDescription}
+          </Text>
+        </View>
+      )}
+
       {/* 🆕 MOVED: Referral Message Section - now appears ABOVE action buttons */}
       {/* Show for job seekers OR public users (not logged in), but NOT for own posted jobs */}
       {(isJobSeeker || !user) && !hasReferred && !isOwnPostedJob && (
@@ -1390,6 +1409,7 @@ const { jobId, fromReferralRequest } = route.params || {};
       </ResponsiveContainer>
     </ScrollView>
     </View>
+    </ScreenWrapper>
   );
 }
 

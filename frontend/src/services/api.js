@@ -130,12 +130,25 @@ class RefOpenAPI {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
+      // If caller passed an external signal (e.g. navigation abort), forward its
+      // abort to our controller so fetch is cancelled immediately.
+      const externalSignal = options.signal;
+      let onExternalAbort;
+      if (externalSignal) {
+        if (externalSignal.aborted) { controller.abort(); }
+        else {
+          onExternalAbort = () => controller.abort();
+          externalSignal.addEventListener('abort', onExternalAbort);
+        }
+      }
+
       const response = await fetch(`${this.baseURL}${endpoint}`, {
         ...config,
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
+      if (externalSignal && onExternalAbort) externalSignal.removeEventListener('abort', onExternalAbort);
       
       const duration = Date.now() - startTime;
       this.logApiResponse(config.method, endpoint, response, duration);
@@ -162,6 +175,13 @@ class RefOpenAPI {
       const duration = Date.now() - startTime;
       
       if (error.name === 'AbortError') {
+        // Distinguish navigation-abort from timeout-abort
+        if (externalSignal && externalSignal.aborted) {
+          // Caller aborted (e.g. user navigated away) — re-throw as AbortError so caller can ignore silently
+          const abortErr = new Error('Request aborted');
+          abortErr.name = 'AbortError';
+          throw abortErr;
+        }
         console.error(`❌ API timeout (${this.timeout}ms): ${endpoint}`);
         throw new Error(`Request timeout (${this.timeout}ms)`);
       }
@@ -239,10 +259,11 @@ class RefOpenAPI {
     this.onSessionExpired = handler;
   }
 
-  // Token management
+  // Token management — uses expo-secure-store on native, AsyncStorage on web
   async setTokens(accessToken, refreshToken) {
     try {
-      await AsyncStorage.multiSet([
+      const { secureMultiSet } = require('../utils/secureStorage');
+      await secureMultiSet([
         ['refopen_token', accessToken],
         ['refopen_refresh_token', refreshToken]
       ]);
@@ -257,7 +278,8 @@ class RefOpenAPI {
 
   async getToken(key) {
     try {
-      return await AsyncStorage.getItem(key);
+      const { secureGet } = require('../utils/secureStorage');
+      return await secureGet(key);
     } catch (error) {
       console.error(`❌ Failed to get token ${key}:`, error);
       return null;
@@ -266,8 +288,8 @@ class RefOpenAPI {
 
   async removeToken(key) {
     try {
-      // Tokens are stored in AsyncStorage in this codebase; remove them from the same store.
-      await AsyncStorage.removeItem(key);
+      const { secureRemove } = require('../utils/secureStorage');
+      await secureRemove(key);
     } catch (error) {
       console.error('Error removing token:', error);
     }
@@ -871,12 +893,12 @@ class RefOpenAPI {
     });
   }
 
-  async getMyApplications(page = 1, pageSize = 20) {
+  async getMyApplications(page = 1, pageSize = 20, fetchOptions = {}) {
     const params = new URLSearchParams({
       page: page.toString(),
       pageSize: pageSize.toString(),
     });
-    return this.apiCall(`/my/applications?${params}`);
+    return this.apiCall(`/my/applications?${params}`, fetchOptions);
   }
 
   async getJobApplications(jobId, page = 1, pageSize = 20) {
@@ -914,10 +936,10 @@ class RefOpenAPI {
     return this.apiCall(`/saved-jobs/${jobId}`, { method: 'DELETE' });
   }
 
-  async getMySavedJobs(page = 1, pageSize = 20) {
+  async getMySavedJobs(page = 1, pageSize = 20, fetchOptions = {}) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    return this.apiCall(`/my/saved-jobs?${params}`);
+    return this.apiCall(`/my/saved-jobs?${params}`, fetchOptions);
   }
 
   // ========================================================================
@@ -939,19 +961,41 @@ class RefOpenAPI {
 
   /**
    * Get multiple reference types in one call (efficient)
+   * ⚡ CACHED: Static data that rarely changes. In-memory cache avoids
+   * redundant API calls across 10+ screens that all fetch the same data.
+   * Cache is keyed by the sorted types array (e.g. "JobType,WorkplaceType").
    * @param {string[]} types - Array of reference types to fetch
    * @returns {Promise} API response with all types
    */
-  async getBulkReferenceMetadata(types) {
-    return await this.apiCall('/reference/metadata/bulk', {
+  async getBulkReferenceMetadata(types, fetchOptions = {}) {
+    const cacheKey = [...types].sort().join(',');
+    // Return cached if available and not explicitly bypassed
+    if (!fetchOptions._noCache && this._refMetaCache?.[cacheKey]) {
+      return this._refMetaCache[cacheKey];
+    }
+    const result = await this.apiCall('/reference/metadata/bulk', {
       method: 'POST',
       body: JSON.stringify({ types }),
+      ...fetchOptions,
     });
+    if (result?.success) {
+      if (!this._refMetaCache) this._refMetaCache = {};
+      this._refMetaCache[cacheKey] = result;
+    }
+    return result;
   }
 
-  async getCurrencies() {
+  async getCurrencies(fetchOptions = {}) {
     try {
-      return await this.apiCall('/reference/currencies');
+      // ⚡ CACHED: Currencies almost never change
+      if (!fetchOptions._noCache && this._currenciesCache) {
+        return this._currenciesCache;
+      }
+      const result = await this.apiCall('/reference/currencies', fetchOptions);
+      if (result?.success) {
+        this._currenciesCache = result;
+      }
+      return result;
     } catch (error) {
       console.warn('Failed to load currencies:', error.message);
       // Return fallback data
@@ -966,7 +1010,12 @@ class RefOpenAPI {
   }
 
   // NEW: Reference data APIs for registration flow
+  // ⚡ CACHED: College list per country rarely changes. Keyed by country.
   async getColleges(country = 'India', searchName = '') {
+    // Only cache full-list fetches (no search)
+    const isFullList = !searchName;
+    const cacheKey = `colleges_${country}`;
+    if (isFullList && this._collegesCache?.[cacheKey]) return this._collegesCache[cacheKey];
     try {
       // Build query parameters for the external API
       const params = new URLSearchParams();
@@ -974,7 +1023,12 @@ class RefOpenAPI {
       if (searchName) params.append('name', searchName);
       
       const endpoint = `/reference/colleges${params.toString() ? `?${params.toString()}` : ''}`;
-      return await this.apiCall(endpoint);
+      const result = await this.apiCall(endpoint);
+      if (isFullList && result?.success) {
+        if (!this._collegesCache) this._collegesCache = {};
+        this._collegesCache[cacheKey] = result;
+      }
+      return result;
     } catch (error) {
       console.warn('Failed to load colleges:', error.message);
       
@@ -1055,9 +1109,9 @@ class RefOpenAPI {
   }
 
   // NEW: Job seeker/applicant profile APIs
-  async getApplicantProfile(userId) {
+  async getApplicantProfile(userId, fetchOptions = {}) {
     try {
-      return await this.apiCall(`/applicants/${userId}/profile`);
+      return await this.apiCall(`/applicants/${userId}/profile`, fetchOptions);
     } catch (error) {
       console.warn('Failed to load applicant profile:', error.message);
       // Return empty profile structure for new job seekers
@@ -1164,9 +1218,13 @@ class RefOpenAPI {
   }
 
   // NEW: Get countries for education screen
+  // ⚡ CACHED: Country list never changes
   async getCountries() {
+    if (this._countriesCache) return this._countriesCache;
     try {
-      return await this.apiCall('/reference/countries');
+      const result = await this.apiCall('/reference/countries');
+      if (result?.success) this._countriesCache = result;
+      return result;
     } catch (error) {
       console.warn('Failed to load countries:', error.message);
       // Return fallback data with proper flags
@@ -1190,8 +1248,15 @@ class RefOpenAPI {
   }
 
   // NEW: Get organizations for employer registration - Optimized with database index
+  // ⚡ CACHED: Full org list (no search) is cached in-memory. Search queries always hit API.
   async getOrganizations(searchTerm = '', limit = null, offset = 0, options = {}) {
     try {
+      // Cache key: only cache full-list fetches (no search, no F500 filter)
+      const isFullList = !searchTerm && !options.isFortune500 && limit === null && offset === 0;
+      const isF500List = !searchTerm && options.isFortune500 && offset === 0;
+      
+      if (isFullList && this._orgFullCache) return this._orgFullCache;
+      if (isF500List && this._orgF500Cache) return this._orgF500Cache;
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       // 🚀 OPTIMIZED: Only add limit if explicitly provided, otherwise fetch ALL
@@ -1209,7 +1274,7 @@ class RefOpenAPI {
       
       const startTime = performance.now();
       
-      const response = await this.apiCall(endpoint);
+      const response = await this.apiCall(endpoint, options.signal ? { signal: options.signal } : {});
       
       const duration = (performance.now() - startTime).toFixed(2);
       
@@ -1244,10 +1309,14 @@ class RefOpenAPI {
         }
         
         
-        return {
+        const result = {
           success: true,
           data: organizationsArray
         };
+        // ⚡ Cache full-list and F500-list results
+        if (isFullList) this._orgFullCache = result;
+        if (isF500List) this._orgF500Cache = result;
+        return result;
       } else {
         throw new Error(response.error || 'No organizations data received');
       }
@@ -1291,9 +1360,13 @@ class RefOpenAPI {
   }
 
   // ✨ NEW: Salary Components API for new salary structure
+  // ⚡ CACHED: Salary component types never change
   async getSalaryComponents() {
+    if (this._salaryComponentsCache) return this._salaryComponentsCache;
     try {
-      return await this.apiCall('/reference/salary-components');
+      const result = await this.apiCall('/reference/salary-components');
+      if (result?.success) this._salaryComponentsCache = result;
+      return result;
     } catch (error) {
       console.warn('Failed to load salary components:', error.message);
       // Return fallback data
@@ -1533,7 +1606,7 @@ class RefOpenAPI {
         }
       } else {
         // React Native: Read file and convert to base64
-        const { FileSystem } = require('expo-file-system');
+        const FileSystem = require('expo-file-system');
         const base64Data = await FileSystem.readAsStringAsync(file.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
@@ -1553,7 +1626,9 @@ class RefOpenAPI {
       if (!mimeType || typeof mimeType !== 'string') {
         throw new Error('Invalid MIME type');
       }
-      if (!userId || typeof userId !== 'string') {
+      // Convert to string in case userId is a number
+      userId = String(userId);
+      if (!userId || userId === 'undefined' || userId === 'null') {
         throw new Error('Invalid user ID');
       }
       if (!resumeLabel || typeof resumeLabel !== 'string') {
@@ -1867,7 +1942,7 @@ if (!resumeId) {
   // ========================================================================
 
   // 💰 NEW: Get wallet balance
-  async getWalletBalance() {
+  async getWalletBalance(fetchOptions = {}) {
     // 🔧 CRITICAL FIX: Ensure token is loaded before checking
     if (!this.token) {
       await this.init();
@@ -1879,7 +1954,7 @@ if (!resumeId) {
     }
     
     try {
-      return await this.apiCall('/wallet/balance');
+      return await this.apiCall('/wallet/balance', fetchOptions);
     } catch (error) {
       console.error('❌ Failed to load wallet balance:', error);
       return { success: false, error: error.message || 'Failed to load wallet balance' };
@@ -2068,7 +2143,7 @@ if (!resumeId) {
   }
 
   // Get my referral requests (as seeker)
-  async getMyReferralRequests(page = 1, pageSize = 20) {
+  async getMyReferralRequests(page = 1, pageSize = 20, fetchOptions = {}) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     const params = new URLSearchParams({
@@ -2076,7 +2151,7 @@ if (!resumeId) {
       pageSize: pageSize.toString(),
     });
     
-    return this.apiCall(`/referral/my-requests?${params}`);
+    return this.apiCall(`/referral/my-requests?${params}`, fetchOptions);
   }
 
   // Get available referral requests (as potential referrer)
@@ -2152,7 +2227,7 @@ if (!resumeId) {
   }
 
   // Get my requests as referrer
-  async getMyReferrerRequests(page = 1, pageSize = 20) {
+  async getMyReferrerRequests(page = 1, pageSize = 20, fetchOptions = {}) {
     if (!this.token) return { success: false, error: 'Authentication required' };
     
     const params = new URLSearchParams({
@@ -2160,7 +2235,7 @@ if (!resumeId) {
       pageSize: pageSize.toString(),
     });
     
-    return this.apiCall(`/referral/my-referrer-requests?${params}`);
+    return this.apiCall(`/referral/my-referrer-requests?${params}`, fetchOptions);
   }
 
   // Get referral analytics
@@ -2628,7 +2703,7 @@ if (!resumeId) {
         }
       } else {
         // React Native: Read file using Expo FileSystem
-        const { FileSystem } = require('expo-file-system');
+        const FileSystem = require('expo-file-system');
 
         fileData = await FileSystem.readAsStringAsync(fileUri, {
           encoding: FileSystem.EncodingType.Base64,
@@ -3119,6 +3194,37 @@ if (!resumeId) {
         error: error.message || 'Failed to analyze resume. Please try again.',
       };
     }
+  }
+
+  // ========================================================================
+  // PUSH TOKENS
+  // ========================================================================
+
+  /**
+   * Register a device push token
+   * @param {string} token - Expo push token
+   * @param {string} platform - 'ios' or 'android'
+   * @param {string} [deviceId] - Unique device identifier
+   * @param {string} [deviceName] - Human-readable device name
+   * @returns {Promise<Object>}
+   */
+  async registerPushToken(token, platform, deviceId, deviceName) {
+    return this.apiCall('/push-tokens/register', {
+      method: 'POST',
+      body: JSON.stringify({ token, platform, deviceId, deviceName, provider: 'expo' }),
+    });
+  }
+
+  /**
+   * Unregister a device push token (on logout)
+   * @param {string} token - Expo push token to deactivate
+   * @returns {Promise<Object>}
+   */
+  async unregisterPushToken(token) {
+    return this.apiCall('/push-tokens/unregister', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
   }
 }
 

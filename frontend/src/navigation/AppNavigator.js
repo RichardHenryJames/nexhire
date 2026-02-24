@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { TouchableOpacity, Platform } from "react-native";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Platform } from "react-native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -283,10 +283,15 @@ const linking = {
 
 // Job Seeker Registration Flow
 function JobSeekerFlow() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       <Stack.Screen
@@ -308,10 +313,15 @@ function JobSeekerFlow() {
 
 // Employer Registration Flow
 function EmployerFlow() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       <Stack.Screen
@@ -337,6 +347,7 @@ function EmployerFlow() {
 // Auth Stack Navigator with complete registration flows
 function AuthStack() {
   const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
+  const { colors } = useTheme();
 
 
   // FIXED: Better initial route logic
@@ -351,6 +362,10 @@ function AuthStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
       initialRouteName={getInitialRoute()}
     >
@@ -429,9 +444,9 @@ function MainTabNavigator() {
     return () => clearInterval(pollRef.current);
   }, [fetchUnreadCount]);
 
-  return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
+  // ⚡ PERF: Memoize screenOptions — without this, every 30s notification poll
+  // creates a new screenOptions function, causing React Navigation to re-evaluate all tabs.
+  const screenOptions = useMemo(() => ({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
@@ -463,34 +478,27 @@ function MainTabNavigator() {
           backgroundColor: colors.surface,
           borderTopWidth: 1,
           borderTopColor: colors.border,
-          // Compact styling similar to LinkedIn
-          height: Platform.OS === 'ios' ? 84 : 58,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 6,
-          paddingTop: 6,
-          ...(Platform.OS === 'web'
-            ? {
-                position: 'fixed',
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: 52, // Very compact for web
-                paddingBottom: 4,
-                paddingTop: 4,
-              }
-            : null),
+          height: Platform.OS === 'ios' ? 84 : Platform.OS === 'web' ? 52 : 58,
+          paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'web' ? 4 : 6,
+          paddingTop: Platform.OS === 'web' ? 4 : 6,
         },
         tabBarLabelStyle: {
-          fontSize: 10, // Smaller font for compact look
+          fontSize: 10,
           fontWeight: "600",
           marginBottom: Platform.OS === 'android' ? 2 : 0,
         },
         tabBarItemStyle: {
-          // Tighten up items
           paddingVertical: 0,
         },
         headerShown: false,
-      })}
-    >
+        lazy: Platform.OS === 'web',
+        freezeOnBlur: false,
+        detachInactiveScreens: false,
+        ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}),
+      }), [colors]);
+
+  return (
+    <Tab.Navigator screenOptions={screenOptions}>
       {/* Show Home tab for all users including Admin */}
       <Tab.Screen
         name="Home"
@@ -587,18 +595,17 @@ function MainStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       <Stack.Screen name="MainTabs" component={MainTabNavigator} />
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{
-          headerShown: false,
-          gestureEnabled: true,
-          gestureDirection: "horizontal",
-          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-        }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="JobDetails"
@@ -812,6 +819,7 @@ function MainStack() {
 // Root Navigator
 export default function AppNavigator() {
   const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
+  const { colors } = useTheme();
 
 
   // Show loading screen while checking authentication state
@@ -832,6 +840,10 @@ export default function AppNavigator() {
       initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
+        cardStyle: { backgroundColor: colors.background },
+        gestureEnabled: true,
+        gestureDirection: 'horizontal',
+        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
     >
       {/* Auth Stack - always present for deep linking */}

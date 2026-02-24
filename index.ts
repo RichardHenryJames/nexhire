@@ -3375,7 +3375,7 @@ app.timer("becomeVerifiedReferrerEmail", {
 // ========================================================================
 
 app.timer("dailyReferrerNotificationEmail", {
-  schedule: "0 0 6 */3 * *", // 11:30 AM IST (6:00 AM UTC) every 3 days
+  schedule: "0 0 6 * * *", // 11:30 AM IST (6:00 AM UTC) daily
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `referrer_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -3385,7 +3385,7 @@ app.timer("dailyReferrerNotificationEmail", {
     context.log("========================================================================");
     context.log(`Execution ID: ${executionId}`);
     context.log(`Triggered at: ${new Date().toISOString()}`);
-    context.log(`Schedule: 11:30 AM IST (6:00 AM UTC) - Every 3 days`);
+    context.log(`Schedule: 11:30 AM IST (6:00 AM UTC) - Daily`);
     context.log(`Past Due: ${myTimer.isPastDue ? "Yes (catching up)" : "No"}`);
 
     if (myTimer.isPastDue) {
@@ -3456,6 +3456,13 @@ app.timer("dailyReferrerNotificationEmail", {
 app.timer("jobScraperTimer", {
   schedule: "0 0 */6 * * *", // Every 6 hours
   handler: async (myTimer: Timer, context: InvocationContext) => {
+    // Skip scraping on dev/staging — only run on production
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') {
+      context.log(`[JobScraper] Skipping — not production (env: ${appEnv})`);
+      return;
+    }
+
     const startTime = Date.now();
     const executionId = `timer_${Date.now()}_${Math.random()
       .toString(36)
@@ -4213,6 +4220,25 @@ app.http("admin-reject-verification", {
   authLevel: "anonymous",
   route: "management/verifications/{verificationId}/reject",
   handler: adminRejectVerification,
+});
+
+// ========================================================================
+// PUSH TOKENS
+// ========================================================================
+import { registerPushToken, unregisterPushToken } from "./src/controllers/pushToken.controller";
+
+app.http("push-token-register", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "push-tokens/register",
+  handler: registerPushToken,
+});
+
+app.http("push-token-unregister", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "push-tokens/unregister",
+  handler: unregisterPushToken,
 });
 
 // ========================================================================

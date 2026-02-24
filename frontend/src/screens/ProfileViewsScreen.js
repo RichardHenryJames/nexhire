@@ -558,6 +558,7 @@ export default function ProfileViewsScreen({ navigation }) {
       />
 
       <FlatList
+        style={{ flex: 1 }}
         data={profileViews}
         keyExtractor={(item, index) => item.ViewID?.toString() || index.toString()}
         renderItem={({ item }) => <ViewerCard item={item} />}

@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
@@ -183,6 +184,7 @@ export default function WithdrawalRequestsScreen({ navigation }) {
           </View>
         ) : (
           <FlatList
+            style={{ flex: 1 }}
             data={withdrawals}
             renderItem={renderWithdrawal}
             keyExtractor={(item) => item.WithdrawalID}
@@ -191,6 +193,10 @@ export default function WithdrawalRequestsScreen({ navigation }) {
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
             }
             showsVerticalScrollIndicator={false}
+            windowSize={11}
+            maxToRenderPerBatch={10}
+            initialNumToRender={15}
+            removeClippedSubviews={Platform.OS !== 'web'}
           />
         )}
       </View>

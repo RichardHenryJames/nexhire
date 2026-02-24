@@ -1,8 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerForPushNotifications, clearPushToken } from '../services/pushNotifications';
 import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
 import { getAndClearRedirectRoute, navigateToRoute } from '../navigation/navigationRef';
+import { warmHomeCache, clearHomeCache } from '../utils/homeCache';
 
 const AuthContext = createContext();
 
@@ -14,34 +18,61 @@ export const useAuth = () => {
   return context;
 };
 
-// NEW: Helper functions for sessionStorage persistence
+// Cross-platform helper functions for Google Auth persistence
+// Uses sessionStorage on web (survives page reload) and AsyncStorage on native
+
 const GOOGLE_AUTH_STORAGE_KEY = 'refopen_pending_google_auth';
 
-const savePendingGoogleAuthToStorage = (data) => {
+const savePendingGoogleAuthToStorage = async (data) => {
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        if (data) {
+          sessionStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(data));
+        } else {
+          sessionStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY);
+        }
+      }
+    } else {
+      // Native: use AsyncStorage
       if (data) {
-        sessionStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(data));
+        await AsyncStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(data));
       } else {
-        sessionStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY);
+        await AsyncStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY);
       }
     }
   } catch (error) {
-    console.warn('Failed to save to sessionStorage:', error);
+    console.warn('Failed to save pending Google auth:', error);
   }
 };
 
 const loadPendingGoogleAuthFromStorage = () => {
   try {
-    if (typeof window !== 'undefined' && window.sessionStorage) {
+    // Synchronous load only works on web (for initial state)
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.sessionStorage) {
       const stored = sessionStorage.getItem(GOOGLE_AUTH_STORAGE_KEY);
       if (stored) {
-        const data = JSON.parse(stored);
-        return data;
+        return JSON.parse(stored);
+      }
+    }
+    // Native async load is handled in useEffect below
+  } catch (error) {
+    console.warn('Failed to load pending Google auth:', error);
+  }
+  return null;
+};
+
+// Async loader for native platforms
+const loadPendingGoogleAuthAsync = async () => {
+  try {
+    if (Platform.OS !== 'web') {
+      const stored = await AsyncStorage.getItem(GOOGLE_AUTH_STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored);
       }
     }
   } catch (error) {
-    console.warn('Failed to load from sessionStorage:', error);
+    console.warn('Failed to load pending Google auth async:', error);
   }
   return null;
 };
@@ -60,11 +91,25 @@ export const AuthProvider = ({ children }) => {
     return loadPendingGoogleAuthFromStorage();
   });
 
-  // NEW: Wrapper to sync with sessionStorage
+  // Track whether the initial auth check has completed
+  // After the first check, subsequent checkAuthState calls should NOT toggle global loading
+  // to prevent the navigator from unmounting (which causes sign-in screen flicker)
+  const initialLoadDone = useRef(false);
+
+  // Wrapper to sync with storage (sessionStorage on web, AsyncStorage on native)
   const setPendingGoogleAuth = (data) => {
     setPendingGoogleAuthState(data);
     savePendingGoogleAuthToStorage(data);
   };
+
+  // Native: async-load pending Google auth from AsyncStorage on mount
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      loadPendingGoogleAuthAsync().then((data) => {
+        if (data) setPendingGoogleAuthState(data);
+      });
+    }
+  }, []);
 
   // Check for pending redirect on mount
   useEffect(() => {
@@ -102,9 +147,27 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
   }, [pendingGoogleAuth]);
 
+  // Helper: register push token after login (non-blocking)
+  const registerForPushNotificationsOnLogin = async () => {
+    try {
+      const token = await registerForPushNotifications();
+      if (token) {
+        await refopenAPI.registerPushToken(token, Platform.OS);
+      }
+    } catch (e) {
+      console.warn('Push token registration failed:', e);
+    }
+  };
+
   const checkAuthState = async () => {
     try {
-      setLoading(true);
+      // Only show the full-screen loading spinner on the very first auth check.
+      // Subsequent calls (e.g., from LoginScreen mount/focus) must NOT toggle
+      // global loading, because that unmounts the entire navigator and causes
+      // the sign-in screen to flicker on native.
+      if (!initialLoadDone.current) {
+        setLoading(true);
+      }
       // Check if user has valid token
       const token = await refopenAPI.getToken('refopen_token');
       
@@ -113,6 +176,12 @@ export const AuthProvider = ({ children }) => {
         const result = await refopenAPI.getProfile();
         if (result.success) {
           setUser(result.data);
+          // ⚡ Warm home cache so HomeScreen renders instantly from cache
+          warmHomeCache();
+          // Register for push notifications on native after auth
+          if (Platform.OS !== 'web') {
+            registerForPushNotificationsOnLogin();
+          }
           // Fetch verification status for job seekers - await to ensure it completes before loading ends
           if (result.data?.UserType === 'JobSeeker') {
             await refreshVerificationStatus();
@@ -134,6 +203,7 @@ export const AuthProvider = ({ children }) => {
       // The user will see the login screen anyway
       setError(null);
     } finally {
+      initialLoadDone.current = true;
       setLoading(false);
     }
   };
@@ -162,93 +232,61 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NEW: Google Sign-In Flow
+  // Google Sign-In Flow — delegates to googleAuth.signIn() which handles
+  // platform differences (implicit flow on web, auth-code+PKCE on native).
   const loginWithGoogle = async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      
-      
-      // Step 1: Get Google authentication
+
       const googleResult = await googleAuth.signIn();
-      
+
       if (!googleResult.success) {
-        if (googleResult.cancelled) {
-          
-          return { success: false, cancelled: true, message: 'Google Sign-In was cancelled' };
-        }
-        if (googleResult.dismissed) {
-          
-          return { success: false, dismissed: true, message: 'Authentication popup was closed' };
-        }
-        if (googleResult.needsConfig) {
-          
-          return { 
-            success: false, 
-            error: googleResult.error,
-            needsConfig: true
-          };
-        }
+        if (googleResult.cancelled) return { success: false, cancelled: true, message: 'Google Sign-In was cancelled' };
+        if (googleResult.dismissed) return { success: false, dismissed: true, message: 'Authentication popup was closed' };
+        if (googleResult.needsConfig) return { success: false, error: googleResult.error, needsConfig: true };
+        if (googleResult.featureDisabled) return { success: false, error: googleResult.error, featureDisabled: true };
         throw new Error(googleResult.error || 'Google authentication failed');
       }
 
-      
-
-      // Step 2: Try to login with existing account
+      // Try to login with existing backend account
       try {
         const loginResult = await refopenAPI.loginWithGoogle(googleResult.data);
-        
+
         if (loginResult.success) {
-          
           setUser(loginResult.data.user);
-          
-          // Check for pending redirect after successful Google login
           handlePostLoginRedirect();
-          
           return { success: true, user: loginResult.data.user, hasPendingRedirect: !!pendingRedirect };
         }
-        
-        // Check if it's a user not found error
+
         if (loginResult.needsRegistration) {
-          
           setPendingGoogleAuth(googleResult.data);
-          
-          
-          
-          return { 
-            success: false, 
+          return {
+            success: false,
             needsRegistration: true,
             googleUser: googleResult.data.user,
-            message: 'New user needs to complete registration'
+            message: 'New user needs to complete registration',
           };
         }
-        
+
         throw new Error(loginResult.error || 'Login failed');
-        
       } catch (loginError) {
-        
-        
-        // If it's a user not found error, prepare for registration
-        if (loginError.message.includes('not found') || loginError.message.includes('USER_NOT_FOUND')) {
-          
+        if (
+          loginError.message.includes('not found') ||
+          loginError.message.includes('USER_NOT_FOUND')
+        ) {
           setPendingGoogleAuth(googleResult.data);
-          
-          
-          
-          return { 
-            success: false, 
+          return {
+            success: false,
             needsRegistration: true,
             googleUser: googleResult.data.user,
-            message: 'New user needs to complete registration'
+            message: 'New user needs to complete registration',
           };
         }
-        
         throw loginError;
       }
-
     } catch (error) {
-      const errorMessage = "Not your fault! We're working on it. Try again soon. ✨";
+      const errorMessage = error.message || "Google Sign-In failed";
       console.error('Google Sign-In error:', error);
       setError(errorMessage);
       return { success: false, error: errorMessage };
@@ -487,6 +525,12 @@ export const AuthProvider = ({ children }) => {
       setError(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
+      // CRITICAL: Clear pending Google auth BEFORE setLoading(false)
+      // setLoading(false) remounts the navigator — if hasPendingGoogleAuth is still true,
+      // it shows Auth stack (ExperienceTypeScreen) instead of Main stack (HomeScreen)
+      if (pendingGoogleAuth) {
+        clearPendingGoogleAuth();
+      }
       setLoading(false);
     }
   };
@@ -496,6 +540,19 @@ export const AuthProvider = ({ children }) => {
     try {
       
       setLoading(true);
+
+      // Unregister push token on native before logout
+      if (Platform.OS !== 'web') {
+        try {
+          const token = await AsyncStorage.getItem('refopen_push_token');
+          if (token) {
+            await refopenAPI.unregisterPushToken(token);
+            await clearPushToken();
+          }
+        } catch (e) {
+          console.warn('Failed to unregister push token:', e);
+        }
+      }
       
       // Revoke Google tokens if user signed in with Google
       if (user?.LoginMethod === 'Google' || user?.GoogleId) {
@@ -511,6 +568,9 @@ export const AuthProvider = ({ children }) => {
       // Call API logout
       
       const result = await refopenAPI.logout();
+      
+      // ⚡ Clear cached home data
+      clearHomeCache();
       
       if (result.success) {
         

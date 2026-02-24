@@ -55,7 +55,8 @@ frontend/dist/*
 
 frontend/.expo/*
 
-# Android signing credentials
+# Android keystore & credentials (sensitive - never commit)
+frontend/android-keystore.jks
+frontend/credentials.json
 *.keystore
 *.jks
-frontend/credentials.json

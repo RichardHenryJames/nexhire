@@ -8,18 +8,21 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
-  Alert,
-  Image,
   Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from "@react-navigation/native";
+import ScreenWrapper from '../../components/ScreenWrapper';
+import CachedImage from '../../components/CachedImage';
 import messagingApi from "../../services/messagingApi";
 import webSocketService from "../../services/websocketService";
+import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
+import { useCustomAlert } from '../../components/CustomAlert';
 
 // Regex patterns for detecting links in messages
 const URL_REGEX = /(https?:\/\/[^\s]+)/g;
@@ -53,7 +56,7 @@ const parseMessageContent = (content, isMine, colors) => {
     } else if (match[3]) {
       // Markdown image: ![alt](url) - render as inline image
       result.push(
-        <Image
+        <CachedImage
           key={`img-${match.index}`}
           source={{ uri: match[5] }}
           style={{ width: 16, height: 16, marginRight: 4 }}
@@ -214,8 +217,10 @@ export default function ChatScreen({
   const route = useRoute();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { refreshUnreadCount } = useUnreadMessages();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const { showAlert } = useCustomAlert();
   const flatListRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -322,6 +327,8 @@ export default function ChatScreen({
     const markAsReadOnOpen = async () => {
       try {
         await messagingApi.markConversationAsRead(conversationId);
+        // ⚡ Immediately update the header badge (don't wait for 10s poll)
+        refreshUnreadCount();
         if (isMounted) {
           setMessages((prev) =>
             prev.map((msg) => ({
@@ -339,7 +346,7 @@ export default function ChatScreen({
 
     const connectSignalR = async () => {
       try {
-        const token = localStorage.getItem("refopen_token");
+        const token = await AsyncStorage.getItem("refopen_token");
         if (!token) {
           connectionStatusRef.current.polling = true;
           if (isMounted) setUsePolling(true);
@@ -489,24 +496,31 @@ export default function ChatScreen({
             : msg
         )
       );
-      Alert.alert("Failed to send", "Message could not be sent.", [
-        {
-          text: "Delete",
-          onPress: () =>
-            setMessages((prev) =>
-              prev.filter((m) => m.MessageID !== optimisticMessageId)
-            ),
-        },
-        {
-          text: "Retry",
-          onPress: () => {
-            setMessages((prev) =>
-              prev.filter((m) => m.MessageID !== optimisticMessageId)
-            );
-            setMessageText(textToSend);
+      showAlert({
+        title: "Failed to send",
+        message: "Message could not be sent.",
+        icon: "alert-circle",
+        buttons: [
+          {
+            text: "Delete",
+            onPress: () =>
+              setMessages((prev) =>
+                prev.filter((m) => m.MessageID !== optimisticMessageId)
+              ),
+            icon: "trash",
           },
-        },
-      ]);
+          {
+            text: "Retry",
+            onPress: () => {
+              setMessages((prev) =>
+                prev.filter((m) => m.MessageID !== optimisticMessageId)
+              );
+              setMessageText(textToSend);
+            },
+            icon: "refresh",
+          },
+        ],
+      });
     } finally {
       setSending(false);
     }
@@ -520,22 +534,25 @@ export default function ChatScreen({
 
   const handleDeleteMessage = (messageId, senderId) => {
     const isMine = senderId === currentUserId;
-    Alert.alert(
-      "Delete Message",
-      "How would you like to delete this message?",
-      [
+    showAlert({
+      title: "Delete Message",
+      message: "How would you like to delete this message?",
+      icon: "trash",
+      buttons: [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete for me",
           onPress: () => deleteMessage(messageId, "Sender"),
+          icon: "person-remove",
         },
         isMine && {
           text: "Delete for everyone",
           style: "destructive",
           onPress: () => deleteMessage(messageId, "Both"),
+          icon: "trash",
         },
-      ].filter(Boolean)
-    );
+      ].filter(Boolean),
+    });
   };
 
   const deleteMessage = async (messageId, deleteFor) => {
@@ -1051,7 +1068,7 @@ export default function ChatScreen({
 
   // MOBILE LAYOUT
   return (
-    <View style={styles.container}>
+    <ScreenWrapper withKeyboard style={styles.container}>
       <View style={styles.innerContainer}>
       {!hideHeader && (
       <View style={styles.header}>
@@ -1076,7 +1093,7 @@ export default function ChatScreen({
           {/* Profile Picture */}
           <View style={styles.profilePicture}>
             {otherUserProfile?.profilePictureUrl ? (
-              <Image
+              <CachedImage
                 source={{ uri: otherUserProfile.profilePictureUrl }}
                 style={styles.profileImage}
               />
@@ -1094,6 +1111,7 @@ export default function ChatScreen({
       )}
 
       <FlatList
+        style={{ flex: 1 }}
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
@@ -1102,6 +1120,10 @@ export default function ChatScreen({
         contentContainerStyle={styles.messagesList}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        windowSize={15}
+        maxToRenderPerBatch={10}
+        initialNumToRender={15}
+        removeClippedSubviews={Platform.OS !== 'web'}
         ListFooterComponent={
           loadingMore ? (
             <View style={styles.loadingMore}>
@@ -1157,7 +1179,7 @@ export default function ChatScreen({
         </TouchableOpacity>
       </View>
       </View>
-    </View>
+    </ScreenWrapper>
   );
 }
 

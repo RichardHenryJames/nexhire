@@ -4,13 +4,13 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  Alert, 
   ActivityIndicator,
   Platform,
-  Image,
   Modal
 } from 'react-native';
+import CachedImage from '../CachedImage';
 import { showToast } from '../Toast';
+import { useCustomAlert } from '../CustomAlert';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -20,8 +20,14 @@ import refopenAPI from '../../services/api';
 class CrossPlatformFileHandler {
   static async readAsBase64(uri, options = {}) {
     if (Platform.OS === 'web') {
-      // Web implementation using fetch + FileReader
       try {
+        // If already a data: URL, extract base64 directly (avoids CSP fetch block)
+        if (uri.startsWith('data:')) {
+          const base64Data = uri.includes(',') ? uri.split(',')[1] : uri;
+          return base64Data;
+        }
+
+        // For blob: or http: URLs, use fetch + FileReader
         const response = await fetch(uri);
         const blob = await response.blob();
         
@@ -90,6 +96,7 @@ export default function UserProfileHeader({
   profileCompletenessFromBackend = null // Backend-driven profile completeness
 }) {
   const { colors } = useTheme();
+  const { showAlert } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
@@ -257,41 +264,39 @@ export default function UserProfileHeader({
 
   // CROSS-PLATFORM IMAGE PICKER
   const showImagePicker = () => {
-    const options = [
-      {
-        text: 'Take Photo',
-        onPress: () => {
-          setShowImagePickerModal(false);
-          pickImage('camera');
-        },
-        icon: 'camera-alt'
-      },
-      {
-        text: 'Choose from Library', 
-        onPress: () => {
-          setShowImagePickerModal(false);
-          pickImage('library');
-        },
-        icon: 'photo-library'
-      },
-      {
-        text: 'Cancel',
-        style: 'cancel',
-        onPress: () => setShowImagePickerModal(false),
-        icon: 'cancel'
-      }
-    ];
-
     if (Platform.OS === 'web') {
       // Web: Direct to library picker
       pickImage('library'); 
     } else {
-      // Mobile: Show action sheet
-      Alert.alert(
-        'Select Profile Picture',
-        'Choose how you want to update your profile picture',
-        options
-      );
+      showAlert({
+        title: 'Update Profile Picture',
+        message: 'Choose a source',
+        icon: 'camera',
+        buttons: [
+          {
+            text: 'Take Photo',
+            onPress: () => {
+              setShowImagePickerModal(false);
+              pickImage('camera');
+            },
+            icon: 'camera',
+          },
+          {
+            text: 'Choose from Library',
+            onPress: () => {
+              setShowImagePickerModal(false);
+              pickImage('library');
+            },
+            icon: 'images',
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => setShowImagePickerModal(false),
+            icon: 'close',
+          },
+        ],
+      });
     }
   };
 
@@ -369,21 +374,24 @@ export default function UserProfileHeader({
       const fileName = `profile-${user?.UserID}-${Date.now()}.${fileExtension}`;
       
       // FIXED: Proper MIME type detection
+      // On Android, expo-image-picker returns type: 'image' (not a full MIME type)
+      // On iOS it may return undefined. Handle all cases.
+      const mimeMap = {
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg', 
+        'png': 'image/png',
+        'webp': 'image/webp'
+      };
       let mimeType = imageAsset.type;
-      if (!mimeType) {
-        // Fallback: determine from file extension
-        const mimeMap = {
-          'jpg': 'image/jpeg',
-          'jpeg': 'image/jpeg', 
-          'png': 'image/png',
-          'webp': 'image/webp'
-        };
-        mimeType = mimeMap[fileExtension] || 'image/jpeg';
+
+      // Clean any data URL contamination first
+      if (mimeType && mimeType.includes('data:')) {
+        mimeType = mimeType.split(';')[0].replace('data:', '');
       }
 
-      // Clean any data URL contamination
-      if (mimeType.includes('data:')) {
-        mimeType = mimeType.split(';')[0].replace('data:', '');
+      // If type is missing, incomplete (e.g. 'image'), or not a valid MIME, derive from extension
+      if (!mimeType || !mimeType.includes('/') || mimeType === 'image') {
+        mimeType = mimeMap[fileExtension] || 'image/jpeg';
       }
 
       // Convert to base64
@@ -580,7 +588,7 @@ export default function UserProfileHeader({
               >
                 <View style={styles.profileImageInner}>
                   {profile?.profilePictureURL ? (
-                    <Image 
+                    <CachedImage 
                       source={{ uri: profile.profilePictureURL }} 
                       style={styles.profileImage}
                     />
@@ -614,7 +622,7 @@ export default function UserProfileHeader({
               disabled={!onProfileUpdate}
             >
               {profile?.profilePictureURL ? (
-                <Image 
+                <CachedImage 
                   source={{ uri: profile.profilePictureURL }} 
                   style={styles.profileImageStandaloneImg}
                 />
@@ -662,7 +670,7 @@ export default function UserProfileHeader({
                 style={{ marginLeft: 6 }}
               >
                 {currentWorkLogo ? (
-                  <Image
+                  <CachedImage
                     source={{ uri: currentWorkLogo }}
                     style={{
                       width: 22,

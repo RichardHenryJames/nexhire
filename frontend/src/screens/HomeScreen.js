@@ -9,12 +9,12 @@ import {
   ActivityIndicator,
   Platform,
   Dimensions,
-  Image,
   TextInput,
   FlatList,
   Animated,
   Modal,
 } from 'react-native';
+import CachedImage from '../components/CachedImage';
 import AddWorkExperienceModal from '../components/profile/AddWorkExperienceModal';
 import VerifiedReferrerOverlay from '../components/VerifiedReferrerOverlay';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,8 +29,90 @@ import { ResponsiveContainer, ResponsiveGrid } from '../components/common/Respon
 import { showToast } from '../components/Toast';
 import TabHeader from '../components/TabHeader';
 import EngagementHub from '../components/engagement/EngagementHub';
+import { getCached, hasCached, setCache, CACHE_KEYS } from '../utils/homeCache';
 
 const { width } = Dimensions.get('window');
+
+// ⚡ PERF: Extracted OUTSIDE component — React sees stable component types,
+// no unmount/remount of native view subtrees on parent re-render.
+
+const getStatusColor = (statusId, colors) => {
+  switch (statusId) {
+    case 1: return colors.warning;
+    case 2: return colors.primary;
+    case 3: return colors.info;
+    case 4: return colors.success;
+    case 5: return colors.success;
+    case 6: return colors.danger;
+    default: return colors.gray500;
+  }
+};
+
+const getStatusText = (statusId) => {
+  switch (statusId) {
+    case 1: return 'Pending';
+    case 2: return 'Under Review';
+    case 3: return 'Interview';
+    case 4: return 'Offer Extended';
+    case 5: return 'Hired';
+    case 6: return 'Rejected';
+    default: return 'Unknown';
+  }
+};
+
+const formatJobDate = (job) => {
+  const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
+  if (!dateString) return 'Recently posted';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return 'Recently posted';
+  const now = new Date();
+  const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+  if (hours < 1) return 'Just posted';
+  if (hours < 24) return `${hours} hours ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} days ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks} weeks ago`;
+  return date.toLocaleDateString();
+};
+
+const HomeJobCard = React.memo(({ job, styles, colors, onPress }) => (
+  <TouchableOpacity style={styles.jobCard} onPress={onPress}>
+    <View style={styles.jobHeader}>
+      <Text style={styles.jobTitle} numberOfLines={1}>{job.Title}</Text>
+      <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
+    </View>
+    <Text style={styles.jobLocation}>{job.Location}</Text>
+    <View style={styles.jobMeta}>
+      <View style={styles.jobTypeTag}>
+        <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
+      </View>
+      <Text style={styles.jobDate}>{formatJobDate(job)}</Text>
+    </View>
+  </TouchableOpacity>
+));
+
+const HomeApplicationCard = React.memo(({ application, styles, colors, onPress }) => (
+  <TouchableOpacity style={styles.applicationCard} onPress={onPress}>
+    <View style={styles.applicationHeader}>
+      <Text style={styles.applicationTitle} numberOfLines={1}>{application.JobTitle}</Text>
+      <View style={[styles.applicationStatus, { backgroundColor: getStatusColor(application.StatusID, colors) + '20' }]}>
+        <Text style={[styles.applicationStatusText, { color: getStatusColor(application.StatusID, colors) }]}>
+          {getStatusText(application.StatusID)}
+        </Text>
+      </View>
+    </View>
+    <Text style={styles.applicationCompany}>{application.CompanyName}</Text>
+    <Text style={styles.applicationDate}>Applied {new Date(application.SubmittedAt).toLocaleDateString()}</Text>
+  </TouchableOpacity>
+));
+
+const HomeSectionLoader = React.memo(({ styles, colors }) => (
+  <View style={styles.sectionLoader}>
+    <ActivityIndicator size="small" color={colors.primary} />
+    <Text style={styles.sectionLoaderText}>Loading...</Text>
+  </View>
+));
 
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker, isAdmin, isVerifiedUser, currentWork, refreshVerificationStatus } = useAuth();
@@ -38,7 +120,6 @@ const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
 const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
-const [showHeader, setShowHeader] = useState(true);
 const [refreshing, setRefreshing] = useState(false);
 
 // Organization search state
@@ -47,17 +128,19 @@ const [searchResults, setSearchResults] = useState([]);
 const [searchLoading, setSearchLoading] = useState(false);
 const [showSearchResults, setShowSearchResults] = useState(false);
   
-// ⚡ NEW: Separate loading states for lazy loading
-const [loadingStats, setLoadingStats] = useState(true);
-const [loadingJobs, setLoadingJobs] = useState(true);
-const [loadingF500Jobs, setLoadingF500Jobs] = useState(true);
-const [loadingApplications, setLoadingApplications] = useState(true);
+// ⚡ PERF: Loading states initialized from cache — if cache exists, NO loading spinners!
+const [loadingStats, setLoadingStats] = useState(!hasCached(CACHE_KEYS.DASHBOARD_STATS));
+const [loadingJobs, setLoadingJobs] = useState(!hasCached(CACHE_KEYS.RECENT_JOBS));
+const [loadingF500Jobs, setLoadingF500Jobs] = useState(!hasCached(CACHE_KEYS.F500_JOBS));
+const [loadingApplications, setLoadingApplications] = useState(!hasCached(CACHE_KEYS.RECENT_APPLICATIONS));
 
-// 🎯 NEW: Fortune 500 companies for Get Referrals card
-const [fortune500Companies, setFortune500Companies] = useState([]);
-const [f500LogoScrollRef] = useState(useRef(null));
-const [f500ScrollPosition, setF500ScrollPosition] = useState(0);
+// 🎯 Fortune 500 companies for Get Referrals card — initialized from cache
+const [fortune500Companies, setFortune500Companies] = useState(() => getCached(CACHE_KEYS.F500_COMPANIES) || []);
+const f500LogoScrollRef = useRef(null);
+const f500ScrollPositionRef = useRef(0);
 const scrollIntervalRef = useRef(null);
+
+
 
 // 🎯 NEW: Loading state for navigating to verify referrer
 const [navigatingToVerify, setNavigatingToVerify] = useState(false);
@@ -71,34 +154,36 @@ const [workExperiences, setWorkExperiences] = useState([]);
 const [showVerifiedOverlay, setShowVerifiedOverlay] = useState(false);
 const [verifiedCompanyName, setVerifiedCompanyName] = useState('');
 
-// 🎯 NEW: Referrer requests (referrals that came to me)
-const [myReferrerRequests, setMyReferrerRequests] = useState([]);
+// 🎯 Referrer requests (referrals that came to me) — initialized from cache
+const [myReferrerRequests, setMyReferrerRequests] = useState(() => getCached(CACHE_KEYS.REFERRER_REQUESTS) || []);
 
-// 🎯 NEW: Social share claims to show/hide Earn Credits button
-const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState([]);
+// 🎯 Social share claims — initialized from cache
+const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState(() => getCached(CACHE_KEYS.SOCIAL_CLAIMS) || []);
 
-// 🎯 NEW: Wallet balance for header badge
-const [walletBalance, setWalletBalance] = useState(null);
+// 🎯 Wallet balance for header badge — initialized from cache
+const [walletBalance, setWalletBalance] = useState(() => getCached(CACHE_KEYS.WALLET_BALANCE) ?? null);
   
-const [dashboardData, setDashboardData] = useState({
-  // Enhanced stats from backend
-  stats: {},
-  recentJobs: [],
-  f500Jobs: [],
-  recentApplications: [],
-  referralStats: {}
+const [dashboardData, setDashboardData] = useState(() => {
+  // ⚡ PERF: Initialize from cache — instant render, no loading spinners
+  const cachedStats = getCached(CACHE_KEYS.DASHBOARD_STATS);
+  const cachedJobs = getCached(CACHE_KEYS.RECENT_JOBS);
+  const cachedF500 = getCached(CACHE_KEYS.F500_JOBS);
+  const cachedApps = getCached(CACHE_KEYS.RECENT_APPLICATIONS);
+  return {
+    stats: cachedStats || {},
+    recentJobs: cachedJobs || [],
+    f500Jobs: cachedF500 || [],
+    recentApplications: cachedApps || [],
+    referralStats: {}
+  };
 });
   
 // ✅ NEW: Scroll ref for scroll-to-top functionality
   const scrollViewRef = React.useRef(null);
 
-  // Ensure the fixed header never overlays stack screens on web.
-  useFocusEffect(
-    useCallback(() => {
-      setShowHeader(true);
-      return () => setShowHeader(false);
-    }, [])
-  );
+  // ⚡ AbortController: cancel in-flight API calls when user leaves this tab
+  // so the destination screen's API calls get network/JS-thread priority.
+  const abortRef = useRef(null);
 
   // Organization search function with debounce
   const searchOrganizations = useCallback(async (query) => {
@@ -139,190 +224,176 @@ const [dashboardData, setDashboardData] = useState({
     return () => clearTimeout(timer);
   }, [searchQuery, searchOrganizations]);
 
-  const fetchDashboardData = useCallback(async () => {
-    // ⚡ Start all fetches in parallel for better performance
+  const fetchDashboardData = useCallback(async (isRefresh = false) => {
+    // ⚡ Abort any previous in-flight fetch
+    if (abortRef.current) abortRef.current.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const sig = { signal: ac.signal };
+
+    // Only show loading spinners if NO cache exists (first ever load)
+    // On refresh, we already have data visible — no spinners needed
+    if (isRefresh || hasCached(CACHE_KEYS.DASHBOARD_STATS)) {
+      // Don't show spinners — cached data is already visible
+    } else {
+      setLoadingStats(true);
+      setLoadingJobs(true);
+      setLoadingF500Jobs(true);
+      setLoadingApplications(true);
+    }
+
+    // ⚡ All 8 fetches in parallel — each saves to cache on success
     
     // 1. Dashboard Stats
-    setLoadingStats(true);
-    const statsPromise = refopenAPI.apiCall('/users/dashboard-stats')
+    const statsPromise = refopenAPI.apiCall('/users/dashboard-stats', sig)
       .then(res => {
-        const stats = res.success ? res.data : {};
-        setDashboardData(prev => ({ ...prev, stats }));
+        if (res.success) {
+          const stats = res.data || {};
+          setCache(CACHE_KEYS.DASHBOARD_STATS, stats);
+          setDashboardData(prev => ({ ...prev, stats }));
+        }
       })
-      .catch(err => {
-        console.warn('Dashboard stats failed:', err);
-        // Don't alert for stats failure as it's non-critical
-      })
+      .catch(err => { if (err?.name !== 'AbortError') console.warn('Dashboard stats failed:', err); })
       .finally(() => setLoadingStats(false));
 
-    // 2. Recommended Jobs (Job Seekers only)
+    // 2. Recommended Jobs
     let jobsPromise = Promise.resolve();
     if (isJobSeeker) {
-      setLoadingJobs(true);
       jobsPromise = (async () => {
         try {
-          const recentJobsRes = await refopenAPI.getJobs(1, 5);
-          
-          let recentJobs = [];
-          if (recentJobsRes.success) {
-            recentJobs = (recentJobsRes.data || []).slice(0, 5);
+          const res = await refopenAPI.getJobs(1, 5, {}, sig);
+          if (res.success) {
+            const recentJobs = (res.data || []).slice(0, 5);
+            setCache(CACHE_KEYS.RECENT_JOBS, recentJobs);
+            setDashboardData(prev => ({ ...prev, recentJobs }));
           }
-          setDashboardData(prev => ({ ...prev, recentJobs }));
-        } catch (err) {
-          console.warn('Recommended jobs fetch failed:', err);
-        } finally {
-          setLoadingJobs(false);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Jobs failed:', err); }
+        finally { setLoadingJobs(false); }
       })();
-    } else {
-      setLoadingJobs(false);
-    }
+    } else { setLoadingJobs(false); }
 
-    // 3. Jobs from Top MNCs (Fortune 500)
+    // 3. F500 Jobs
     let f500JobsPromise = Promise.resolve();
     if (isJobSeeker) {
-      setLoadingF500Jobs(true);
       f500JobsPromise = (async () => {
         try {
-          const f500JobsRes = await refopenAPI.getJobs(1, 5, { isFortune500: true });
-          let f500Jobs = [];
-          if (f500JobsRes.success) {
-            f500Jobs = (f500JobsRes.data || []).slice(0, 5);
+          const res = await refopenAPI.getJobs(1, 5, { isFortune500: true }, sig);
+          if (res.success) {
+            const f500Jobs = (res.data || []).slice(0, 5);
+            setCache(CACHE_KEYS.F500_JOBS, f500Jobs);
+            setDashboardData(prev => ({ ...prev, f500Jobs }));
           }
-          setDashboardData(prev => ({ ...prev, f500Jobs }));
-        } catch (err) {
-          console.warn('F500 jobs fetch failed:', err);
-        } finally {
-          setLoadingF500Jobs(false);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('F500 jobs failed:', err); }
+        finally { setLoadingF500Jobs(false); }
       })();
-    } else {
-      setLoadingF500Jobs(false);
-    }
+    } else { setLoadingF500Jobs(false); }
 
-    // 3. Applications (Job Seeker only)
+    // 4. Applications
     let applicationsPromise = Promise.resolve();
     if (isJobSeeker) {
-      setLoadingApplications(true);
-      applicationsPromise = refopenAPI.getMyApplications(1, 3)
-        .then(res => {
-          const recentApplications = res.success ? res.data.slice(0, 3) : [];
-          setDashboardData(prev => ({ ...prev, recentApplications }));
-        })
-        .catch(err => console.warn('Applications fetch failed:', err))
-        .finally(() => setLoadingApplications(false));
+      applicationsPromise = (async () => {
+        try {
+          const res = await refopenAPI.getMyApplications(1, 3, sig);
+          if (res.success) {
+            const recentApplications = (res.data || []).slice(0, 3);
+            setCache(CACHE_KEYS.RECENT_APPLICATIONS, recentApplications);
+            setDashboardData(prev => ({ ...prev, recentApplications }));
+          }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Applications failed:', err); }
+        finally { setLoadingApplications(false); }
+      })();
     }
 
-    // 🎯 NEW: Fetch Fortune 500 companies for Get Referrals card (job seekers only)
+    // 5. Fortune 500 Companies (logos)
     let f500CompaniesPromise = Promise.resolve();
     if (isJobSeeker) {
       f500CompaniesPromise = (async () => {
         try {
-          // Fetch only Fortune 500 companies with the backend filter
-          const result = await refopenAPI.getOrganizations('', 500, 0, { isFortune500: true });
+          const result = await refopenAPI.getOrganizations('', 500, 0, { isFortune500: true, ...sig });
           if (result.success && result.data) {
-            // Filter only companies with logos (already F500 from backend)
             const f500WithLogos = result.data
               .filter(org => org.logoURL)
-              .map(org => ({
-                ...org,
-                // Generate random referrer count (0-99, or 99+)
-                referrerCount: Math.floor(Math.random() * 120)
-              }))
-              .sort(() => Math.random() - 0.5); // Shuffle
+              .map(org => ({ ...org, referrerCount: Math.floor(Math.random() * 120) }))
+              .sort(() => Math.random() - 0.5);
+            setCache(CACHE_KEYS.F500_COMPANIES, f500WithLogos);
             setFortune500Companies(f500WithLogos);
           }
-        } catch (err) {
-          console.warn('Fortune 500 companies fetch failed:', err);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('F500 companies failed:', err); }
       })();
     }
 
-    // 🎯 NEW: Fetch social share claims to check if user completed all
+    // 6. Social share claims
     const socialSharePromise = (async () => {
       try {
-        const result = await refopenAPI.apiCall('/social-share/my-claims');
+        const result = await refopenAPI.apiCall('/social-share/my-claims', sig);
         if (result.success) {
-          // Handle both array and object response formats
           const claims = Array.isArray(result.data) ? result.data : (result.data?.claims || []);
-          const approved = claims
-            .filter(c => c.Status === 'Approved')
-            .map(c => c.Platform);
+          const approved = claims.filter(c => c.Status === 'Approved').map(c => c.Platform);
+          setCache(CACHE_KEYS.SOCIAL_CLAIMS, approved);
           setApprovedSocialPlatforms(approved);
         }
-      } catch (err) {
-        console.warn('Social share claims fetch failed:', err);
-      }
+      } catch (err) { if (err?.name !== 'AbortError') console.warn('Social share failed:', err); }
     })();
 
-    // 🎯 NEW: Fetch wallet balance for header badge
+    // 7. Wallet balance
     const walletPromise = (async () => {
       try {
-        const result = await refopenAPI.apiCall('/wallet');
+        const result = await refopenAPI.apiCall('/wallet', sig);
         if (result.success && result.data) {
-          setWalletBalance(result.data.Balance ?? result.data.balance ?? 0);
+          const balance = result.data.Balance ?? result.data.balance ?? 0;
+          setCache(CACHE_KEYS.WALLET_BALANCE, balance);
+          setWalletBalance(balance);
         }
-      } catch (err) {
-        console.warn('Wallet balance fetch failed:', err);
-      }
+      } catch (err) { if (err?.name !== 'AbortError') console.warn('Wallet failed:', err); }
     })();
 
-    // 🎯 NEW: Fetch my referrer requests (referrals that came to me)
+    // 8. Referrer requests
     let referrerRequestsPromise = Promise.resolve();
     if (isJobSeeker) {
       referrerRequestsPromise = (async () => {
         try {
-          const result = await refopenAPI.getMyReferrerRequests(1, 10);
+          const result = await refopenAPI.getMyReferrerRequests(1, 10, sig);
           if (result.success && result.data) {
-            // Data comes as { requests: [...], total, page, pageSize, totalPages }
             const requests = result.data.requests || result.data || [];
-            // Only show pending requests (Claimed status removed)
             const activeRequests = Array.isArray(requests) 
               ? requests.filter(r => r.StatusID === 1 || r.Status === 'Pending')
               : [];
+            setCache(CACHE_KEYS.REFERRER_REQUESTS, activeRequests);
             setMyReferrerRequests(activeRequests);
           }
-        } catch (err) {
-          console.warn('Referrer requests fetch failed:', err);
-        }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Referrer requests failed:', err); }
       })();
     }
 
-    // We don't await here to allow UI to update progressively
-    // But we catch any unhandled promise rejections just in case
     Promise.all([
-      statsPromise, 
-      jobsPromise, 
-      f500JobsPromise, 
-      applicationsPromise,
-      f500CompaniesPromise,
-      referrerRequestsPromise,
-      socialSharePromise,
-      walletPromise
+      statsPromise, jobsPromise, f500JobsPromise, applicationsPromise,
+      f500CompaniesPromise, referrerRequestsPromise, socialSharePromise, walletPromise
     ]).catch(err => {
+      if (err?.name === 'AbortError') return;
       console.error('Error in dashboard data fetch:', err);
     });
 
   }, [isJobSeeker, isEmployer, user]);
 
+  // Initial data fetch on mount
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      fetchDashboardData();
-    });
-
-    return unsubscribe;
-  }, [navigation, fetchDashboardData]);
-
-  // ✅ NEW: Scroll to top when navigating to HomeScreen
+  // ⚡ No focus listener for data — mount + pull-to-refresh only.
+  // But we DO abort in-flight fetches on blur so the destination screen gets priority.
   useFocusEffect(
     useCallback(() => {
-      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      // On focus: nothing (data already loaded on mount)
+      return () => {
+        // On blur: abort any in-flight Home API calls
+        if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+      };
     }, [])
   );
+
+  // ⚡ PERF: scroll-to-top on focus REMOVED — was triggering layout recalculation
+  // of entire ScrollView on every tab switch. Users expect scroll position preserved.
 
   // 🎯 Handler for "Become a Verified Referrer" button
   const handleBecomeVerifiedReferrer = useCallback(async () => {
@@ -363,32 +434,20 @@ const [dashboardData, setDashboardData] = useState({
     }
   }, []);
 
-  // 🎯 NEW: Auto-scroll Fortune 500 logos horizontally
+  // 🎯 Auto-scroll Fortune 500 logos — uses ref.scrollTo instead of setState
+  // to avoid re-rendering the entire 1966-line component every 2 seconds.
   useEffect(() => {
     if (fortune500Companies.length > 3 && isJobSeeker) {
-      // Clear any existing interval
-      if (scrollIntervalRef.current) {
-        clearInterval(scrollIntervalRef.current);
-      }
-      
-      const logoItemWidth = 70; // 56px logo + 14px margin
+      if (scrollIntervalRef.current) clearInterval(scrollIntervalRef.current);
+      const logoItemWidth = 70;
       const maxScroll = (fortune500Companies.length - 3) * logoItemWidth;
-      
+      f500ScrollPositionRef.current = 0;
       scrollIntervalRef.current = setInterval(() => {
-        setF500ScrollPosition(prev => {
-          const next = prev + logoItemWidth;
-          if (next >= maxScroll) {
-            return 0; // Reset to start
-          }
-          return next;
-        });
-      }, 2000); // Scroll every 2 seconds
-      
-      return () => {
-        if (scrollIntervalRef.current) {
-          clearInterval(scrollIntervalRef.current);
-        }
-      };
+        const next = f500ScrollPositionRef.current + logoItemWidth;
+        f500ScrollPositionRef.current = next >= maxScroll ? 0 : next;
+        f500LogoScrollRef.current?.scrollTo({ x: f500ScrollPositionRef.current, animated: true });
+      }, 2000);
+      return () => clearInterval(scrollIntervalRef.current);
     }
   }, [fortune500Companies.length, isJobSeeker]);
 
@@ -400,211 +459,12 @@ const [dashboardData, setDashboardData] = useState({
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setDashboardData({
-      stats: {},
-      recentJobs: [],
-      recentApplications: [],
-      referralStats: {}
-    });
-    await fetchDashboardData();
+    await fetchDashboardData(true);
     setRefreshing(false);
   };
 
-  // Enhanced StatCard with trends and better styling
-  const StatCard = ({ title, value, icon, color = colors.primary, subtitle, trend, onPress, size = 'normal' }) => {
-    const isLarge = size === 'large';
-    
-    return (
-      <TouchableOpacity 
-        style={[
-          styles.statCard, 
-          { borderLeftColor: color },
-          isLarge && styles.statCardLarge
-        ]}
-        onPress={onPress}
-        disabled={!onPress}
-      >
-        <View style={styles.statContent}>
-          <View style={styles.statHeader}>
-            <Ionicons name={icon} size={isLarge ? 32 : 24} color={color} />
-            <View style={styles.statValueContainer}>
-              <Text style={[styles.statValue, isLarge && styles.statValueLarge]}>{value}</Text>
-              {trend && (
-                <View style={[styles.trendContainer, { backgroundColor: trend.positive ? colors.success + '20' : colors.danger + '20' }]}>
-                  <Ionicons 
-                    name={trend.positive ? 'trending-up' : 'trending-down'} 
-                    size={12} 
-                    color={trend.positive ? colors.success : colors.danger} 
-                  />
-                  <Text style={[styles.trendText, { color: trend.positive ? colors.success : colors.danger }]}>
-                    {trend.value}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-          <Text style={[styles.statTitle, isLarge && styles.statTitleLarge]}>{title}</Text>
-          {subtitle && (
-            <Text style={styles.statSubtitle} numberOfLines={2}>{subtitle}</Text>
-          )}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  // Enhanced QuickAction with better styling
-  const QuickAction = ({ title, description, icon, onPress, color = colors.primary, badge, urgent = false }) => (
-    <TouchableOpacity 
-      style={[styles.actionCard, urgent && styles.actionCardUrgent]} 
-      onPress={onPress}
-    >
-      <View style={[styles.actionIcon, { backgroundColor: color + '20' }]}
-      >
-        <Ionicons name={icon} size={24} color={color} />
-        {badge && (
-          <View style={[styles.actionBadge, urgent && styles.actionBadgeUrgent]}>
-            <Text style={styles.actionBadgeText}>{badge}</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.actionContent}>
-        <Text style={[styles.actionTitle, urgent && styles.actionTitleUrgent]}>{title}</Text>
-        <Text style={styles.actionDescription}>{description}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
-    </TouchableOpacity>
-  );
-
-  // Attention items component
-  const AttentionItems = () => {
-    const { stats } = dashboardData;
-    const needsAttention = stats.summary?.needsAttention || [];
-    
-    if (needsAttention.length === 0) return null;
-
-    return (
-      <View style={styles.attentionContainer}>
-        <Text style={styles.sectionTitle}>
-          <Ionicons name="alert-circle" size={16} color={colors.warning} /> Needs Attention
-        </Text>
-        {needsAttention.slice(0, 3).map((item, index) => (
-          <View key={index} style={styles.attentionItem}>
-            <Ionicons name="chevron-forward" size={16} color={colors.warning} />
-            <Text style={styles.attentionText}>{item}</Text>
-          </View>
-        ))}
-      </View>
-    );
-  };
-
-  const JobCard = ({ job }) => {
-    const formatDate = (job) => {
-      // Use same date field priority as the actual API response and JobCard component
-      const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
-      
-      if (!dateString) return 'Recently posted';
-      
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return 'Recently posted';
-      
-      const now = new Date();
-      const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-      
-      if (hours < 1) return 'Just posted';
-      if (hours < 24) return `${hours} hours ago`;
-      
-      const days = Math.floor(hours / 24);
-      if (days < 7) return `${days} days ago`;
-      
-      const weeks = Math.floor(days / 7);
-      if (weeks < 4) return `${weeks} weeks ago`;
-      
-      return date.toLocaleDateString();
-    };
-
-    return (
-      <TouchableOpacity
-        style={styles.jobCard}
-        onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
-      >
-        <View style={styles.jobHeader}>
-          <Text style={styles.jobTitle} numberOfLines={1}>
-            {job.Title}
-          </Text>
-          <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
-        </View>
-        <Text style={styles.jobLocation}>{job.Location}</Text>
-        <View style={styles.jobMeta}>
-          <View style={styles.jobTypeTag}>
-            <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
-          </View>
-          <Text style={styles.jobDate}>
-            {formatDate(job)}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const ApplicationCard = ({ application }) => (
-    <TouchableOpacity
-      style={styles.applicationCard}
-      onPress={() => navigation.navigate('Applications')}
-    >
-      <View style={styles.applicationHeader}>
-        <Text style={styles.applicationTitle} numberOfLines={1}>
-          {application.JobTitle}
-        </Text>
-        <View style={[
-          styles.applicationStatus,
-          { backgroundColor: getStatusColor(application.StatusID) + '20' }
-        ]}>
-          <Text style={[
-            styles.applicationStatusText,
-            { color: getStatusColor(application.StatusID) }
-          ]}>
-            {getStatusText(application.StatusID)}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.applicationCompany}>{application.CompanyName}</Text>
-      <Text style={styles.applicationDate}>
-        Applied {new Date(application.SubmittedAt).toLocaleDateString()}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const getStatusColor = (statusId) => {
-    switch (statusId) {
-      case 1: return colors.warning;
-      case 2: return colors.primary;
-      case 3: return colors.info;
-      case 4: return colors.success;
-      case 5: return colors.success;
-      case 6: return colors.danger;
-      default: return colors.gray500;
-    }
-  };
-
-  const getStatusText = (statusId) => {
-    switch (statusId) {
-      case 1: return 'Pending';
-      case 2: return 'Under Review';
-      case 3: return 'Interview';
-      case 4: return 'Offer Extended';
-      case 5: return 'Hired';
-      case 6: return 'Rejected';
-      default: return 'Unknown';
-    }
-  };
-
-  // ⚡ NEW: Section loading component
-  const SectionLoader = () => (
-    <View style={styles.sectionLoader}>
-      <ActivityIndicator size="small" color={colors.primary} />
-      <Text style={styles.sectionLoaderText}>Loading...</Text>
-    </View>
-  );
+  // ⚡ PERF: JobCard, ApplicationCard, SectionLoader extracted OUTSIDE
+  // component body (above) — prevents native view unmount/remount on re-render.
 
   // ⚡ Remove the global loading screen - show content immediately
 
@@ -613,11 +473,14 @@ const [dashboardData, setDashboardData] = useState({
   return (
     <>
       {/* Compact Header with Search - OUTSIDE ScrollView for proper z-index */}
-      {showHeader && (
       <TabHeader
         navigation={navigation}
         showWallet={true}
         walletBalance={walletBalance}
+        onProfileSliderOpen={() => {
+          // Abort Home's heavy API calls so ProfileSlider gets network priority
+          if (abortRef.current) { abortRef.current.abort(); abortRef.current = null; }
+        }}
         centerContent={
           <View style={styles.searchContainerMain}>
             <View style={styles.searchInputWrapper}>
@@ -659,7 +522,7 @@ const [dashboardData, setDashboardData] = useState({
                       }}
                     >
                       {item.logoURL ? (
-                        <Image 
+                        <CachedImage 
                           source={{ uri: item.logoURL }} 
                           style={styles.orgLogo}
                         />
@@ -684,7 +547,6 @@ const [dashboardData, setDashboardData] = useState({
           </View>
         }
       />
-      )}
 
       <ScrollView
         ref={scrollViewRef}
@@ -841,9 +703,9 @@ const [dashboardData, setDashboardData] = useState({
                   {fortune500Companies.length > 0 && (
                     <View style={styles.f500LogoContainer}>
                       <ScrollView
+                        ref={f500LogoScrollRef}
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        contentOffset={{ x: f500ScrollPosition, y: 0 }}
                         scrollEnabled={true}
                         style={styles.f500LogoScroll}
                       >
@@ -868,7 +730,7 @@ const [dashboardData, setDashboardData] = useState({
                                 {formatReferrerCount(company.referrerCount)}
                               </Text>
                             </View>
-                            <Image 
+                            <CachedImage 
                               source={{ uri: company.logoURL }} 
                               style={styles.f500Logo}
                               resizeMode="contain"
@@ -916,7 +778,7 @@ const [dashboardData, setDashboardData] = useState({
           loadingF500Jobs ? (
             <View style={styles.recentContainer}>
               <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
-              <SectionLoader />
+              <HomeSectionLoader styles={styles} colors={colors} />
             </View>
           ) : dashboardData.f500Jobs?.length > 0 ? (
             <View style={styles.recentContainer}>
@@ -932,7 +794,7 @@ const [dashboardData, setDashboardData] = useState({
                 contentContainerStyle={styles.horizontalScroll}
               >
                 {dashboardData.f500Jobs.map((job, index) => (
-                  <JobCard key={job.JobID || index} job={job} currentUserId={user?.UserID} />
+                  <HomeJobCard key={job.JobID || index} job={job} styles={styles} colors={colors} onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })} />
                 ))}
               </ScrollView>
             </View>
@@ -943,7 +805,7 @@ const [dashboardData, setDashboardData] = useState({
         {isJobSeeker && (loadingJobs ? (
           <View style={styles.recentContainer}>
             <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-            <SectionLoader />
+            <HomeSectionLoader styles={styles} colors={colors} />
           </View>
         ) : recentJobs.length > 0 ? (
           <View style={styles.recentContainer}>
@@ -959,7 +821,7 @@ const [dashboardData, setDashboardData] = useState({
               contentContainerStyle={styles.horizontalScroll}
             >
               {recentJobs.map((job, index) => (
-                <JobCard key={job.JobID || index} job={job} currentUserId={user?.UserID} />
+                <HomeJobCard key={job.JobID || index} job={job} styles={styles} colors={colors} onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })} />
               ))}
             </ScrollView>
           </View>
@@ -970,7 +832,7 @@ const [dashboardData, setDashboardData] = useState({
           loadingApplications ? (
             <View style={styles.recentContainer}>
               <Text style={styles.sectionTitle}>Recent Applications</Text>
-              <SectionLoader />
+              <HomeSectionLoader styles={styles} colors={colors} />
             </View>
           ) : recentApplications.length > 0 ? (
             <View style={styles.recentContainer}>
@@ -981,7 +843,7 @@ const [dashboardData, setDashboardData] = useState({
                 </TouchableOpacity>
               </View>
               {recentApplications.map((application, index) => (
-                <ApplicationCard key={application.ApplicationID || index} application={application} />
+                <HomeApplicationCard key={application.ApplicationID || index} application={application} styles={styles} colors={colors} onPress={() => navigation.navigate('Applications')} />
               ))}
             </View>
           ) : null

@@ -12,7 +12,8 @@ param(
     [string]$FunctionAppName = "",  # Auto-detected based on environment
     [string]$SubscriptionId = "44027c71-593a-4d51-977b-ab0604cb76eb",
     [switch]$SkipBuild,
-    [switch]$SkipTest
+    [switch]$SkipTest,
+    [switch]$Force  # Bypass master branch check (emergency only)
 )
 
 # Start time logging
@@ -39,6 +40,29 @@ if ($normalizedEnv -notin @("dev", "staging", "prod")) {
     Write-Host "❌ Invalid environment: $Environment" -ForegroundColor Red
     Write-Host "✅ Valid environments: dev, staging, prod" -ForegroundColor Yellow
     exit 1
+}
+
+# Safety: Production deployments must be from master branch
+if ($normalizedEnv -eq "prod") {
+    $currentBranch = (git rev-parse --abbrev-ref HEAD 2>$null).Trim()
+    if ($currentBranch -ne "master") {
+        if ($Force) {
+            Write-Host ""
+            Write-Host "⚠️  WARNING: Force-deploying to production from '$currentBranch' branch!" -ForegroundColor Yellow
+            Write-Host "   This bypasses the master branch safety check." -ForegroundColor Yellow
+            Write-Host ""
+        } else {
+            Write-Host ""
+            Write-Host "❌ BLOCKED: Production deployment must be from 'master' branch!" -ForegroundColor Red
+            Write-Host "   Current branch: $currentBranch" -ForegroundColor Yellow
+            Write-Host "   Switch to master first: git checkout master" -ForegroundColor Yellow
+            Write-Host "   Or use -Force to bypass (emergency only)" -ForegroundColor Yellow
+            Write-Host ""
+            exit 1
+        }
+    } else {
+        Write-Host "✅ Branch check: master" -ForegroundColor Green
+    }
 }
 
 # Step 1: Switch to target environment

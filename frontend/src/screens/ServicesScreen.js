@@ -18,6 +18,7 @@ import {
   Platform,
   Animated,
   Dimensions,
+  InteractionManager,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -224,22 +225,23 @@ export default function ServicesScreen({ navigation }) {
   const { isDesktop } = useResponsive();
   const [interestedServices, setInterestedServices] = useState(new Set());
 
-  // Fetch user's service interests on focus (so badge updates after returning from lock screen)
-  useFocusEffect(
-    useCallback(() => {
-      const fetchInterests = async () => {
-        try {
-          const result = await refopenAPI.apiCall('/services/interests');
-          if (result?.interests) {
-            setInterestedServices(new Set(result.interests));
-          }
-        } catch (err) {
-          // Silently fail — badges just won't show
-        }
-      };
-      fetchInterests();
-    }, [])
-  );
+  const fetchInterests = useCallback(async () => {
+    try {
+      const result = await refopenAPI.apiCall('/services/interests');
+      if (result?.interests) {
+        setInterestedServices(new Set(result.interests));
+      }
+    } catch (err) {
+      // Silently fail — badges just won't show
+    }
+  }, []);
+
+  // Load interests on mount
+  useEffect(() => {
+    fetchInterests();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ⚡ No focus listener — data loads on mount, pull-to-refresh for updates. Zero work on tab switch = instant.
 
   const handleServicePress = (service) => {
     if (service.screen) {

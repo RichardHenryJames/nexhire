@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, ScrollView, StyleSheet, RefreshControl, ActivityIndicator,
-  Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -53,8 +53,8 @@ export default function AdminSocialShareScreen() {
     try {
       const res = await refopenAPI.apiCall(`/management/social-share/claims/${claimId}/approve`, { method: 'POST' });
       if (res.success) { showToast('Claim approved!', 'success'); fetchData(); }
-      else Alert.alert('Error', res.error || 'Failed to approve');
-    } catch (err) { Alert.alert('Error', 'Failed to approve claim'); }
+      else showToast(res.error || 'Failed to approve', 'error');
+    } catch (err) { showToast('Failed to approve claim', 'error'); }
   };
 
   const handleReject = (claim) => {
@@ -64,14 +64,14 @@ export default function AdminSocialShareScreen() {
   };
 
   const confirmReject = async () => {
-    if (!rejectionReason.trim()) { Alert.alert('Error', 'Please enter a rejection reason'); return; }
+    if (!rejectionReason.trim()) { showToast('Please enter a rejection reason', 'error'); return; }
     try {
       const res = await refopenAPI.apiCall(`/management/social-share/claims/${selectedClaim.ClaimID}/reject`, {
         method: 'POST', body: JSON.stringify({ reason: rejectionReason })
       });
       if (res.success) { setRejectModalVisible(false); showToast('Claim rejected', 'info'); fetchData(); }
-      else Alert.alert('Error', res.error || 'Failed to reject');
-    } catch (err) { Alert.alert('Error', 'Failed to reject claim'); }
+      else showToast(res.error || 'Failed to reject', 'error');
+    } catch (err) { showToast('Failed to reject claim', 'error'); }
   };
 
   const getPlatformColor = (p) => p === 'LinkedIn' ? '#0A66C2' : p === 'Instagram' ? '#E4405F' : p === 'Facebook' ? '#1877F2' : colors.text;

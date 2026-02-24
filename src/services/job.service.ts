@@ -747,6 +747,8 @@ export class JobService {
                 o.LinkedInProfile as OrganizationLinkedIn,
                 o.Website as OrganizationWebsite,
                 o.Description as OrganizationDescription,
+                o.IsFortune500 as OrganizationIsFortune500,
+                o.Industry as OrganizationIndustry,
                 c.Symbol as CurrencySymbol,
                 CASE
                     WHEN j.PostedByUserID IS NOT NULL AND j.PostedByType = 2 THEN 'Verified Referrer'

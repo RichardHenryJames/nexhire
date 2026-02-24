@@ -16,20 +16,21 @@
  *  - navigation: navigation object (optional, falls back to useNavigation)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  Image,
   StyleSheet,
+  PanResponder,
+  Platform,
 } from 'react-native';
+import CachedImage from './CachedImage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useFocusEffect } from '@react-navigation/native';
 import { useUnreadMessages } from '../contexts/UnreadMessagesContext';
 import ProfileSlider from './ProfileSlider';
 import { HEADER_CONTAINER_BASE, HEADER_TITLE } from './headerStyles';
@@ -44,6 +45,7 @@ export default function TabHeader({
   showWallet = false,
   walletBalance = null,
   onProfilePress,
+  onProfileSliderOpen,
   navigation: navProp = null,
 }) {
   const navigation = navProp || useNavigation();
@@ -52,21 +54,32 @@ export default function TabHeader({
   const [profileSliderVisible, setProfileSliderVisible] = useState(false);
   const { unreadCount: unreadMessageCount, refreshUnreadCount } = useUnreadMessages();
 
+  // ⚡ Left-edge swipe to open ProfileSlider (like LinkedIn)
+  const edgePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dx > 15 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.5,
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dx > 40 || gs.vx > 0.5) {
+          if (onProfileSliderOpen) onProfileSliderOpen();
+          setProfileSliderVisible(true);
+        }
+      },
+    })
+  ).current;
+
   const profilePhotoUrl = user?.ProfilePictureURL || user?.profilePictureURL || user?.picture || null;
 
-  // Refresh unread count on focus (uses shared context — deduped, throttled)
-  useFocusEffect(
-    useCallback(() => {
-      if (showMessages) {
-        refreshUnreadCount();
-      }
-    }, [showMessages, refreshUnreadCount])
-  );
+  // ⚡ Message badge updates via polling in UnreadMessagesContext (10s interval)
+  // No focus listener needed — polling handles it globally.
 
   const handleProfilePress = () => {
     if (onProfilePress) {
       onProfilePress();
     } else {
+      // Notify parent to abort heavy API calls (ProfileSlider needs network priority)
+      if (onProfileSliderOpen) onProfileSliderOpen();
       setProfileSliderVisible(true);
     }
   };
@@ -93,7 +106,7 @@ export default function TabHeader({
       {/* Left: Profile avatar */}
       <TouchableOpacity activeOpacity={0.8} onPress={handleProfilePress}>
         {profilePhotoUrl ? (
-          <Image
+          <CachedImage
             source={{ uri: profilePhotoUrl }}
             style={[styles.profilePic, { borderColor: profileBorderColor }]}
           />
@@ -165,6 +178,14 @@ export default function TabHeader({
         </View>
       )}
 
+      {/* ⚡ Left-edge swipe zone — invisible, captures right-swipe to open ProfileSlider */}
+      {Platform.OS !== 'web' && (
+        <View
+          {...edgePanResponder.panHandlers}
+          style={styles.edgeSwipeZone}
+        />
+      )}
+
       {/* Profile Slider — shared, no need to add in each screen */}
       <ProfileSlider
         visible={profileSliderVisible}
@@ -175,6 +196,14 @@ export default function TabHeader({
 }
 
 const styles = StyleSheet.create({
+  edgeSwipeZone: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 20, // 20px invisible strip on left edge
+    zIndex: 100,
+  },
   container: {
     ...HEADER_CONTAINER_BASE,
   },

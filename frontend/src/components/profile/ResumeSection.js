@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Modal,
   TextInput,
@@ -14,6 +13,7 @@ import {
   Animated,
 } from 'react-native';
 import { showToast } from '../Toast';
+import { useCustomAlert } from '../CustomAlert';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { typography } from '../../styles/theme';
@@ -193,14 +193,14 @@ const ResumeSection = ({
 
       // Check if we're at the 3 resume limit
       if (resumes.length >= 3) {
-        Alert.alert(
-          'Maximum Resumes Reached',
-          'You can only have 3 resumes. The oldest non-primary resume will be replaced.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Continue', onPress: () => performUpload() }
-          ]
-        );
+        showConfirm({
+          title: 'Maximum Resumes',
+          message: 'You can only have 3 resumes. The oldest non-primary resume will be replaced.',
+          icon: 'document-text',
+          confirmText: 'Continue',
+          confirmStyle: 'destructive',
+          onConfirm: () => performUpload(),
+        });
       } else {
         await performUpload();
       }
@@ -362,13 +362,7 @@ const ResumeSection = ({
       }
     } catch (error) {
       console.error('Error opening resume:', error);
-      // Fallback: Show URL in alert with copy option
-      Alert.alert('Resume URL', resumeURL, [
-        { text: 'Close', style: 'cancel' },
-        { text: 'Copy URL', onPress: () => {
-          showToast('Resume URL copied to clipboard', 'success');
-        }}
-      ]);
+      showToast('Could not open resume', 'error');
     }
   };
 

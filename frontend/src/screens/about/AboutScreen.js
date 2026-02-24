@@ -27,6 +27,7 @@ import {
   Image,
   Platform,
   Linking,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useResponsive from '../../hooks/useResponsive';
@@ -327,6 +328,7 @@ export default function AboutScreenNew() {
           justifyContent: 'space-between',
           paddingHorizontal: isLg ? 40 : 20,
           paddingVertical: 16,
+          paddingTop: Platform.OS !== 'web' ? (StatusBar.currentHeight || 44) + 10 : 16,
           borderBottomWidth: 1,
           borderBottomColor: C.border,
           backgroundColor: 'rgba(3,7,18,0.8)',
