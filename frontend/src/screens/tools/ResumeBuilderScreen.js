@@ -448,6 +448,60 @@ export default function ResumeBuilderScreen({ navigation }) {
   // RENDER
   // ══════════════════════════════════════════════════════════
 
+  // ── Template Picker Modal (shared across all views) ──────
+  const templatePickerModal = (
+    <Modal visible={showTemplatePicker} animationType="slide" transparent>
+      <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+        <View style={[styles.modalContent, { backgroundColor: colors.surface, maxWidth: isDesktop ? 700 : '95%' }]}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{pickerMode === 'switch' ? 'Switch Template' : 'Choose a Template'}</Text>
+            <TouchableOpacity onPress={() => setShowTemplatePicker(false)}>
+              <Ionicons name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          {pickerMode === 'switch' && (
+            <Text style={{ color: colors.textSecondary, fontSize: 13, paddingHorizontal: 20, marginBottom: 12 }}>Your content stays the same — only the design changes.</Text>
+          )}
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.templateGrid}>
+            {templates.map(template => (
+              <TouchableOpacity
+                key={template.TemplateID}
+                style={[
+                  styles.templateCard,
+                  { backgroundColor: colors.background, borderColor: colors.border },
+                  pickerMode === 'switch' && activeProject?.TemplateID === template.TemplateID && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+                onPress={() => {
+                  setShowTemplatePicker(false);
+                  if (pickerMode === 'switch') {
+                    handleSwitchTemplate(template.TemplateID);
+                  } else {
+                    handleCreateProject(template.TemplateID);
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <LinearGradient
+                  colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
+                  style={styles.templateThumb}
+                >
+                  <Ionicons name="document-text" size={32} color="rgba(255,255,255,0.7)" />
+                  {template.IsPremium && (
+                    <View style={styles.premiumBadge}>
+                      <Ionicons name="star" size={10} color="#FBBF24" />
+                    </View>
+                  )}
+                </LinearGradient>
+                <Text style={[styles.templateName, { color: colors.text }]} numberOfLines={1}>{template.Name}</Text>
+                <Text style={[styles.templateCat, { color: colors.textSecondary }]} numberOfLines={1}>{template.Category}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+
   // ── Loading ──────────────────────────────────────────────
   if (loading && currentView === VIEW.LIST && projects.length === 0) {
     return (
@@ -554,57 +608,7 @@ export default function ResumeBuilderScreen({ navigation }) {
           <View style={{ height: 100 }} />
         </ScrollView>
 
-        {/* ── Template Picker Modal ────────────────────── */}
-        <Modal visible={showTemplatePicker} animationType="slide" transparent>
-          <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-            <View style={[styles.modalContent, { backgroundColor: colors.surface, maxWidth: isDesktop ? 700 : '95%' }]}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>{pickerMode === 'switch' ? 'Switch Template' : 'Choose a Template'}</Text>
-                <TouchableOpacity onPress={() => setShowTemplatePicker(false)}>
-                  <Ionicons name="close" size={24} color={colors.text} />
-                </TouchableOpacity>
-              </View>
-              {pickerMode === 'switch' && (
-                <Text style={{ color: colors.textSecondary, fontSize: 13, paddingHorizontal: 20, marginBottom: 12 }}>Your content stays the same — only the design changes.</Text>
-              )}
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.templateGrid}>
-                {templates.map(template => (
-                  <TouchableOpacity
-                    key={template.TemplateID}
-                    style={[
-                      styles.templateCard,
-                      { backgroundColor: colors.background, borderColor: colors.border },
-                      pickerMode === 'switch' && activeProject?.TemplateID === template.TemplateID && { borderColor: colors.primary, borderWidth: 2 },
-                    ]}
-                    onPress={() => {
-                      setShowTemplatePicker(false);
-                      if (pickerMode === 'switch') {
-                        handleSwitchTemplate(template.TemplateID);
-                      } else {
-                        handleCreateProject(template.TemplateID);
-                      }
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <LinearGradient
-                      colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
-                      style={styles.templateThumb}
-                    >
-                      <Ionicons name="document-text" size={32} color="rgba(255,255,255,0.7)" />
-                      {template.IsPremium && (
-                        <View style={styles.premiumBadge}>
-                          <Ionicons name="star" size={10} color="#FBBF24" />
-                        </View>
-                      )}
-                    </LinearGradient>
-                    <Text style={[styles.templateName, { color: colors.text }]} numberOfLines={1}>{template.Name}</Text>
-                    <Text style={[styles.templateCat, { color: colors.textSecondary }]} numberOfLines={1}>{template.Category}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        {templatePickerModal}
       </View>
     );
   }
@@ -923,6 +927,7 @@ export default function ResumeBuilderScreen({ navigation }) {
             </View>
           </View>
         </Modal>
+        {templatePickerModal}
       </View>
     );
   }
