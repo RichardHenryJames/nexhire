@@ -88,55 +88,67 @@ const MiniBullet = ({ children, style }) => (
 const TEMPLATE_PREVIEWS = {
   classic: (c) => (
     <View style={[tpStyles.page, { borderColor: c.border }]}>
-      <View style={{ alignItems: 'center', borderBottomWidth: 1.5, borderBottomColor: '#1a1a1a', paddingBottom: 3, marginBottom: 4 }}>
-        <Text style={{ fontSize: 8, fontWeight: '700', color: '#1a1a1a', letterSpacing: 1, textTransform: 'uppercase' }}>John Smith</Text>
-        <Text style={{ fontSize: 3.5, color: '#666', marginTop: 1 }}>john@email.com | +1 234 567 890 | New York, NY</Text>
+      <View style={{ alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#1a1a1a', paddingBottom: 2, marginBottom: 3 }}>
+        <Text style={{ fontSize: 7, fontWeight: '700', color: '#1a1a1a', letterSpacing: 1, textTransform: 'uppercase' }}>John Smith</Text>
+        <Text style={{ fontSize: 3, color: '#666', marginTop: 1 }}>john@email.com | +1 234 567 890 | NYC</Text>
       </View>
-      <Text style={{ fontSize: 3.5, color: '#555', fontStyle: 'italic', textAlign: 'center', marginBottom: 4, lineHeight: 5 }}>Experienced software engineer with 5+ years...</Text>
-      <Text style={{ fontSize: 4.5, fontWeight: '700', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#1a1a1a', paddingBottom: 1, marginBottom: 3 }}>Work Experience</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
-        <Text style={{ fontSize: 4, fontWeight: '700', color: '#333' }}>Senior Engineer · Google</Text>
-        <Text style={{ fontSize: 3, color: '#999' }}>2020 – Present</Text>
+      <Text style={{ fontSize: 3, color: '#555', fontStyle: 'italic', textAlign: 'center', marginBottom: 3 }}>Software engineer with 5+ years building scalable apps</Text>
+      <Text style={{ fontSize: 4, fontWeight: '700', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#1a1a1a', paddingBottom: 1, marginBottom: 2 }}>Experience</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#333' }}>Senior Engineer · Google</Text>
+        <Text style={{ fontSize: 2.5, color: '#999' }}>2020 – Present</Text>
       </View>
-      <MiniBullet>Led development of microservices architecture</MiniBullet>
-      <MiniBullet>Reduced latency by 40% across 3 services</MiniBullet>
-      <Text style={{ fontSize: 4.5, fontWeight: '700', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#1a1a1a', paddingBottom: 1, marginBottom: 3, marginTop: 4 }}>Education</Text>
-      <Text style={{ fontSize: 3.5, color: '#555' }}>B.S. Computer Science — MIT, 2018</Text>
+      <MiniBullet>Led microservices architecture for 10M+ users</MiniBullet>
+      <MiniBullet>Reduced API latency by 40%</MiniBullet>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+        <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#333' }}>Software Engineer · Meta</Text>
+        <Text style={{ fontSize: 2.5, color: '#999' }}>2018 – 2020</Text>
+      </View>
+      <MiniBullet>Built React Native features for 2B+ users</MiniBullet>
+      <Text style={{ fontSize: 4, fontWeight: '700', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#1a1a1a', paddingBottom: 1, marginBottom: 2, marginTop: 3 }}>Education</Text>
+      <Text style={{ fontSize: 3, color: '#555' }}>B.S. Computer Science — MIT, 2018</Text>
     </View>
   ),
   modern: (c) => (
     <View style={[tpStyles.page, { borderColor: c.border }]}>
-      <View style={{ borderBottomWidth: 2, borderBottomColor: '#2563EB', paddingBottom: 3, marginBottom: 3 }}>
-        <Text style={{ fontSize: 8, fontWeight: '700', color: '#111827' }}>John Smith</Text>
-        <Text style={{ fontSize: 3.5, color: '#9CA3AF', marginTop: 1 }}>john@email.com | New York</Text>
+      <View style={{ borderBottomWidth: 1.5, borderBottomColor: '#2563EB', paddingBottom: 2, marginBottom: 2 }}>
+        <Text style={{ fontSize: 7, fontWeight: '700', color: '#111827' }}>John Smith</Text>
+        <Text style={{ fontSize: 3, color: '#9CA3AF', marginTop: 1 }}>john@email.com | NYC | LinkedIn</Text>
       </View>
-      <View style={{ backgroundColor: '#F0F7FF', padding: 3, borderLeftWidth: 2, borderLeftColor: '#2563EB', marginBottom: 3, borderRadius: 1 }}>
-        <Text style={{ fontSize: 3.5, color: '#374151', lineHeight: 5 }}>Full-stack engineer with 5+ years building...</Text>
+      <View style={{ backgroundColor: '#F0F7FF', padding: 2, borderLeftWidth: 1.5, borderLeftColor: '#2563EB', marginBottom: 3, borderRadius: 1 }}>
+        <Text style={{ fontSize: 3, color: '#374151' }}>Full-stack engineer specializing in React & Node.js</Text>
       </View>
-      <Text style={{ fontSize: 4, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB', paddingBottom: 1, marginBottom: 3 }}>Experience</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
-        <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#111' }}>Senior Engineer · Google</Text>
-        <Text style={{ fontSize: 3, color: '#9CA3AF' }}>2020 – Present</Text>
+      <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB', paddingBottom: 1, marginBottom: 2 }}>Experience</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 3, fontWeight: '600', color: '#111' }}>Senior Engineer · Google</Text>
+        <Text style={{ fontSize: 2.5, color: '#9CA3AF' }}>2020 – Present</Text>
       </View>
-      <MiniBullet style={{ color: '#374151' }}>Built scalable APIs serving 10M+ users</MiniBullet>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, marginTop: 4 }}>
-        {['React', 'Node', 'AWS'].map(s => <View key={s} style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 3, paddingVertical: 1, borderRadius: 4 }}><Text style={{ fontSize: 3, color: '#1D4ED8' }}>{s}</Text></View>)}
+      <MiniBullet style={{ color: '#374151' }}>Built scalable APIs serving 10M+ requests/day</MiniBullet>
+      <MiniBullet style={{ color: '#374151' }}>Mentored team of 5 junior engineers</MiniBullet>
+      <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB', paddingBottom: 1, marginBottom: 2, marginTop: 3 }}>Skills</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2 }}>
+        {['React', 'Node.js', 'TypeScript', 'AWS', 'Python'].map(s => <View key={s} style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 3, paddingVertical: 0.5, borderRadius: 4 }}><Text style={{ fontSize: 2.5, color: '#1D4ED8' }}>{s}</Text></View>)}
       </View>
     </View>
   ),
   minimal: (c) => (
     <View style={[tpStyles.page, { borderColor: c.border }]}>
-      <Text style={{ fontSize: 10, fontWeight: '700', color: '#000', marginBottom: 2 }}>John Smith</Text>
-      <Text style={{ fontSize: 3.5, color: '#999', marginBottom: 6 }}>john@email.com | New York</Text>
-      <Text style={{ fontSize: 3.5, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3 }}>Experience</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 1 }}>
-        <Text style={{ fontSize: 4, fontWeight: '600', color: '#000' }}>Senior Engineer · Google</Text>
-        <Text style={{ fontSize: 3, color: '#999' }}>2020 – Present</Text>
+      <Text style={{ fontSize: 9, fontWeight: '700', color: '#000', marginBottom: 1 }}>John Smith</Text>
+      <Text style={{ fontSize: 3, color: '#999', marginBottom: 4 }}>john@email.com | New York</Text>
+      <Text style={{ fontSize: 3, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 2 }}>Experience</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#000' }}>Senior Engineer · Google</Text>
+        <Text style={{ fontSize: 2.5, color: '#999' }}>2020 – Present</Text>
       </View>
       <MiniBullet>Led development of core platform</MiniBullet>
       <MiniBullet>Managed team of 8 engineers</MiniBullet>
-      <Text style={{ fontSize: 3.5, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 3, marginTop: 5 }}>Education</Text>
-      <Text style={{ fontSize: 3.5, color: '#333' }}>B.S. Computer Science — MIT</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+        <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#000' }}>Software Engineer · Meta</Text>
+        <Text style={{ fontSize: 2.5, color: '#999' }}>2018 – 2020</Text>
+      </View>
+      <MiniBullet>Built React features for mobile app</MiniBullet>
+      <Text style={{ fontSize: 3, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 2, marginTop: 3 }}>Education</Text>
+      <Text style={{ fontSize: 3, color: '#333' }}>B.S. Computer Science — Stanford, 2018</Text>
     </View>
   ),
   executive: (c) => (
@@ -193,7 +205,7 @@ const TEMPLATE_PREVIEWS = {
 };
 
 const tpStyles = StyleSheet.create({
-  page: { width: '100%', height: 150, borderRadius: 6, borderWidth: 1, padding: 8, backgroundColor: '#fff', overflow: 'hidden' },
+  page: { width: '100%', height: 160, borderRadius: 6, borderWidth: 1, padding: 6, backgroundColor: '#fff', overflow: 'hidden' },
 });
 const TEMPLATE_GRADIENTS = {
   classic: ['#1E3A5F', '#2C5F8A'],
