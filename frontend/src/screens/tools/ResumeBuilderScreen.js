@@ -330,10 +330,16 @@ export default function ResumeBuilderScreen({ navigation }) {
     if (!item?.bullets?.length) return;
     try {
       setAiLoading(`bullets-${sectionId}-${itemIndex}`);
+      // Clean bullets before sending — strip any JSON artifacts from auto-fill
+      let cleanBullets = item.bullets.map(b => b.replace(/^\[?"?|"?,?\]?$/g, '').trim()).filter(Boolean);
+      // If first bullet looks like a JSON array, try to parse it
+      if (cleanBullets.length === 1 && cleanBullets[0].startsWith('[')) {
+        try { cleanBullets = JSON.parse(cleanBullets[0]); } catch {}
+      }
       const result = await refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}/ai/bullets`, {
         method: 'POST',
         body: JSON.stringify({
-          bullets: item.bullets,
+          bullets: cleanBullets,
           jobTitle: item.title || activeProject.TargetJobTitle || '',
         }),
       });
@@ -758,8 +764,9 @@ export default function ResumeBuilderScreen({ navigation }) {
           }
           rightContent={
             (saving || loading) ? (
-              <View style={[styles.saveBtn, { backgroundColor: colors.gray300 }]}>
+              <View style={[styles.saveBtn, { backgroundColor: colors.gray300, minWidth: 72 }]}>
                 <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text style={styles.saveBtnText}>Saving</Text>
               </View>
             ) : (
               <TouchableOpacity
