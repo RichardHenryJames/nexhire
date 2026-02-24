@@ -89,6 +89,7 @@ export interface ResumeProject {
   Summary?: string;
   MatchScore?: number;
   LastExportedAt?: string;
+  TemplateDefaultConfig?: string;
   CreatedAt: string;
   UpdatedAt: string;
   sections?: ResumeSection[];
@@ -946,7 +947,7 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
       throw new Error(`Gemini API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data: any = await response.json();
     return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
   }
 }
