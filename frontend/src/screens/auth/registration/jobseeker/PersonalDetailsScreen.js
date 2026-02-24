@@ -1576,6 +1576,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: colors.primary + '30',
+    marginBottom: 8,
   },
   otpLabel: {
     fontSize: typography.sizes.sm,
@@ -1585,16 +1586,16 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   otpRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  otpInput: {
-    width: 140,
     backgroundColor: colors.background,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.primary + '40',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    overflow: 'hidden',
+  },
+  otpInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 22,
     fontWeight: typography.weights.bold,
     letterSpacing: 8,
@@ -1604,8 +1605,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   verifyOtpButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
   },
   resendText: {
     fontSize: typography.sizes.sm,
