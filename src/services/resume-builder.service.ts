@@ -186,7 +186,7 @@ export class ResumeBuilderService {
     const mainHtml = dummyExperience + dummyEducation + (isModern ? '' : dummySkills) + dummyCerts;
     const sidebarHtml = isModern ? dummySkills : '';
 
-    const contactHtml = ['john.smith@email.com', '+1 (555) 123-4567', 'San Francisco, CA'].join('<span class="sep">|</span>');
+    const contactHtml = ['john.doe@email.com', '+1 (555) 123-4567', 'San Francisco, CA'].join('<span class="sep">|</span>');
     const linksHtml = ['<a href="#">LinkedIn</a>', '<a href="#">GitHub</a>', '<a href="#">Portfolio</a>'].join('<span class="sep">·</span>');
     const summaryText = 'Results-driven Full-Stack Engineer with 5+ years of experience building scalable web applications. Specialized in React, Node.js, and cloud infrastructure. Led development of platforms serving millions of users with a focus on performance and reliability.';
 
@@ -195,14 +195,14 @@ export class ResumeBuilderService {
 
     html = html
       .replace(/\{\{STYLES\}\}/g, css)
-      .replace(/\{\{FULL_NAME\}\}/g, 'John Smith')
+      .replace(/\{\{FULL_NAME\}\}/g, 'John Doe')
       .replace(/\{\{CONTACT_HTML\}\}/g, contactHtml)
       .replace(/\{\{LINKS_HTML\}\}/g, linksHtml)
       .replace(/\{\{SUMMARY_TEXT\}\}/g, summaryText)
       .replace(/\{\{SECTIONS_HTML\}\}/g, mainHtml + sidebarHtml)
       .replace(/\{\{MAIN_SECTIONS_HTML\}\}/g, mainHtml)
       .replace(/\{\{SIDEBAR_SECTIONS_HTML\}\}/g, sidebarHtml)
-      .replace(/\{\{TITLE\}\}/g, 'John Smith - Resume');
+      .replace(/\{\{TITLE\}\}/g, 'John Doe - Resume');
 
     return html;
   }

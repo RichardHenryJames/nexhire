@@ -512,12 +512,14 @@ export default function ResumeBuilderScreen({ navigation }) {
                 {/* DB-driven template preview via iframe, gradient fallback */}
                 {Platform.OS === 'web' && templatePreviews[template.Slug] ? (
                   <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
-                    <iframe
-                      srcDoc={templatePreviews[template.Slug]}
-                      style={{ border: 'none', width: '100%', height: '100%', pointerEvents: 'none' }}
-                      title={template.Name}
-                      scrolling="no"
-                    />
+                    <View style={{ width: 816, height: 1056, transform: [{ scale: 0.19 }], transformOrigin: 'top left' }}>
+                      <iframe
+                        srcDoc={templatePreviews[template.Slug]}
+                        style={{ border: 'none', width: 816, height: 1056, pointerEvents: 'none', backgroundColor: '#FFFFFF' }}
+                        title={template.Name}
+                        scrolling="no"
+                      />
+                    </View>
                   </View>
                 ) : (
                   <LinearGradient
