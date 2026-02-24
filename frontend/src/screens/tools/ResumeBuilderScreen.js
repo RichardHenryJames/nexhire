@@ -97,7 +97,7 @@ const TEMPLATE_GRADIENTS = {
 export default function ResumeBuilderScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
-  const { isDesktop, isMobile } = useResponsive();
+  const { isDesktop, isMobile, width: responsiveWidth } = useResponsive();
 
   // ── State ────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState(VIEW.LIST);
@@ -1077,8 +1077,8 @@ export default function ResumeBuilderScreen({ navigation }) {
             <View style={[
               styles.previewPaper,
               // Scale down on mobile to fit within viewport
-              screenWidth < 850 && {
-                transform: [{ scale: Math.min(1, (screenWidth - 32) / 816) }],
+              responsiveWidth < 850 && {
+                transform: [{ scale: Math.min(1, (responsiveWidth - 32) / 816) }],
                 transformOrigin: 'top center',
               },
             ]}>
