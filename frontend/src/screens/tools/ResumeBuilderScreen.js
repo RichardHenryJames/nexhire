@@ -119,7 +119,7 @@ export default function ResumeBuilderScreen({ navigation }) {
   const [sections, setSections] = useState([]);
   const [expandedSection, setExpandedSection] = useState(null);
   const [editingItem, setEditingItem] = useState(null); // { sectionId, itemIndex }
-  const [aiLoading, setAiLoading] = useState(null); // 'summary' | 'bullets' | 'ats'
+  const [aiLoading, setAiLoading] = useState(null); // 'summary' | 'bullets-{idx}' | 'ats'
 
   // Template picker
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
@@ -329,7 +329,7 @@ export default function ResumeBuilderScreen({ navigation }) {
     const item = sec.Content[itemIndex];
     if (!item?.bullets?.length) return;
     try {
-      setAiLoading('bullets');
+      setAiLoading(`bullets-${sectionId}-${itemIndex}`);
       const result = await refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}/ai/bullets`, {
         method: 'POST',
         body: JSON.stringify({
@@ -468,6 +468,7 @@ export default function ResumeBuilderScreen({ navigation }) {
       setActiveProject(null);
       loadProjects();
     } else {
+      // LIST view — let SubScreenHeader handle it via fallbackTab
       navigation.goBack();
     }
   };
@@ -591,7 +592,7 @@ export default function ResumeBuilderScreen({ navigation }) {
   if (loading && currentView === VIEW.LIST && projects.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SubScreenHeader title="Resume Builder" onBack={() => navigation.goBack()} fallbackTab="Services" />
+        <SubScreenHeader title="Resume Builder" fallbackTab="Services" />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your resumes...</Text>
@@ -607,7 +608,7 @@ export default function ResumeBuilderScreen({ navigation }) {
   if (currentView === VIEW.LIST) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SubScreenHeader title="Resume Builder" onBack={() => navigation.goBack()} fallbackTab="Services" />
+        <SubScreenHeader title="Resume Builder" fallbackTab="Services" />
 
         <ScrollView contentContainerStyle={[styles.scrollContent, isDesktop && { alignItems: 'center' }]} showsVerticalScrollIndicator={false}>
           {/* Desktop: single container for consistent width */}
@@ -715,6 +716,26 @@ export default function ResumeBuilderScreen({ navigation }) {
           title={activeProject?.Title || 'Edit Resume'}
           onBack={handleBack}
           fallbackTab="Services"
+          subtitle={
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}
+              onPress={() => {
+                const newTitle = Platform.OS === 'web'
+                  ? window.prompt('Rename resume:', activeProject?.Title || 'My Resume')
+                  : null;
+                if (newTitle && newTitle.trim()) {
+                  setActiveProject(prev => ({ ...prev, Title: newTitle.trim() }));
+                  refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ title: newTitle.trim() }),
+                  }).catch(() => {});
+                }
+              }}
+            >
+              <Ionicons name="create-outline" size={12} color={colors.textSecondary} />
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>Rename</Text>
+            </TouchableOpacity>
+          }
           rightContent={
             (saving || loading) ? (
               <View style={[styles.saveBtn, { backgroundColor: colors.gray300 }]}>
@@ -871,15 +892,15 @@ export default function ResumeBuilderScreen({ navigation }) {
                                 <TouchableOpacity
                                   style={[styles.aiSmallBtn, { backgroundColor: '#7C3AED15' }]}
                                   onPress={() => handleAiBullets(section.SectionID, idx)}
-                                  disabled={aiLoading === 'bullets'}
+                                  disabled={aiLoading?.startsWith('bullets')}
                                 >
-                                  {aiLoading === 'bullets' ? (
+                                  {aiLoading === `bullets-${section.SectionID}-${idx}` ? (
                                     <ActivityIndicator size={12} color="#7C3AED" />
                                   ) : (
                                     <Ionicons name="flash" size={12} color="#7C3AED" />
                                   )}
                                   <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '600' }}>
-                                    {aiLoading === 'bullets' ? 'Rewriting...' : 'AI Rewrite'}
+                                    {aiLoading === `bullets-${section.SectionID}-${idx}` ? 'Rewriting...' : 'AI Rewrite'}
                                   </Text>
                                 </TouchableOpacity>
                               )}
