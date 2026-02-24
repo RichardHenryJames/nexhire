@@ -503,7 +503,7 @@ export default function ResumeBuilderScreen({ navigation }) {
           </View>
 
           {/* Search bar */}
-          <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+          <View style={{ paddingHorizontal: 16, marginBottom: 12, marginTop: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.inputBackground || colors.gray50, borderRadius: 10, paddingHorizontal: 12, height: 40, borderWidth: 1, borderColor: colors.border }}>
               <Ionicons name="search" size={16} color={colors.gray400} />
               <TextInput
