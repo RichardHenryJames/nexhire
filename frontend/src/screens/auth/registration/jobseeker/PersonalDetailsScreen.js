@@ -1585,11 +1585,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   otpRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
   },
   otpInput: {
     flex: 1,
     maxWidth: 160,
+    minWidth: 130,
     backgroundColor: colors.background,
     borderRadius: 8,
     borderWidth: 1,
