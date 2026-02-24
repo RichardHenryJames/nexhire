@@ -139,6 +139,12 @@ import {
   getVerificationStatus,
 } from "./src/controllers/companyEmailVerification.controller";
 
+// NEW: Registration Email Verification controller (anonymous - pre-auth)
+import {
+  sendRegistrationOTP,
+  verifyRegistrationOTP,
+} from "./src/controllers/registrationEmailVerification.controller";
+
 // Import storage controller - MOVED HERE to prevent execution issues
 import { uploadFile, deleteFile } from "./src/controllers/storage.controller";
 
@@ -1688,6 +1694,24 @@ app.http("support-referral-refund", {
   authLevel: "anonymous",
   route: "support/referral-refund",
   handler: withErrorHandling(refundReferral),
+});
+
+// ========================================================================
+// REGISTRATION EMAIL VERIFICATION ENDPOINTS - Email OTP during signup
+// ========================================================================
+
+app.http("auth-email-send-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/email/send-otp",
+  handler: withErrorHandling(sendRegistrationOTP),
+});
+
+app.http("auth-email-verify-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/email/verify-otp",
+  handler: withErrorHandling(verifyRegistrationOTP),
 });
 
 // ========================================================================

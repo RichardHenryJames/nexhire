@@ -637,6 +637,34 @@ class RefOpenAPI {
   }
 
   // ==========================================
+  // REGISTRATION EMAIL VERIFICATION (Signup OTP)
+  // ==========================================
+
+  /**
+   * Send OTP to email during registration (anonymous - no JWT needed)
+   * @param {string} email - The email to send OTP to
+   */
+  async sendRegistrationEmailOTP(email) {
+    return this.apiCall('/auth/email/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  /**
+   * Verify OTP during registration (anonymous - no JWT needed)
+   * @param {string} email - The email being verified
+   * @param {string} otp - The 4-digit OTP code
+   * @returns {Promise<{success: boolean, data?: {verificationId: string}}>}
+   */
+  async verifyRegistrationEmailOTP(email, otp) {
+    return this.apiCall('/auth/email/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    });
+  }
+
+  // ==========================================
   // COMPANY EMAIL VERIFICATION (Verified Referrer)
   // ==========================================
   
