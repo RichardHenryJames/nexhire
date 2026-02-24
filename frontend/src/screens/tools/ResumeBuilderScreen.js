@@ -660,35 +660,17 @@ export default function ResumeBuilderScreen({ navigation }) {
   // ══════════════════════════════════════════════════════════
 
   if (currentView === VIEW.EDITOR) {
+    const templateName = activeProject?.templateName || activeProject?.TemplateName || templates.find(t => t.TemplateID === activeProject?.TemplateID)?.Name || 'Classic';
+
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Clean header: just title + save */}
         <SubScreenHeader
           title={activeProject?.Title || 'Edit Resume'}
           onBack={handleBack}
           rightContent={
-            <View style={styles.headerActions}>
-              {saving && <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />}
-              <TouchableOpacity
-                style={[styles.headerBtn, { backgroundColor: colors.primary + '15' }]}
-                onPress={() => { setPickerMode('switch'); setShowTemplatePicker(true); }}
-              >
-                <Ionicons name="brush-outline" size={16} color={colors.primary} />
-                {!isMobile && <Text style={[styles.headerBtnText, { color: colors.primary }]}>Template</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerBtn, { backgroundColor: colors.primary + '15' }]}
-                onPress={() => setShowAtsModal(true)}
-              >
-                <Ionicons name="shield-checkmark" size={16} color={colors.primary} />
-                <Text style={[styles.headerBtnText, { color: colors.primary }]}>ATS</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.headerBtn, { backgroundColor: colors.primary + '15' }]}
-                onPress={handlePreview}
-              >
-                <Ionicons name="eye" size={16} color={colors.primary} />
-                <Text style={[styles.headerBtnText, { color: colors.primary }]}>Preview</Text>
-              </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {saving && <ActivityIndicator size="small" color={colors.primary} />}
               <TouchableOpacity
                 style={[styles.saveBtn, { backgroundColor: colors.primary }]}
                 onPress={saveProject}
@@ -699,6 +681,42 @@ export default function ResumeBuilderScreen({ navigation }) {
             </View>
           }
         />
+
+        {/* Action toolbar — below header */}
+        <View style={[styles.editorToolbar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8, alignItems: 'center' }}>
+            {/* Current template indicator + switch */}
+            <TouchableOpacity
+              style={[styles.toolbarBtn, { backgroundColor: colors.primary + '10', borderColor: colors.primary + '30' }]}
+              onPress={() => { setPickerMode('switch'); setShowTemplatePicker(true); }}
+            >
+              <Ionicons name="brush-outline" size={15} color={colors.primary} />
+              {!isMobile ? (
+                <Text style={[styles.toolbarBtnText, { color: colors.primary }]}>Template: {templateName}</Text>
+              ) : (
+                <Text style={[styles.toolbarBtnText, { color: colors.primary }]}>{templateName}</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* ATS Check */}
+            <TouchableOpacity
+              style={[styles.toolbarBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+              onPress={() => setShowAtsModal(true)}
+            >
+              <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
+              {!isMobile && <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>ATS Check</Text>}
+            </TouchableOpacity>
+
+            {/* Preview */}
+            <TouchableOpacity
+              style={[styles.toolbarBtn, { backgroundColor: colors.background, borderColor: colors.border }]}
+              onPress={handlePreview}
+            >
+              <Ionicons name="eye-outline" size={15} color={colors.textSecondary} />
+              {!isMobile && <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>Preview</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
 
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={[styles.editorScroll, isDesktop && { alignItems: 'center' }]} showsVerticalScrollIndicator={false}>
@@ -1279,6 +1297,11 @@ const styles = StyleSheet.create({
 
   // Header actions
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+
+  // Editor toolbar (below header)
+  editorToolbar: { paddingVertical: 8, borderBottomWidth: 1 },
+  toolbarBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  toolbarBtnText: { fontSize: 12, fontWeight: '600' },
   headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   headerBtnText: { fontSize: 12, fontWeight: '600' },
   saveBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
