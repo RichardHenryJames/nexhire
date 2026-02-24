@@ -846,9 +846,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   otpSection: {
     backgroundColor: colors.surface + '80',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: colors.primary + '30',
+    overflow: 'hidden',
   },
   otpLabel: {
     fontSize: typography.sizes.sm,
@@ -858,7 +859,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   otpRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   otpInput: {
     flex: 1,
@@ -866,11 +867,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.primary + '40',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: typography.weights.bold,
-    letterSpacing: 8,
+    letterSpacing: 6,
     color: colors.text,
     textAlign: 'center',
   },
