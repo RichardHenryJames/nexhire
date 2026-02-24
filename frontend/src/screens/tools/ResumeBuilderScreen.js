@@ -763,20 +763,20 @@ export default function ResumeBuilderScreen({ navigation }) {
             </TouchableOpacity>
           }
           rightContent={
-            (saving || loading) ? (
-              <View style={[styles.saveBtn, { backgroundColor: colors.gray300, minWidth: 72 }]}>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: (saving || loading) ? colors.gray300 : colors.primary, minWidth: 70 }]}
+              onPress={saveProject}
+              disabled={saving || loading}
+            >
+              {(saving || loading) ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>Saving</Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-                onPress={saveProject}
-              >
-                <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>Save</Text>
-              </TouchableOpacity>
-            )
+              ) : (
+                <>
+                  <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
+                  <Text style={styles.saveBtnText}>Save</Text>
+                </>
+              )}
+            </TouchableOpacity>
           }
         />
 
