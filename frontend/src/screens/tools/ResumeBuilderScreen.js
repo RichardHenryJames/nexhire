@@ -71,142 +71,12 @@ const SECTION_ICONS = {
   custom: 'list',
 };
 
-// ── TEMPLATE MINI-PREVIEWS (realistic mini resumes with dummy data) ──
-const MiniLine = ({ w, h = 2, bg = '#ccc', mb = 2, style }) => (
-  <View style={[{ width: w, height: h, borderRadius: 1, backgroundColor: bg, marginBottom: mb }, style]} />
-);
-const MiniText = ({ children, style }) => (
-  <Text style={[{ fontSize: 4, color: '#666', lineHeight: 5.5 }, style]} numberOfLines={1}>{children}</Text>
-);
-const MiniBullet = ({ children, style }) => (
-  <View style={{ flexDirection: 'row', marginBottom: 1, paddingLeft: 4 }}>
-    <Text style={[{ fontSize: 3.5, color: '#999', marginRight: 2 }, style]}>•</Text>
-    <Text style={[{ fontSize: 3.5, color: '#888', flex: 1, lineHeight: 5 }, style]} numberOfLines={1}>{children}</Text>
-  </View>
-);
-
-const TEMPLATE_PREVIEWS = {
-  classic: (c) => (
-    <View style={[tpStyles.page, { borderColor: c.border }]}>
-      <View style={{ alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#1a1a1a', paddingBottom: 2, marginBottom: 3 }}>
-        <Text style={{ fontSize: 7, fontWeight: '700', color: '#1a1a1a', letterSpacing: 1, textTransform: 'uppercase' }}>John Smith</Text>
-        <Text style={{ fontSize: 3, color: '#666', marginTop: 1 }}>john@email.com | +1 234 567 890 | NYC</Text>
-      </View>
-      <Text style={{ fontSize: 3, color: '#555', fontStyle: 'italic', textAlign: 'center', marginBottom: 3 }}>Software engineer with 5+ years building scalable apps</Text>
-      <Text style={{ fontSize: 4, fontWeight: '700', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#1a1a1a', paddingBottom: 1, marginBottom: 2 }}>Experience</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#333' }}>Senior Engineer · Google</Text>
-        <Text style={{ fontSize: 2.5, color: '#999' }}>2020 – Present</Text>
-      </View>
-      <MiniBullet>Led microservices architecture for 10M+ users</MiniBullet>
-      <MiniBullet>Reduced API latency by 40%</MiniBullet>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-        <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#333' }}>Software Engineer · Meta</Text>
-        <Text style={{ fontSize: 2.5, color: '#999' }}>2018 – 2020</Text>
-      </View>
-      <MiniBullet>Built React Native features for 2B+ users</MiniBullet>
-      <Text style={{ fontSize: 4, fontWeight: '700', color: '#1a1a1a', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#1a1a1a', paddingBottom: 1, marginBottom: 2, marginTop: 3 }}>Education</Text>
-      <Text style={{ fontSize: 3, color: '#555' }}>B.S. Computer Science — MIT, 2018</Text>
-    </View>
-  ),
-  modern: (c) => (
-    <View style={[tpStyles.page, { borderColor: c.border }]}>
-      <View style={{ borderBottomWidth: 1.5, borderBottomColor: '#2563EB', paddingBottom: 2, marginBottom: 2 }}>
-        <Text style={{ fontSize: 7, fontWeight: '700', color: '#111827' }}>John Smith</Text>
-        <Text style={{ fontSize: 3, color: '#9CA3AF', marginTop: 1 }}>john@email.com | NYC | LinkedIn</Text>
-      </View>
-      <View style={{ backgroundColor: '#F0F7FF', padding: 2, borderLeftWidth: 1.5, borderLeftColor: '#2563EB', marginBottom: 3, borderRadius: 1 }}>
-        <Text style={{ fontSize: 3, color: '#374151' }}>Full-stack engineer specializing in React & Node.js</Text>
-      </View>
-      <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB', paddingBottom: 1, marginBottom: 2 }}>Experience</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 3, fontWeight: '600', color: '#111' }}>Senior Engineer · Google</Text>
-        <Text style={{ fontSize: 2.5, color: '#9CA3AF' }}>2020 – Present</Text>
-      </View>
-      <MiniBullet style={{ color: '#374151' }}>Built scalable APIs serving 10M+ requests/day</MiniBullet>
-      <MiniBullet style={{ color: '#374151' }}>Mentored team of 5 junior engineers</MiniBullet>
-      <Text style={{ fontSize: 3.5, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB', paddingBottom: 1, marginBottom: 2, marginTop: 3 }}>Skills</Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2 }}>
-        {['React', 'Node.js', 'TypeScript', 'AWS', 'Python'].map(s => <View key={s} style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 3, paddingVertical: 0.5, borderRadius: 4 }}><Text style={{ fontSize: 2.5, color: '#1D4ED8' }}>{s}</Text></View>)}
-      </View>
-    </View>
-  ),
-  minimal: (c) => (
-    <View style={[tpStyles.page, { borderColor: c.border }]}>
-      <Text style={{ fontSize: 9, fontWeight: '700', color: '#000', marginBottom: 1 }}>John Smith</Text>
-      <Text style={{ fontSize: 3, color: '#999', marginBottom: 4 }}>john@email.com | New York</Text>
-      <Text style={{ fontSize: 3, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 2 }}>Experience</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#000' }}>Senior Engineer · Google</Text>
-        <Text style={{ fontSize: 2.5, color: '#999' }}>2020 – Present</Text>
-      </View>
-      <MiniBullet>Led development of core platform</MiniBullet>
-      <MiniBullet>Managed team of 8 engineers</MiniBullet>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-        <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#000' }}>Software Engineer · Meta</Text>
-        <Text style={{ fontSize: 2.5, color: '#999' }}>2018 – 2020</Text>
-      </View>
-      <MiniBullet>Built React features for mobile app</MiniBullet>
-      <Text style={{ fontSize: 3, color: '#999', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 2, marginTop: 3 }}>Education</Text>
-      <Text style={{ fontSize: 3, color: '#333' }}>B.S. Computer Science — Stanford, 2018</Text>
-    </View>
-  ),
-  executive: (c) => (
-    <View style={[tpStyles.page, { borderColor: c.border, padding: 0, overflow: 'hidden' }]}>
-      <View style={{ backgroundColor: '#111827', paddingVertical: 5, paddingHorizontal: 8, alignItems: 'center' }}>
-        <Text style={{ fontSize: 7, fontWeight: '700', color: '#fff', letterSpacing: 1.5, textTransform: 'uppercase' }}>John Smith</Text>
-        <Text style={{ fontSize: 3, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>john@email.com | New York</Text>
-      </View>
-      <View style={{ padding: 6 }}>
-        <Text style={{ fontSize: 3.5, color: '#555', fontStyle: 'italic', marginBottom: 3, lineHeight: 5 }}>VP of Engineering with 15+ years...</Text>
-        <Text style={{ fontSize: 4.5, fontWeight: '700', color: '#1E40AF', borderBottomWidth: 1, borderBottomColor: '#1E40AF', paddingBottom: 1, marginBottom: 3 }}>Experience</Text>
-        <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#111' }}>VP Engineering · Amazon</Text>
-        <MiniBullet style={{ color: '#374151' }}>Scaled org from 20 to 150 engineers</MiniBullet>
-      </View>
-    </View>
-  ),
-  'ats-optimized': (c) => (
-    <View style={[tpStyles.page, { borderColor: c.border }]}>
-      <View style={{ borderBottomWidth: 1.5, borderBottomColor: '#000', paddingBottom: 3, marginBottom: 4 }}>
-        <Text style={{ fontSize: 8, fontWeight: '700', color: '#000' }}>John Smith</Text>
-        <Text style={{ fontSize: 3.5, color: '#333', marginTop: 1 }}>john@email.com | +1 234 567 890 | New York</Text>
-      </View>
-      <Text style={{ fontSize: 5, fontWeight: '700', color: '#000', textTransform: 'uppercase', borderBottomWidth: 0.5, borderBottomColor: '#000', paddingBottom: 1, marginBottom: 3 }}>Experience</Text>
-      <Text style={{ fontSize: 4, fontWeight: '700', color: '#000' }}>Senior Engineer, Google</Text>
-      <Text style={{ fontSize: 3.5, color: '#333', marginBottom: 1 }}>Jan 2020 – Present</Text>
-      <MiniBullet style={{ color: '#000' }}>Developed REST APIs with Node.js</MiniBullet>
-      <MiniBullet style={{ color: '#000' }}>Improved test coverage to 95%</MiniBullet>
-      <Text style={{ fontSize: 5, fontWeight: '700', color: '#000', textTransform: 'uppercase', borderBottomWidth: 0.5, borderBottomColor: '#000', paddingBottom: 1, marginBottom: 3, marginTop: 4 }}>Skills</Text>
-      <Text style={{ fontSize: 3.5, color: '#333' }}>React, Node.js, Python, AWS, SQL, Git</Text>
-    </View>
-  ),
-  tech: (c) => (
-    <View style={[tpStyles.page, { borderColor: '#21262D', backgroundColor: '#0D1117' }]}>
-      <View style={{ flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: '#21262D', paddingBottom: 3, marginBottom: 3 }}>
-        <View style={{ width: 2, backgroundColor: '#58A6FF', borderRadius: 1, marginRight: 4 }} />
-        <View>
-          <Text style={{ fontSize: 7, fontWeight: '700', color: '#F0F6FC', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }}>John Smith</Text>
-          <Text style={{ fontSize: 3, color: '#484F58', marginTop: 1 }}>john@email.com | GitHub</Text>
-        </View>
-      </View>
-      <View style={{ backgroundColor: '#161B22', padding: 3, borderRadius: 2, borderLeftWidth: 1.5, borderLeftColor: '#58A6FF', marginBottom: 3 }}>
-        <Text style={{ fontSize: 3.5, color: '#8B949E', lineHeight: 5 }}>Full-stack dev, open-source contributor...</Text>
-      </View>
-      <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#58A6FF', textTransform: 'uppercase', letterSpacing: 1, borderBottomWidth: 0.5, borderBottomColor: '#21262D', paddingBottom: 1, marginBottom: 3, fontFamily: Platform.OS === 'web' ? 'monospace' : undefined }}>Experience</Text>
-      <View style={{ backgroundColor: '#161B22', padding: 3, borderRadius: 2, borderWidth: 0.5, borderColor: '#21262D', marginBottom: 2 }}>
-        <Text style={{ fontSize: 3.5, fontWeight: '600', color: '#F0F6FC' }}>SDE II · GitHub</Text>
-        <MiniBullet style={{ color: '#C9D1D9' }}>Built CI/CD pipeline for 500+ repos</MiniBullet>
-      </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
-        {['Go', 'Rust', 'K8s'].map(s => <View key={s} style={{ backgroundColor: '#1F6FEB20', paddingHorizontal: 3, paddingVertical: 1, borderRadius: 3, borderWidth: 0.5, borderColor: '#1F6FEB40' }}><Text style={{ fontSize: 3, color: '#58A6FF' }}>{s}</Text></View>)}
-      </View>
-    </View>
-  ),
-};
-
+// ── TEMPLATE THUMBNAIL STYLE (for DB-driven iframe previews) ──
 const tpStyles = StyleSheet.create({
-  page: { width: '100%', height: 160, borderRadius: 6, borderWidth: 1, padding: 6, backgroundColor: '#fff', overflow: 'hidden' },
+  page: { width: '100%', height: 160, borderRadius: 6, borderWidth: 1, backgroundColor: '#fff', overflow: 'hidden' },
 });
+
+// ── TEMPLATE GRADIENTS (fallback for project cards + non-web) ──
 const TEMPLATE_GRADIENTS = {
   classic: ['#1E3A5F', '#2C5F8A'],
   modern: ['#7C3AED', '#A78BFA'],
@@ -639,17 +509,17 @@ export default function ResumeBuilderScreen({ navigation }) {
                 }}
                 activeOpacity={0.7}
               >
-                {/* Real template preview — DB-driven via iframe */}
+                {/* DB-driven template preview via iframe, gradient fallback */}
                 {Platform.OS === 'web' && templatePreviews[template.Slug] ? (
                   <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
                     <iframe
                       srcDoc={templatePreviews[template.Slug]}
-                      style={{ border: 'none', width: '100%', height: '100%', pointerEvents: 'none', transform: 'scale(1)', transformOrigin: 'top left' }}
+                      style={{ border: 'none', width: '100%', height: '100%', pointerEvents: 'none' }}
                       title={template.Name}
                       scrolling="no"
                     />
                   </View>
-                ) : TEMPLATE_PREVIEWS[template.Slug] ? TEMPLATE_PREVIEWS[template.Slug](colors) : (
+                ) : (
                   <LinearGradient
                     colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
                     style={styles.templateThumb}
