@@ -10,6 +10,7 @@ import {
     userLoginSchema
 } from '../utils/validation';
 import { appConstants } from '../config';
+import { registrationEmailVerificationService } from './registrationEmailVerification.service';
 
 export class UserService {
     /**
@@ -48,6 +49,18 @@ export class UserService {
             }
         }
         
+        // Validate email verification (OTP must have been verified before registration)
+        let emailVerified = 0;
+        if (userData.emailVerificationId) {
+            const isValid = await registrationEmailVerificationService.validate(
+                validatedData.email,
+                userData.emailVerificationId
+            );
+            if (isValid) {
+                emailVerified = 1;
+            }
+        }
+
         // Start transaction for user and organization/applicant creation
         const tx = await dbService.beginTransaction();
         try {
@@ -66,7 +79,7 @@ export class UserService {
                     TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion
                 ) VALUES (
                     @param0, @param1, @param2, @param3, @param4, @param5,
-                    @param6, @param7, @param8, 0, 0,
+                    @param6, @param7, @param8, @param14, 0,
                     'Public', GETUTCDATE(), GETUTCDATE(), 1,
                     0, 0, @param9, GETUTCDATE(),
                     @param10, @param11, @param12, @param13
@@ -89,7 +102,8 @@ export class UserService {
                 termsAccepted ? new Date().toISOString() : null,      // TermsAcceptedAt
                 termsAccepted ? termsVersion : null,     // TermsVersion
                 termsAccepted ? new Date().toISOString() : null,       // PrivacyPolicyAcceptedAt
-                termsAccepted ? privacyPolicyVersion : null // PrivacyPolicyVersion
+                termsAccepted ? privacyPolicyVersion : null, // PrivacyPolicyVersion
+                emailVerified, // @param14: EmailVerified (1 if OTP verified, 0 if not)
             ];
 
             const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);

@@ -99,6 +99,15 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const [errors, setErrors] = useState({});
   const [termsAccepted, setTermsAccepted] = useState(false);
 
+  // EMAIL VERIFICATION STATE (non-Google users)
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [emailVerificationId, setEmailVerificationId] = useState(null);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [verifiedEmail, setVerifiedEmail] = useState(''); // track which email was verified
+
   // NEW: Organization picker state
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [orgQuery, setOrgQuery] = useState('');
@@ -282,6 +291,83 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     return phoneRegex.test(phone);
   };
 
+  // ===== EMAIL VERIFICATION HANDLERS =====
+  // Reset verification when email changes
+  useEffect(() => {
+    if (formData.email !== verifiedEmail && emailVerified) {
+      setEmailVerified(false);
+      setEmailVerificationId(null);
+      setShowOtpInput(false);
+      setOtpCode('');
+    }
+  }, [formData.email]);
+
+  // OTP cooldown timer
+  useEffect(() => {
+    if (otpCooldown > 0) {
+      const timer = setTimeout(() => setOtpCooldown(otpCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCooldown]);
+
+  const handleSendOTP = async () => {
+    const email = formData.email.trim().toLowerCase();
+    if (!email || !validateEmail(email)) {
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const result = await refopenAPI.sendRegistrationEmailOTP(email);
+      if (result.success) {
+        setShowOtpInput(true);
+        setOtpCooldown(60);
+        showToast('Verification code sent! Check your inbox.', 'success');
+      } else {
+        const msg = result.error || result.message || 'Failed to send code';
+        if (msg.includes('already exists')) {
+          setErrors(prev => ({ ...prev, email: 'Account already exists. Please sign in.' }));
+        } else {
+          showToast(msg, 'error');
+        }
+      }
+    } catch (e) {
+      const msg = e?.data?.message || e?.data?.error || e?.message || 'Failed to send verification code';
+      if (msg.includes('already exists')) {
+        setErrors(prev => ({ ...prev, email: 'Account already exists. Please sign in.' }));
+      } else {
+        showToast(msg, 'error');
+      }
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (otpCode.length !== 4) {
+      showToast('Please enter the 4-digit code', 'error');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const email = formData.email.trim().toLowerCase();
+      const result = await refopenAPI.verifyRegistrationEmailOTP(email, otpCode);
+      if (result.success && result.data?.verificationId) {
+        setEmailVerified(true);
+        setEmailVerificationId(result.data.verificationId);
+        setVerifiedEmail(email);
+        setShowOtpInput(false);
+        showToast('Email verified! ✓', 'success');
+      } else {
+        showToast(result.message || 'Invalid code', 'error');
+      }
+    } catch (e) {
+      showToast('Verification failed', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -369,6 +455,11 @@ newErrors.jobTitle = 'Job title is required when company is selected';
       }
     }
 
+    // Email verification is mandatory
+    if (!isGoogleUser && !emailVerified) {
+      newErrors.email = 'Please verify your email address before registering';
+    }
+
     // Terms & Conditions acceptance is mandatory
     if (!termsAccepted) {
       newErrors.termsAccepted = 'You must accept the Terms of Service and Privacy Policy';
@@ -380,7 +471,11 @@ newErrors.jobTitle = 'Job title is required when company is selected';
 
   const handleRegister = async () => {
     if (!validateForm()) {
-      showToast('Please fix the errors before continuing', 'error');
+      if (!isGoogleUser && !emailVerified) {
+        showToast('Please verify your email address first', 'error');
+      } else {
+        showToast('Please fix the errors before continuing', 'error');
+      }
       return;
     }
 
@@ -397,6 +492,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
         ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // 🎁 NEW: Add referral code
+        ...(emailVerificationId && { emailVerificationId }), // Email OTP verification proof
         termsAccepted: true, // User has accepted T&C checkbox
         termsVersion: frontendConfig.legal.termsVersion,
         privacyPolicyVersion: frontendConfig.legal.privacyPolicyVersion,
@@ -656,8 +752,101 @@ styles.selectionButton,
               </View>
             </View>
 
-            {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
+            {/* Email field with inline verify button */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                Email Address <Text style={styles.requiredAsterisk}>*</Text>
+                {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
+              </Text>
+              <View style={styles.emailRow}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { flex: 1 },
+                    errors.email && styles.inputError,
+                    isGoogleUser && styles.inputPrefilled,
+                    emailVerified && { borderColor: colors.success, borderWidth: 1.5 },
+                  ]}
+                  placeholder="Email Address"
+                  placeholderTextColor={colors.gray400}
+                  value={formData.email}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, email: text });
+                    if (errors.email) setErrors({ ...errors, email: null });
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={true}
+                />
+                {!isGoogleUser && !showOtpInput && (
+                  emailVerified ? (
+                    <View style={styles.emailVerifiedInline}>
+                      <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        styles.verifyEmailButtonInline,
+                        (!validateEmail(formData.email.trim()) || otpLoading) && styles.verifyEmailButtonDisabled
+                      ]}
+                      onPress={handleSendOTP}
+                      disabled={!validateEmail(formData.email.trim()) || otpLoading}
+                    >
+                      {otpLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.verifyEmailButtonText}>Verify</Text>
+                      )}
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
             
+            {/* EMAIL VERIFICATION OTP input */}
+            {!isGoogleUser && showOtpInput && !emailVerified && (
+                  <View style={styles.otpSection}>
+                    <Text style={styles.otpLabel}>Enter the 4-digit code sent to your email</Text>
+                    <View style={styles.otpRow}>
+                      <TextInput
+                        style={styles.otpInput}
+                        placeholder="0000"
+                        placeholderTextColor={colors.gray500}
+                        value={otpCode}
+                        onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        autoFocus={true}
+                      />
+                      <TouchableOpacity
+                        style={[
+                          styles.verifyOtpButton,
+                          (otpCode.length !== 4 || otpLoading) && styles.verifyEmailButtonDisabled
+                        ]}
+                        onPress={handleVerifyOTP}
+                        disabled={otpCode.length !== 4 || otpLoading}
+                      >
+                        {otpLoading ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={styles.verifyEmailButtonText}>Verify</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                    <TouchableOpacity
+                      onPress={handleSendOTP}
+                      disabled={otpCooldown > 0 || otpLoading}
+                      style={{ marginTop: 8 }}
+                    >
+                      <Text style={[styles.resendText, otpCooldown > 0 && { color: colors.gray500 }]}>
+                        {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : 'Resend code'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+            )}
+
             {/* 🎁 NEW: Invite Code Input (Optional) */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>
@@ -1327,6 +1516,101 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.success,
     marginLeft: 6,
     flex: 1,
+  },
+  // EMAIL VERIFICATION styles
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emailVerifiedInline: {
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  verifyEmailButtonInline: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  emailVerifyContainer: {
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  emailVerifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  emailVerifiedText: {
+    fontSize: typography.sizes.sm,
+    color: colors.success,
+    fontWeight: typography.weights.semiBold,
+    marginLeft: 6,
+  },
+  verifyEmailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  verifyEmailButtonDisabled: {
+    opacity: 0.5,
+  },
+  verifyEmailButtonText: {
+    color: '#fff',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semiBold,
+  },
+  otpSection: {
+    backgroundColor: colors.surface + '80',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  otpLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray300,
+    marginBottom: 10,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  otpInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 24,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 8,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  verifyOtpButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  resendText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    textAlign: 'center',
   },
   // 🎉 Welcome Bonus Banner Styles
   welcomeBonusBanner: {
