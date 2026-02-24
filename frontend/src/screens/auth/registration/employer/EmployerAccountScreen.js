@@ -8,7 +8,8 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
-  Image 
+  Image,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../../../contexts/ThemeContext';
@@ -51,6 +52,15 @@ export default function EmployerAccountScreen({ navigation, route }) {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState('');
 
+  // EMAIL VERIFICATION STATE (non-Google users)
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [emailVerificationId, setEmailVerificationId] = useState(null);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+  const [verifiedEmail, setVerifiedEmail] = useState('');
+
   // Pre-populate Google user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
@@ -64,6 +74,77 @@ export default function EmployerAccountScreen({ navigation, route }) {
     }
   }, [isGoogleUser, googleUser]);
 
+  // ===== EMAIL VERIFICATION HANDLERS =====
+  useEffect(() => {
+    if (email !== verifiedEmail && emailVerified) {
+      setEmailVerified(false);
+      setEmailVerificationId(null);
+      setShowOtpInput(false);
+      setOtpCode('');
+    }
+  }, [email]);
+
+  useEffect(() => {
+    if (otpCooldown > 0) {
+      const timer = setTimeout(() => setOtpCooldown(otpCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCooldown]);
+
+  const handleSendOTP = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast('Please enter a valid email address', 'error');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const result = await refopenAPI.sendRegistrationEmailOTP(trimmedEmail);
+      if (result.success) {
+        setShowOtpInput(true);
+        setOtpCooldown(60);
+        showToast('Verification code sent! Check your inbox.', 'success');
+      } else {
+        const msg = result.error || result.message || 'Failed to send code';
+        if (msg.includes('already exists')) {
+          showToast('Account already exists. Please sign in.', 'info');
+          navigation.navigate('Login');
+        } else {
+          showToast(msg, 'error');
+        }
+      }
+    } catch (e) {
+      showToast('Failed to send verification code', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (otpCode.length !== 4) {
+      showToast('Please enter the 4-digit code', 'error');
+      return;
+    }
+    setOtpLoading(true);
+    try {
+      const trimmedEmail = email.trim().toLowerCase();
+      const result = await refopenAPI.verifyRegistrationEmailOTP(trimmedEmail, otpCode);
+      if (result.success && result.data?.verificationId) {
+        setEmailVerified(true);
+        setEmailVerificationId(result.data.verificationId);
+        setVerifiedEmail(trimmedEmail);
+        setShowOtpInput(false);
+        showToast('Email verified! ✓', 'success');
+      } else {
+        showToast(result.message || 'Invalid code', 'error');
+      }
+    } catch (e) {
+      showToast('Verification failed', 'error');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
   const validate = () => {
     if (!firstName.trim() || !lastName.trim()) return 'First name and last name are required';
     if (!email.trim()) return 'Email is required';
@@ -71,6 +152,9 @@ export default function EmployerAccountScreen({ navigation, route }) {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return 'Please enter a valid email address';
+    
+    // Email must be verified for non-Google users
+    if (!isGoogleUser && !emailVerified) return 'Please verify your email address first';
     
     // Skip password validation for Google users and already authenticated users
     if (!refopenAPI.token && !isGoogleUser) {
@@ -123,6 +207,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ...(phone && { phone: phone.trim() }),
           ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
           ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
+          ...(emailVerificationId && { emailVerificationId }), // Email OTP verification proof
           termsAccepted: true,
           termsVersion: frontendConfig.legal.termsVersion,
           privacyPolicyVersion: frontendConfig.legal.privacyPolicyVersion,
@@ -177,6 +262,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
           ...(phone && { phone: phone.trim() }),
           ...(dateOfBirth && { dateOfBirth }),
           ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
+          ...(emailVerificationId && { emailVerificationId }), // Email OTP verification proof
           termsAccepted: true,
           termsVersion: frontendConfig.legal.termsVersion,
           privacyPolicyVersion: frontendConfig.legal.privacyPolicyVersion,
@@ -321,6 +407,75 @@ export default function EmployerAccountScreen({ navigation, route }) {
             placeholderTextColor={colors.gray400}
           />
         </View>
+
+        {/* EMAIL VERIFICATION for non-Google users */}
+        {!isGoogleUser && (
+          <View style={styles.emailVerifyContainer}>
+            {emailVerified ? (
+              <View style={styles.emailVerifiedBadge}>
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                <Text style={styles.emailVerifiedText}>Email verified</Text>
+              </View>
+            ) : !showOtpInput ? (
+              <TouchableOpacity
+                style={[
+                  styles.verifyEmailButton,
+                  (!email.trim() || otpLoading) && styles.verifyEmailButtonDisabled
+                ]}
+                onPress={handleSendOTP}
+                disabled={!email.trim() || otpLoading}
+              >
+                {otpLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="mail-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
+                    <Text style={styles.verifyEmailButtonText}>Verify Email</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.otpSection}>
+                <Text style={styles.otpLabel}>Enter the 4-digit code sent to your email</Text>
+                <View style={styles.otpRow}>
+                  <TextInput
+                    style={styles.otpInput}
+                    placeholder="0000"
+                    placeholderTextColor={colors.gray500}
+                    value={otpCode}
+                    onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    autoFocus={true}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.verifyOtpButton,
+                      (otpCode.length !== 4 || otpLoading) && styles.verifyEmailButtonDisabled
+                    ]}
+                    onPress={handleVerifyOTP}
+                    disabled={otpCode.length !== 4 || otpLoading}
+                  >
+                    {otpLoading ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.verifyEmailButtonText}>Verify</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  onPress={handleSendOTP}
+                  disabled={otpCooldown > 0 || otpLoading}
+                  style={{ marginTop: 8 }}
+                >
+                  <Text style={[styles.resendText, otpCooldown > 0 && { color: colors.gray500 }]}>
+                    {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : 'Resend code'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* 🎁 NEW: Referral Code Input (Optional) */}
         <View style={styles.field}>
@@ -623,6 +778,86 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.success,
     marginLeft: 6,
     flex: 1,
+  },
+  // EMAIL VERIFICATION styles
+  emailVerifyContainer: {
+    marginTop: -4,
+    marginBottom: 12,
+  },
+  emailVerifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  emailVerifiedText: {
+    fontSize: typography.sizes.sm,
+    color: colors.success,
+    fontWeight: typography.weights.semiBold,
+    marginLeft: 6,
+  },
+  verifyEmailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  verifyEmailButtonDisabled: {
+    opacity: 0.5,
+  },
+  verifyEmailButtonText: {
+    color: '#fff',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semiBold,
+  },
+  otpSection: {
+    backgroundColor: colors.surface + '80',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.primary + '30',
+  },
+  otpLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray300,
+    marginBottom: 10,
+  },
+  otpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  otpInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 24,
+    fontWeight: typography.weights.bold,
+    letterSpacing: 8,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  verifyOtpButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  resendText: {
+    fontSize: typography.sizes.sm,
+    color: colors.primary,
+    textAlign: 'center',
   },
   summaryContainer: {
     backgroundColor: colors.surface,
