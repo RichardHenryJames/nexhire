@@ -960,43 +960,59 @@ export default function ResumeBuilderScreen({ navigation }) {
               style={[styles.saveBtn, { backgroundColor: '#059669' }]}
               onPress={async () => {
                 if (Platform.OS === 'web') {
-                  // Web: use html2pdf.js for client-side PDF generation
+                  // Web: use html2pdf.js — render in hidden iframe, capture as PDF
                   if (!previewHtml || !html2pdf) {
                     showAlert('Error', 'Preview not available.');
                     return;
                   }
                   try {
-                    const container = document.createElement('div');
-                    container.style.position = 'fixed';
-                    container.style.left = '-9999px';
-                    container.style.top = '0';
-                    container.style.width = '8.5in';
-                    container.innerHTML = previewHtml
-                      .replace(/^<!DOCTYPE[^>]*>/i, '')
-                      .replace(/<html[^>]*>/i, '')
-                      .replace(/<\/html>/i, '')
-                      .replace(/<head>[\s\S]*?<\/head>/i, (match) => {
-                        const styles = match.match(/<style>[\s\S]*?<\/style>/gi) || [];
-                        return styles.join('');
-                      })
-                      .replace(/<\/?body[^>]*>/gi, '');
-                    document.body.appendChild(container);
-
                     const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume.pdf';
 
-                    await html2pdf()
-                      .set({
-                        margin: 0,
-                        filename: fileName,
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-                      })
-                      .from(container)
-                      .save();
+                    // Create a hidden iframe to render the full HTML with styles
+                    const iframe = document.createElement('iframe');
+                    iframe.style.position = 'fixed';
+                    iframe.style.left = '-9999px';
+                    iframe.style.top = '0';
+                    iframe.style.width = '8.5in';
+                    iframe.style.height = '11in';
+                    iframe.style.border = 'none';
+                    document.body.appendChild(iframe);
 
-                    document.body.removeChild(container);
+                    // Write HTML into iframe
+                    iframe.contentDocument.open();
+                    iframe.contentDocument.write(previewHtml);
+                    iframe.contentDocument.close();
+
+                    // Wait for fonts and styles to load, then capture
+                    setTimeout(async () => {
+                      try {
+                        const element = iframe.contentDocument.body;
+
+                        await html2pdf()
+                          .set({
+                            margin: 0,
+                            filename: fileName,
+                            image: { type: 'jpeg', quality: 0.98 },
+                            html2canvas: {
+                              scale: 2,
+                              useCORS: true,
+                              letterRendering: true,
+                              logging: false,
+                              windowWidth: 816, // 8.5in at 96dpi
+                            },
+                            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+                            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+                          })
+                          .from(element)
+                          .save();
+
+                        document.body.removeChild(iframe);
+                      } catch (innerErr) {
+                        console.error('PDF capture error:', innerErr);
+                        document.body.removeChild(iframe);
+                        showAlert('Error', 'PDF generation failed.');
+                      }
+                    }, 1500); // 1.5s for Google Fonts to load
                   } catch (e) {
                     console.error('PDF generation error:', e);
                     showAlert('Error', 'PDF generation failed.');
