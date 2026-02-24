@@ -136,37 +136,4 @@ BEGIN
 END
 GO
 
--- ============================================================
--- SEED: Default Templates
--- ============================================================
-IF NOT EXISTS (SELECT * FROM ResumeBuilderTemplates WHERE Slug = 'classic')
-BEGIN
-    INSERT INTO ResumeBuilderTemplates (Name, Slug, Category, Description, IsPremium, SortOrder, DefaultConfig, HtmlTemplate, CssTemplate)
-    VALUES
-    ('Classic', 'classic', 'Professional', 'Clean single-column layout with serif fonts. Timeless and ATS-friendly.', 0, 1,
-     '{"fontFamily":"Georgia, serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#1a1a1a","accentColor":"#2563EB","marginTop":"0.6in","marginSide":"0.75in","showPhoto":false}',
-     '<!-- Classic template HTML injected at render time -->', '/* Classic template CSS injected at render time */'),
-
-    ('Modern', 'modern', 'Professional', 'Two-column layout with sidebar skills panel. Clean sans-serif look.', 0, 2,
-     '{"fontFamily":"Inter, Helvetica, sans-serif","fontSize":"10pt","lineHeight":"1.35","primaryColor":"#111827","accentColor":"#2563EB","marginTop":"0.5in","marginSide":"0in","showPhoto":false,"layout":"two-column"}',
-     '<!-- Modern template HTML injected at render time -->', '/* Modern template CSS injected at render time */'),
-
-    ('Minimal', 'minimal', 'Professional', 'Ultra-clean whitespace-heavy design. Developer favorite.', 0, 3,
-     '{"fontFamily":"system-ui, -apple-system, sans-serif","fontSize":"10.5pt","lineHeight":"1.5","primaryColor":"#000000","accentColor":"#6B7280","marginTop":"0.7in","marginSide":"0.8in","showPhoto":false}',
-     '<!-- Minimal template HTML injected at render time -->', '/* Minimal template CSS injected at render time */'),
-
-    ('Executive', 'executive', 'Professional', 'Dark header with serif body. Enterprise and leadership roles.', 1, 4,
-     '{"fontFamily":"Merriweather, Georgia, serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#1F2937","accentColor":"#1E40AF","headerBg":"#111827","headerText":"#FFFFFF","marginTop":"0in","marginSide":"0.6in","showPhoto":false}',
-     '<!-- Executive template HTML injected at render time -->', '/* Executive template CSS injected at render time */'),
-
-    ('ATS Optimized', 'ats-optimized', 'ATS-Friendly', 'Zero formatting tricks. Maximum ATS parsability. Guaranteed to pass.', 0, 5,
-     '{"fontFamily":"Arial, sans-serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#000000","accentColor":"#000000","marginTop":"0.5in","marginSide":"0.75in","showPhoto":false}',
-     '<!-- ATS template HTML injected at render time -->', '/* ATS template CSS injected at render time */'),
-
-    ('Tech', 'tech', 'Creative', 'GitHub-inspired layout with monospace accents and skill tags.', 0, 6,
-     '{"fontFamily":"JetBrains Mono, Fira Code, monospace","fontSize":"10pt","lineHeight":"1.4","primaryColor":"#0D1117","accentColor":"#58A6FF","marginTop":"0.5in","marginSide":"0.6in","showPhoto":false}',
-     '<!-- Tech template HTML injected at render time -->', '/* Tech template CSS injected at render time */');
-
-    PRINT 'Seeded 6 default templates';
-END
-GO
+-- NOTE: Seed data for ResumeBuilderTemplates is in database/schema/seed-data.sql

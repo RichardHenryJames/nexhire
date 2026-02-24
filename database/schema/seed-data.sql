@@ -939,3 +939,38 @@ INSERT INTO ApplicationStatuses (StatusID, Status, Description, IsActive, Create
 INSERT INTO ApplicationStatuses (StatusID, Status, Description, IsActive, CreatedAt) VALUES (10, N'Withdrawn', N'Application has been withdrawn', 1, '2025-10-23T13:11:07.382Z');
 SET IDENTITY_INSERT ApplicationStatuses OFF;
 GO
+
+-- ============================================================
+-- Resume Builder Templates
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM ResumeBuilderTemplates WHERE Slug = 'classic')
+BEGIN
+    INSERT INTO ResumeBuilderTemplates (Name, Slug, Category, Description, IsPremium, SortOrder, DefaultConfig, HtmlTemplate, CssTemplate)
+    VALUES
+    ('Classic', 'classic', 'Professional', 'Clean single-column layout with serif fonts. Timeless and ATS-friendly.', 0, 1,
+     '{"fontFamily":"Georgia, serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#1a1a1a","accentColor":"#2563EB","marginTop":"0.6in","marginSide":"0.75in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Modern', 'modern', 'Professional', 'Two-column layout with sidebar skills panel. Clean sans-serif look.', 0, 2,
+     '{"fontFamily":"Inter, Helvetica, sans-serif","fontSize":"10pt","lineHeight":"1.35","primaryColor":"#111827","accentColor":"#2563EB","marginTop":"0.5in","marginSide":"0in","showPhoto":false,"layout":"two-column"}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Minimal', 'minimal', 'Professional', 'Ultra-clean whitespace-heavy design. Developer favorite.', 0, 3,
+     '{"fontFamily":"system-ui, -apple-system, sans-serif","fontSize":"10.5pt","lineHeight":"1.5","primaryColor":"#000000","accentColor":"#6B7280","marginTop":"0.7in","marginSide":"0.8in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Executive', 'executive', 'Professional', 'Dark header with serif body. Enterprise and leadership roles.', 1, 4,
+     '{"fontFamily":"Merriweather, Georgia, serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#1F2937","accentColor":"#1E40AF","headerBg":"#111827","headerText":"#FFFFFF","marginTop":"0in","marginSide":"0.6in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('ATS Optimized', 'ats-optimized', 'ATS-Friendly', 'Zero formatting tricks. Maximum ATS parsability. Guaranteed to pass.', 0, 5,
+     '{"fontFamily":"Arial, sans-serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#000000","accentColor":"#000000","marginTop":"0.5in","marginSide":"0.75in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+
+    ('Tech', 'tech', 'Creative', 'GitHub-inspired layout with monospace accents and skill tags.', 0, 6,
+     '{"fontFamily":"JetBrains Mono, Fira Code, monospace","fontSize":"10pt","lineHeight":"1.4","primaryColor":"#0D1117","accentColor":"#58A6FF","marginTop":"0.5in","marginSide":"0.6in","showPhoto":false}',
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */');
+
+    PRINT 'Seeded 6 default resume builder templates';
+END
+GO
