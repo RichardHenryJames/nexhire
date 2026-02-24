@@ -747,35 +747,61 @@ styles.selectionButton,
               </View>
             </View>
 
-            {renderInput('email', 'Email Address', false, 'email-address', true, isGoogleUser)}
+            {/* Email field with inline verify button */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>
+                Email Address <Text style={styles.requiredAsterisk}>*</Text>
+                {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
+              </Text>
+              <View style={styles.emailRow}>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { flex: 1 },
+                    errors.email && styles.inputError,
+                    isGoogleUser && styles.inputPrefilled,
+                    emailVerified && { borderColor: colors.success, borderWidth: 1.5 },
+                  ]}
+                  placeholder="Email Address"
+                  placeholderTextColor={colors.gray400}
+                  value={formData.email}
+                  onChangeText={(text) => {
+                    setFormData({ ...formData, email: text });
+                    if (errors.email) setErrors({ ...errors, email: null });
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={true}
+                />
+                {!isGoogleUser && !showOtpInput && (
+                  emailVerified ? (
+                    <View style={styles.emailVerifiedInline}>
+                      <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[
+                        styles.verifyEmailButtonInline,
+                        (!validateEmail(formData.email.trim()) || otpLoading) && styles.verifyEmailButtonDisabled
+                      ]}
+                      onPress={handleSendOTP}
+                      disabled={!validateEmail(formData.email.trim()) || otpLoading}
+                    >
+                      {otpLoading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.verifyEmailButtonText}>Verify</Text>
+                      )}
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
             
-            {/* EMAIL VERIFICATION for non-Google users */}
-            {!isGoogleUser && (
-              <View style={styles.emailVerifyContainer}>
-                {emailVerified ? (
-                  <View style={styles.emailVerifiedBadge}>
-                    <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                    <Text style={styles.emailVerifiedText}>Email verified</Text>
-                  </View>
-                ) : !showOtpInput ? (
-                  <TouchableOpacity
-                    style={[
-                      styles.verifyEmailButton,
-                      (!formData.email.trim() || otpLoading) && styles.verifyEmailButtonDisabled
-                    ]}
-                    onPress={handleSendOTP}
-                    disabled={!formData.email.trim() || otpLoading}
-                  >
-                    {otpLoading ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons name="mail-outline" size={16} color="#fff" style={{ marginRight: 6 }} />
-                        <Text style={styles.verifyEmailButtonText}>Verify Email</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                ) : (
+            {/* EMAIL VERIFICATION OTP input */}
+            {!isGoogleUser && showOtpInput && !emailVerified && (
                   <View style={styles.otpSection}>
                     <Text style={styles.otpLabel}>Enter the 4-digit code sent to your email</Text>
                     <View style={styles.otpRow}>
@@ -1489,6 +1515,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   // EMAIL VERIFICATION styles
+  emailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  emailVerifiedInline: {
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  verifyEmailButtonInline: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
   emailVerifyContainer: {
     marginTop: -8,
     marginBottom: 12,

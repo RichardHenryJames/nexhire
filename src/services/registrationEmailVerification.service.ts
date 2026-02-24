@@ -113,7 +113,7 @@ export const sendRegistrationEmailOTP = async (email: string): Promise<Registrat
         AND IsUsed = 0
     `, [normalizedEmail]);
 
-    // 6. Store new OTP (no UserID since user doesn't exist yet, WorkExperienceID = NULL)
+    // 6. Store new OTP (UserID is NULL since user doesn't exist yet during registration)
     await dbService.executeQuery(`
       INSERT INTO EmailVerificationOTPs 
       (UserID, WorkExperienceID, Email, OTPCode, ExpiresAt, Purpose)
