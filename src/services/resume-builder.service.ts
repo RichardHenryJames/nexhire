@@ -652,7 +652,7 @@ ${jobDescription}
 
 Return a JSON object with exactly this structure (no markdown, no explanation):
 {
-  "score": <number 0-100>,
+  "matchScore": <number 0-100>,
   "missingKeywords": ["keyword1", "keyword2"],
   "tips": ["tip1", "tip2", "tip3"]
 }
@@ -662,23 +662,43 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
     const response = await this.callGemini(prompt);
 
     try {
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        const score = Math.min(100, Math.max(0, parsed.score || 0));
-
-        // Save score to project
-        await this.updateProject(projectId, userId, {
-          matchScore: score,
-          targetJobDescription: jobDescription,
-        });
-
-        return {
-          score,
-          missingKeywords: parsed.missingKeywords || [],
-          tips: parsed.tips || [],
-        };
+      // Robust JSON parsing (same approach as Resume Analyzer)
+      let jsonString = response.trim();
+      // Remove markdown code blocks
+      jsonString = jsonString.replace(/^```(?:json)?\s*/i, '');
+      jsonString = jsonString.replace(/\s*```$/i, '');
+      jsonString = jsonString.trim();
+      // Extract JSON object
+      if (!jsonString.startsWith('{')) {
+        const startIdx = jsonString.indexOf('{');
+        if (startIdx !== -1) {
+          let braceCount = 0;
+          let endIdx = startIdx;
+          for (let i = startIdx; i < jsonString.length; i++) {
+            if (jsonString[i] === '{') braceCount++;
+            if (jsonString[i] === '}') braceCount--;
+            if (braceCount === 0) { endIdx = i + 1; break; }
+          }
+          jsonString = jsonString.slice(startIdx, endIdx);
+        }
       }
+      // Clean trailing commas
+      jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1');
+
+      const parsed = JSON.parse(jsonString);
+      const score = Math.min(100, Math.max(0, Number(parsed.matchScore || parsed.score) || 0));
+
+      // Save score to project
+      await this.updateProject(projectId, userId, {
+        matchScore: score,
+        targetJobDescription: jobDescription,
+      });
+
+      return {
+        score,
+        missingKeywords: Array.isArray(parsed.missingKeywords) ? parsed.missingKeywords : [],
+        tips: Array.isArray(parsed.tips) ? parsed.tips : [],
+      };
     } catch (parseErr) {
       console.error('ATS check - failed to parse AI response:', parseErr, 'Raw response:', response?.substring(0, 200));
     }
