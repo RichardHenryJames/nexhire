@@ -33,6 +33,7 @@ out/
 
 # Scripts with sensitive data
 scripts/database/users-to-delete.txt
+scripts/_*.js
 temp-*.js
 
 # OS generated files
