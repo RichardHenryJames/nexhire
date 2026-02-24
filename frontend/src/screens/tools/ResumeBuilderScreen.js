@@ -943,31 +943,57 @@ export default function ResumeBuilderScreen({ navigation }) {
           title="Resume Preview"
           onBack={handleBack}
           rightContent={
-            <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: '#059669' }]}
-              onPress={() => {
-                if (Platform.OS === 'web' && previewHtml) {
-                  // Open resume HTML in a new window and trigger print (Save as PDF)
-                  const printWindow = window.open('', '_blank', 'width=900,height=1100');
-                  if (printWindow) {
-                    printWindow.document.write(previewHtml);
-                    printWindow.document.close();
-                    // Small delay to let fonts/styles load, then trigger print
-                    setTimeout(() => {
-                      printWindow.focus();
-                      printWindow.print();
-                    }, 600);
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {/* Download HTML file — works everywhere */}
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: '#2563EB' }]}
+                onPress={() => {
+                  if (Platform.OS === 'web' && previewHtml) {
+                    try {
+                      // Create downloadable HTML file with proper filename
+                      const name = personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume';
+                      const blob = new Blob([previewHtml], { type: 'text/html' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${name}_Resume.html`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    } catch (e) {
+                      showAlert('Error', 'Failed to download. Please try the Print option.');
+                    }
                   } else {
-                    showAlert('Popup Blocked', 'Please allow popups for this site to download PDF.');
+                    showAlert('Download', 'HTML download is available on web. Open refopen.com/resume-builder on your browser.');
                   }
-                } else {
-                  showAlert('PDF Download', 'Use the Preview on web to download as PDF via your browser\'s print dialog.');
-                }
-              }}
-            >
-              <Ionicons name="download" size={16} color="#FFFFFF" />
-              <Text style={styles.saveBtnText}>Download PDF</Text>
-            </TouchableOpacity>
+                }}
+              >
+                <Ionicons name="download-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.saveBtnText}>HTML</Text>
+              </TouchableOpacity>
+              {/* Print to PDF — native browser print dialog */}
+              <TouchableOpacity
+                style={[styles.saveBtn, { backgroundColor: '#059669' }]}
+                onPress={() => {
+                  if (Platform.OS === 'web' && previewHtml) {
+                    const printWindow = window.open('', '_blank', 'width=900,height=1100');
+                    if (printWindow) {
+                      printWindow.document.write(previewHtml);
+                      printWindow.document.close();
+                      setTimeout(() => { printWindow.focus(); printWindow.print(); }, 600);
+                    } else {
+                      showAlert('Popup Blocked', 'Please allow popups to print.');
+                    }
+                  } else {
+                    showAlert('Print', 'Open on web browser for print-to-PDF.');
+                  }
+                }}
+              >
+                <Ionicons name="print-outline" size={16} color="#FFFFFF" />
+                <Text style={styles.saveBtnText}>PDF</Text>
+              </TouchableOpacity>
+            </View>
           }
         />
         {Platform.OS === 'web' ? (
