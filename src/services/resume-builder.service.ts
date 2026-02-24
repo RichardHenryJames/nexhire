@@ -831,7 +831,7 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
     const formatDate = (d: string) => {
       try {
         const date = new Date(d);
-        return date.toLocaleDateString('en-US', { month: 'Short', year: 'numeric' });
+        return date.toLocaleDateString('en-US', { month: 'short' as const, year: 'numeric' as const });
       } catch { return d; }
     };
     const s = start ? formatDate(start) : '';
