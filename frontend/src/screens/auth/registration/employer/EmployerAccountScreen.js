@@ -854,6 +854,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.gray300,
     marginBottom: 10,
+    textAlign: 'center',
   },
   otpRow: {
     flexDirection: 'row',
