@@ -610,9 +610,11 @@ export default function ResumeBuilderScreen({ navigation }) {
         <SubScreenHeader title="Resume Builder" onBack={() => navigation.goBack()} fallbackTab="Services" />
 
         <ScrollView contentContainerStyle={[styles.scrollContent, isDesktop && { alignItems: 'center' }]} showsVerticalScrollIndicator={false}>
+          {/* Desktop: single container for consistent width */}
+          <View style={isDesktop ? { maxWidth: 900, width: '100%' } : { width: '100%' }}>
 
           {/* ── Hero Banner ─────────────────────────────── */}
-          <LinearGradient colors={['#7C3AED', '#A78BFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.heroBanner, isDesktop && { maxWidth: 900, borderRadius: 16, marginTop: 16 }]}>
+          <LinearGradient colors={['#7C3AED', '#A78BFA']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.heroBanner, isDesktop && { borderRadius: 16, marginTop: 16 }]}>
             <View style={styles.heroContent}>
               <View style={styles.heroIconRow}>
                 <View style={styles.heroIconBg}>
@@ -639,13 +641,13 @@ export default function ResumeBuilderScreen({ navigation }) {
 
           {/* ── My Resumes ──────────────────────────────── */}
           {projects.length > 0 && (
-            <View style={[styles.sectionHeader, isDesktop && { maxWidth: 900 }]}>
+            <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>My Resumes</Text>
               <Text style={[styles.sectionSub, { color: colors.textSecondary }]}>{projects.length} resume{projects.length !== 1 ? 's' : ''}</Text>
             </View>
           )}
 
-          <View style={[styles.projectsGrid, isDesktop && { maxWidth: 900, flexDirection: 'row', flexWrap: 'wrap' }]}>
+          <View style={[styles.projectsGrid, isDesktop && { flexDirection: 'row', flexWrap: 'wrap' }]}>
             {projects.map((project, index) => (
               <TouchableOpacity
                 key={project.ProjectID}
@@ -691,6 +693,7 @@ export default function ResumeBuilderScreen({ navigation }) {
           )}
 
           <View style={{ height: 100 }} />
+          </View>{/* end desktop width container */}
         </ScrollView>
 
         {templatePickerModal}
