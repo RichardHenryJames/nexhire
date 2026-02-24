@@ -210,6 +210,51 @@ const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, co
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Description as bullet points */}
+        {(item.Description || item.description) ? (() => {
+          const desc = (item.Description || item.description || '').trim();
+          const lines = desc.split('\n').filter(l => l.trim());
+          return lines.length > 0 ? (
+            <View style={{ paddingHorizontal: 12, paddingBottom: 8, marginTop: -4 }}>
+              {lines.slice(0, 3).map((line, i) => (
+                <View key={i} style={{ flexDirection: 'row', marginBottom: 3, paddingRight: 4 }}>
+                  <Text style={{ fontSize: 12, color: colors.gray500, marginRight: 6, marginTop: 1 }}>•</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 17, flex: 1 }} numberOfLines={2}>{line.trim()}</Text>
+                </View>
+              ))}
+              {lines.length > 3 && (
+                <Text style={{ fontSize: 11, color: colors.gray400, marginTop: 2, paddingLeft: 14 }}>+{lines.length - 3} more...</Text>
+              )}
+            </View>
+          ) : null;
+        })() : null}
+
+        {/* Skills tags */}
+        {(item.Skills || item.skills) ? (() => {
+          const skillsRaw = item.Skills || item.skills || '';
+          let skillsList = [];
+          try {
+            const parsed = JSON.parse(skillsRaw);
+            skillsList = Array.isArray(parsed) ? parsed : [];
+          } catch {
+            skillsList = skillsRaw.split(',').map(s => s.trim()).filter(Boolean);
+          }
+          return skillsList.length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, paddingHorizontal: 12, paddingBottom: 10 }}>
+              {skillsList.slice(0, 6).map((skill, i) => (
+                <View key={i} style={{ backgroundColor: colors.primary + '12', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }}>
+                  <Text style={{ fontSize: 10, color: colors.primary, fontWeight: '500' }}>{skill}</Text>
+                </View>
+              ))}
+              {skillsList.length > 6 && (
+                <View style={{ paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Text style={{ fontSize: 10, color: colors.gray400 }}>+{skillsList.length - 6}</Text>
+                </View>
+              )}
+            </View>
+          ) : null;
+        })() : null}
       </View>
     </View>
   );
