@@ -945,47 +945,57 @@ GO
 -- ============================================================
 IF NOT EXISTS (SELECT * FROM ResumeBuilderTemplates WHERE Slug = 'classic')
 BEGIN
-    INSERT INTO ResumeBuilderTemplates (Name, Slug, Category, Description, IsPremium, SortOrder, DefaultConfig, HtmlTemplate, CssTemplate)
+    INSERT INTO ResumeBuilderTemplates (Name, Slug, Category, Description, IsPremium, SortOrder, DefaultConfig, HtmlTemplate, CssTemplate, SearchTags)
     VALUES
     ('Classic', 'classic', 'Professional', 'Clean single-column layout with serif fonts. Timeless and ATS-friendly.', 0, 1,
      '{"fontFamily":"Georgia, serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#1a1a1a","accentColor":"#2563EB","marginTop":"0.6in","marginSide":"0.75in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'serif traditional clean timeless centered ats-friendly single-column professional formal harvard garamond classic conservative'),
 
     ('Modern', 'modern', 'Professional', 'Two-column layout with sidebar skills panel. Clean sans-serif look.', 0, 2,
      '{"fontFamily":"Inter, Helvetica, sans-serif","fontSize":"10pt","lineHeight":"1.35","primaryColor":"#111827","accentColor":"#2563EB","marginTop":"0.5in","marginSide":"0in","showPhoto":false,"layout":"two-column"}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'sans-serif modern blue two-column sidebar skills-panel clean inter contemporary professional sleek'),
 
     ('Minimal', 'minimal', 'Professional', 'Ultra-clean whitespace-heavy design. Developer favorite.', 0, 3,
      '{"fontFamily":"system-ui, -apple-system, sans-serif","fontSize":"10.5pt","lineHeight":"1.5","primaryColor":"#000000","accentColor":"#6B7280","marginTop":"0.7in","marginSide":"0.8in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'minimal clean whitespace simple elegant developer minimalist dm-sans light spacious less-is-more'),
 
     ('Executive', 'executive', 'Professional', 'Dark header with serif body. Enterprise and leadership roles.', 1, 4,
      '{"fontFamily":"Merriweather, Georgia, serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#1F2937","accentColor":"#1E40AF","headerBg":"#111827","headerText":"#FFFFFF","marginTop":"0in","marginSide":"0.6in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'executive dark-header serif leadership corporate enterprise senior premium playfair navy formal c-suite director vp'),
 
     ('ATS Optimized', 'ats-optimized', 'ATS-Friendly', 'Zero formatting tricks. Maximum ATS parsability. Guaranteed to pass.', 0, 5,
      '{"fontFamily":"Arial, sans-serif","fontSize":"11pt","lineHeight":"1.4","primaryColor":"#000000","accentColor":"#000000","marginTop":"0.5in","marginSide":"0.75in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'ats ats-friendly ats-optimized plain simple no-graphics parsable recruiter-friendly applicant-tracking arial safe compatible'),
 
     ('Tech', 'tech', 'Creative', 'GitHub-inspired layout with monospace accents and skill tags.', 0, 6,
      '{"fontFamily":"JetBrains Mono, Fira Code, monospace","fontSize":"10pt","lineHeight":"1.4","primaryColor":"#0D1117","accentColor":"#58A6FF","marginTop":"0.5in","marginSide":"0.6in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'tech developer github dark-theme monospace code engineering jetbrains programmer software-engineer dark hacker terminal'),
 
     ('Elegant', 'elegant', 'Professional', 'Sophisticated design with teal accents and clean typography. Perfect for creative professionals.', 0, 7,
      '{"fontFamily":"Lora, Georgia, serif","fontSize":"9.5pt","lineHeight":"1.35","primaryColor":"#1a1a1a","accentColor":"#0D9488","marginTop":"0.4in","marginSide":"0.7in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'elegant teal sophisticated creative serif lora centered pill-tags polished refined classy designer'),
 
     ('Bold', 'bold', 'Creative', 'Strong left accent bar with bold section headers. Stands out while staying professional.', 0, 8,
      '{"fontFamily":"Poppins, sans-serif","fontSize":"9.5pt","lineHeight":"1.35","primaryColor":"#111","accentColor":"#E11D48","marginTop":"0.4in","marginSide":"0.65in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'bold red accent-bar strong poppins creative standout vibrant energetic impactful modern dynamic'),
 
     ('Compact', 'compact', 'ATS-Friendly', 'Maximum content in minimum space. Two-column layout with inline skills. Great for experienced professionals.', 0, 9,
      '{"fontFamily":"Roboto, sans-serif","fontSize":"9pt","lineHeight":"1.3","primaryColor":"#222","accentColor":"#4F46E5","marginTop":"0.35in","marginSide":"0.5in","showPhoto":false,"layout":"two-column"}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */'),
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'compact dense two-column roboto small-font experienced senior lots-of-content space-efficient indigo condensed'),
 
     ('Professional', 'professional', 'Professional', 'Navy blue header with gold accents. Polished and corporate-ready for senior roles.', 1, 10,
      '{"fontFamily":"Crimson Pro, Georgia, serif","fontSize":"9.5pt","lineHeight":"1.35","primaryColor":"#1B2A4A","accentColor":"#B8860B","marginTop":"0in","marginSide":"0.6in","showPhoto":false}',
-     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */');
+     '<!-- Template HTML rendered at runtime -->', '/* Template CSS rendered at runtime */',
+     'professional navy gold corporate premium serif crimson executive polished formal senior leadership blue-gold luxury');
 
     PRINT 'Seeded 10 default resume builder templates';
 END
