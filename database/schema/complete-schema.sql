@@ -575,7 +575,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'EmailVerificationOTPs')
 BEGIN
     CREATE TABLE EmailVerificationOTPs (
         OTPID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
-        UserID UNIQUEIDENTIFIER NOT NULL,
+        UserID UNIQUEIDENTIFIER NULL,
         WorkExperienceID UNIQUEIDENTIFIER NULL,
         Email NVARCHAR(255) NOT NULL,
         OTPCode CHAR(4) NOT NULL,
