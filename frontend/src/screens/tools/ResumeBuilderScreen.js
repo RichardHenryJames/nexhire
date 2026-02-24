@@ -914,11 +914,15 @@ export default function ResumeBuilderScreen({ navigation }) {
           }
         />
         {Platform.OS === 'web' ? (
-          <iframe
-            srcDoc={previewHtml}
-            style={{ flex: 1, border: 'none', width: '100%', height: '100%', backgroundColor: '#FFFFFF' }}
-            title="Resume Preview"
-          />
+          <View style={styles.previewWrapper}>
+            <View style={styles.previewPaper}>
+              <iframe
+                srcDoc={previewHtml}
+                style={{ border: 'none', width: '100%', height: '100%', backgroundColor: '#FFFFFF' }}
+                title="Resume Preview"
+              />
+            </View>
+          </View>
         ) : (
           <ScrollView style={{ flex: 1, padding: 16 }}>
             <View style={[styles.previewPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -1149,6 +1153,31 @@ const styles = StyleSheet.create({
   tipText: { flex: 1, fontSize: 13, lineHeight: 18 },
 
   // Preview
+  previewWrapper: {
+    flex: 1,
+    backgroundColor: '#E5E7EB',
+    alignItems: 'center',
+    paddingVertical: 24,
+    overflow: 'auto',
+  },
+  previewPaper: {
+    width: 816, // 8.5in at 96dpi
+    minHeight: 1056, // 11in at 96dpi
+    backgroundColor: '#FFFFFF',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 24px rgba(0,0,0,0.15), 0 1px 4px rgba(0,0,0,0.08)',
+      },
+      default: {
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+    }),
+    overflow: 'hidden',
+  },
   previewPlaceholder: { borderRadius: 14, borderWidth: 1, padding: 48, alignItems: 'center', justifyContent: 'center' },
   previewPlaceholderText: { marginTop: 16, fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

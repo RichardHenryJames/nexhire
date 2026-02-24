@@ -618,30 +618,38 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
   }
 
   // ============================================================
-  // HTML GENERATION (for preview + PDF)
+  // HTML GENERATION — DB-driven templates
   // ============================================================
 
   /**
-   * Generate complete HTML for a resume project (for preview or PDF)
+   * Generate complete HTML for a resume project using DB-stored template.
+   * Templates are stored in ResumeBuilderTemplates.HtmlTemplate / CssTemplate
+   * with {{PLACEHOLDER}} syntax for data injection.
+   * 
+   * To add a new design: just INSERT a new row in the DB. No code changes needed.
    */
   static async generateHTML(projectId: string, userId: string): Promise<string> {
     const project = await this.getProjectById(projectId, userId);
     if (!project) throw new Error('Project not found');
 
+    // Fetch full template with HTML/CSS from database
+    const template = await this.getTemplateById(project.TemplateID);
+    if (!template) throw new Error('Template not found');
+
     const personalInfo: PersonalInfo = project.PersonalInfo ? JSON.parse(project.PersonalInfo) : {};
     const customConfig = project.CustomConfig ? JSON.parse(project.CustomConfig) : {};
-    const templateConfig = project.TemplateDefaultConfig ? JSON.parse(project.TemplateDefaultConfig) : {};
-    const config: TemplateConfig = { ...templateConfig, ...customConfig };
+    const config: TemplateConfig = { ...(template.DefaultConfig || {}), ...customConfig };
 
+    // Filter and sort visible sections
     const sections = (project.sections || [])
       .filter((s: ResumeSection) => s.IsVisible)
       .sort((a: ResumeSection, b: ResumeSection) => a.SortOrder - b.SortOrder);
 
     const isModern = config.layout === 'two-column';
 
-    // Build sections HTML
-    let sectionsHtml = '';
-    let sidebarHtml = '';
+    // Render section HTML using existing renderers
+    let mainSectionsHtml = '';
+    let sidebarSectionsHtml = '';
 
     for (const section of sections) {
       const items = JSON.parse(section.Content || '[]');
@@ -649,135 +657,43 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
 
       const html = this.renderSectionHtml(section.SectionType, section.SectionTitle, items, config);
 
-      // For two-column layout, skills go in sidebar
       if (isModern && (section.SectionType === 'skills' || section.SectionType === 'languages')) {
-        sidebarHtml += html;
+        sidebarSectionsHtml += html;
       } else {
-        sectionsHtml += html;
+        mainSectionsHtml += html;
       }
     }
 
-    // Contact line
-    const contactParts = [personalInfo.email, personalInfo.phone, personalInfo.location]
-      .filter(Boolean);
+    // Build contact info HTML
+    const contactParts = [personalInfo.email, personalInfo.phone, personalInfo.location].filter(Boolean);
+    const contactHtml = contactParts.map(p => this.escapeHtml(p!)).join('<span class="sep">|</span>');
+
     const linkParts = [
       personalInfo.linkedin ? `<a href="${personalInfo.linkedin}">LinkedIn</a>` : '',
       personalInfo.github ? `<a href="${personalInfo.github}">GitHub</a>` : '',
       personalInfo.portfolio ? `<a href="${personalInfo.portfolio}">Portfolio</a>` : '',
     ].filter(Boolean);
+    const linksHtml = linkParts.join('<span class="sep">·</span>');
 
-    const headerHtml = `
-      <header class="resume-header">
-        <h1 class="name">${this.escapeHtml(personalInfo.fullName || 'Your Name')}</h1>
-        ${contactParts.length ? `<div class="contact-line">${contactParts.map(p => this.escapeHtml(p!)).join(' · ')}</div>` : ''}
-        ${linkParts.length ? `<div class="links-line">${linkParts.join(' · ')}</div>` : ''}
-      </header>
-    `;
+    const summaryText = project.Summary ? this.escapeHtml(project.Summary) : '';
 
-    const summaryHtml = project.Summary ? `
-      <section class="summary-section">
-        <p class="summary-text">${this.escapeHtml(project.Summary)}</p>
-      </section>
-    ` : '';
+    // Get template HTML and CSS from database
+    let html = template.HtmlTemplate || '';
+    const css = template.CssTemplate || '';
 
-    // Build full HTML document
-    const bodyContent = isModern ? `
-      ${headerHtml}
-      ${summaryHtml}
-      <div class="two-column-layout">
-        <div class="main-column">${sectionsHtml}</div>
-        <div class="sidebar-column">${sidebarHtml}</div>
-      </div>
-    ` : `
-      ${headerHtml}
-      ${summaryHtml}
-      ${sectionsHtml}
-    `;
+    // Replace all template placeholders with rendered data
+    html = html
+      .replace(/\{\{STYLES\}\}/g, css)
+      .replace(/\{\{FULL_NAME\}\}/g, this.escapeHtml(personalInfo.fullName || 'Your Name'))
+      .replace(/\{\{CONTACT_HTML\}\}/g, contactHtml)
+      .replace(/\{\{LINKS_HTML\}\}/g, linksHtml)
+      .replace(/\{\{SUMMARY_TEXT\}\}/g, summaryText)
+      .replace(/\{\{SECTIONS_HTML\}\}/g, mainSectionsHtml + sidebarSectionsHtml)
+      .replace(/\{\{MAIN_SECTIONS_HTML\}\}/g, mainSectionsHtml)
+      .replace(/\{\{SIDEBAR_SECTIONS_HTML\}\}/g, sidebarSectionsHtml)
+      .replace(/\{\{TITLE\}\}/g, this.escapeHtml(personalInfo.fullName || 'Resume'));
 
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${this.escapeHtml(personalInfo.fullName || 'Resume')} - Resume</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: ${config.fontFamily || 'Inter, sans-serif'};
-      font-size: ${config.fontSize || '10.5pt'};
-      line-height: ${config.lineHeight || '1.4'};
-      color: ${config.primaryColor || '#111827'};
-      background: #ffffff;
-      padding: ${config.marginTop || '0.5in'} ${config.marginSide || '0.6in'};
-    }
-
-    @page {
-      size: A4;
-      margin: ${config.marginTop || '0.5in'} ${config.marginSide || '0.6in'};
-    }
-
-    .resume-header {
-      text-align: center;
-      margin-bottom: 12pt;
-      padding-bottom: 8pt;
-      border-bottom: 1.5pt solid ${config.accentColor || '#2563EB'};
-    }
-    .name { font-size: 22pt; font-weight: 700; letter-spacing: -0.5pt; color: ${config.primaryColor || '#111827'}; }
-    .contact-line { font-size: 9pt; color: #6B7280; margin-top: 4pt; }
-    .links-line { font-size: 9pt; margin-top: 2pt; }
-    .links-line a { color: ${config.accentColor || '#2563EB'}; text-decoration: none; }
-
-    .summary-section { margin-bottom: 12pt; }
-    .summary-text { font-size: ${config.fontSize || '10.5pt'}; color: #374151; font-style: italic; }
-
-    .section { margin-bottom: 14pt; }
-    .section-title {
-      font-size: 11pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1pt;
-      color: ${config.accentColor || '#2563EB'}; border-bottom: 0.75pt solid ${config.accentColor || '#2563EB'};
-      padding-bottom: 2pt; margin-bottom: 8pt;
-    }
-
-    .entry { margin-bottom: 8pt; }
-    .entry-header { display: flex; justify-content: space-between; align-items: baseline; }
-    .entry-title { font-weight: 700; font-size: 10.5pt; }
-    .entry-subtitle { font-size: 10pt; color: #4B5563; }
-    .entry-date { font-size: 9pt; color: #6B7280; white-space: nowrap; }
-    .entry-location { font-size: 9pt; color: #6B7280; }
-
-    .bullets { padding-left: 16pt; margin-top: 3pt; }
-    .bullets li { font-size: ${config.fontSize || '10.5pt'}; margin-bottom: 2pt; }
-
-    .skills-grid { display: flex; flex-wrap: wrap; gap: 4pt 12pt; }
-    .skill-category { margin-bottom: 4pt; }
-    .skill-category-name { font-weight: 600; font-size: 10pt; }
-    .skill-tags { display: flex; flex-wrap: wrap; gap: 4pt; margin-top: 2pt; }
-    .skill-tag {
-      font-size: 9pt; padding: 1pt 6pt; border-radius: 3pt;
-      background: ${config.accentColor || '#2563EB'}10; color: ${config.primaryColor || '#111827'};
-      border: 0.5pt solid ${config.accentColor || '#2563EB'}30;
-    }
-
-    .cert-entry { margin-bottom: 4pt; }
-    .cert-name { font-weight: 600; font-size: 10pt; }
-    .cert-issuer { font-size: 9pt; color: #6B7280; }
-
-    .two-column-layout { display: flex; gap: 20pt; }
-    .main-column { flex: 2.5; }
-    .sidebar-column { flex: 1; padding-left: 12pt; border-left: 1pt solid #E5E7EB; }
-
-    @media print {
-      body { padding: 0; }
-      .section { break-inside: avoid; }
-    }
-  </style>
-</head>
-<body>
-  ${bodyContent}
-</body>
-</html>`;
+    return html;
   }
 
   // ── Section HTML Renderers ──────────────────────────────────
@@ -915,7 +831,7 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
     const formatDate = (d: string) => {
       try {
         const date = new Date(d);
-        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        return date.toLocaleDateString('en-US', { month: 'Short', year: 'numeric' });
       } catch { return d; }
     };
     const s = start ? formatDate(start) : '';
