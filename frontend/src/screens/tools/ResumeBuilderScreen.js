@@ -904,8 +904,23 @@ export default function ResumeBuilderScreen({ navigation }) {
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: '#059669' }]}
               onPress={() => {
-                // TODO: PDF download
-                showAlert('Coming Soon', 'PDF download will be available in the next update!');
+                if (Platform.OS === 'web' && previewHtml) {
+                  // Open resume HTML in a new window and trigger print (Save as PDF)
+                  const printWindow = window.open('', '_blank', 'width=900,height=1100');
+                  if (printWindow) {
+                    printWindow.document.write(previewHtml);
+                    printWindow.document.close();
+                    // Small delay to let fonts/styles load, then trigger print
+                    setTimeout(() => {
+                      printWindow.focus();
+                      printWindow.print();
+                    }, 600);
+                  } else {
+                    showAlert('Popup Blocked', 'Please allow popups for this site to download PDF.');
+                  }
+                } else {
+                  showAlert('PDF Download', 'Use the Preview on web to download as PDF via your browser\'s print dialog.');
+                }
               }}
             >
               <Ionicons name="download" size={16} color="#FFFFFF" />
