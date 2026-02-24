@@ -40,6 +40,12 @@ import { useResponsive } from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import refopenAPI from '../../services/api';
 
+// html2pdf.js — client-side HTML→PDF (web only, lazy loaded)
+let html2pdf = null;
+if (Platform.OS === 'web') {
+  try { html2pdf = require('html2pdf.js'); } catch (e) { /* not available */ }
+}
+
 const { width: screenWidth } = Dimensions.get('window');
 
 // ── Cross-platform alert (Alert.alert doesn't work on web) ──
@@ -943,57 +949,56 @@ export default function ResumeBuilderScreen({ navigation }) {
           title="Resume Preview"
           onBack={handleBack}
           rightContent={
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {/* Download HTML file — works everywhere */}
-              <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: '#2563EB' }]}
-                onPress={() => {
-                  if (Platform.OS === 'web' && previewHtml) {
-                    try {
-                      // Create downloadable HTML file with proper filename
-                      const name = personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume';
-                      const blob = new Blob([previewHtml], { type: 'text/html' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `${name}_Resume.html`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    } catch (e) {
-                      showAlert('Error', 'Failed to download. Please try the Print option.');
-                    }
-                  } else {
-                    showAlert('Download', 'HTML download is available on web. Open refopen.com/resume-builder on your browser.');
-                  }
-                }}
-              >
-                <Ionicons name="download-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>HTML</Text>
-              </TouchableOpacity>
-              {/* Print to PDF — native browser print dialog */}
-              <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: '#059669' }]}
-                onPress={() => {
-                  if (Platform.OS === 'web' && previewHtml) {
-                    const printWindow = window.open('', '_blank', 'width=900,height=1100');
-                    if (printWindow) {
-                      printWindow.document.write(previewHtml);
-                      printWindow.document.close();
-                      setTimeout(() => { printWindow.focus(); printWindow.print(); }, 600);
-                    } else {
-                      showAlert('Popup Blocked', 'Please allow popups to print.');
-                    }
-                  } else {
-                    showAlert('Print', 'Open on web browser for print-to-PDF.');
-                  }
-                }}
-              >
-                <Ionicons name="print-outline" size={16} color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>PDF</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: '#059669' }]}
+              onPress={async () => {
+                if (Platform.OS !== 'web' || !previewHtml) {
+                  showAlert('Download', 'Open refopen.com/resume-builder in your browser to download PDF.');
+                  return;
+                }
+                try {
+                  // Create a hidden container, inject resume HTML, convert to PDF
+                  const container = document.createElement('div');
+                  container.style.position = 'fixed';
+                  container.style.left = '-9999px';
+                  container.style.top = '0';
+                  container.style.width = '8.5in';
+                  container.innerHTML = previewHtml
+                    .replace(/^<!DOCTYPE[^>]*>/i, '')
+                    .replace(/<html[^>]*>/i, '')
+                    .replace(/<\/html>/i, '')
+                    .replace(/<head>[\s\S]*?<\/head>/i, (match) => {
+                      // Extract just the <style> tags from head
+                      const styles = match.match(/<style>[\s\S]*?<\/style>/gi) || [];
+                      return styles.join('');
+                    })
+                    .replace(/<\/?body[^>]*>/gi, '');
+                  document.body.appendChild(container);
+
+                  const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume.pdf';
+
+                  await html2pdf()
+                    .set({
+                      margin: 0,
+                      filename: fileName,
+                      image: { type: 'jpeg', quality: 0.98 },
+                      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+                      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+                    })
+                    .from(container)
+                    .save();
+
+                  document.body.removeChild(container);
+                } catch (e) {
+                  console.error('PDF generation error:', e);
+                  showAlert('Error', 'PDF generation failed. Try using Print (Ctrl+P) instead.');
+                }
+              }}
+            >
+              <Ionicons name="download-outline" size={16} color="#FFFFFF" />
+              <Text style={styles.saveBtnText}>Download PDF</Text>
+            </TouchableOpacity>
           }
         />
         {Platform.OS === 'web' ? (
