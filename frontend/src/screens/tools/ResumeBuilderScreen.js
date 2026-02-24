@@ -1332,7 +1332,7 @@ export default function ResumeBuilderScreen({ navigation }) {
 // ══════════════════════════════════════════════════════════
 
 const styles = StyleSheet.create({
-  container: { flex: 1, ...Platform.select({ web: { overflow: 'hidden', height: '100vh' }, default: {} }) },
+  container: { flex: 1 },
   centerContent: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
   loadingText: { marginTop: 12, fontSize: 14 },
   scrollContent: { paddingBottom: 40 },
