@@ -46,6 +46,13 @@ if (Platform.OS === 'web') {
   try { html2pdf = require('html2pdf.js'); } catch (e) { /* not available */ }
 }
 
+// expo-print + expo-sharing — native HTML→PDF (Android/iOS)
+let Print = null;
+let Sharing = null;
+if (Platform.OS !== 'web') {
+  try { Print = require('expo-print'); Sharing = require('expo-sharing'); } catch (e) { /* not available */ }
+}
+
 const { width: screenWidth } = Dimensions.get('window');
 
 // ── Cross-platform alert (Alert.alert doesn't work on web) ──
@@ -952,47 +959,73 @@ export default function ResumeBuilderScreen({ navigation }) {
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: '#059669' }]}
               onPress={async () => {
-                if (Platform.OS !== 'web' || !previewHtml) {
-                  showAlert('Download', 'Open refopen.com/resume-builder in your browser to download PDF.');
-                  return;
-                }
-                try {
-                  // Create a hidden container, inject resume HTML, convert to PDF
-                  const container = document.createElement('div');
-                  container.style.position = 'fixed';
-                  container.style.left = '-9999px';
-                  container.style.top = '0';
-                  container.style.width = '8.5in';
-                  container.innerHTML = previewHtml
-                    .replace(/^<!DOCTYPE[^>]*>/i, '')
-                    .replace(/<html[^>]*>/i, '')
-                    .replace(/<\/html>/i, '')
-                    .replace(/<head>[\s\S]*?<\/head>/i, (match) => {
-                      // Extract just the <style> tags from head
-                      const styles = match.match(/<style>[\s\S]*?<\/style>/gi) || [];
-                      return styles.join('');
-                    })
-                    .replace(/<\/?body[^>]*>/gi, '');
-                  document.body.appendChild(container);
+                if (Platform.OS === 'web') {
+                  // Web: use html2pdf.js for client-side PDF generation
+                  if (!previewHtml || !html2pdf) {
+                    showAlert('Error', 'Preview not available.');
+                    return;
+                  }
+                  try {
+                    const container = document.createElement('div');
+                    container.style.position = 'fixed';
+                    container.style.left = '-9999px';
+                    container.style.top = '0';
+                    container.style.width = '8.5in';
+                    container.innerHTML = previewHtml
+                      .replace(/^<!DOCTYPE[^>]*>/i, '')
+                      .replace(/<html[^>]*>/i, '')
+                      .replace(/<\/html>/i, '')
+                      .replace(/<head>[\s\S]*?<\/head>/i, (match) => {
+                        const styles = match.match(/<style>[\s\S]*?<\/style>/gi) || [];
+                        return styles.join('');
+                      })
+                      .replace(/<\/?body[^>]*>/gi, '');
+                    document.body.appendChild(container);
 
-                  const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume.pdf';
+                    const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume.pdf';
 
-                  await html2pdf()
-                    .set({
-                      margin: 0,
-                      filename: fileName,
-                      image: { type: 'jpeg', quality: 0.98 },
-                      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-                      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-                      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-                    })
-                    .from(container)
-                    .save();
+                    await html2pdf()
+                      .set({
+                        margin: 0,
+                        filename: fileName,
+                        image: { type: 'jpeg', quality: 0.98 },
+                        html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+                      })
+                      .from(container)
+                      .save();
 
-                  document.body.removeChild(container);
-                } catch (e) {
-                  console.error('PDF generation error:', e);
-                  showAlert('Error', 'PDF generation failed. Try using Print (Ctrl+P) instead.');
+                    document.body.removeChild(container);
+                  } catch (e) {
+                    console.error('PDF generation error:', e);
+                    showAlert('Error', 'PDF generation failed.');
+                  }
+                } else {
+                  // Native (Android/iOS): use expo-print → expo-sharing
+                  if (!previewHtml || !Print) {
+                    showAlert('Error', 'PDF generation not available.');
+                    return;
+                  }
+                  try {
+                    const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume';
+                    const { uri } = await Print.printToFileAsync({
+                      html: previewHtml,
+                      base64: false,
+                    });
+                    if (Sharing && await Sharing.isAvailableAsync()) {
+                      await Sharing.shareAsync(uri, {
+                        mimeType: 'application/pdf',
+                        dialogTitle: `Share ${fileName}`,
+                        UTI: 'com.adobe.pdf',
+                      });
+                    } else {
+                      showAlert('Saved', `PDF saved to: ${uri}`);
+                    }
+                  } catch (e) {
+                    console.error('Native PDF error:', e);
+                    showAlert('Error', 'PDF generation failed.');
+                  }
                 }
               }}
             >
