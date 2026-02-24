@@ -711,9 +711,13 @@ export default function ResumeBuilderScreen({ navigation }) {
         <SubScreenHeader
           title={activeProject?.Title || 'Edit Resume'}
           onBack={handleBack}
+          fallbackTab="Services"
           rightContent={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              {saving && <ActivityIndicator size="small" color={colors.primary} />}
+            (saving || loading) ? (
+              <View style={[styles.saveBtn, { backgroundColor: colors.gray300 }]}>
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              </View>
+            ) : (
               <TouchableOpacity
                 style={[styles.saveBtn, { backgroundColor: colors.primary }]}
                 onPress={saveProject}
@@ -721,7 +725,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                 <Ionicons name="checkmark-circle" size={16} color="#FFFFFF" />
                 <Text style={styles.saveBtnText}>Save</Text>
               </TouchableOpacity>
-            </View>
+            )
           }
         />
 
@@ -1054,6 +1058,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         <SubScreenHeader
           title="Resume Preview"
           onBack={handleBack}
+          fallbackTab="Services"
           rightContent={
             <TouchableOpacity
               style={[styles.saveBtn, { backgroundColor: '#059669' }]}
