@@ -798,7 +798,7 @@ export default function ResumeBuilderScreen({ navigation }) {
               onPress={handlePreview}
             >
               <Ionicons name="eye-outline" size={15} color={colors.textSecondary} />
-              {!isMobile && <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>Preview</Text>}
+              <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>Preview</Text>
             </TouchableOpacity>
 
             {/* 3. ATS Check */}
@@ -807,7 +807,7 @@ export default function ResumeBuilderScreen({ navigation }) {
               onPress={() => setShowAtsModal(true)}
             >
               <Ionicons name="shield-checkmark" size={15} color={colors.textSecondary} />
-              {!isMobile && <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>ATS Check</Text>}
+              <Text style={[styles.toolbarBtnText, { color: colors.textSecondary }]}>ATS</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -1400,7 +1400,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 
   // Editor toolbar (below header)
-  editorToolbar: { paddingVertical: 8, borderBottomWidth: 1, alignItems: 'center' },
+  editorToolbar: { paddingVertical: 8, borderBottomWidth: 1, alignItems: 'center', zIndex: 10, ...Platform.select({ web: { boxShadow: '0 2px 4px rgba(0,0,0,0.08)' }, default: { elevation: 2 } }) },
   toolbarBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   toolbarBtnText: { fontSize: 12, fontWeight: '600' },
   headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
