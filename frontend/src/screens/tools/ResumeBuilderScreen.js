@@ -42,6 +42,15 @@ import refopenAPI from '../../services/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
+// ── Cross-platform alert (Alert.alert doesn't work on web) ──
+const showAlert = (title, message) => {
+  if (Platform.OS === 'web') {
+    window.alert(message || title);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
 // ── VIEWS ─────────────────────────────────────────────────
 const VIEW = { LIST: 'list', EDITOR: 'editor', PREVIEW: 'preview' };
 
@@ -157,7 +166,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         await openProject(result.data.ProjectID);
       }
     } catch (e) {
-      Alert.alert('Error', 'Failed to create project');
+      showAlert('Error', 'Failed to create project');
     } finally {
       setLoading(false);
     }
@@ -183,7 +192,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         setCurrentView(VIEW.EDITOR);
       }
     } catch (e) {
-      Alert.alert('Error', 'Failed to load project');
+      showAlert('Error', 'Failed to load project');
     } finally {
       setLoading(false);
     }
@@ -222,20 +231,29 @@ export default function ResumeBuilderScreen({ navigation }) {
 
   // ── Delete Project ───────────────────────────────────────
   const handleDeleteProject = (projectId) => {
-    Alert.alert('Delete Resume', 'Are you sure you want to delete this resume?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await refopenAPI.apiCall(`/resume-builder/projects/${projectId}`, { method: 'DELETE' });
-            setProjects(prev => prev.filter(p => p.ProjectID !== projectId));
-          } catch (e) {
-            Alert.alert('Error', 'Failed to delete');
-          }
-        },
-      },
-    ]);
+    const doDelete = async () => {
+      try {
+        await refopenAPI.apiCall(`/resume-builder/projects/${projectId}`, { method: 'DELETE' });
+        setProjects(prev => prev.filter(p => p.ProjectID !== projectId));
+      } catch (e) {
+        if (Platform.OS === 'web') {
+          showAlert('Error', 'Failed to delete resume');
+        } else {
+          showAlert('Error', 'Failed to delete');
+        }
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to delete this resume?')) {
+        doDelete();
+      }
+    } else {
+      Alert.alert('Delete Resume', 'Are you sure you want to delete this resume?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: doDelete },
+      ]);
+    }
   };
 
   // ── AI: Generate Summary ─────────────────────────────────
@@ -251,7 +269,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         setSummary(result.data.summary);
       }
     } catch (e) {
-      Alert.alert('AI Error', 'Failed to generate summary');
+      showAlert('AI Error', 'Failed to generate summary');
     } finally {
       setAiLoading(null);
     }
@@ -281,7 +299,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         }));
       }
     } catch (e) {
-      Alert.alert('AI Error', 'Failed to rewrite bullets');
+      showAlert('AI Error', 'Failed to rewrite bullets');
     } finally {
       setAiLoading(null);
     }
@@ -301,7 +319,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         setAtsResult(result.data);
       }
     } catch (e) {
-      Alert.alert('AI Error', 'Failed to run ATS check');
+      showAlert('AI Error', 'Failed to run ATS check');
     } finally {
       setAiLoading(null);
     }
@@ -318,7 +336,7 @@ export default function ResumeBuilderScreen({ navigation }) {
       setPreviewHtml(typeof result === 'string' ? result : (result?.data || '<p>Preview unavailable</p>'));
       setCurrentView(VIEW.PREVIEW);
     } catch (e) {
-      Alert.alert('Error', 'Failed to generate preview');
+      showAlert('Error', 'Failed to generate preview');
     } finally {
       setLoading(false);
     }
@@ -886,7 +904,7 @@ export default function ResumeBuilderScreen({ navigation }) {
               style={[styles.saveBtn, { backgroundColor: '#059669' }]}
               onPress={() => {
                 // TODO: PDF download
-                Alert.alert('Coming Soon', 'PDF download will be available in the next update!');
+                showAlert('Coming Soon', 'PDF download will be available in the next update!');
               }}
             >
               <Ionicons name="download" size={16} color="#FFFFFF" />
