@@ -40,19 +40,15 @@ import { useResponsive } from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import refopenAPI from '../../services/api';
 
-// expo-print + expo-sharing — native HTML→PDF (Android/iOS)
-let Print = null;
-let Sharing = null;
-if (Platform.OS !== 'web') {
-  try {
-    const expoPrint = require('expo-print');
-    Print = expoPrint.printToFileAsync ? expoPrint : expoPrint.default || expoPrint;
-    const expoSharing = require('expo-sharing');
-    Sharing = expoSharing.isAvailableAsync ? expoSharing : expoSharing.default || expoSharing;
-  } catch (e) { console.warn('expo-print/sharing not available:', e); }
-}
-
 const { width: screenWidth } = Dimensions.get('window');
+
+// Helper: get expo-print and expo-sharing at runtime (inline require avoids module-level failures)
+const getNativePrint = () => {
+  try { const m = require('expo-print'); return m.printToFileAsync ? m : (m.default || m); } catch { return null; }
+};
+const getNativeSharing = () => {
+  try { const m = require('expo-sharing'); return m.isAvailableAsync ? m : (m.default || m); } catch { return null; }
+};
 
 // ── Cross-platform alert (Alert.alert doesn't work on web) ──
 const showAlert = (title, message) => {
@@ -1156,19 +1152,21 @@ export default function ResumeBuilderScreen({ navigation }) {
                     showAlert('Error', 'Preview not available. Please try again.');
                     return;
                   }
-                  if (!Print || !Print.printToFileAsync) {
+                  const PrintMod = getNativePrint();
+                  if (!PrintMod || !PrintMod.printToFileAsync) {
                     showAlert('Error', 'PDF generation not available on this device.');
                     return;
                   }
                   try {
                     const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume';
-                    const { uri } = await Print.printToFileAsync({
+                    const { uri } = await PrintMod.printToFileAsync({
                       html: previewHtml,
                       base64: false,
                     });
-                    const canShare = Sharing && Sharing.isAvailableAsync && await Sharing.isAvailableAsync();
+                    const SharingMod = getNativeSharing();
+                    const canShare = SharingMod && SharingMod.isAvailableAsync && await SharingMod.isAvailableAsync();
                     if (canShare) {
-                      await Sharing.shareAsync(uri, {
+                      await SharingMod.shareAsync(uri, {
                         mimeType: 'application/pdf',
                         dialogTitle: `Share ${fileName}`,
                         UTI: 'com.adobe.pdf',
@@ -1178,7 +1176,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                     }
                   } catch (e) {
                     console.error('Native PDF error:', e);
-                    showAlert('Error', 'PDF generation failed.');
+                    showAlert('Error', 'PDF generation failed: ' + (e.message || e));
                   }
                 }
               }}
@@ -1228,37 +1226,64 @@ export default function ResumeBuilderScreen({ navigation }) {
             </View>
           </View>
         ) : (
-          <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ alignItems: 'center' }}>
-            <View style={[styles.previewPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border, padding: 32, alignItems: 'center' }]}>
-              <Ionicons name="checkmark-circle" size={56} color="#10B981" />
+          <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ alignItems: 'center', paddingBottom: 40 }}>
+            <View style={[styles.previewPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border, padding: 32, alignItems: 'center', width: '100%' }]}>
+              <Ionicons name="document-text" size={56} color={colors.primary} />
               <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16, textAlign: 'center' }}>
-                Resume Saved Successfully!
+                Your Resume is Ready!
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
-                Tap "Save as PDF" above to download and share your resume.
+                View the preview or download as PDF to share.
               </Text>
-              {Print && Print.printToFileAsync && (
-                <TouchableOpacity
-                  style={{ backgroundColor: '#059669', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8, marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-                  onPress={async () => {
-                    try {
-                      const { uri } = await Print.printToFileAsync({ html: previewHtml, base64: false });
-                      const canShare = Sharing && Sharing.isAvailableAsync && await Sharing.isAvailableAsync();
-                      if (canShare) {
-                        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Resume' });
-                      } else {
-                        showAlert('Saved', 'PDF saved to: ' + uri);
-                      }
-                    } catch (e) {
-                      console.error('PDF error:', e);
-                      showAlert('Error', 'PDF generation failed: ' + e.message);
+
+              {/* View Preview — opens native print dialog showing rendered HTML */}
+              <TouchableOpacity
+                style={{ backgroundColor: colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8, marginTop: 24, flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center' }}
+                onPress={async () => {
+                  try {
+                    const P = getNativePrint();
+                    if (P && P.printAsync) {
+                      await P.printAsync({ html: previewHtml });
+                    } else {
+                      showAlert('Error', 'Print preview not available on this device.');
                     }
-                  }}
-                >
-                  <Ionicons name="download-outline" size={18} color="#FFFFFF" />
-                  <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}>Download PDF</Text>
-                </TouchableOpacity>
-              )}
+                  } catch (e) {
+                    console.error('Preview error:', e);
+                    showAlert('Error', 'Preview failed: ' + (e.message || e));
+                  }
+                }}
+              >
+                <Ionicons name="eye-outline" size={20} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 16 }}>View Preview & Print</Text>
+              </TouchableOpacity>
+
+              {/* Download PDF */}
+              <TouchableOpacity
+                style={{ backgroundColor: '#059669', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center' }}
+                onPress={async () => {
+                  try {
+                    const P = getNativePrint();
+                    const S = getNativeSharing();
+                    if (!P || !P.printToFileAsync) {
+                      showAlert('Error', 'PDF generation not available. Please update the app.');
+                      return;
+                    }
+                    const { uri } = await P.printToFileAsync({ html: previewHtml, base64: false });
+                    const canShare = S && S.isAvailableAsync && await S.isAvailableAsync();
+                    if (canShare) {
+                      await S.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Resume' });
+                    } else {
+                      showAlert('Saved', 'PDF saved to: ' + uri);
+                    }
+                  } catch (e) {
+                    console.error('PDF error:', e);
+                    showAlert('Error', 'PDF failed: ' + (e.message || e));
+                  }
+                }}
+              >
+                <Ionicons name="download-outline" size={20} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 16 }}>Download PDF</Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         )}
