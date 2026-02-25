@@ -43,8 +43,15 @@ import refopenAPI from '../../services/api';
 // expo-print + expo-sharing — native HTML→PDF (Android/iOS)
 let Print = null;
 let Sharing = null;
+let WebView = null;
 if (Platform.OS !== 'web') {
-  try { Print = require('expo-print'); Sharing = require('expo-sharing'); } catch (e) { /* not available */ }
+  try {
+    const expoPrint = require('expo-print');
+    Print = expoPrint.default || expoPrint;
+    const expoSharing = require('expo-sharing');
+    Sharing = expoSharing.default || expoSharing;
+  } catch (e) { /* not available */ }
+  try { WebView = require('react-native-webview').default; } catch (e) { /* not available */ }
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -157,19 +164,17 @@ export default function ResumeBuilderScreen({ navigation }) {
       const tpls = result?.data || [];
       setTemplates(tpls);
 
-      // Fetch preview HTML for each template (for thumbnail iframes)
-      if (Platform.OS === 'web') {
-        const previews = {};
-        await Promise.all(tpls.map(async (t) => {
-          try {
-            const previewResult = await refopenAPI.apiCall(`/resume-builder/templates/${t.Slug}/preview`);
-            previews[t.Slug] = previewResult?.message || previewResult || '';
-          } catch (e) {
-            previews[t.Slug] = '';
-          }
-        }));
-        setTemplatePreviews(previews);
-      }
+      // Fetch preview HTML for each template (for thumbnails)
+      const previews = {};
+      await Promise.all(tpls.map(async (t) => {
+        try {
+          const previewResult = await refopenAPI.apiCall(`/resume-builder/templates/${t.Slug}/preview`);
+          previews[t.Slug] = previewResult?.message || previewResult || '';
+        } catch (e) {
+          previews[t.Slug] = '';
+        }
+      }));
+      setTemplatePreviews(previews);
     } catch (e) {
       console.error('Failed to load templates:', e);
     }
@@ -558,18 +563,41 @@ export default function ResumeBuilderScreen({ navigation }) {
                 }}
                 activeOpacity={0.7}
               >
-                {/* DB-driven template preview via iframe, gradient fallback */}
-                {Platform.OS === 'web' && templatePreviews[template.Slug] ? (
-                  <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
-                    <View style={{ width: 816, height: 1056, transform: [{ scale: 0.19 }], transformOrigin: 'top left' }}>
-                      <iframe
-                        srcDoc={templatePreviews[template.Slug]}
-                        style={{ border: 'none', width: 816, height: 1056, pointerEvents: 'none', backgroundColor: '#FFFFFF' }}
-                        title={template.Name}
-                        scrolling="no"
+                {/* DB-driven template preview — iframe on web, WebView on native */}
+                {templatePreviews[template.Slug] ? (
+                  Platform.OS === 'web' ? (
+                    <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
+                      <View style={{ width: 816, height: 1056, transform: [{ scale: 0.19 }], transformOrigin: 'top left' }}>
+                        <iframe
+                          srcDoc={templatePreviews[template.Slug]}
+                          style={{ border: 'none', width: 816, height: 1056, pointerEvents: 'none', backgroundColor: '#FFFFFF' }}
+                          title={template.Name}
+                          scrolling="no"
+                        />
+                      </View>
+                    </View>
+                  ) : WebView ? (
+                    <View style={[styles.templateThumb, { overflow: 'hidden', backgroundColor: '#FFFFFF' }]}>
+                      <WebView
+                        source={{ html: templatePreviews[template.Slug] }}
+                        style={{ width: 816, height: 1056, transform: [{ scale: 0.17 }], transformOrigin: 'top left' }}
+                        scrollEnabled={false}
+                        pointerEvents="none"
+                        scalesPageToFit={false}
+                        showsHorizontalScrollIndicator={false}
+                        showsVerticalScrollIndicator={false}
+                        originWhitelist={['*']}
+                        javaScriptEnabled={false}
                       />
                     </View>
-                  </View>
+                  ) : (
+                    <LinearGradient
+                      colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
+                      style={styles.templateThumb}
+                    >
+                      <Ionicons name="document-text" size={32} color="rgba(255,255,255,0.7)" />
+                    </LinearGradient>
+                  )
                 ) : (
                   <LinearGradient
                     colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
@@ -1147,8 +1175,12 @@ export default function ResumeBuilderScreen({ navigation }) {
                   }
                 } else {
                   // Native (Android/iOS): use expo-print → expo-sharing
-                  if (!previewHtml || !Print) {
-                    showAlert('Error', 'PDF generation not available.');
+                  if (!previewHtml) {
+                    showAlert('Error', 'Preview not available. Please try again.');
+                    return;
+                  }
+                  if (!Print || !Print.printToFileAsync) {
+                    showAlert('Error', 'PDF generation not available on this device.');
                     return;
                   }
                   try {
@@ -1157,7 +1189,8 @@ export default function ResumeBuilderScreen({ navigation }) {
                       html: previewHtml,
                       base64: false,
                     });
-                    if (Sharing && await Sharing.isAvailableAsync()) {
+                    const canShare = Sharing && Sharing.isAvailableAsync && await Sharing.isAvailableAsync();
+                    if (canShare) {
                       await Sharing.shareAsync(uri, {
                         mimeType: 'application/pdf',
                         dialogTitle: `Share ${fileName}`,
@@ -1216,6 +1249,17 @@ export default function ResumeBuilderScreen({ navigation }) {
                 }}
               />
             </View>
+          </View>
+        ) : WebView && previewHtml ? (
+          <View style={{ flex: 1 }}>
+            <WebView
+              source={{ html: previewHtml }}
+              style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+              scalesPageToFit={true}
+              originWhitelist={['*']}
+              javaScriptEnabled={false}
+              showsHorizontalScrollIndicator={false}
+            />
           </View>
         ) : (
           <ScrollView style={{ flex: 1, padding: 16 }}>

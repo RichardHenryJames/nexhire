@@ -60,8 +60,10 @@
     "expo-linear-gradient": "~12.3.0",
     "expo-linking": "~5.0.2",
     "expo-notifications": "~0.20.1",
+    "expo-print": "~12.4.2",
     "expo-router": "^2.0.0",
     "expo-secure-store": "~12.3.1",
+    "expo-sharing": "~11.5.0",
     "expo-status-bar": "~1.6.0",
     "expo-updates": "~0.18.19",
     "expo-web-browser": "~12.3.2",
@@ -77,9 +79,8 @@
     "react-native-screens": "~3.22.0",
     "react-native-svg": "^13.9.0",
     "react-native-web": "~0.19.6",
-    "socket.io-client": "^4.8.1",
-    "expo-print": "~12.4.2",
-    "expo-sharing": "~11.5.0"
+    "react-native-webview": "^13.16.0",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "@azure/static-web-apps-cli": "^1.1.7",
