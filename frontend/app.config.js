@@ -131,19 +131,9 @@ export default ({ config }) => {
       fallbackToCacheTimeout: 0,
     },
     plugins: [
-      'expo-router',
-      [
-        'expo-notifications',
-        {
-          icon: './assets/icon.png',
-          color: '#3B82F6',
-          sounds: [],
-        },
-      ],
+      // expo-notifications temporarily removed for parimalnew test build (needs google-services.json)
+      // Restore when building on parimalkumar account
     ],
-    experiments: {
-      typedRoutes: true,
-    },
     extra: {
       ...extraConfig,
       eas: { projectId: '5ea7ce94-6c26-41e3-b132-8ef9e44e2406' },
