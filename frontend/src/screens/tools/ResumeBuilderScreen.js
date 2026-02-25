@@ -27,7 +27,6 @@ import {
   Platform,
   ActivityIndicator,
   Dimensions,
-  Alert,
   Animated,
   Modal,
   KeyboardAvoidingView,
@@ -38,6 +37,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import { useCustomAlert } from '../../components/CustomAlert';
 import refopenAPI from '../../services/api';
 
 import * as ExpoPrint from 'expo-print';
@@ -46,14 +46,8 @@ import { WebView } from 'react-native-webview';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// ── Cross-platform alert (Alert.alert doesn't work on web) ──
-const showAlert = (title, message) => {
-  if (Platform.OS === 'web') {
-    window.alert(message || title);
-  } else {
-    Alert.alert(title, message);
-  }
-};
+// ── Cross-platform alert ──
+// showAlert and showConfirm are provided by useCustomAlert() inside the component
 
 // ── VIEWS ─────────────────────────────────────────────────
 const VIEW = { LIST: 'list', EDITOR: 'editor', PREVIEW: 'preview' };
@@ -95,6 +89,10 @@ export default function ResumeBuilderScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
   const { isDesktop, isMobile, width: responsiveWidth } = useResponsive();
+  const { showAlert, showConfirm } = useCustomAlert();
+
+  // Wrapper for simple alerts (used throughout the screen)
+  const alert = (title, message) => showAlert({ title, message });
 
   // ── State ────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState(VIEW.LIST);
@@ -190,7 +188,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         await openProject(result.data.ProjectID);
       }
     } catch (e) {
-      showAlert('Error', 'Failed to create project');
+      alert('Error', 'Failed to create project');
     } finally {
       setLoading(false);
     }
@@ -208,7 +206,7 @@ export default function ResumeBuilderScreen({ navigation }) {
       // Reload project to pick up new template
       await openProject(activeProject.ProjectID);
     } catch (e) {
-      showAlert('Error', 'Failed to switch template');
+      alert('Error', 'Failed to switch template');
     } finally {
       setSaving(false);
     }
@@ -234,7 +232,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         setCurrentView(VIEW.EDITOR);
       }
     } catch (e) {
-      showAlert('Error', 'Failed to load project');
+      alert('Error', 'Failed to load project');
     } finally {
       setLoading(false);
     }
@@ -279,23 +277,21 @@ export default function ResumeBuilderScreen({ navigation }) {
         setProjects(prev => prev.filter(p => p.ProjectID !== projectId));
       } catch (e) {
         if (Platform.OS === 'web') {
-          showAlert('Error', 'Failed to delete resume');
+          alert('Error', 'Failed to delete resume');
         } else {
-          showAlert('Error', 'Failed to delete');
+          alert('Error', 'Failed to delete');
         }
       }
     };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to delete this resume?')) {
-        doDelete();
-      }
-    } else {
-      Alert.alert('Delete Resume', 'Are you sure you want to delete this resume?', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: doDelete },
-      ]);
-    }
+    showConfirm({
+      title: 'Delete Resume',
+      message: 'Are you sure you want to delete this resume?',
+      icon: 'trash-outline',
+      confirmText: 'Delete',
+      destructive: true,
+      onConfirm: doDelete,
+    });
   };
 
   // ── AI: Generate Summary ─────────────────────────────────
@@ -311,7 +307,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         setSummary(result.data.summary);
       }
     } catch (e) {
-      showAlert('AI Error', 'Failed to generate summary');
+      alert('AI Error', 'Failed to generate summary');
     } finally {
       setAiLoading(null);
     }
@@ -347,7 +343,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         }));
       }
     } catch (e) {
-      showAlert('AI Error', 'Failed to rewrite bullets');
+      alert('AI Error', 'Failed to rewrite bullets');
     } finally {
       setAiLoading(null);
     }
@@ -367,7 +363,7 @@ export default function ResumeBuilderScreen({ navigation }) {
         setAtsResult(result.data);
       }
     } catch (e) {
-      showAlert('AI Error', 'Failed to run ATS check');
+      alert('AI Error', 'Failed to run ATS check');
     } finally {
       setAiLoading(null);
     }
@@ -385,7 +381,7 @@ export default function ResumeBuilderScreen({ navigation }) {
       setPreviewHtml(html);
       setCurrentView(VIEW.PREVIEW);
     } catch (e) {
-      showAlert('Error', 'Failed to generate preview');
+      alert('Error', 'Failed to generate preview');
     } finally {
       setLoading(false);
     }
@@ -1117,7 +1113,7 @@ export default function ResumeBuilderScreen({ navigation }) {
               onPress={async () => {
                 if (Platform.OS === 'web') {
                   if (!previewHtml) {
-                    showAlert('Error', 'Preview not available.');
+                    alert('Error', 'Preview not available.');
                     return;
                   }
                   try {
@@ -1133,7 +1129,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                     // Open in new window — browser renders it perfectly (same as preview)
                     const printWindow = window.open('', '_blank');
                     if (!printWindow) {
-                      showAlert('Popup Blocked', 'Please allow popups for this site, then try again.');
+                      alert('Popup Blocked', 'Please allow popups for this site, then try again.');
                       return;
                     }
                     printWindow.document.write(printHtml);
@@ -1153,12 +1149,12 @@ export default function ResumeBuilderScreen({ navigation }) {
                     }, 2000);
                   } catch (e) {
                     console.error('PDF error:', e);
-                    showAlert('Error', 'Failed to generate PDF.');
+                    alert('Error', 'Failed to generate PDF.');
                   }
                 } else {
                   // Native (Android/iOS): use expo-print → expo-sharing
                   if (!previewHtml) {
-                    showAlert('Error', 'Preview not available. Please try again.');
+                    alert('Error', 'Preview not available. Please try again.');
                     return;
                   }
                   try {
@@ -1175,7 +1171,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                         UTI: 'com.adobe.pdf',
                       });
                     } else {
-                      showAlert('Saved', `PDF saved to: ${uri}`);
+                      alert('Saved', `PDF saved to: ${uri}`);
                     }
                   } catch (e) {
                     console.error('Native PDF error:', e);
