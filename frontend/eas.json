@@ -28,6 +28,7 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "staging",
+        "EXPO_PUBLIC_APP_VERSION": "1.1.1",
         "EXPO_PUBLIC_API_URL": "https://refopen-api-func-dev.azurewebsites.net/api",
         "EXPO_PUBLIC_API_TIMEOUT": "30000",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com",
@@ -47,6 +48,7 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_APP_VERSION": "1.1.1",
         "EXPO_PUBLIC_API_URL": "https://refopen-api-func.azurewebsites.net/api",
         "EXPO_PUBLIC_API_TIMEOUT": "30000",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com",
@@ -68,6 +70,7 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_ENV": "production",
+        "EXPO_PUBLIC_APP_VERSION": "1.1.1",
         "EXPO_PUBLIC_API_URL": "https://refopen-api-func.azurewebsites.net/api",
         "EXPO_PUBLIC_API_TIMEOUT": "30000",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB": "179542785325-ava51t8ercmv4vg6aef1ftn9rqef6pis.apps.googleusercontent.com",
