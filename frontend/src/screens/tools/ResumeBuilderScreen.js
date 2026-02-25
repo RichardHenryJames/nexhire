@@ -82,6 +82,17 @@ const TEMPLATE_GRADIENTS = {
 };
 
 // ══════════════════════════════════════════════════════════
+// Helper: inject CSS zoom into HTML for native WebView thumbnails
+// (React Native 0.76 breaks CSS transform on WebView containers)
+const getThumbnailHtml = (html) => {
+  if (!html) return '';
+  const zoomCss = '<style>html{zoom:0.19;-webkit-text-size-adjust:none;overflow:hidden;}body{margin:0;padding:0;}</style>';
+  if (html.includes('</head>')) {
+    return html.replace('</head>', zoomCss + '</head>');
+  }
+  return zoomCss + html;
+};
+
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════
 
@@ -563,23 +574,19 @@ export default function ResumeBuilderScreen({ navigation }) {
                   </View>
                 ) : Platform.OS !== 'web' && templatePreviews[template.Slug] ? (
                   <View style={[styles.templateThumb, { overflow: 'hidden', backgroundColor: '#FFFFFF', padding: 0 }]}>
-                    <View style={{ width: 612, height: 792, transform: [{ scale: 0.18 }], transformOrigin: 'top left' }}>
-                      <WebView
-                        source={{ html: templatePreviews[template.Slug] }}
-                        style={{ flex: 1, width: 612, height: 792, backgroundColor: '#FFFFFF' }}
-                        scrollEnabled={false}
-                        nestedScrollEnabled={false}
-                        showsHorizontalScrollIndicator={false}
-                        showsVerticalScrollIndicator={false}
-                        originWhitelist={['*']}
-                        javaScriptEnabled={true}
-                        domStorageEnabled={true}
-                        startInLoadingState={false}
-                        androidLayerType="software"
-                        mixedContentMode="always"
-                        allowFileAccess={true}
-                      />
-                    </View>
+                    <WebView
+                      source={{ html: getThumbnailHtml(templatePreviews[template.Slug]) }}
+                      style={{ width: '100%', height: '100%', backgroundColor: '#FFFFFF', opacity: 0.99 }}
+                      scrollEnabled={false}
+                      nestedScrollEnabled={false}
+                      showsHorizontalScrollIndicator={false}
+                      showsVerticalScrollIndicator={false}
+                      originWhitelist={['*']}
+                      javaScriptEnabled={true}
+                      domStorageEnabled={true}
+                      scalesPageToFit={false}
+                      startInLoadingState={false}
+                    />
                   </View>
                 ) : (
                   <LinearGradient
