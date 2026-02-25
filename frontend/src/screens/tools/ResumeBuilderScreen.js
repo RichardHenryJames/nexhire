@@ -43,15 +43,13 @@ import refopenAPI from '../../services/api';
 // expo-print + expo-sharing — native HTML→PDF (Android/iOS)
 let Print = null;
 let Sharing = null;
-let WebView = null;
 if (Platform.OS !== 'web') {
   try {
     const expoPrint = require('expo-print');
-    Print = expoPrint.default || expoPrint;
+    Print = expoPrint.printToFileAsync ? expoPrint : expoPrint.default || expoPrint;
     const expoSharing = require('expo-sharing');
-    Sharing = expoSharing.default || expoSharing;
-  } catch (e) { /* not available */ }
-  try { WebView = require('react-native-webview').default; } catch (e) { /* not available */ }
+    Sharing = expoSharing.isAvailableAsync ? expoSharing : expoSharing.default || expoSharing;
+  } catch (e) { console.warn('expo-print/sharing not available:', e); }
 }
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -164,17 +162,19 @@ export default function ResumeBuilderScreen({ navigation }) {
       const tpls = result?.data || [];
       setTemplates(tpls);
 
-      // Fetch preview HTML for each template (for thumbnails)
-      const previews = {};
-      await Promise.all(tpls.map(async (t) => {
-        try {
-          const previewResult = await refopenAPI.apiCall(`/resume-builder/templates/${t.Slug}/preview`);
-          previews[t.Slug] = previewResult?.message || previewResult || '';
-        } catch (e) {
-          previews[t.Slug] = '';
-        }
-      }));
-      setTemplatePreviews(previews);
+      // Fetch preview HTML for each template (for thumbnail iframes - web only)
+      if (Platform.OS === 'web') {
+        const previews = {};
+        await Promise.all(tpls.map(async (t) => {
+          try {
+            const previewResult = await refopenAPI.apiCall(`/resume-builder/templates/${t.Slug}/preview`);
+            previews[t.Slug] = previewResult?.message || previewResult || '';
+          } catch (e) {
+            previews[t.Slug] = '';
+          }
+        }));
+        setTemplatePreviews(previews);
+      }
     } catch (e) {
       console.error('Failed to load templates:', e);
     }
@@ -563,41 +563,18 @@ export default function ResumeBuilderScreen({ navigation }) {
                 }}
                 activeOpacity={0.7}
               >
-                {/* DB-driven template preview — iframe on web, WebView on native */}
-                {templatePreviews[template.Slug] ? (
-                  Platform.OS === 'web' ? (
-                    <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
-                      <View style={{ width: 816, height: 1056, transform: [{ scale: 0.19 }], transformOrigin: 'top left' }}>
-                        <iframe
-                          srcDoc={templatePreviews[template.Slug]}
-                          style={{ border: 'none', width: 816, height: 1056, pointerEvents: 'none', backgroundColor: '#FFFFFF' }}
-                          title={template.Name}
-                          scrolling="no"
-                        />
-                      </View>
-                    </View>
-                  ) : WebView ? (
-                    <View style={[styles.templateThumb, { overflow: 'hidden', backgroundColor: '#FFFFFF' }]}>
-                      <WebView
-                        source={{ html: templatePreviews[template.Slug] }}
-                        style={{ width: 816, height: 1056, transform: [{ scale: 0.17 }], transformOrigin: 'top left' }}
-                        scrollEnabled={false}
-                        pointerEvents="none"
-                        scalesPageToFit={false}
-                        showsHorizontalScrollIndicator={false}
-                        showsVerticalScrollIndicator={false}
-                        originWhitelist={['*']}
-                        javaScriptEnabled={false}
+                {/* DB-driven template preview — iframe on web, gradient on native */}
+                {Platform.OS === 'web' && templatePreviews[template.Slug] ? (
+                  <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
+                    <View style={{ width: 816, height: 1056, transform: [{ scale: 0.19 }], transformOrigin: 'top left' }}>
+                      <iframe
+                        srcDoc={templatePreviews[template.Slug]}
+                        style={{ border: 'none', width: 816, height: 1056, pointerEvents: 'none', backgroundColor: '#FFFFFF' }}
+                        title={template.Name}
+                        scrolling="no"
                       />
                     </View>
-                  ) : (
-                    <LinearGradient
-                      colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
-                      style={styles.templateThumb}
-                    >
-                      <Ionicons name="document-text" size={32} color="rgba(255,255,255,0.7)" />
-                    </LinearGradient>
-                  )
+                  </View>
                 ) : (
                   <LinearGradient
                     colors={TEMPLATE_GRADIENTS[template.Slug] || TEMPLATE_GRADIENTS.classic}
@@ -1250,24 +1227,38 @@ export default function ResumeBuilderScreen({ navigation }) {
               />
             </View>
           </View>
-        ) : WebView && previewHtml ? (
-          <View style={{ flex: 1 }}>
-            <WebView
-              source={{ html: previewHtml }}
-              style={{ flex: 1, backgroundColor: '#FFFFFF' }}
-              scalesPageToFit={true}
-              originWhitelist={['*']}
-              javaScriptEnabled={false}
-              showsHorizontalScrollIndicator={false}
-            />
-          </View>
         ) : (
-          <ScrollView style={{ flex: 1, padding: 16 }}>
-            <View style={[styles.previewPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <Ionicons name="document-text" size={48} color={colors.gray400} />
-              <Text style={[styles.previewPlaceholderText, { color: colors.textSecondary }]}>
-                Preview is best viewed on web. Your resume has been saved.
+          <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ alignItems: 'center' }}>
+            <View style={[styles.previewPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border, padding: 32, alignItems: 'center' }]}>
+              <Ionicons name="checkmark-circle" size={56} color="#10B981" />
+              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16, textAlign: 'center' }}>
+                Resume Saved Successfully!
               </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
+                Tap "Save as PDF" above to download and share your resume.
+              </Text>
+              {Print && Print.printToFileAsync && (
+                <TouchableOpacity
+                  style={{ backgroundColor: '#059669', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 8, marginTop: 20, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                  onPress={async () => {
+                    try {
+                      const { uri } = await Print.printToFileAsync({ html: previewHtml, base64: false });
+                      const canShare = Sharing && Sharing.isAvailableAsync && await Sharing.isAvailableAsync();
+                      if (canShare) {
+                        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Resume' });
+                      } else {
+                        showAlert('Saved', 'PDF saved to: ' + uri);
+                      }
+                    } catch (e) {
+                      console.error('PDF error:', e);
+                      showAlert('Error', 'PDF generation failed: ' + e.message);
+                    }
+                  }}
+                >
+                  <Ionicons name="download-outline" size={18} color="#FFFFFF" />
+                  <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 15 }}>Download PDF</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </ScrollView>
         )}
