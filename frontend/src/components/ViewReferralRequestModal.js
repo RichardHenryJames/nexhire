@@ -357,7 +357,7 @@ export default function ViewReferralRequestModal({
 
           {/* Refer for: — compact 2-line layout */}
           <View style={[styles.section, { padding: 12 }]}>
-            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 6 }}>Refer for:</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, marginBottom: 6 }}>Refer for: <Text style={{ color: colors.primary }}>{jobTitle}</Text></Text>
 
             {/* Line 1: Resume | View Job | Job ID — all inline */}
             <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
@@ -404,14 +404,14 @@ export default function ViewReferralRequestModal({
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.gray100, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
                   onPress={async () => {
                     try {
-                      if (Platform.OS === 'web') await navigator.clipboard.writeText(referralRequest.ExtJobID);
+                      if (Platform.OS === 'web') await navigator.clipboard.writeText(referralRequest.OpenToAnyCompany ? 'Any Job ID' : referralRequest.ExtJobID);
                       showToast('Job ID copied!', 'success');
                     } catch (e) { showToast('Failed to copy', 'error'); }
                   }}
                 >
                   <Text style={{ fontSize: 11, color: colors.gray500 }}>ID:</Text>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.text }} numberOfLines={1}>{referralRequest.ExtJobID}</Text>
-                  <Ionicons name="copy-outline" size={11} color={colors.primary} />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: referralRequest.OpenToAnyCompany ? colors.primary : colors.text }} numberOfLines={1}>{referralRequest.OpenToAnyCompany ? 'Any Job ID' : referralRequest.ExtJobID}</Text>
+                  {!referralRequest.OpenToAnyCompany && <Ionicons name="copy-outline" size={11} color={colors.primary} />}
                 </TouchableOpacity>
               )}
             </View>
