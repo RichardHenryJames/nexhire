@@ -40,15 +40,10 @@ import { useResponsive } from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import refopenAPI from '../../services/api';
 
-const { width: screenWidth } = Dimensions.get('window');
+import * as ExpoPrint from 'expo-print';
+import * as ExpoSharing from 'expo-sharing';
 
-// Helper: get expo-print and expo-sharing at runtime (inline require avoids module-level failures)
-const getNativePrint = () => {
-  try { const m = require('expo-print'); return m.printToFileAsync ? m : (m.default || m); } catch { return null; }
-};
-const getNativeSharing = () => {
-  try { const m = require('expo-sharing'); return m.isAvailableAsync ? m : (m.default || m); } catch { return null; }
-};
+const { width: screenWidth } = Dimensions.get('window');
 
 // ── Cross-platform alert (Alert.alert doesn't work on web) ──
 const showAlert = (title, message) => {
@@ -1152,21 +1147,15 @@ export default function ResumeBuilderScreen({ navigation }) {
                     showAlert('Error', 'Preview not available. Please try again.');
                     return;
                   }
-                  const PrintMod = getNativePrint();
-                  if (!PrintMod || !PrintMod.printToFileAsync) {
-                    showAlert('Error', 'PDF generation not available on this device.');
-                    return;
-                  }
                   try {
                     const fileName = (personalInfo.fullName?.replace(/\s+/g, '_') || 'Resume') + '_Resume';
-                    const { uri } = await PrintMod.printToFileAsync({
+                    const { uri } = await ExpoPrint.printToFileAsync({
                       html: previewHtml,
                       base64: false,
                     });
-                    const SharingMod = getNativeSharing();
-                    const canShare = SharingMod && SharingMod.isAvailableAsync && await SharingMod.isAvailableAsync();
+                    const canShare = await ExpoSharing.isAvailableAsync();
                     if (canShare) {
-                      await SharingMod.shareAsync(uri, {
+                      await ExpoSharing.shareAsync(uri, {
                         mimeType: 'application/pdf',
                         dialogTitle: `Share ${fileName}`,
                         UTI: 'com.adobe.pdf',
@@ -1176,7 +1165,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                     }
                   } catch (e) {
                     console.error('Native PDF error:', e);
-                    showAlert('Error', 'PDF generation failed: ' + (e.message || e));
+                    showAlert('Error', 'PDF generation failed: ' + (e.message || String(e)));
                   }
                 }
               }}
@@ -1241,15 +1230,10 @@ export default function ResumeBuilderScreen({ navigation }) {
                 style={{ backgroundColor: colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8, marginTop: 24, flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center' }}
                 onPress={async () => {
                   try {
-                    const P = getNativePrint();
-                    if (P && P.printAsync) {
-                      await P.printAsync({ html: previewHtml });
-                    } else {
-                      showAlert('Error', 'Print preview not available on this device.');
-                    }
+                    await ExpoPrint.printAsync({ html: previewHtml });
                   } catch (e) {
                     console.error('Preview error:', e);
-                    showAlert('Error', 'Preview failed: ' + (e.message || e));
+                    Alert.alert('Error', 'Preview failed: ' + (e.message || String(e)));
                   }
                 }}
               >
@@ -1262,22 +1246,16 @@ export default function ResumeBuilderScreen({ navigation }) {
                 style={{ backgroundColor: '#059669', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center' }}
                 onPress={async () => {
                   try {
-                    const P = getNativePrint();
-                    const S = getNativeSharing();
-                    if (!P || !P.printToFileAsync) {
-                      showAlert('Error', 'PDF generation not available. Please update the app.');
-                      return;
-                    }
-                    const { uri } = await P.printToFileAsync({ html: previewHtml, base64: false });
-                    const canShare = S && S.isAvailableAsync && await S.isAvailableAsync();
+                    const { uri } = await ExpoPrint.printToFileAsync({ html: previewHtml, base64: false });
+                    const canShare = await ExpoSharing.isAvailableAsync();
                     if (canShare) {
-                      await S.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Resume' });
+                      await ExpoSharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Resume' });
                     } else {
-                      showAlert('Saved', 'PDF saved to: ' + uri);
+                      Alert.alert('Saved', 'PDF saved to: ' + uri);
                     }
                   } catch (e) {
                     console.error('PDF error:', e);
-                    showAlert('Error', 'PDF failed: ' + (e.message || e));
+                    Alert.alert('Error', 'PDF failed: ' + (e.message || String(e)));
                   }
                 }}
               >
