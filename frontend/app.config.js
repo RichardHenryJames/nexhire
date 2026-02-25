@@ -75,7 +75,7 @@ export default ({ config }) => {
     ...config,
     name: currentEnvConfig.name,
     slug: 'refopen',
-    owner: 'parimalkumar',
+    owner: 'parimalnew', // TEMP: was 'parimalkumar' - revert after build
     version: '1.1.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -127,7 +127,8 @@ export default ({ config }) => {
       policy: 'sdkVersion',
     },
     updates: {
-      url: 'https://u.expo.dev/fd95890b-34f4-4da8-a4ca-bc95684b279f',
+      // url temporarily removed for build on alternate account
+      // Original: 'https://u.expo.dev/fd95890b-34f4-4da8-a4ca-bc95684b279f'
       fallbackToCacheTimeout: 0,
     },
     plugins: [
@@ -146,9 +147,7 @@ export default ({ config }) => {
     },
     extra: {
       ...extraConfig,
-      eas: {
-        projectId: 'fd95890b-34f4-4da8-a4ca-bc95684b279f',
-      },
+      eas: { projectId: '5ea7ce94-6c26-41e3-b132-8ef9e44e2406' },
     },
   };
 };
