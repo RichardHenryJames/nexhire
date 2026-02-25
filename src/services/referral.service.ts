@@ -455,48 +455,66 @@ export class ReferralService {
 
     /**
      * Get available referral requests for a referrer (same organization)
+     * Admin users see ALL requests across all organizations
      * ✅ FIXED: Added IsActive = 1 to exclude soft-deleted work experiences
      */
-    static async getAvailableRequests(referrerId: string, page: number = 1, pageSize: number = 20, filters?: ReferralRequestsFilter): Promise<PaginatedReferralRequests> {
+    static async getAvailableRequests(referrerId: string, page: number = 1, pageSize: number = 20, filters?: ReferralRequestsFilter, isAdmin: boolean = false): Promise<PaginatedReferralRequests> {
         try {
             // ✅ FIX: Ensure parameters are integers
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
-            // ✅ FIXED: Get referrer's current ACTIVE organization (IsActive = 1 excludes soft-deleted)
-            const referrerOrgQuery = `
-                SELECT we.OrganizationID
-                FROM WorkExperiences we
-                INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-                WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND we.IsActive = 1
-            `;
-            const referrerOrgResult = await dbService.executeQuery(referrerOrgQuery, [referrerId]);
-            
-            if (!referrerOrgResult.recordset || referrerOrgResult.recordset.length === 0) {
-                return { requests: [], total: 0, page: safePageNumber, pageSize: safePageSize, totalPages: 0 };
+            let organizationId: number | null = null;
+
+            if (!isAdmin) {
+                // ✅ FIXED: Get referrer's current ACTIVE organization (IsActive = 1 excludes soft-deleted)
+                const referrerOrgQuery = `
+                    SELECT we.OrganizationID
+                    FROM WorkExperiences we
+                    INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
+                    WHERE a.ApplicantID = @param0 AND we.IsCurrent = 1 AND we.IsActive = 1
+                `;
+                const referrerOrgResult = await dbService.executeQuery(referrerOrgQuery, [referrerId]);
+                
+                if (!referrerOrgResult.recordset || referrerOrgResult.recordset.length === 0) {
+                    return { requests: [], total: 0, page: safePageNumber, pageSize: safePageSize, totalPages: 0 };
+                }
+                
+                organizationId = referrerOrgResult.recordset[0].OrganizationID;
             }
-            
-            const organizationId = referrerOrgResult.recordset[0].OrganizationID;
             
             // Return ALL requests for this organization (frontend will filter by tab)
             // Exclude only Cancelled requests - everything else should be visible
             // Expired requests will show in Closed tab on frontend
             const statusFilter = `rr.Status NOT IN ('Cancelled')`;
             
-            // Build where clause - show requests for this referrer's organization
-            let whereClause = `
-                WHERE ${statusFilter}
-                AND (
-                    -- Internal referrals: Match by job's organization
-                    (rr.JobID IS NOT NULL AND j.OrganizationID = @param0)
-                    OR
-                    -- External referrals: Match by stored organization ID
-                    (rr.ExtJobID IS NOT NULL AND rr.OrganizationID = @param0)
-                )
-                AND rr.ApplicantID != @param1  -- Don't show own requests
-            `;
-            const queryParams = [organizationId, referrerId];
-            let paramIndex = 2;
+            // Build where clause - admin sees all, referrer sees only their org
+            let whereClause: string;
+            let queryParams: any[];
+            let paramIndex: number;
+
+            if (isAdmin) {
+                whereClause = `WHERE ${statusFilter}`;
+                queryParams = [];
+                paramIndex = 0;
+            } else {
+                whereClause = `
+                    WHERE ${statusFilter}
+                    AND (
+                        -- Internal referrals: Match by job's organization
+                        (rr.JobID IS NOT NULL AND j.OrganizationID = @param0)
+                        OR
+                        -- External referrals: Match by stored organization ID
+                        (rr.ExtJobID IS NOT NULL AND rr.OrganizationID = @param0)
+                        OR
+                        -- Open to any company: visible to ALL verified referrers
+                        (rr.OpenToAnyCompany = 1)
+                    )
+                    AND rr.ApplicantID != @param1  -- Don't show own requests
+                `;
+                queryParams = [organizationId, referrerId];
+                paramIndex = 2;
+            }
             
             if (filters?.jobTitle) {
                 whereClause += ` AND j.Title LIKE @param${paramIndex}`;
@@ -545,7 +563,8 @@ export class ReferralService {
                     -- ✅ Use stored JobTitle column with proper COALESCE
                     COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
                     COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
-                    COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
+                    CASE WHEN rr.OpenToAnyCompany = 1 THEN N'🌐 Any Company' ELSE COALESCE(jo.Name, eo.Name, 'Unknown Company') END as CompanyName,
+                    rr.OpenToAnyCompany,
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
                     u.UserID as ApplicantUserID,
@@ -1415,7 +1434,7 @@ export class ReferralService {
         try {
             // Check if request is available - allow Pending OR Claimed (by same user for continue flow)
             const requestQuery = `
-                SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt, AssignedReferrerID
+                SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt, AssignedReferrerID, OpenToAnyCompany
                 FROM ReferralRequests
                 WHERE RequestID = @param0 AND Status IN ('Pending', 'Claimed', 'Viewed', 'NotifiedToReferrers')
             `;
@@ -1426,7 +1445,7 @@ export class ReferralService {
             }
             
             const request = requestResult.recordset[0];
-            const { JobID: jobId, ExtJobID: extJobId, OrganizationID: organizationId, ApplicantID: seekerId, RequestedAt: requestedAt, Status: currentStatus, AssignedReferrerID: assignedReferrerId } = request;
+            const { JobID: jobId, ExtJobID: extJobId, OrganizationID: organizationId, ApplicantID: seekerId, RequestedAt: requestedAt, Status: currentStatus, AssignedReferrerID: assignedReferrerId, OpenToAnyCompany: openToAnyCompany } = request;
             
             // If already claimed, only the same user can continue
             if (currentStatus === 'Claimed' && assignedReferrerId && assignedReferrerId !== userId) {
@@ -1470,7 +1489,14 @@ export class ReferralService {
             
             const eligibilityResult = await dbService.executeQuery(eligibilityQuery, eligibilityParams);
             
-            if (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0) {
+            // Admin users can claim any referral regardless of company
+            // OpenToAnyCompany requests can be claimed by any verified referrer
+            const userTypeResult = await dbService.executeQuery(
+                `SELECT UserType FROM Users WHERE UserID = @param0`, [userId]
+            );
+            const isAdminUser = userTypeResult.recordset?.[0]?.UserType === 'Admin';
+
+            if (!isAdminUser && !openToAnyCompany && (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0)) {
                 throw new ValidationError('You are not eligible to refer for this job - must work at the same company');
             }
             
