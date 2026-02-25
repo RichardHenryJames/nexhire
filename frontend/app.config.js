@@ -132,8 +132,14 @@ export default ({ config }) => {
     },
     plugins: [
       'expo-router',
-      // expo-notifications temporarily removed for parimalnew test build (needs google-services.json)
-      // Restore when building on parimalkumar account
+      [
+        'expo-notifications',
+        {
+          icon: './assets/icon.png',
+          color: '#3B82F6',
+          sounds: [],
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,
