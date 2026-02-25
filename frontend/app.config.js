@@ -82,8 +82,8 @@ export default ({ config }) => {
     userInterfaceStyle: 'light',
     scheme: currentEnvConfig.scheme,
     splash: {
-      image: './assets/splash.png',
-      resizeMode: 'cover',
+      image: './assets/refopen-logo.png',
+      resizeMode: 'contain',
       backgroundColor: '#0A0E17',
     },
     assetBundlePatterns: ['**/*'],
@@ -127,8 +127,7 @@ export default ({ config }) => {
       policy: 'sdkVersion',
     },
     updates: {
-      // url temporarily removed for build on alternate account
-      // Original: 'https://u.expo.dev/fd95890b-34f4-4da8-a4ca-bc95684b279f'
+      url: 'https://u.expo.dev/5ea7ce94-6c26-41e3-b132-8ef9e44e2406',
       fallbackToCacheTimeout: 0,
     },
     plugins: [
