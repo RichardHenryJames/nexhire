@@ -91,8 +91,8 @@ export default function ProfileSlider({ visible, onClose }) {
           console.warn('Wallet balance fetch failed:', e);
         }
       })();
-      // Fetch available referral requests for verified referrers (all open requests for their company)
-      if (isVerifiedReferrer) {
+      // Fetch available referral requests for verified referrers or admin
+      if (isVerifiedReferrer || isAdmin) {
         (async () => {
           try {
             const res = await refopenAPI.getAvailableReferralRequests(1, 100);
@@ -200,7 +200,7 @@ export default function ProfileSlider({ visible, onClose }) {
         },
       ],
     },
-    ...(!isVerifiedReferrer ? [{
+    ...((!isVerifiedReferrer && !isAdmin) ? [{
       title: '🚀 Referrer',
       items: [
         {
