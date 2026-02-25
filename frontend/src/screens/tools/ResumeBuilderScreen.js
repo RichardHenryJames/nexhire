@@ -82,15 +82,15 @@ const TEMPLATE_GRADIENTS = {
 };
 
 // ══════════════════════════════════════════════════════════
-// Helper: inject CSS zoom into HTML for native WebView thumbnails
-// (React Native 0.76 breaks CSS transform on WebView containers)
-const getThumbnailHtml = (html) => {
+// Helper: wrap HTML for thumbnail — just ensure viewport is set so WebView can scale
+const wrapThumbHtml = (html) => {
   if (!html) return '';
-  const zoomCss = '<style>html{zoom:0.19;-webkit-text-size-adjust:none;overflow:hidden;}body{margin:0;padding:0;}</style>';
-  if (html.includes('</head>')) {
-    return html.replace('</head>', zoomCss + '</head>');
-  }
-  return zoomCss + html;
+  // If already has viewport, return as-is; otherwise add one
+  if (html.includes('viewport')) return html;
+  const meta = '<meta name="viewport" content="width=816">';
+  if (html.includes('<head>')) return html.replace('<head>', '<head>' + meta);
+  if (html.includes('</head>')) return html.replace('</head>', meta + '</head>');
+  return '<html><head>' + meta + '</head><body>' + html + '</body></html>';
 };
 
 // MAIN COMPONENT
@@ -575,17 +575,15 @@ export default function ResumeBuilderScreen({ navigation }) {
                 ) : Platform.OS !== 'web' && templatePreviews[template.Slug] ? (
                   <View style={[styles.templateThumb, { overflow: 'hidden', backgroundColor: '#FFFFFF', padding: 0 }]}>
                     <WebView
-                      source={{ html: getThumbnailHtml(templatePreviews[template.Slug]) }}
-                      style={{ width: '100%', height: '100%', backgroundColor: '#FFFFFF', opacity: 0.99 }}
+                      source={{ html: wrapThumbHtml(templatePreviews[template.Slug]) }}
+                      style={{ flex: 1, backgroundColor: '#FFFFFF' }}
                       scrollEnabled={false}
-                      nestedScrollEnabled={false}
-                      showsHorizontalScrollIndicator={false}
                       showsVerticalScrollIndicator={false}
+                      showsHorizontalScrollIndicator={false}
                       originWhitelist={['*']}
                       javaScriptEnabled={true}
-                      domStorageEnabled={true}
-                      scalesPageToFit={false}
-                      startInLoadingState={false}
+                      scalesPageToFit={true}
+                      setBuiltInZoomControls={false}
                     />
                   </View>
                 ) : (
