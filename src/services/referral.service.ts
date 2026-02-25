@@ -506,6 +506,9 @@ export class ReferralService {
                         OR
                         -- External referrals: Match by stored organization ID
                         (rr.ExtJobID IS NOT NULL AND rr.OrganizationID = @param0)
+                        OR
+                        -- Open to any company: visible to ALL verified referrers
+                        (rr.OpenToAnyCompany = 1)
                     )
                     AND rr.ApplicantID != @param1  -- Don't show own requests
                 `;
@@ -560,7 +563,8 @@ export class ReferralService {
                     -- ✅ Use stored JobTitle column with proper COALESCE
                     COALESCE(j.Title, rr.JobTitle, 'External Job') as JobTitle,
                     COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
-                    COALESCE(jo.Name, eo.Name, 'Unknown Company') as CompanyName,
+                    CASE WHEN rr.OpenToAnyCompany = 1 THEN N'🌐 Any Company' ELSE COALESCE(jo.Name, eo.Name, 'Unknown Company') END as CompanyName,
+                    rr.OpenToAnyCompany,
                     u.FirstName + ' ' + u.LastName as ApplicantName,
                     u.Email as ApplicantEmail,
                     u.UserID as ApplicantUserID,
@@ -1430,7 +1434,7 @@ export class ReferralService {
         try {
             // Check if request is available - allow Pending OR Claimed (by same user for continue flow)
             const requestQuery = `
-                SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt, AssignedReferrerID
+                SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt, AssignedReferrerID, OpenToAnyCompany
                 FROM ReferralRequests
                 WHERE RequestID = @param0 AND Status IN ('Pending', 'Claimed', 'Viewed', 'NotifiedToReferrers')
             `;
@@ -1441,7 +1445,7 @@ export class ReferralService {
             }
             
             const request = requestResult.recordset[0];
-            const { JobID: jobId, ExtJobID: extJobId, OrganizationID: organizationId, ApplicantID: seekerId, RequestedAt: requestedAt, Status: currentStatus, AssignedReferrerID: assignedReferrerId } = request;
+            const { JobID: jobId, ExtJobID: extJobId, OrganizationID: organizationId, ApplicantID: seekerId, RequestedAt: requestedAt, Status: currentStatus, AssignedReferrerID: assignedReferrerId, OpenToAnyCompany: openToAnyCompany } = request;
             
             // If already claimed, only the same user can continue
             if (currentStatus === 'Claimed' && assignedReferrerId && assignedReferrerId !== userId) {
@@ -1486,12 +1490,13 @@ export class ReferralService {
             const eligibilityResult = await dbService.executeQuery(eligibilityQuery, eligibilityParams);
             
             // Admin users can claim any referral regardless of company
+            // OpenToAnyCompany requests can be claimed by any verified referrer
             const userTypeResult = await dbService.executeQuery(
                 `SELECT UserType FROM Users WHERE UserID = @param0`, [userId]
             );
             const isAdminUser = userTypeResult.recordset?.[0]?.UserType === 'Admin';
 
-            if (!isAdminUser && (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0)) {
+            if (!isAdminUser && !openToAnyCompany && (!eligibilityResult.recordset || eligibilityResult.recordset.length === 0)) {
                 throw new ValidationError('You are not eligible to refer for this job - must work at the same company');
             }
             
