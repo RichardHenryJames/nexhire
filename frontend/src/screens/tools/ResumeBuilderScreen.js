@@ -563,17 +563,23 @@ export default function ResumeBuilderScreen({ navigation }) {
                   </View>
                 ) : Platform.OS !== 'web' && templatePreviews[template.Slug] ? (
                   <View style={[styles.templateThumb, { overflow: 'hidden', backgroundColor: '#FFFFFF', padding: 0 }]}>
-                    <WebView
-                      source={{ html: templatePreviews[template.Slug] }}
-                      style={{ width: 612, height: 792, transform: [{ scale: 0.18 }], transformOrigin: 'top left' }}
-                      scrollEnabled={false}
-                      nestedScrollEnabled={false}
-                      showsHorizontalScrollIndicator={false}
-                      showsVerticalScrollIndicator={false}
-                      originWhitelist={['*']}
-                      javaScriptEnabled={false}
-                      setBuiltInZoomControls={false}
-                    />
+                    <View style={{ width: 612, height: 792, transform: [{ scale: 0.18 }], transformOrigin: 'top left' }}>
+                      <WebView
+                        source={{ html: templatePreviews[template.Slug] }}
+                        style={{ flex: 1, width: 612, height: 792, backgroundColor: '#FFFFFF' }}
+                        scrollEnabled={false}
+                        nestedScrollEnabled={false}
+                        showsHorizontalScrollIndicator={false}
+                        showsVerticalScrollIndicator={false}
+                        originWhitelist={['*']}
+                        javaScriptEnabled={true}
+                        domStorageEnabled={true}
+                        startInLoadingState={false}
+                        androidLayerType="software"
+                        mixedContentMode="always"
+                        allowFileAccess={true}
+                      />
+                    </View>
                   </View>
                 ) : (
                   <LinearGradient
