@@ -76,7 +76,7 @@ export default ({ config }) => {
     name: currentEnvConfig.name,
     slug: 'refopen',
     owner: 'parimalnew', // TEMP: was 'parimalkumar' - revert after build
-    version: '1.1.0',
+    version: '1.1.1',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
