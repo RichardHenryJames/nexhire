@@ -42,6 +42,7 @@ import refopenAPI from '../../services/api';
 
 import * as ExpoPrint from 'expo-print';
 import * as ExpoSharing from 'expo-sharing';
+import { WebView } from 'react-native-webview';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -153,19 +154,17 @@ export default function ResumeBuilderScreen({ navigation }) {
       const tpls = result?.data || [];
       setTemplates(tpls);
 
-      // Fetch preview HTML for each template (for thumbnail iframes - web only)
-      if (Platform.OS === 'web') {
-        const previews = {};
-        await Promise.all(tpls.map(async (t) => {
-          try {
-            const previewResult = await refopenAPI.apiCall(`/resume-builder/templates/${t.Slug}/preview`);
-            previews[t.Slug] = previewResult?.message || previewResult || '';
-          } catch (e) {
-            previews[t.Slug] = '';
-          }
-        }));
-        setTemplatePreviews(previews);
-      }
+      // Fetch preview HTML for each template (thumbnails)
+      const previews = {};
+      await Promise.all(tpls.map(async (t) => {
+        try {
+          const previewResult = await refopenAPI.apiCall(`/resume-builder/templates/${t.Slug}/preview`);
+          previews[t.Slug] = previewResult?.message || previewResult || '';
+        } catch (e) {
+          previews[t.Slug] = '';
+        }
+      }));
+      setTemplatePreviews(previews);
     } catch (e) {
       console.error('Failed to load templates:', e);
     }
@@ -554,7 +553,7 @@ export default function ResumeBuilderScreen({ navigation }) {
                 }}
                 activeOpacity={0.7}
               >
-                {/* DB-driven template preview — iframe on web, gradient on native */}
+                {/* Template preview — iframe on web, WebView on native */}
                 {Platform.OS === 'web' && templatePreviews[template.Slug] ? (
                   <View style={[tpStyles.page, { borderColor: colors.border, padding: 0 }]}>
                     <View style={{ width: 816, height: 1056, transform: [{ scale: 0.19 }], transformOrigin: 'top left' }}>
@@ -563,6 +562,21 @@ export default function ResumeBuilderScreen({ navigation }) {
                         style={{ border: 'none', width: 816, height: 1056, pointerEvents: 'none', backgroundColor: '#FFFFFF' }}
                         title={template.Name}
                         scrolling="no"
+                      />
+                    </View>
+                  </View>
+                ) : Platform.OS !== 'web' && templatePreviews[template.Slug] ? (
+                  <View style={[styles.templateThumb, { overflow: 'hidden', backgroundColor: '#FFFFFF', padding: 0 }]}>
+                    <View style={{ width: 612, height: 792, transform: [{ scale: 0.2 }], transformOrigin: 'top left' }} pointerEvents="none">
+                      <WebView
+                        source={{ html: templatePreviews[template.Slug] }}
+                        style={{ width: 612, height: 792 }}
+                        scrollEnabled={false}
+                        scalesPageToFit={false}
+                        showsHorizontalScrollIndicator={false}
+                        showsVerticalScrollIndicator={false}
+                        originWhitelist={['*']}
+                        javaScriptEnabled={false}
                       />
                     </View>
                   </View>
@@ -1214,56 +1228,22 @@ export default function ResumeBuilderScreen({ navigation }) {
               />
             </View>
           </View>
+        ) : previewHtml ? (
+          <View style={{ flex: 1 }}>
+            <WebView
+              source={{ html: previewHtml }}
+              style={{ flex: 1, backgroundColor: '#FFFFFF' }}
+              scalesPageToFit={true}
+              originWhitelist={['*']}
+              javaScriptEnabled={true}
+              showsHorizontalScrollIndicator={false}
+            />
+          </View>
         ) : (
-          <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ alignItems: 'center', paddingBottom: 40 }}>
-            <View style={[styles.previewPlaceholder, { backgroundColor: colors.surface, borderColor: colors.border, padding: 32, alignItems: 'center', width: '100%' }]}>
-              <Ionicons name="document-text" size={56} color={colors.primary} />
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16, textAlign: 'center' }}>
-                Your Resume is Ready!
-              </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
-                View the preview or download as PDF to share.
-              </Text>
-
-              {/* View Preview — opens native print dialog showing rendered HTML */}
-              <TouchableOpacity
-                style={{ backgroundColor: colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8, marginTop: 24, flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center' }}
-                onPress={async () => {
-                  try {
-                    await ExpoPrint.printAsync({ html: previewHtml });
-                  } catch (e) {
-                    console.error('Preview error:', e);
-                    Alert.alert('Error', 'Preview failed: ' + (e.message || String(e)));
-                  }
-                }}
-              >
-                <Ionicons name="eye-outline" size={20} color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 16 }}>View Preview & Print</Text>
-              </TouchableOpacity>
-
-              {/* Download PDF */}
-              <TouchableOpacity
-                style={{ backgroundColor: '#059669', paddingHorizontal: 28, paddingVertical: 14, borderRadius: 8, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', justifyContent: 'center' }}
-                onPress={async () => {
-                  try {
-                    const { uri } = await ExpoPrint.printToFileAsync({ html: previewHtml, base64: false });
-                    const canShare = await ExpoSharing.isAvailableAsync();
-                    if (canShare) {
-                      await ExpoSharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Resume' });
-                    } else {
-                      Alert.alert('Saved', 'PDF saved to: ' + uri);
-                    }
-                  } catch (e) {
-                    console.error('PDF error:', e);
-                    Alert.alert('Error', 'PDF failed: ' + (e.message || String(e)));
-                  }
-                }}
-              >
-                <Ionicons name="download-outline" size={20} color="#FFFFFF" />
-                <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 16 }}>Download PDF</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Loading preview...</Text>
+          </View>
         )}
       </View>
     );
