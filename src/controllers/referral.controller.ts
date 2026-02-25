@@ -289,6 +289,21 @@ export const getAvailableRequests = withErrorHandling(async (req: HttpRequest, c
 
         // Get applicant ID
         const { dbService } = await import('../services/database.service');
+        
+        // Check if user is Admin - admins see ALL referral requests
+        const userTypeResult = await dbService.executeQuery(
+            'SELECT UserType FROM Users WHERE UserID = @param0', [user.userId]
+        );
+        const isAdmin = userTypeResult.recordset?.[0]?.UserType === 'Admin';
+        
+        if (isAdmin) {
+            const result = await ReferralService.getAvailableRequests(null as any, page, pageSize, filters, true);
+            return {
+                status: 200,
+                jsonBody: successResponse(result, 'All referral requests retrieved (admin)')
+            };
+        }
+
         const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
         const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
         
