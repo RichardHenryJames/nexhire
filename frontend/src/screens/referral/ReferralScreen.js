@@ -26,7 +26,7 @@ import CachedImage from '../../components/CachedImage';
 import SubScreenHeader from '../../components/SubScreenHeader';
 
 export default function ReferralScreen({ navigation }) {
-  const { user, userId, isVerifiedReferrer, currentWork, loading: authLoading, refreshVerificationStatus } = useAuth();
+  const { user, userId, isVerifiedReferrer, isAdmin, currentWork, loading: authLoading, refreshVerificationStatus } = useAuth();
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -60,7 +60,8 @@ export default function ReferralScreen({ navigation }) {
 
   // ✅ Handle non-verified referrers - show verification prompt only in Open tab
   // They can still see the Closed tab to view past referrals they received
-  const isNotVerifiedReferrer = !authLoading && !isVerifiedReferrer;
+  // Admin users bypass this check entirely
+  const isNotVerifiedReferrer = !authLoading && !isVerifiedReferrer && !isAdmin;
 
   // Refresh data when screen is focused (always reloads from any page)
   useFocusEffect(
