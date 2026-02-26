@@ -67,6 +67,7 @@ import SubmitPaymentScreen from "../screens/wallet/SubmitPaymentScreen";
 import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
 import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 import WalletHoldsScreen from "../screens/wallet/WalletHoldsScreen";
+import EarningsScreen from "../screens/earnings/EarningsScreen";
 
 // Legal/Compliance Screens
 import TermsScreen from "../screens/legal/TermsScreen";
@@ -808,6 +809,11 @@ function MainStack() {
       <Stack.Screen
         name="WalletHolds"
         component={WalletHoldsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Earnings"
+        component={EarningsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

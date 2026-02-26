@@ -22,7 +22,6 @@ import SubScreenHeader from '../../components/SubScreenHeader';
 import refopenAPI from '../../services/api';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
 import ComplianceFooter from '../../components/ComplianceFooter';
-import ReferralPointsBreakdown from '../../components/profile/ReferralPointsBreakdown';
 import SkillsSelectionModal from '../../components/profile/SkillsSelectionModal';
 import AddWorkExperienceModal from '../../components/profile/AddWorkExperienceModal';
 import VerifiedReferrerOverlay from '../../components/VerifiedReferrerOverlay';
@@ -81,21 +80,6 @@ export default function ProfileScreen({ navigation, route }) {
   // Wallet state
   const [walletBalance, setWalletBalance] = useState(null);
   const [loadingWallet, setLoadingWallet] = useState(false);
-  
-  // Referral Points state
-  const [referralPointsData, setReferralPointsData] = useState({
-    totalPoints: 0,
-    pointsHistory: [],
-    pointTypeMetadata: {},
-    referralStats: {
-      totalReferralsMade: 0,
-      verifiedReferrals: 0,
-      referralRequestsMade: 0,
-      totalPointsFromRewards: 0
-    }
-  });
-  const [loadingReferralPoints, setLoadingReferralPoints] = useState(false);
-  const [showReferralBreakdown, setShowReferralBreakdown] = useState(false);
   
   // User-level verification status
   const [isVerifiedReferrer, setIsVerifiedReferrer] = useState(false); // Temporary - for referral access
@@ -175,9 +159,6 @@ export default function ProfileScreen({ navigation, route }) {
       
       loadExtendedProfile();
       loadWallet();
-      if (userType === 'JobSeeker') {
-        loadReferralPoints();
-      }
     }, [])
   );
 
@@ -261,14 +242,6 @@ export default function ProfileScreen({ navigation, route }) {
             profileCompleteness: data.ProfileCompleteness || data.profileCompleteness || 0,
           }));
           
-          // Save referralStats from profile for the breakdown modal
-          if (data.referralStats) {
-            setReferralPointsData(prev => ({
-              ...prev,
-              referralStats: data.referralStats
-            }));
-          }
-          
           // Fetch user-level verification status
           try {
             const verifyRes = await refopenAPI.getVerificationStatus();
@@ -307,32 +280,10 @@ export default function ProfileScreen({ navigation, route }) {
     }
   };
 
-  const loadReferralPoints = async () => {
-    try {
-      setLoadingReferralPoints(true);
-      const response = await refopenAPI.getReferralPointsHistory();
-      if (response.success && response.data) {
-        setReferralPointsData(prev => ({
-          ...prev, // Preserve existing referralStats
-          totalPoints: response.data.totalPoints || 0,
-          pointsHistory: response.data.history || [],
-          pointTypeMetadata: response.data.pointTypeMetadata || {}
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading referral points:', error);
-    } finally {
-      setLoadingReferralPoints(false);
-    }
-  };
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadExtendedProfile();
     await loadWallet();
-    if (userType === 'JobSeeker') {
-      await loadReferralPoints();
-    }
     setRefreshing(false);
   }, []);
 
@@ -494,7 +445,7 @@ export default function ProfileScreen({ navigation, route }) {
                 {/* Referral Points Button */}
                 <TouchableOpacity 
                   style={styles.actionButtonThird}
-                  onPress={() => setShowReferralBreakdown(true)}
+                  onPress={() => navigation.navigate('Earnings')}
                   activeOpacity={0.7}
                 >
                   <View style={[styles.actionButtonIcon, { backgroundColor: '#FFF4E6' }]}>
@@ -757,22 +708,6 @@ export default function ProfileScreen({ navigation, route }) {
       </Animated.ScrollView>
 
       {/* Modals */}
-
-      {/* Referral Points Breakdown Modal */}
-      <ReferralPointsBreakdown
-        visible={showReferralBreakdown}
-        onClose={() => setShowReferralBreakdown(false)}
-        totalPoints={referralPointsData.totalPoints}
-        pointsHistory={referralPointsData.pointsHistory}
-        pointTypeMetadata={referralPointsData.pointTypeMetadata}
-        referralStats={referralPointsData.referralStats}
-        navigation={navigation}
-        onConversionSuccess={async () => {
-          // Refresh wallet and points data after successful conversion
-          await loadWallet();
-          await loadReferralPoints();
-        }}
-      />
 
       {/* Skills Selection Modal */}
       <SkillsSelectionModal

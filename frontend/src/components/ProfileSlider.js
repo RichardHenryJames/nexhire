@@ -179,6 +179,11 @@ export default function ProfileSlider({ visible, onClose }) {
           rightText: walletBalance !== null ? `₹${walletBalance}` : null,
         },
         {
+          icon: 'trending-up-outline',
+          label: 'Earnings',
+          onPress: () => navigateTo('Earnings'),
+        },
+        {
           icon: 'megaphone-outline',
           label: 'Earn via Social Share',
           onPress: () => navigateTo('ShareEarn'),
