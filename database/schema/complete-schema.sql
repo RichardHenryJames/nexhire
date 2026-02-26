@@ -3034,20 +3034,34 @@ GO
 IF NOT EXISTS (SELECT 1 FROM PromoCodes WHERE Code = 'FIRST50')
 BEGIN
     INSERT INTO PromoCodes (Code, Type, Value, MinRechargeAmount, MaxBonusAmount, MaxUses, PerUserLimit, ExpiresAt, IsActive, Description)
-    VALUES ('FIRST50', 'FLAT_BONUS', 50, 99, 50, 1000, 1, '2026-12-31', 1, 'First recharge bonus — ₹50 extra');
+    VALUES ('FIRST50', 'FLAT_BONUS', 50, 99, 50, NULL, 1, '2026-12-31', 1, 'Get Rs.50 bonus on first recharge');
 END
 GO
 
 IF NOT EXISTS (SELECT 1 FROM PromoCodes WHERE Code = 'EXTRA25')
 BEGIN
     INSERT INTO PromoCodes (Code, Type, Value, MinRechargeAmount, MaxBonusAmount, MaxUses, PerUserLimit, ExpiresAt, IsActive, Description)
-    VALUES ('EXTRA25', 'PERCENT_BONUS', 25, 199, 100, NULL, 1, '2026-12-31', 1, '25% extra credit (max ₹100)');
+    VALUES ('EXTRA25', 'PERCENT_BONUS', 25, 199, 100, NULL, 3, '2026-12-31', 1, 'Get 25% extra credit');
 END
 GO
 
 IF NOT EXISTS (SELECT 1 FROM PromoCodes WHERE Code = 'CAMPUS100')
 BEGIN
     INSERT INTO PromoCodes (Code, Type, Value, MinRechargeAmount, MaxBonusAmount, MaxUses, PerUserLimit, ExpiresAt, IsActive, Description)
-    VALUES ('CAMPUS100', 'FLAT_BONUS', 100, 399, 100, 500, 1, '2026-06-30', 1, 'Campus recruitment special — ₹100 extra');
+    VALUES ('CAMPUS100', 'FLAT_BONUS', 100, 399, 100, NULL, 3, '2026-12-31', 1, 'Campus drive: Rs.100 free credit');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM PromoCodes WHERE Code = 'FRESHER')
+BEGIN
+    INSERT INTO PromoCodes (Code, Type, Value, MinRechargeAmount, MaxBonusAmount, MaxUses, PerUserLimit, ExpiresAt, IsActive, Description)
+    VALUES ('FRESHER', 'FLAT_BONUS', 75, 199, 75, NULL, 10, '2026-12-31', 1, 'Fresher bonus: Rs.75 extra credit on recharge');
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM PromoCodes WHERE Code = 'SWITCH')
+BEGIN
+    INSERT INTO PromoCodes (Code, Type, Value, MinRechargeAmount, MaxBonusAmount, MaxUses, PerUserLimit, ExpiresAt, IsActive, Description)
+    VALUES ('SWITCH', 'PERCENT_BONUS', 30, 599, 200, NULL, 5, '2026-12-31', 1, 'Career switch: 30% extra credit');
 END
 GO

@@ -21,7 +21,9 @@ import useResponsive from '../../hooks/useResponsive';
 // ─── Promo Code Card ─────────────────────────────────────────────
 const PromoCard = ({ promo, colors, onApply }) => {
   const isPercent = promo.type === 'PERCENT_BONUS';
-  const bonusLabel = isPercent ? `${promo.value}% bonus` : `₹${promo.value} bonus`;
+  const bonusLabel = isPercent
+    ? `${promo.value}% extra`
+    : `₹${promo.value} bonus`;
   const exhausted = promo.exhausted;
 
   const handleCopy = async () => {
@@ -86,7 +88,7 @@ const PromoCard = ({ promo, colors, onApply }) => {
       {/* Recommendation reason */}
       {promo.recommended && promo.recommendReason ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 }}>
-          <Ionicons name="sparkles" size={12} color="#F59E0B" />
+          <Text style={{ fontSize: 11, color: '#F59E0B' }}>✨</Text>
           <Text style={{ fontSize: 11, color: '#F59E0B', fontWeight: '600', fontStyle: 'italic' }}>
             {promo.recommendReason}
           </Text>
@@ -94,23 +96,11 @@ const PromoCard = ({ promo, colors, onApply }) => {
       ) : null}
 
       {/* Details row */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-          <Ionicons name="wallet-outline" size={11} color={colors.gray500} />
-          <Text style={{ fontSize: 11, color: colors.gray500 }}>Min ₹{promo.minRecharge}</Text>
-        </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+        <Text style={{ fontSize: 11, color: colors.gray500 }}>Min ₹{promo.minRecharge}</Text>
         {promo.maxBonus !== null && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-            <Ionicons name="trending-up-outline" size={11} color={colors.gray500} />
-            <Text style={{ fontSize: 11, color: colors.gray500 }}>Max ₹{promo.maxBonus}</Text>
-          </View>
+          <Text style={{ fontSize: 11, color: colors.gray500 }}>Max ₹{promo.maxBonus}</Text>
         )}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-          <Ionicons name="refresh-outline" size={11} color={colors.gray500} />
-          <Text style={{ fontSize: 11, color: colors.gray500 }}>
-            {exhausted ? 'Fully used' : `${promo.remainingUses} use${promo.remainingUses !== 1 ? 's' : ''} left`}
-          </Text>
-        </View>
       </View>
 
       {/* Action button */}
@@ -182,7 +172,7 @@ const PromoCodesScreen = ({ navigation }) => {
   };
 
   const handleApply = (code) => {
-    navigation.navigate('WalletRecharge', { promoCode: code });
+    navigation.navigate({ name: 'WalletRecharge', params: { promoCode: code }, merge: true });
   };
 
   const recommended = promoCodes.filter(p => p.recommended);
