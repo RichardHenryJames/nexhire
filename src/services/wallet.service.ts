@@ -867,7 +867,7 @@ export class WalletService {
       const earnedResult = await dbService.executeQuery(earnedQuery, [wallet.WalletID]);
       const totalEarned = earnedResult.recordset?.[0]?.TotalEarned || 0;
 
-      const minimumWithdrawal = 10; // Minimum ₹10 required to withdraw
+      const minimumWithdrawal = await PricingService.getMinimumWithdrawal(); // Dynamic from PricingSettings (₹200)
       const canWithdraw = withdrawableAmount >= minimumWithdrawal;
 
       return {

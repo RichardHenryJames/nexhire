@@ -6,6 +6,9 @@
 
 import { dbService } from './database.service';
 
+// Organization tier type
+export type OrganizationTier = 'Standard' | 'Premium' | 'Elite';
+
 // Default values (fallback if DB fetch fails)
 const DEFAULT_PRICING = {
   AI_JOBS_COST: 99,
@@ -17,6 +20,22 @@ const DEFAULT_PRICING = {
   PROFILE_VIEW_COST: 29,
   PROFILE_VIEW_ACCESS_DURATION_HOURS: 168, // 7 days
   OPEN_TO_ANY_REFERRAL_COST: 99,
+  // Tier-based referral costs
+  PREMIUM_REFERRAL_COST: 99,
+  ELITE_REFERRAL_COST: 199,
+  // Tier-based referrer payouts (fixed, transparent — replaces old random ₹20-40)
+  STANDARD_REFERRER_PAYOUT: 25,
+  PREMIUM_REFERRER_PAYOUT: 50,
+  ELITE_REFERRER_PAYOUT: 100,
+  // Milestone bonuses (monthly)
+  MILESTONE_5_BONUS: 100,
+  MILESTONE_10_BONUS: 250,
+  MILESTONE_20_BONUS: 500,
+  // Withdrawal
+  MINIMUM_WITHDRAWAL: 200,
+  // AI Resume Analysis
+  AI_RESUME_ANALYSIS_COST: 29,
+  AI_RESUME_FREE_USES: 2,
 };
 
 // Cache for pricing settings (refresh every 5 minutes)
@@ -119,6 +138,63 @@ export class PricingService {
    */
   static async getProfileViewAccessDurationHours(): Promise<number> {
     return this.getSetting('PROFILE_VIEW_ACCESS_DURATION_HOURS');
+  }
+
+  // ===== TIER-BASED PRICING =====
+
+  /**
+   * Get referral cost based on organization tier
+   */
+  static async getReferralCostByTier(tier: OrganizationTier): Promise<number> {
+    switch (tier) {
+      case 'Elite': return this.getSetting('ELITE_REFERRAL_COST');
+      case 'Premium': return this.getSetting('PREMIUM_REFERRAL_COST');
+      default: return this.getSetting('REFERRAL_REQUEST_COST'); // Standard
+    }
+  }
+
+  /**
+   * Get referrer payout based on organization tier
+   */
+  static async getReferrerPayoutByTier(tier: OrganizationTier): Promise<number> {
+    switch (tier) {
+      case 'Elite': return this.getSetting('ELITE_REFERRER_PAYOUT');
+      case 'Premium': return this.getSetting('PREMIUM_REFERRER_PAYOUT');
+      default: return this.getSetting('STANDARD_REFERRER_PAYOUT');
+    }
+  }
+
+  /**
+   * Get milestone bonus amounts
+   */
+  static async getMilestoneBonuses(): Promise<{ m5: number; m10: number; m20: number }> {
+    const [m5, m10, m20] = await Promise.all([
+      this.getSetting('MILESTONE_5_BONUS'),
+      this.getSetting('MILESTONE_10_BONUS'),
+      this.getSetting('MILESTONE_20_BONUS'),
+    ]);
+    return { m5, m10, m20 };
+  }
+
+  /**
+   * Get minimum withdrawal amount
+   */
+  static async getMinimumWithdrawal(): Promise<number> {
+    return this.getSetting('MINIMUM_WITHDRAWAL');
+  }
+
+  /**
+   * Get AI resume analysis cost
+   */
+  static async getAIResumeAnalysisCost(): Promise<number> {
+    return this.getSetting('AI_RESUME_ANALYSIS_COST');
+  }
+
+  /**
+   * Get number of free AI resume analysis uses
+   */
+  static async getAIResumeFreeUses(): Promise<number> {
+    return this.getSetting('AI_RESUME_FREE_USES');
   }
 
   /**

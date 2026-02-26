@@ -1947,9 +1947,12 @@ if (!resumeId) {
           aiAccessDurationDays: 15,
           referralRequestCost: 49,
           openToAnyReferralCost: 99,
-          jobPublishCost: 50,
-          welcomeBonus: 50,
-          referralSignupBonus: 50
+          jobPublishCost: 0,
+          welcomeBonus: 0,
+          referralSignupBonus: 25,
+          premiumReferralCost: 99,
+          eliteReferralCost: 199,
+          minimumWithdrawal: 200,
         }
       };
     }
