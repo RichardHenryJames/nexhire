@@ -363,7 +363,8 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
                   id: organization.id,
                   name: organization.name,
                   industry: organization.industry,
-                  logoURL: organization.logoURL
+                  logoURL: organization.logoURL,
+                  tier: organization.tier || 'Standard'
                 }
               });
             }}

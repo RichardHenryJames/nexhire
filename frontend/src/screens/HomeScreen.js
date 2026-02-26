@@ -719,7 +719,8 @@ const [dashboardData, setDashboardData] = useState(() => {
                                 preSelectedOrganization: {
                                   id: company.id,
                                   name: company.name,
-                                  logoURL: company.logoURL
+                                  logoURL: company.logoURL,
+                                  tier: company.tier || 'Standard'
                                 }
                               });
                             }}

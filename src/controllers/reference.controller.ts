@@ -195,6 +195,7 @@ export const getOrganizationById = async (req: any): Promise<any> => {
                 Headquarters as location,
                 VerificationStatus as verification,
                 IsFortune500 as isFortune500,
+                ISNULL(Tier, 'Standard') as tier,
                 CreatedAt as createdAt,
                 UpdatedAt as updatedAt
             FROM Organizations 

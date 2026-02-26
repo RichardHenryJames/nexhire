@@ -501,7 +501,7 @@ export default function ProfileScreen({ navigation, route }) {
                     <Ionicons name="gift" size={20} color="#FF9500" />
                   </View>
                   <View style={styles.actionButtonContent}>
-                    <Text style={styles.actionButtonLabel}>Rewards</Text>
+                    <Text style={styles.actionButtonLabel}>Earnings</Text>
                   </View>
                 </TouchableOpacity>
 
