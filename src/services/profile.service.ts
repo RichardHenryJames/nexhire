@@ -112,8 +112,9 @@ export class ApplicantService {
                     (profile as any).CurrentJobTitle = latest.JobTitle || profile.CurrentJobTitle;
                     (profile as any).CurrentOrganizationID = latest.OrganizationID;
                     if (latest.OrganizationID) {
-                        const org = await dbService.executeQuery('SELECT Name FROM Organizations WHERE OrganizationID = @param0', [latest.OrganizationID]);
+                        const org = await dbService.executeQuery('SELECT Name, ISNULL(Tier, \'Standard\') as Tier FROM Organizations WHERE OrganizationID = @param0', [latest.OrganizationID]);
                         (profile as any).CurrentCompanyName = org.recordset && org.recordset[0] ? org.recordset[0].Name : (latest.CompanyName || profile.CurrentCompanyName);
+                        (profile as any).organizationTier = org.recordset?.[0]?.Tier || 'Standard';
                     } else {
                         // Fallback to CompanyName from WorkExperiences or Applicants table
                         (profile as any).CurrentCompanyName = latest.CompanyName || profile.CurrentCompanyName || null;

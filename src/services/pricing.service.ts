@@ -27,15 +27,20 @@ const DEFAULT_PRICING = {
   STANDARD_REFERRER_PAYOUT: 25,
   PREMIUM_REFERRER_PAYOUT: 50,
   ELITE_REFERRER_PAYOUT: 100,
-  // Milestone bonuses (monthly)
-  MILESTONE_5_BONUS: 100,
-  MILESTONE_10_BONUS: 250,
-  MILESTONE_20_BONUS: 500,
+  // Milestone bonuses (monthly) — tier-specific (Standard gets NONE)
+  PREMIUM_MILESTONE_5_BONUS: 100,
+  PREMIUM_MILESTONE_10_BONUS: 250,
+  PREMIUM_MILESTONE_20_BONUS: 500,
+  ELITE_MILESTONE_5_BONUS: 200,
+  ELITE_MILESTONE_10_BONUS: 500,
+  ELITE_MILESTONE_20_BONUS: 1000,
   // Withdrawal
   MINIMUM_WITHDRAWAL: 200,
   // AI Resume Analysis
   AI_RESUME_ANALYSIS_COST: 29,
   AI_RESUME_FREE_USES: 2,
+  // Resume Templates
+  RESUME_TEMPLATE_COST: 49,
 };
 
 // Cache for pricing settings (refresh every 5 minutes)
@@ -165,15 +170,25 @@ export class PricingService {
   }
 
   /**
-   * Get milestone bonus amounts
+   * Get milestone bonus amounts by tier (Standard gets NONE)
    */
-  static async getMilestoneBonuses(): Promise<{ m5: number; m10: number; m20: number }> {
+  static async getMilestoneBonusesByTier(tier: OrganizationTier): Promise<{ m5: number; m10: number; m20: number } | null> {
+    if (tier === 'Standard') return null; // Standard referrers get no milestone bonuses
+    const prefix = tier === 'Elite' ? 'ELITE' : 'PREMIUM';
     const [m5, m10, m20] = await Promise.all([
-      this.getSetting('MILESTONE_5_BONUS'),
-      this.getSetting('MILESTONE_10_BONUS'),
-      this.getSetting('MILESTONE_20_BONUS'),
+      this.getSetting(`${prefix}_MILESTONE_5_BONUS`),
+      this.getSetting(`${prefix}_MILESTONE_10_BONUS`),
+      this.getSetting(`${prefix}_MILESTONE_20_BONUS`),
     ]);
     return { m5, m10, m20 };
+  }
+
+  /**
+   * @deprecated Use getMilestoneBonusesByTier instead. Kept for backward compat.
+   */
+  static async getMilestoneBonuses(): Promise<{ m5: number; m10: number; m20: number }> {
+    // Falls back to Premium tier values for backward compat
+    return this.getMilestoneBonusesByTier('Premium') as Promise<{ m5: number; m10: number; m20: number }>;
   }
 
   /**
@@ -195,6 +210,13 @@ export class PricingService {
    */
   static async getAIResumeFreeUses(): Promise<number> {
     return this.getSetting('AI_RESUME_FREE_USES');
+  }
+
+  /**
+   * Get resume template cost
+   */
+  static async getResumeTemplateCost(): Promise<number> {
+    return this.getSetting('RESUME_TEMPLATE_COST');
   }
 
   /**
