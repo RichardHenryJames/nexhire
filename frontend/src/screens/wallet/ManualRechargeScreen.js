@@ -136,7 +136,7 @@ const UPI_APPS = [
 ];
 
 // ─── Main Component ──────────────────────────────────────────────
-const ManualRechargeScreen = ({ navigation }) => {
+const ManualRechargeScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const { pricing } = usePricing();
   const { isMobile } = useResponsive();
@@ -154,6 +154,21 @@ const ManualRechargeScreen = ({ navigation }) => {
   const [promoResult, setPromoResult] = useState(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
+
+  // Handle incoming promo code from PromoCodesScreen (without resetting other state)
+  useEffect(() => {
+    const incoming = route?.params?.promoCode;
+    if (incoming) {
+      setPromoCode(incoming);
+      setShowPromoInput(true);
+      // Clear the param so it doesn't re-trigger
+      navigation.setParams({ promoCode: undefined });
+      // Validate after a tick so amount state is current
+      setTimeout(() => {
+        handleValidatePromo(incoming, parseFloat(amount) || 0);
+      }, 100);
+    }
+  }, [route?.params?.promoCode]);
 
   // Form state
   const [amount, setAmount] = useState('');
@@ -426,6 +441,12 @@ const ManualRechargeScreen = ({ navigation }) => {
                   <Text style={{ color: promoResult.valid ? '#10B981' : colors.error, fontSize: 11, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
                 </View>
               )}
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PromoCodes')}
+                style={{ alignSelf: 'center', marginTop: 6 }}
+              >
+                <Text style={{ color: colors.textSecondary, fontSize: 11 }}>View coupons →</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
