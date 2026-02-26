@@ -61,3 +61,4 @@ frontend/credentials.json
 *.keystore
 *.jks
 .expo/
+*.zip
