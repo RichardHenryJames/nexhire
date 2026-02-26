@@ -1439,65 +1439,12 @@ export class ReferralService {
             // ✅ Return CURRENT available points (from Applicants table), not sum of history
             return {
                 totalPoints, // This is the actual available balance after conversions
-                history: result.recordset || [],
-                // 🆕 ADD: Dynamic point type metadata (including conversion type)
-                pointTypeMetadata: this.getPointTypeMetadata()
+                history: result.recordset || []
             };
         } catch (error) {
             console.error('Error getting referral points history:', error);
             throw error;
         }
-    }
-
-    /**
-     * 🆕 NEW: Get point type metadata for dynamic frontend rendering
-     */
-    private static getPointTypeMetadata() {
-        return {
-            proof_submission: {
-                icon: '\uD83D\uDCF8', // 📸 Camera emoji
-                title: 'Proof Submissions',
-                description: 'Base points for submitting referral screenshots',
-                color: '#3B82F6', // Primary blue
-                category: 'action'
-            },
-            verification: {
-                icon: '\u2705', // ✅ Check mark emoji  
-                title: 'Verifications',
-                description: 'Bonus points when job seekers confirm referrals',
-                color: '#10B981', // Success green
-                category: 'completion'
-            },
-            quick_response_bonus: {
-                icon: '\u26A1', // ⚡ Lightning emoji
-                title: 'Quick Response Bonus',
-                description: 'Extra points for responding within 24 hours',
-                color: '#F59E0B', // Warning amber
-                category: 'bonus'
-            },
-            // 🚀 FUTURE: Any new point types can be added here without frontend changes
-            monthly_bonus: {
-                icon: '\uD83C\uDF81', // 🎁 Gift emoji
-                title: 'Monthly Bonus',
-                description: 'Special monthly activity bonus',
-                color: '#8B5CF6', // Purple
-                category: 'bonus'
-            },
-            streak_bonus: {
-                icon: '\uD83D\uDD25', // 🔥 Fire emoji
-                title: 'Streak Bonus', 
-                description: 'Consecutive referral streak bonus',
-                color: '#EF4444', // Red
-                category: 'achievement'
-            },
-            general: {
-                icon: '\uD83C\uDFAF', // 🎯 Target emoji
-                title: 'General Points',
-                description: 'Other referral activities',
-                color: '#6B7280', // Gray
-                category: 'general'
-            }
-        };
     }
 
     /**
