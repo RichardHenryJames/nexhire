@@ -24,11 +24,11 @@ export default function EarningsScreen({ navigation }) {
   const faqData = [
     {
       question: 'How do I earn referral earnings?',
-      answer: 'When you refer a candidate for a job and the job seeker verifies your referral, you earn a cash payout directly to your wallet. The payout amount depends on the company tier — ₹25 for Standard, ₹50 for Premium, and ₹100 for Elite companies.'
+      answer: 'When you refer a candidate for a job and the job seeker verifies your referral, you earn a cash payout directly to your wallet. The payout amount varies based on the company.'
     },
     {
       question: 'What are milestone bonuses?',
-      answer: 'Milestone bonuses are extra cash rewards for hitting referral targets each month. You earn ₹50 at 5 verified referrals, ₹100 at 10, and ₹200 at 20 referrals in a single month. These are flat bonuses available to all referrers regardless of company tier.'
+      answer: 'Milestone bonuses are extra cash rewards for hitting referral targets each month. The more verified referrals you complete, the bigger the bonus. Check the milestone progress bar above to see your current targets.'
     },
     {
       question: 'What are RefPoints?',
@@ -36,7 +36,7 @@ export default function EarningsScreen({ navigation }) {
     },
     {
       question: 'How do I withdraw my earnings?',
-      answer: 'Go to your Wallet and tap Withdraw. You can withdraw via UPI or bank transfer once your balance reaches the minimum withdrawal amount of ₹200. Withdrawals are processed within 24-48 hours.'
+      answer: 'Go to your Wallet and tap Withdraw. You can withdraw via UPI or bank transfer once your balance reaches the minimum withdrawal amount. Withdrawals are processed within 24-48 hours.'
     },
     {
       question: 'When do I get paid for a referral?',

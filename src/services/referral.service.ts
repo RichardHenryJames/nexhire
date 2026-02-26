@@ -694,9 +694,12 @@ export class ReferralService {
 
             // If verified, award tier-based verification payout to referrer's wallet
             if (dto.verified && referrerId) {
-                // Look up org tier for this referral request
+                // Look up org tier + job details for this referral request
                 const orgTierQuery = `
-                    SELECT ISNULL(COALESCE(jo.Tier, eo.Tier), 'Standard') as Tier
+                    SELECT 
+                        ISNULL(COALESCE(jo.Tier, eo.Tier), 'Standard') as Tier,
+                        COALESCE(j.Title, rr.JobTitle) as JobTitle,
+                        COALESCE(jo.Name, eo.Name) as CompanyName
                     FROM ReferralRequests rr
                     LEFT JOIN Jobs j ON rr.JobID = j.JobID
                     LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
@@ -705,16 +708,28 @@ export class ReferralService {
                 `;
                 const orgTierResult = await dbService.executeQuery(orgTierQuery, [dto.requestID]);
                 const requestTier = (orgTierResult.recordset?.[0]?.Tier || 'Standard') as 'Standard' | 'Premium' | 'Elite';
+                const rewardJobTitle = orgTierResult.recordset?.[0]?.JobTitle || '';
+                const rewardCompanyName = orgTierResult.recordset?.[0]?.CompanyName || '';
 
                 // Get fixed payout based on tier (transparent, not random)
                 const verificationAmount = await PricingService.getReferrerPayoutByTier(requestTier);
+
+                // Build clean wallet description (no tier info, no request ID)
+                let walletDescription = 'Referral verification reward';
+                if (rewardJobTitle && rewardCompanyName) {
+                    walletDescription += ` for ${rewardJobTitle} (${rewardCompanyName})`;
+                } else if (rewardJobTitle) {
+                    walletDescription += ` for ${rewardJobTitle}`;
+                } else if (rewardCompanyName) {
+                    walletDescription += ` at ${rewardCompanyName}`;
+                }
 
                 // Add money to referrer's wallet (actual earnings - WITHDRAWABLE)
                 await WalletService.creditBonus(
                     referrerId,
                     verificationAmount,
                     'REFERRAL_EARNINGS',  // NOT 'REFERRAL_BONUS' - these are actual earnings
-                    `Referral verification reward (${requestTier} tier) for request ${dto.requestID}`
+                    walletDescription
                 );
 
                 // Check and award milestone bonuses (5th, 10th, 20th verified referral this month)
@@ -735,20 +750,6 @@ export class ReferralService {
                     const referrerResult = await dbService.executeQuery(referrerQuery, [referrerId]);
                     const referrer = referrerResult.recordset?.[0];
 
-                    // Get job/company details
-                    const jobQuery = `
-                        SELECT 
-                            COALESCE(j.Title, rr.JobTitle, 'Job Position') as JobTitle,
-                            COALESCE(jo.Name, eo.Name, 'Company') as CompanyName
-                        FROM ReferralRequests rr
-                        LEFT JOIN Jobs j ON rr.JobID = j.JobID
-                        LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
-                        LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
-                        WHERE rr.RequestID = @param0
-                    `;
-                    const jobResult = await dbService.executeQuery(jobQuery, [dto.requestID]);
-                    const jobInfo = jobResult.recordset?.[0];
-
                     // Get new wallet balance
                     const balanceResult = await WalletService.getBalance(referrerId);
                     const newBalance = balanceResult?.balance || verificationAmount;
@@ -760,8 +761,8 @@ export class ReferralService {
                             referrerName: referrer.FirstName,
                             referrerEmail: referrer.Email,
                             seekerName: applicantName,
-                            jobTitle: jobInfo?.JobTitle || 'Job Position',
-                            companyName: jobInfo?.CompanyName || 'Company',
+                            jobTitle: rewardJobTitle || 'Job Position',
+                            companyName: rewardCompanyName || 'Company',
                             amount: verificationAmount,
                             newBalance: newBalance
                         });
