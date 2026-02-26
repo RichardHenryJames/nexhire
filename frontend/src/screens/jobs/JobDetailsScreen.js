@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import RenderHtml from 'react-native-render-html';
 import refopenAPI from '../../services/api';
+import { getReferralCostForJob } from '../../utils/pricingUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
@@ -71,6 +72,9 @@ const { jobId, fromReferralRequest } = route.params || {};
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
+
+  // 💰 Tier-based referral cost (updates when job loads)
+  const tierCost = job ? getReferralCostForJob(job, pricing) : pricing.referralRequestCost;
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
@@ -244,7 +248,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         // Show confirmation modal (works for both sufficient and insufficient balance)
         setReferralConfirmData({ 
           currentBalance: availableBalance, // Use available, not total
-          requiredAmount: pricing.referralRequestCost,
+          requiredAmount: tierCost,
           holdAmount: holdAmount // Pass hold info for display
         });
         setShowReferralConfirmModal(true);
@@ -322,7 +326,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           setReferralBroadcastTime(broadcastTime);
           setShowReferralSuccessOverlay(true);
           
-          const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || pricing.referralRequestCost;
+          const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || tierCost;
           const availableBalance = res.data?.availableBalanceAfter;
           
           let message = 'Referral request sent! Amount held until referral is completed.';
@@ -341,7 +345,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           // Handle insufficient balance error
           if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
             const currentBalance = res.data?.currentBalance || 0;
-            const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
+            const requiredAmount = res.data?.requiredAmount || tierCost;
             
             // 💎 NEW: Show beautiful modal instead of ugly alert
             setWalletModalData({ currentBalance, requiredAmount });
@@ -478,7 +482,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         setReferralBroadcastTime(broadcastTime);
         setShowReferralSuccessOverlay(true);
         
-        const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || pricing.referralRequestCost;
+        const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || tierCost;
         const availableBalance = res.data?.availableBalanceAfter;
         
         let message = 'Referral sent! You\'ll only be charged when someone refers you.';
@@ -493,7 +497,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
+          const requiredAmount = res.data?.requiredAmount || tierCost;
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });

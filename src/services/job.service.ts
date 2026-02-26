@@ -481,11 +481,8 @@ export class JobService {
         const insertQuery = `
             INSERT INTO Jobs (${fields.join(', ')})
             VALUES (${placeholders.join(', ')});
-            SELECT j.*, jt.Value as JobTypeName, o.Name as OrganizationName
+            SELECT j.*, jt.Value as JobTypeName, o.Name as OrganizationName, ISNULL(o.Tier, 'Standard') as OrganizationTier
             FROM Jobs j
-            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            WHERE j.JobID = @param0;
         `;
 
         // Debug logging
@@ -621,7 +618,8 @@ export class JobService {
                 wt.Value as WorkplaceTypeName,
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
-                ISNULL(o.Size, '') as OrganizationSize
+                ISNULL(o.Size, '') as OrganizationSize,
+                ISNULL(o.Tier, 'Standard') as OrganizationTier
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
@@ -639,14 +637,9 @@ export class JobService {
                 jt.Value as JobTypeName,
                 wt.Value as WorkplaceTypeName,
                 o.Name as OrganizationName,
-                ISNULL(o.LogoURL, '') as OrganizationLogo
+                ISNULL(o.LogoURL, '') as OrganizationLogo,
+                ISNULL(o.Tier, 'Standard') as OrganizationTier
             FROM Jobs j
-            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
-            ${whereClause}
-        `;
-        }
 
         let fetched: any[];
 
@@ -748,6 +741,7 @@ export class JobService {
                 o.Website as OrganizationWebsite,
                 o.Description as OrganizationDescription,
                 o.IsFortune500 as OrganizationIsFortune500,
+                ISNULL(o.Tier, 'Standard') as OrganizationTier,
                 o.Industry as OrganizationIndustry,
                 c.Symbol as CurrencySymbol,
                 CASE
@@ -1051,7 +1045,7 @@ export class JobService {
         const offset = (page - 1) * pageSize;
         const dataQuery = `
             SELECT
-                j.*, jt.Value as JobTypeName, o.Name as OrganizationName
+                j.*, jt.Value as JobTypeName, o.Name as OrganizationName, ISNULL(o.Tier, 'Standard') as OrganizationTier
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
@@ -1206,7 +1200,8 @@ export class JobService {
                     jt.Value as JobTypeName,
                     wt.Value as WorkplaceTypeName,
                     o.Name as OrganizationName,
-                    ISNULL(o.LogoURL, '') as OrganizationLogo
+                    ISNULL(o.LogoURL, '') as OrganizationLogo,
+                    ISNULL(o.Tier, 'Standard') as OrganizationTier
                     ${useRoleTitleScore ? `, ${preferenceScoreSql} AS _prefScore` : ''}
                 FROM Jobs j
                 INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
