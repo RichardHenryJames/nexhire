@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../styles/theme';
@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
 import useResponsive from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function EarningsScreen({ navigation }) {
   const { user } = useAuth();
@@ -34,10 +35,12 @@ export default function EarningsScreen({ navigation }) {
     withdrawalFee: 0
   });
 
-  // Load all data on mount
-  useEffect(() => {
-    loadAllData();
-  }, []);
+  // Load all data on focus (auto-refresh when navigating to screen)
+  useFocusEffect(
+    useCallback(() => {
+      loadAllData();
+    }, [])
+  );
 
   const loadAllData = async () => {
     try {
@@ -308,7 +311,7 @@ export default function EarningsScreen({ navigation }) {
                         </View>
                       );
                     })}
-                    {verified > 0 && verified < maxCount && (
+                    {verified < maxCount && (
                       <View style={[styles.milestoneYouAreHere, { left: `${progress * 100}%` }]}>
                         <View style={styles.milestoneYouDot} />
                       </View>
@@ -409,35 +412,7 @@ export default function EarningsScreen({ navigation }) {
             </View>
           )}
 
-          {/* How to Earn More Points - UPDATED: Dynamic tips from metadata */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💡 How to Earn More Points</Text>
-            <View style={styles.tipsContainer}>
-              {Object.entries(pointTypeMetadata).map(([type, metadata]) => {
-                // Skip general type in tips
-                if (type === 'general') return null;
-                
-                return (
-                  <View key={type} style={styles.tipRow}>
-                    <Text style={styles.tipIcon}>{metadata.icon || '🎯'}</Text>
-                    <View style={styles.tipContent}>
-                      <Text style={styles.tipTitle}>{metadata.title || 'Points'}</Text>
-                      <Text style={styles.tipDescription}>{metadata.description || 'Earn referral points'}</Text>
-                    </View>
-                  </View>
-                );
-              })}
-              
-              {/* Always show the summary tip */}
-              <View style={styles.tipRow}>
-                <Text style={styles.tipIcon}>🎯</Text>
-                <View style={styles.tipContent}>
-                  <Text style={styles.tipTitle}>Maximum Per Referral</Text>
-                  <Text style={styles.tipDescription}>Points vary by activity type and timing bonuses</Text>
-                </View>
-              </View>
-            </View>
-          </View>
+
         </ScrollView>
       </View>
     </View>
@@ -671,31 +646,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-  },
-  tipsContainer: {
-    gap: 16,
-  },
-  tipRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  tipIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    marginTop: 2,
-  },
-  tipContent: {
-    flex: 1,
-  },
-  tipTitle: {
-    fontSize: typography.sizes?.md || 16,
-    fontWeight: typography.weights?.medium || '500',
-    color: colors.text,
-    marginBottom: 2,
-  },
-  tipDescription: {
-    fontSize: typography.sizes?.sm || 14,
-    color: colors.textSecondary,
   },
   conversionSection: {
     marginTop: 8,

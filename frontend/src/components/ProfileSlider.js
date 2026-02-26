@@ -185,7 +185,7 @@ export default function ProfileSlider({ visible, onClose }) {
         },
         {
           icon: 'megaphone-outline',
-          label: 'Earn via Social Share',
+          label: 'Social Share',
           onPress: () => navigateTo('ShareEarn'),
         },
       ],
