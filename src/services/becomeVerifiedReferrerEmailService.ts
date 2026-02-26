@@ -119,8 +119,9 @@ export class BecomeVerifiedReferrerEmailService {
                             <p style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">🚀 Why Verified Members get more:</p>
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Get referrals faster</strong> — Verified members are prioritized when requesting referrals from others</td></tr>
-                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Refer anyone, anytime</strong> — Earn cash rewards for every refer you submit through RefOpen</td></tr>
-                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Use rewards to get referrals</strong> — The reward cash you earn as a referrer can be used to request referrals for yourself too, or you can withdraw to your bank/UPI</td></tr>
+                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Earn ₹25–₹100 per referral</strong> — Fixed, transparent payouts for every verified referral you submit</td></tr>
+                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Monthly milestone bonuses</strong> — Top referrers at premium companies earn ₹2,000+/month</td></tr>
+                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Use rewards to get referrals</strong> — Earned cash can be used to request referrals for yourself, or withdraw to bank/UPI</td></tr>
                                 <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Verified badge</strong> — Build trust with a verified profile that stands out</td></tr>
                             </table>
                         </td>

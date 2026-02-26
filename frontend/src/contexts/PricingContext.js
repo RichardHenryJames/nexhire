@@ -26,15 +26,20 @@ const DEFAULT_PRICING = {
   standardReferrerPayout: 25,
   premiumReferrerPayout: 50,
   eliteReferrerPayout: 100,
-  // Milestone bonuses
-  milestone5Bonus: 100,
-  milestone10Bonus: 250,
-  milestone20Bonus: 500,
+  // Milestone bonuses — tier-specific (Standard gets NONE)
+  premiumMilestone5Bonus: 100,
+  premiumMilestone10Bonus: 250,
+  premiumMilestone20Bonus: 500,
+  eliteMilestone5Bonus: 200,
+  eliteMilestone10Bonus: 500,
+  eliteMilestone20Bonus: 1000,
   // Withdrawal
   minimumWithdrawal: 200,
   // AI Resume
   aiResumeAnalysisCost: 29,
   aiResumeFreeUses: 2,
+  // Resume Templates
+  resumeTemplateCost: 49,
 };
 
 const PricingContext = createContext({

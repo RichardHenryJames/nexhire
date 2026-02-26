@@ -828,7 +828,7 @@ SET IDENTITY_INSERT ReferralPlans OFF;
 GO
 
 -- ============================================================
--- Seed Data: PricingSettings (8 rows)
+-- Seed Data: PricingSettings (24 rows)
 -- ============================================================
 
 SET IDENTITY_INSERT PricingSettings ON;
@@ -842,6 +842,21 @@ INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, I
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (7, N'PROFILE_VIEW_COST', 29, N'Cost in INR to unlock profile views', 1, '2025-12-18T19:48:27.483Z', '2025-12-18T19:48:27.483Z');
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (8, N'PROFILE_VIEW_ACCESS_DURATION_HOURS', 168, N'Duration in hours for profile view access (7 days)', 1, '2025-12-18T19:48:27.483Z', '2025-12-18T19:48:27.483Z');
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (9, N'OPEN_TO_ANY_REFERRAL_COST', 99, N'Cost in INR for open-to-any-company referral request', 1, '2026-02-13T09:10:56.510Z', '2026-02-13T09:10:56.510Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (10, N'PREMIUM_REFERRAL_COST', 99, N'Cost in INR for Premium-tier referral request', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (11, N'ELITE_REFERRAL_COST', 199, N'Cost in INR for Elite-tier referral request', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (12, N'STANDARD_REFERRER_PAYOUT', 25, N'Referrer payout in INR for Standard-tier verified referral', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (13, N'PREMIUM_REFERRER_PAYOUT', 50, N'Referrer payout in INR for Premium-tier verified referral', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (14, N'ELITE_REFERRER_PAYOUT', 100, N'Referrer payout in INR for Elite-tier verified referral', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (15, N'PREMIUM_MILESTONE_5_BONUS', 100, N'Premium tier milestone bonus at 5 verified referrals/month', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (16, N'PREMIUM_MILESTONE_10_BONUS', 250, N'Premium tier milestone bonus at 10 verified referrals/month', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (17, N'PREMIUM_MILESTONE_20_BONUS', 500, N'Premium tier milestone bonus at 20 verified referrals/month', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (18, N'ELITE_MILESTONE_5_BONUS', 200, N'Elite tier milestone bonus at 5 verified referrals/month', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (19, N'ELITE_MILESTONE_10_BONUS', 500, N'Elite tier milestone bonus at 10 verified referrals/month', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (20, N'ELITE_MILESTONE_20_BONUS', 1000, N'Elite tier milestone bonus at 20 verified referrals/month', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (21, N'MINIMUM_WITHDRAWAL', 200, N'Minimum withdrawal amount in INR', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (22, N'AI_RESUME_ANALYSIS_COST', 29, N'Cost per AI resume scan in INR (after free uses)', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (23, N'AI_RESUME_FREE_USES', 2, N'Number of free AI resume scans per user', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (24, N'RESUME_TEMPLATE_COST', 49, N'Cost per premium resume template in INR', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
 SET IDENTITY_INSERT PricingSettings OFF;
 GO
 
