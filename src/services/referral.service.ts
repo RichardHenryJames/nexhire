@@ -152,10 +152,22 @@ export class ReferralService {
      */
     static async createReferralRequest(applicantId: string, dto: CreateReferralRequestDto): Promise<ReferralRequest> {
         try {
-            // Get referral cost from database (open-to-any costs more)
+            // Resolve organization tier for tier-based pricing
+            let organizationTier: 'Standard' | 'Premium' | 'Elite' = 'Standard';
+            if (dto.organizationId && dto.organizationId !== '999999') {
+                const tierQuery = `SELECT ISNULL(Tier, 'Standard') as Tier FROM Organizations WHERE OrganizationID = @param0`;
+                const tierResult = await dbService.executeQuery(tierQuery, [parseInt(dto.organizationId, 10)]);
+                organizationTier = tierResult.recordset?.[0]?.Tier || 'Standard';
+            } else if (dto.jobID) {
+                const tierQuery = `SELECT ISNULL(o.Tier, 'Standard') as Tier FROM Jobs j INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID WHERE j.JobID = @param0`;
+                const tierResult = await dbService.executeQuery(tierQuery, [dto.jobID]);
+                organizationTier = tierResult.recordset?.[0]?.Tier || 'Standard';
+            }
+
+            // Get referral cost based on org tier (open-to-any uses highest tier cost)
             const REFERRAL_REQUEST_COST = dto.openToAnyCompany
                 ? await PricingService.getOpenToAnyCost()
-                : await PricingService.getReferralCost();
+                : await PricingService.getReferralCostByTier(organizationTier);
             
             // Get user ID for wallet operations
             const userQuery = `SELECT UserID FROM Applicants WHERE ApplicantID = @param0`;
@@ -680,35 +692,37 @@ export class ReferralService {
                 applicantName
             ]);
 
-            // If verified, award ADDITIONAL verification money to referrer's wallet
-            // Amount varies based on whether referrer got quick response bonus
+            // If verified, award tier-based verification payout to referrer's wallet
             if (dto.verified && referrerId) {
-                // Check if referrer received quick response bonus for this request
-                const quickBonusCheckQuery = `
-                    SELECT COUNT(*) as HasQuickBonus 
-                    FROM ReferralRewards 
-                    WHERE ReferrerID = @param0 AND RequestID = @param1 AND PointsType = 'quick_response_bonus'
+                // Look up org tier for this referral request
+                const orgTierQuery = `
+                    SELECT ISNULL(COALESCE(jo.Tier, eo.Tier), 'Standard') as Tier
+                    FROM ReferralRequests rr
+                    LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                    LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
+                    LEFT JOIN Organizations eo ON rr.OrganizationID = eo.OrganizationID AND rr.ExtJobID IS NOT NULL
+                    WHERE rr.RequestID = @param0
                 `;
-                const quickBonusResult = await dbService.executeQuery(quickBonusCheckQuery, [referrerId, dto.requestID]);
-                const hasQuickBonus = quickBonusResult.recordset?.[0]?.HasQuickBonus > 0;
+                const orgTierResult = await dbService.executeQuery(orgTierQuery, [dto.requestID]);
+                const requestTier = (orgTierResult.recordset?.[0]?.Tier || 'Standard') as 'Standard' | 'Premium' | 'Elite';
 
-                // Random verification reward amounts (in rupees):
-                // - Fast referrers (responded < 24hrs): ₹30-40 — rewarding speed
-                // - Normal referrers (responded > 24hrs): ₹20-30 — still worthwhile
-                let verificationAmount: number;
-                if (hasQuickBonus) {
-                    verificationAmount = Math.floor(Math.random() * 11) + 30; // ₹30-40
-                } else {
-                    verificationAmount = Math.floor(Math.random() * 11) + 20; // ₹20-30
-                }
+                // Get fixed payout based on tier (transparent, not random)
+                const verificationAmount = await PricingService.getReferrerPayoutByTier(requestTier);
 
                 // Add money to referrer's wallet (actual earnings - WITHDRAWABLE)
                 await WalletService.creditBonus(
                     referrerId,
                     verificationAmount,
                     'REFERRAL_EARNINGS',  // NOT 'REFERRAL_BONUS' - these are actual earnings
-                    `Referral verification reward for request ${dto.requestID}`
+                    `Referral verification reward (${requestTier} tier) for request ${dto.requestID}`
                 );
+
+                // Check and award milestone bonuses (5th, 10th, 20th verified referral this month)
+                try {
+                    await this.checkAndAwardMilestoneBonus(referrerId, dto.requestID);
+                } catch (milestoneErr) {
+                    console.warn('Non-critical: Failed to check milestone bonus:', milestoneErr);
+                }
 
                 // ✅ Send email notification to referrer about earnings
                 try {
@@ -1047,7 +1061,66 @@ export class ReferralService {
     }
 
     // ===== HELPER METHODS =====
-    
+
+    /**
+     * Check if referrer hit a monthly milestone and award bonus
+     * Milestones: 5th, 10th, 20th verified referral in a calendar month
+     */
+    private static async checkAndAwardMilestoneBonus(referrerId: string, requestId: string): Promise<void> {
+        try {
+            // Count verified referrals this month for this referrer
+            const countQuery = `
+                SELECT COUNT(*) as VerifiedThisMonth
+                FROM ReferralRequests
+                WHERE AssignedReferrerID = @param0
+                  AND Status = 'Verified'
+                  AND MONTH(ReferredAt) = MONTH(GETUTCDATE())
+                  AND YEAR(ReferredAt) = YEAR(GETUTCDATE())
+            `;
+            const countResult = await dbService.executeQuery(countQuery, [referrerId]);
+            const count = countResult.recordset?.[0]?.VerifiedThisMonth || 0;
+
+            const milestones = await PricingService.getMilestoneBonuses();
+
+            // Check each milestone (award only once per milestone per month)
+            const milestonesToCheck = [
+                { threshold: 20, amount: milestones.m20, type: 'milestone_20' },
+                { threshold: 10, amount: milestones.m10, type: 'milestone_10' },
+                { threshold: 5, amount: milestones.m5, type: 'milestone_5' },
+            ];
+
+            for (const milestone of milestonesToCheck) {
+                if (count >= milestone.threshold) {
+                    // Check if already awarded this milestone this month
+                    const existingQuery = `
+                        SELECT RewardID FROM ReferralRewards
+                        WHERE ReferrerID = @param0 AND PointsType = @param1
+                          AND MONTH(AwardedAt) = MONTH(GETUTCDATE())
+                          AND YEAR(AwardedAt) = YEAR(GETUTCDATE())
+                    `;
+                    const existing = await dbService.executeQuery(existingQuery, [referrerId, milestone.type]);
+                    if (existing.recordset?.length) continue; // Already awarded
+
+                    // Award milestone bonus to wallet (WITHDRAWABLE earnings)
+                    await WalletService.creditBonus(
+                        referrerId,
+                        milestone.amount,
+                        'REFERRAL_EARNINGS',
+                        `🎉 Milestone bonus: ${milestone.threshold}th verified referral this month`
+                    );
+
+                    // Track as referral reward points too
+                    await this.awardReferralPoints(referrerId, requestId, milestone.amount, milestone.type);
+
+                    console.log(`Milestone bonus awarded: ${milestone.type} (₹${milestone.amount}) to ${referrerId}`);
+                    break; // Only award the highest unawarded milestone
+                }
+            }
+        } catch (error) {
+            console.warn('Non-critical: Failed to check/award milestone bonus:', error);
+        }
+    }
+
     /**
      * Award points to referrer with enhanced tracking
      */

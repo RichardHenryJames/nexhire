@@ -14,11 +14,27 @@ const DEFAULT_PRICING = {
   referralRequestCost: 49,
   openToAnyReferralCost: 99,
   jobPublishCost: 0,
-  welcomeBonus: 100,
-  referralSignupBonus: 50,
+  welcomeBonus: 0,
+  referralSignupBonus: 25,
   profileViewCost: 29,
   profileViewAccessDurationHours: 168,
-  profileViewAccessDurationDays: 7
+  profileViewAccessDurationDays: 7,
+  // Tier-based referral pricing
+  premiumReferralCost: 99,
+  eliteReferralCost: 199,
+  // Tier-based referrer payouts
+  standardReferrerPayout: 25,
+  premiumReferrerPayout: 50,
+  eliteReferrerPayout: 100,
+  // Milestone bonuses
+  milestone5Bonus: 100,
+  milestone10Bonus: 250,
+  milestone20Bonus: 500,
+  // Withdrawal
+  minimumWithdrawal: 200,
+  // AI Resume
+  aiResumeAnalysisCost: 29,
+  aiResumeFreeUses: 2,
 };
 
 const PricingContext = createContext({

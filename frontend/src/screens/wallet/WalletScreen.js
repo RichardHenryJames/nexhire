@@ -45,8 +45,9 @@ export default function WalletScreen({ navigation, route }) {
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawableBalance, setWithdrawableBalance] = useState(0);
   const [loadingWithdrawable, setLoadingWithdrawable] = useState(false);
+  const [withdrawMinimum, setWithdrawMinimum] = useState(200);
   const withdrawalFee = 0; // No withdrawal fee
-  const minimumWithdrawal = 10;
+  const minimumWithdrawal = withdrawMinimum;
 
   // Fetch withdrawable balance when modal opens
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function WalletScreen({ navigation, route }) {
           const result = await refopenAPI.getWithdrawableBalance();
           if (result.success) {
             setWithdrawableBalance(result.data.withdrawableAmount || 0);
+            if (result.data.minimumWithdrawal) setWithdrawMinimum(result.data.minimumWithdrawal);
           }
         } catch (error) {
           console.error('Error fetching withdrawable balance:', error);

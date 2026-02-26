@@ -44,7 +44,8 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     Name as name,
                     LogoURL as logoURL,
                     Industry as industry,
-                    IsFortune500 as isFortune500
+                    IsFortune500 as isFortune500,
+                    ISNULL(Tier, 'Standard') as tier
                 FROM Organizations WITH (INDEX(IX_Organizations_IsFortune500))
                 WHERE IsActive = 1 AND IsFortune500 = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
                 ORDER BY Name ASC
@@ -57,7 +58,8 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     Name as name,
                     LogoURL as logoURL,
                     Industry as industry,
-                    IsFortune500 as isFortune500
+                    IsFortune500 as isFortune500,
+                    ISNULL(Tier, 'Standard') as tier
                 FROM Organizations
                 WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL) AND Name LIKE @param${paramIndex}
             `;
@@ -76,7 +78,8 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     Name as name,
                     LogoURL as logoURL,
                     Industry as industry,
-                    IsFortune500 as isFortune500
+                    IsFortune500 as isFortune500,
+                    ISNULL(Tier, 'Standard') as tier
                 FROM Organizations
                 WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
                 ORDER BY IsFortune500 DESC, Name ASC

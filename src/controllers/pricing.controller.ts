@@ -34,7 +34,23 @@ async function getPricing(request: HttpRequest, context: InvocationContext): Pro
           referralSignupBonus: settings.REFERRAL_SIGNUP_BONUS,
           profileViewCost: settings.PROFILE_VIEW_COST,
           profileViewAccessDurationHours: settings.PROFILE_VIEW_ACCESS_DURATION_HOURS,
-          profileViewAccessDurationDays: Math.floor(settings.PROFILE_VIEW_ACCESS_DURATION_HOURS / 24)
+          profileViewAccessDurationDays: Math.floor(settings.PROFILE_VIEW_ACCESS_DURATION_HOURS / 24),
+          // Tier-based referral pricing
+          premiumReferralCost: settings.PREMIUM_REFERRAL_COST,
+          eliteReferralCost: settings.ELITE_REFERRAL_COST,
+          // Tier-based referrer payouts
+          standardReferrerPayout: settings.STANDARD_REFERRER_PAYOUT,
+          premiumReferrerPayout: settings.PREMIUM_REFERRER_PAYOUT,
+          eliteReferrerPayout: settings.ELITE_REFERRER_PAYOUT,
+          // Milestone bonuses
+          milestone5Bonus: settings.MILESTONE_5_BONUS,
+          milestone10Bonus: settings.MILESTONE_10_BONUS,
+          milestone20Bonus: settings.MILESTONE_20_BONUS,
+          // Withdrawal
+          minimumWithdrawal: settings.MINIMUM_WITHDRAWAL,
+          // AI Resume
+          aiResumeAnalysisCost: settings.AI_RESUME_ANALYSIS_COST,
+          aiResumeFreeUses: settings.AI_RESUME_FREE_USES,
         }
       })
     };

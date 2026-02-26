@@ -111,8 +111,15 @@ const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
 // 🆕 "Open to any company" mode — user only knows job title
 const [openToAnyCompany, setOpenToAnyCompany] = useState(false);
 
-// 💰 Effective cost depends on open-to-any checkbox (must be after openToAnyCompany state)
-const effectiveCost = openToAnyCompany ? pricing.openToAnyReferralCost : pricing.referralRequestCost;
+// 💰 Effective cost depends on open-to-any checkbox AND company tier
+const getEffectiveCost = () => {
+  if (openToAnyCompany) return pricing.openToAnyReferralCost;
+  const tier = selectedCompany?.tier || 'Standard';
+  if (tier === 'Elite') return pricing.eliteReferralCost || 199;
+  if (tier === 'Premium') return pricing.premiumReferralCost || 99;
+  return pricing.referralRequestCost; // Standard
+};
+const effectiveCost = getEffectiveCost();
 
 // Search state (same as HomeScreen)
 const [headerSearchQuery, setHeaderSearchQuery] = useState('');
