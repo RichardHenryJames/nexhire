@@ -44,44 +44,11 @@ const FeatureRow = ({ icon, label, value, sub, colors }) => (
       <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }}>{label}</Text>
       {sub ? <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{sub}</Text> : null}
     </View>
-    <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{value}</Text>
+    <Text style={{ fontSize: 15, fontWeight: '700', color: value === 'Free' ? (colors.success || '#10B981') : colors.text }}>{value}</Text>
   </View>
 );
 
-// ─── Tier Card ─────────────────────────────────────────────
-const TierCard = ({ tier, price, accent, icon, popular, colors, styles }) => (
-  <View style={[
-    styles.tierCard,
-    popular && { borderColor: colors.primary, borderWidth: 2 },
-  ]}>
-    {popular && (
-      <View style={styles.popularBadge}>
-        <Text style={styles.popularText}>MOST POPULAR</Text>
-      </View>
-    )}
-    <View style={{ alignItems: 'center', paddingTop: popular ? 10 : 0 }}>
-      <View style={[styles.tierIcon, { backgroundColor: accent + '18' }]}>
-        <Ionicons name={icon} size={26} color={accent} />
-      </View>
-      <Text style={[styles.tierName, { color: accent }]}>{tier}</Text>
-      <Text style={styles.tierPrice}>{fmt(price)}</Text>
-      <Text style={styles.tierPriceLabel}>per referral request</Text>
-    </View>
-    <View style={styles.tierDivider} />
-    <View style={styles.tierDetail}>
-      <Ionicons name="checkmark-circle" size={16} color={colors.success || '#10B981'} />
-      <Text style={styles.tierDetailText}>Direct request to verified employee</Text>
-    </View>
-    <View style={styles.tierDetail}>
-      <Ionicons name="checkmark-circle" size={16} color={colors.success || '#10B981'} />
-      <Text style={styles.tierDetailText}>Pay only if someone refers you</Text>
-    </View>
-    <View style={styles.tierDetail}>
-      <Ionicons name="checkmark-circle" size={16} color={colors.success || '#10B981'} />
-      <Text style={styles.tierDetailText}>Auto-refund if no one picks up</Text>
-    </View>
-  </View>
-);
+
 
 // ─── Main Component ────────────────────────────────────────
 export default function PricingScreen() {
@@ -91,31 +58,9 @@ export default function PricingScreen() {
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
-  const tiers = [
-    {
-      tier: 'Standard',
-      price: pricing.referralRequestCost,
-      accent: '#3B82F6',
-      icon: 'person-outline',
-    },
-    {
-      tier: 'Premium',
-      price: pricing.premiumReferralCost,
-      accent: '#8B5CF6',
-      icon: 'star-outline',
-      popular: true,
-    },
-    {
-      tier: 'Elite',
-      price: pricing.eliteReferralCost,
-      accent: '#F59E0B',
-      icon: 'trophy-outline',
-    },
-  ];
-
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Pricing" onBack={() => navigation.goBack()} />
+      <SubScreenHeader title="Pricing" />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.innerContainer}>
           <View style={styles.content}>
@@ -128,55 +73,87 @@ export default function PricingScreen() {
               </Text>
             </View>
 
-            {/* ── Referral Tiers ── */}
-            <Text style={styles.sectionTitle}>Referral Request Pricing</Text>
-            <Text style={styles.sectionSub}>
-              Cost depends on the referrer's tier at their company
-            </Text>
+            {/* ── Referral Pricing Card ── */}
+            <View style={styles.pricingCard}>
+              <View style={styles.pricingCardAccent} />
+              <View style={styles.pricingCardInner}>
+                <View style={styles.pricingIconRow}>
+                  <View style={styles.pricingIconCircle}>
+                    <Ionicons name="send-outline" size={24} color={colors.primary} />
+                  </View>
+                  <Badge text="PER REQUEST" color={colors.primary} bg={colors.primary + '14'} />
+                </View>
 
-            <View style={styles.tiersRow}>
-              {tiers.map((t) => (
-                <TierCard key={t.tier} {...t} colors={colors} styles={styles} />
-              ))}
+                <Text style={styles.pricingLabel}>Referral Request</Text>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceRange}>{fmt(pricing.referralRequestCost)} – {fmt(pricing.eliteReferralCost)}</Text>
+                </View>
+                <Text style={styles.priceNote}>Exact price shown when you send a request</Text>
+
+                <View style={styles.pricingDivider} />
+
+                <View style={styles.benefitRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
+                  <Text style={styles.benefitText}>Direct request to a verified employee</Text>
+                </View>
+                <View style={styles.benefitRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
+                  <Text style={styles.benefitText}>You're only charged when someone refers you</Text>
+                </View>
+                <View style={styles.benefitRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
+                  <Text style={styles.benefitText}>Auto-refund if no one picks up in 2 weeks</Text>
+                </View>
+              </View>
             </View>
 
             {/* ── Open to Any ── */}
-            <View style={styles.highlightCard}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="globe-outline" size={22} color="#8B5CF6" />
-                <Text style={[styles.highlightTitle, { marginLeft: 8 }]}>Open-to-Any Company</Text>
-                <Badge text="WIDE REACH" color="#8B5CF6" bg="#8B5CF620" style={{ marginLeft: 'auto' }} />
+            <View style={styles.openCard}>
+              <View style={styles.openCardInner}>
+                <View style={styles.pricingIconRow}>
+                  <View style={[styles.pricingIconCircle, { backgroundColor: '#8B5CF614' }]}>
+                    <Ionicons name="globe-outline" size={24} color="#8B5CF6" />
+                  </View>
+                  <Badge text="WIDE REACH" color="#8B5CF6" bg="#8B5CF620" />
+                </View>
+
+                <Text style={styles.pricingLabel}>Open-to-Any Company</Text>
+                <Text style={styles.openPrice}>{fmt(pricing.openToAnyReferralCost)}</Text>
+                <Text style={styles.priceNote}>
+                  Your request goes to referrers across all companies — great when you're open to multiple opportunities.
+                </Text>
               </View>
-              <Text style={styles.highlightPrice}>{fmt(pricing.openToAnyReferralCost)}</Text>
-              <Text style={styles.highlightSub}>
-                Request goes to referrers across all companies — great if you're open to multiple opportunities.
-              </Text>
             </View>
 
             {/* ── AI & Tools ── */}
             <Text style={styles.sectionTitle}>AI & Career Tools</Text>
             <View style={styles.card}>
               <FeatureRow
-                icon="sparkles"
-                label="AI Job Recommendations"
-                value={fmt(pricing.aiJobsCost)}
-                sub={`${pricing.aiAccessDurationDays}-day access`}
+                icon="briefcase-outline"
+                label="Job Posting"
+                value="Free"
+                sub="Post and discover jobs at no cost"
                 colors={colors}
               />
               <FeatureRow
                 icon="document-text-outline"
                 label="AI Resume Analysis"
-                value={pricing.aiResumeFreeUses > 0
-                  ? `${pricing.aiResumeFreeUses} free, then ${fmt(pricing.aiResumeAnalysisCost)}`
-                  : fmt(pricing.aiResumeAnalysisCost)}
+                value="Free"
                 sub="Detailed feedback & score"
                 colors={colors}
               />
               <FeatureRow
                 icon="reader-outline"
                 label="Resume Templates"
-                value={fmt(pricing.resumeTemplateCost)}
+                value="Free"
                 sub="Professional ATS-friendly templates"
+                colors={colors}
+              />
+              <FeatureRow
+                icon="color-wand-outline"
+                label="AI Job Recommendations"
+                value={fmt(pricing.aiJobsCost)}
+                sub={`${pricing.aiAccessDurationDays}-day access`}
                 colors={colors}
               />
               <FeatureRow
@@ -267,91 +244,84 @@ const createStyles = (colors, responsive = {}) => {
       marginBottom: 14,
     },
 
-    // ── Tier cards
-    tiersRow: {
-      flexDirection: isDesktop ? 'row' : 'column',
-      gap: 14,
-      marginTop: 8,
-    },
-    tierCard: {
-      flex: isDesktop ? 1 : undefined,
+    // ── Referral pricing card
+    pricingCard: {
       backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 20,
+      borderRadius: 18,
+      marginTop: 24,
       borderWidth: 1,
       borderColor: colors.border,
-      alignItems: 'center',
-      position: 'relative',
       overflow: 'hidden',
     },
-    popularBadge: {
-      position: 'absolute',
-      top: 0, left: 0, right: 0,
+    pricingCardAccent: {
+      height: 4,
       backgroundColor: colors.primary,
-      paddingVertical: 4,
-      alignItems: 'center',
     },
-    popularText: {
-      color: '#fff',
-      fontSize: 10,
-      fontWeight: '800',
-      letterSpacing: 1,
+    pricingCardInner: {
+      padding: 22,
     },
-    tierIcon: {
-      width: 52, height: 52, borderRadius: 16,
-      alignItems: 'center', justifyContent: 'center',
-      marginBottom: 10,
-    },
-    tierName: {
-      fontSize: 16, fontWeight: '700',
-      marginBottom: 4,
-    },
-    tierPrice: {
-      fontSize: 28, fontWeight: '800',
-      color: colors.text,
-    },
-    tierPriceLabel: {
-      fontSize: 12, color: colors.textSecondary,
-      marginBottom: 8,
-    },
-    tierDivider: {
-      height: 1,
-      backgroundColor: colors.border,
-      alignSelf: 'stretch',
-      marginVertical: 12,
-    },
-    tierDetail: {
+    pricingIconRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      alignSelf: 'flex-start',
-      marginBottom: 8,
+      justifyContent: 'space-between',
+      marginBottom: 14,
     },
-    tierDetailText: {
-      fontSize: 13, color: colors.textSecondary,
-      marginLeft: 6,
+    pricingIconCircle: {
+      width: 46, height: 46, borderRadius: 14,
+      backgroundColor: colors.primary + '14',
+      alignItems: 'center', justifyContent: 'center',
     },
-
-    // ── Highlight (open-to-any)
-    highlightCard: {
-      backgroundColor: '#8B5CF610',
-      borderRadius: 14,
-      padding: 18,
-      marginTop: 18,
-      borderWidth: 1,
-      borderColor: '#8B5CF630',
-    },
-    highlightTitle: {
-      fontSize: 16, fontWeight: '700',
+    pricingLabel: {
+      fontSize: 18, fontWeight: '700',
       color: colors.text,
+      marginBottom: 6,
     },
-    highlightPrice: {
-      fontSize: 28, fontWeight: '800',
-      color: '#8B5CF6',
+    priceRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
       marginBottom: 4,
     },
-    highlightSub: {
+    priceRange: {
+      fontSize: 32, fontWeight: '800',
+      color: colors.text,
+    },
+    priceNote: {
       fontSize: 13, color: colors.textSecondary,
       lineHeight: 20,
+      marginBottom: 4,
+    },
+    pricingDivider: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginVertical: 16,
+    },
+    benefitRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    benefitText: {
+      fontSize: 14, color: colors.textSecondary,
+      marginLeft: 8,
+      flex: 1,
+    },
+
+    // ── Open-to-any card
+    openCard: {
+      backgroundColor: '#8B5CF60A',
+      borderRadius: 18,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: '#8B5CF625',
+      overflow: 'hidden',
+    },
+    openCardInner: {
+      padding: 22,
+    },
+    openPrice: {
+      fontSize: 32, fontWeight: '800',
+      color: '#8B5CF6',
+      marginBottom: 6,
     },
 
     // ── Generic card
@@ -362,32 +332,6 @@ const createStyles = (colors, responsive = {}) => {
       borderWidth: 1,
       borderColor: colors.border,
       marginTop: 6,
-    },
-
-    // ── Milestones
-    milestonesRow: {
-      flexDirection: 'row',
-      gap: 12,
-      marginTop: 10,
-    },
-    milestoneChip: {
-      flex: 1,
-      backgroundColor: colors.surface,
-      borderRadius: 14,
-      padding: 14,
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    milestoneCount: {
-      fontSize: 13, fontWeight: '600',
-      color: colors.text,
-      marginTop: 6,
-    },
-    milestoneBonus: {
-      fontSize: 16, fontWeight: '800',
-      color: '#10B981',
-      marginTop: 2,
     },
 
     // ── Info card
