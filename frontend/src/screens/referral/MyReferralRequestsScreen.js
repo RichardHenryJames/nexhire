@@ -262,7 +262,7 @@ export default function MyReferralRequestsScreen() {
         const newStatus = verified ? 'Verified' : 'Unverified';
         showToast(
           verified
-            ? 'Referral verified! Referrer has been rewarded.'
+            ? 'Referral verified!'
             : 'Marked as unverified. A support ticket has been created — our team will review within 2 working days.',
           verified ? 'success' : 'info'
         );
