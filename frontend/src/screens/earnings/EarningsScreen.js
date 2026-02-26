@@ -293,9 +293,10 @@ export default function EarningsScreen({ navigation }) {
           {(() => {
             const verified = referralStats.verifiedReferrals || 0;
             const milestones = [
-              { count: 5, bonus: pricing.milestone5Bonus || 50, color: '#3B82F6', emoji: '⭐' },
-              { count: 10, bonus: pricing.milestone10Bonus || 100, color: '#F59E0B', emoji: '🔥' },
-              { count: 20, bonus: pricing.milestone20Bonus || 200, color: '#10B981', emoji: '🏆' },
+              { count: 5, bonus: 100, color: '#3B82F6', emoji: '⭐', hidden: false },
+              { count: 10, color: '#F59E0B', emoji: '🔥', hidden: true },
+              { count: 15, color: '#EF4444', emoji: '🏆', hidden: true },
+              { count: 20, color: '#10B981', emoji: '💎', hidden: true },
             ];
             const maxCount = 25;
             const mysteryMarker = { count: 25, color: '#8B5CF6', mystery: true };
@@ -365,7 +366,11 @@ export default function EarningsScreen({ navigation }) {
                       ]}>
                         <Text style={styles.milestoneCardEmoji}>{m.emoji}</Text>
                         <Text style={[styles.milestoneCardCount, reached && { color: m.color }]}>{m.count} referrals</Text>
-                        <Text style={[styles.milestoneCardBonus, reached && { color: m.color }]}>₹{m.bonus}</Text>
+                        {m.hidden && !reached ? (
+                          <Text style={[styles.milestoneCardBonus, { color: m.color }]}>₹XXX</Text>
+                        ) : (
+                          <Text style={[styles.milestoneCardBonus, reached && { color: m.color }]}>₹{m.bonus || '???'}</Text>
+                        )}
                         {reached && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>✓ Earned</Text>}
                         {isNext && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>{m.count - verified} more</Text>}
                       </View>
@@ -384,6 +389,7 @@ export default function EarningsScreen({ navigation }) {
                       ]}>
                         <Text style={styles.milestoneCardEmoji}>🎁</Text>
                         {reached25 && <Text style={[styles.milestoneCardStatus, { color: '#8B5CF6' }]}>✓ Unlocked!</Text>}
+                        {!reached25 && <Text style={[styles.milestoneCardBonus, { color: '#8B5CF6' }]}>₹XXX</Text>}
                         {isNext25 && <Text style={[styles.milestoneCardStatus, { color: '#8B5CF6' }]}>Keep going!</Text>}
                         {!reached25 && !isNext25 && <Text style={[styles.milestoneCardStatus, { color: '#8B5CF6' }]}>Surprise!</Text>}
                       </View>
@@ -569,7 +575,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderColor: colors.border,
   },
   milestoneSectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  milestoneSubheading: { fontSize: 12, color: colors.textSecondary, marginBottom: 14 },
+  milestoneSubheading: { fontSize: 13, color: colors.textSecondary, marginBottom: 14, fontWeight: '600' },
   milestoneBarContainer: { marginBottom: 12 },
   milestoneBarTrack: { height: 8, backgroundColor: colors.border, borderRadius: 4, position: 'relative', overflow: 'visible' },
   milestoneBarFill: { height: '100%', backgroundColor: '#3B82F6', borderRadius: 4, position: 'absolute', left: 0, top: 0 },

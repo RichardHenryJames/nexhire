@@ -169,13 +169,14 @@ export class PricingService {
   /**
    * Get milestone bonus amounts (flat for all tiers)
    */
-  static async getMilestoneBonuses(): Promise<{ m5: number; m10: number; m20: number }> {
-    const [m5, m10, m20] = await Promise.all([
+  static async getMilestoneBonuses(): Promise<{ m5: number; m10: number; m15: number; m20: number }> {
+    const [m5, m10, m15, m20] = await Promise.all([
       this.getSetting('MILESTONE_5_BONUS'),
       this.getSetting('MILESTONE_10_BONUS'),
+      this.getSetting('MILESTONE_15_BONUS'),
       this.getSetting('MILESTONE_20_BONUS'),
     ]);
-    return { m5, m10, m20 };
+    return { m5, m10, m15, m20 };
   }
 
   /**

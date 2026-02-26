@@ -1065,12 +1065,17 @@ export class ReferralService {
 
     /**
      * Check if referrer hit a monthly milestone and award bonus
-     * Milestones: 5th, 10th, 20th verified referral in a calendar month
+     * Milestones: 5th (fixed ₹100), 10th (random ₹100-120), 15th (random ₹100-130), 20th (random ₹100-140)
      */
     private static async checkAndAwardMilestoneBonus(referrerId: string, requestId: string): Promise<void> {
         try {
             // Flat milestones for all referrers regardless of tier
             const milestones = await PricingService.getMilestoneBonuses();
+
+            // Random bonus: base + random extra up to maxExtra
+            const randomBonus = (base: number, maxExtra: number) => {
+                return base + Math.floor(Math.random() * (maxExtra + 1));
+            };
 
             // Count verified referrals this month for this referrer
             const countQuery = `
@@ -1094,10 +1099,11 @@ export class ReferralService {
             }
 
             // Check each milestone — use === so bonus triggers ONLY at exact threshold
-            // e.g. milestone_5 triggers only when count is exactly 5, not 6, 7, 8, 9
+            // 5th: fixed ₹100, 10th: random ₹100-120, 15th: random ₹100-130, 20th: random ₹100-140
             const milestonesToCheck = [
-                { threshold: 20, amount: milestones.m20, type: 'milestone_20' },
-                { threshold: 10, amount: milestones.m10, type: 'milestone_10' },
+                { threshold: 20, amount: randomBonus(milestones.m20, 40), type: 'milestone_20' },
+                { threshold: 15, amount: randomBonus(milestones.m15, 30), type: 'milestone_15' },
+                { threshold: 10, amount: randomBonus(milestones.m10, 20), type: 'milestone_10' },
                 { threshold: 5, amount: milestones.m5, type: 'milestone_5' },
             ];
 
