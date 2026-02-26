@@ -190,16 +190,18 @@ export class PromoService {
       // 3. Check if user has current work experience
       const workResult = await dbService.executeQuery(`
         SELECT TOP 1 1 AS HasWork
-        FROM WorkExperiences
-        WHERE UserID = @param0
+        FROM WorkExperiences w
+        INNER JOIN Applicants a ON w.ApplicantID = a.ApplicantID
+        WHERE a.UserID = @param0
       `, [userId]);
 
       const hasAnyWork = (workResult.recordset?.length || 0) > 0;
 
       const currentWorkResult = await dbService.executeQuery(`
         SELECT TOP 1 1 AS HasCurrentWork
-        FROM WorkExperiences
-        WHERE UserID = @param0 AND (IsCurrent = 1 OR EndDate IS NULL)
+        FROM WorkExperiences w
+        INNER JOIN Applicants a ON w.ApplicantID = a.ApplicantID
+        WHERE a.UserID = @param0 AND (w.IsCurrent = 1 OR w.EndDate IS NULL)
       `, [userId]);
 
       const hasCurrentWork = (currentWorkResult.recordset?.length || 0) > 0;
