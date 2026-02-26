@@ -26,10 +26,11 @@ const DEFAULT_PRICING = {
   standardReferrerPayout: 25,
   premiumReferrerPayout: 50,
   eliteReferrerPayout: 100,
-  // Milestone bonuses — flat for all tiers
-  milestone5Bonus: 50,
+  // Milestone bonuses — flat for all tiers (10/15/20 are hidden, random on award)
+  milestone5Bonus: 100,
   milestone10Bonus: 100,
-  milestone20Bonus: 200,
+  milestone15Bonus: 100,
+  milestone20Bonus: 100,
   // Withdrawal
   minimumWithdrawal: 200,
   // AI Resume

@@ -28,7 +28,7 @@ const PromoCard = ({ promo, colors, onApply }) => {
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(promo.code);
-    showToast('success', 'Copied!', `${promo.code} copied to clipboard`);
+    showToast(`${promo.code} copied!`, 'success', 3000);
   };
 
   return (
@@ -100,6 +100,11 @@ const PromoCard = ({ promo, colors, onApply }) => {
         <Text style={{ fontSize: 11, color: colors.gray500 }}>Min ₹{promo.minRecharge}</Text>
         {promo.maxBonus !== null && (
           <Text style={{ fontSize: 11, color: colors.gray500 }}>Max ₹{promo.maxBonus}</Text>
+        )}
+        {!exhausted && (
+          <Text style={{ fontSize: 11, color: colors.gray500 }}>
+            {promo.remainingUses} use{promo.remainingUses !== 1 ? 's' : ''} left
+          </Text>
         )}
       </View>
 

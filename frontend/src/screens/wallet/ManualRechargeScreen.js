@@ -135,6 +135,34 @@ const UPI_APPS = [
     logo: null },
 ];
 
+// ─── Animated "View coupons" link ────────────────────────────────
+const ShimmerCouponLink = ({ onPress, fontSize = 12 }) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(animValue, {
+        toValue: 1,
+        duration: 2000,
+        useNativeDriver: false,
+      })
+    ).start();
+  }, []);
+
+  const color = animValue.interpolate({
+    inputRange: [0, 0.25, 0.5, 0.75, 1],
+    outputRange: ['#F59E0B', '#EF4444', '#8B5CF6', '#3B82F6', '#F59E0B'],
+  });
+
+  return (
+    <TouchableOpacity onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <Animated.Text style={{ color, fontSize, fontWeight: '600' }}>
+        🎟 View coupons
+      </Animated.Text>
+    </TouchableOpacity>
+  );
+};
+
 // ─── Main Component ──────────────────────────────────────────────
 const ManualRechargeScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
@@ -396,12 +424,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                 <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, marginLeft: 5 }}>Got a promo code?</Text>
               </TouchableOpacity>
               <Text style={{ color: colors.gray500, marginHorizontal: 8, fontSize: 12 }}>|</Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('PromoCodes')}
-                style={{ flexDirection: 'row', alignItems: 'center' }}
-              >
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>View coupons</Text>
-              </TouchableOpacity>
+              <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes')} fontSize={12} />
             </View>
           ) : (
             <View>
@@ -441,12 +464,9 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                   <Text style={{ color: promoResult.valid ? '#10B981' : colors.error, fontSize: 11, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
                 </View>
               )}
-              <TouchableOpacity
-                onPress={() => navigation.navigate('PromoCodes')}
-                style={{ alignSelf: 'center', marginTop: 6 }}
-              >
-                <Text style={{ color: colors.textSecondary, fontSize: 11 }}>View coupons →</Text>
-              </TouchableOpacity>
+              <View style={{ alignSelf: 'center', marginTop: 6 }}>
+                <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes')} fontSize={11} />
+              </View>
             </View>
           )}
         </View>

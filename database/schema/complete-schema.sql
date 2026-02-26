@@ -3055,13 +3055,13 @@ GO
 IF NOT EXISTS (SELECT 1 FROM PromoCodes WHERE Code = 'FRESHER')
 BEGIN
     INSERT INTO PromoCodes (Code, Type, Value, MinRechargeAmount, MaxBonusAmount, MaxUses, PerUserLimit, ExpiresAt, IsActive, Description)
-    VALUES ('FRESHER', 'FLAT_BONUS', 75, 199, 75, NULL, 10, '2026-12-31', 1, 'Fresher bonus: Rs.75 extra credit on recharge');
+    VALUES ('FRESHER', 'FLAT_BONUS', 75, 199, 75, NULL, 3, '2026-12-31', 1, 'Fresher bonus: Rs.75 extra credit on recharge');
 END
 GO
 
 IF NOT EXISTS (SELECT 1 FROM PromoCodes WHERE Code = 'SWITCH')
 BEGIN
     INSERT INTO PromoCodes (Code, Type, Value, MinRechargeAmount, MaxBonusAmount, MaxUses, PerUserLimit, ExpiresAt, IsActive, Description)
-    VALUES ('SWITCH', 'PERCENT_BONUS', 30, 599, 200, NULL, 5, '2026-12-31', 1, 'Career switch: 30% extra credit');
+    VALUES ('SWITCH', 'PERCENT_BONUS', 30, 599, 200, NULL, 3, '2026-12-31', 1, 'Career switch: 30% extra credit');
 END
 GO
