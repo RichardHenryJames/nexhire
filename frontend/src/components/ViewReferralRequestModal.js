@@ -447,8 +447,11 @@ export default function ViewReferralRequestModal({
             <View style={styles.rewardTextContainerCompact}>
               <Text style={styles.rewardTitleCompact}>Earn Guaranteed Rewards!</Text>
               <Text style={styles.rewardDescriptionCompact}>
-                Complete this referral and earn up to <Text style={styles.rewardHighlight}>₹100</Text> immediately.
+                Earn guaranteed rewards for this referral. Top referrers earn more than <Text style={styles.rewardHighlight}>₹5,000/month!</Text>
               </Text>
+              <TouchableOpacity onPress={() => { if (onClose) onClose(); setTimeout(() => navigation.navigate('Earnings'), 300); }}>
+                <Text style={{ fontSize: 12, color: '#059669', fontWeight: '700', marginTop: 4 }}>View Earnings →</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
