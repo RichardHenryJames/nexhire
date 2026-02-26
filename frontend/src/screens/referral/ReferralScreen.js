@@ -617,7 +617,7 @@ export default function ReferralScreen({ navigation }) {
       <View style={styles.innerContainer}>
         <SubScreenHeader title="Provide Referral" fallbackTab="Home" />
 
-        {/* Post Job / Publish buttons row */}
+        {/* Post Job / Publish / Earnings buttons row */}
         {isVerifiedReferrer && currentVerifiedCompany && (
           <View style={styles.headerButtons}>
             <TouchableOpacity 
@@ -637,6 +637,13 @@ export default function ReferralScreen({ navigation }) {
             >
               <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
               <Text style={styles.postJobButtonText}>Publish{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.postJobButton, { backgroundColor: '#F59E0B' }]}
+              onPress={() => navigation.navigate('Earnings')}
+            >
+              <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
+              <Text style={styles.postJobButtonText}>Earnings</Text>
             </TouchableOpacity>
           </View>
         )}
