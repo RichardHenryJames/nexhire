@@ -254,17 +254,17 @@ GO
 
 -- 7. Milestone bonus settings (monthly)
 INSERT INTO PricingSettings (SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt)
-SELECT N'MILESTONE_5_BONUS', 100, N'Bonus in INR for 5th verified referral in a calendar month', 1, GETUTCDATE(), GETUTCDATE()
+SELECT N'MILESTONE_5_BONUS', 50, N'Bonus in INR for 5th verified referral in a calendar month', 1, GETUTCDATE(), GETUTCDATE()
 WHERE NOT EXISTS (SELECT 1 FROM PricingSettings WHERE SettingKey = 'MILESTONE_5_BONUS');
 GO
 
 INSERT INTO PricingSettings (SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt)
-SELECT N'MILESTONE_10_BONUS', 250, N'Bonus in INR for 10th verified referral in a calendar month', 1, GETUTCDATE(), GETUTCDATE()
+SELECT N'MILESTONE_10_BONUS', 100, N'Bonus in INR for 10th verified referral in a calendar month', 1, GETUTCDATE(), GETUTCDATE()
 WHERE NOT EXISTS (SELECT 1 FROM PricingSettings WHERE SettingKey = 'MILESTONE_10_BONUS');
 GO
 
 INSERT INTO PricingSettings (SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt)
-SELECT N'MILESTONE_20_BONUS', 500, N'Bonus in INR for 20th verified referral in a calendar month', 1, GETUTCDATE(), GETUTCDATE()
+SELECT N'MILESTONE_20_BONUS', 200, N'Bonus in INR for 20th verified referral in a calendar month', 1, GETUTCDATE(), GETUTCDATE()
 WHERE NOT EXISTS (SELECT 1 FROM PricingSettings WHERE SettingKey = 'MILESTONE_20_BONUS');
 GO
 
