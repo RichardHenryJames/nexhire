@@ -72,7 +72,7 @@ export default function FAQScreen() {
         },
         {
           question: 'Is Refopen free to use?',
-          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nReferral requests start from ₹49 per request (paid from wallet credits). Open-to-any-company requests cost ₹99.\n\nAdd money to wallet via bank transfer or UPI.'
+          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nReferral requests start from ₹49 per request (paid from wallet credits). Open-to-any-company requests cost ₹249.\n\nAdd money to wallet via bank transfer or UPI.'
         },
         {
           question: 'How do I complete my profile?',
