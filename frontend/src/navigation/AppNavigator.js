@@ -265,6 +265,8 @@ const linking = {
           
           // Share & Earn screen
           ShareEarn: "share-earn",
+          // Earnings / Referrer Dashboard
+          Earnings: "earnings",
           // Social Share Submit screen with platform parameter
           SocialShareSubmit: "SocialShareSubmit",
 

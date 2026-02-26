@@ -18,6 +18,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
+import { getReferralCostForJob } from '../../utils/pricingUtils';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
@@ -76,6 +77,9 @@ export default function ApplicationsScreen({ navigation }) {
   // 💎 NEW: Beautiful wallet modal state
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost });
+
+  // 💰 Tier-based cost helper
+  const getJobTierCost = (job) => getReferralCostForJob(job, pricing);
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
@@ -276,7 +280,7 @@ export default function ApplicationsScreen({ navigation }) {
         // ✅ Match Jobs/JobDetails: always show the same confirmation popup
         setReferralConfirmData({
           currentBalance: balance,
-          requiredAmount: pricing.referralRequestCost,
+          requiredAmount: getJobTierCost(job),
           jobTitle: job.JobTitle || job.Title || 'this job',
           companyName: job.OrganizationName || job.CompanyName || '',
           job,
@@ -325,7 +329,7 @@ export default function ApplicationsScreen({ navigation }) {
           setReferralBroadcastTime(broadcastTime);
           setShowReferralSuccessOverlay(true);
           
-          const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || pricing.referralRequestCost;
+          const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || getJobTierCost(referralConfirmData.job || {});
           const availableBalance = res.data?.availableBalanceAfter;
           
           let message = 'Referral request sent! Amount held until referral is completed.';
@@ -343,7 +347,7 @@ export default function ApplicationsScreen({ navigation }) {
           // Handle insufficient balance error
           if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
             const availableBalance = res.data?.availableBalance || res.data?.currentBalance || 0;
-            const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
+            const requiredAmount = res.data?.requiredAmount || getJobTierCost(referralConfirmData.job || {});
             
             // 💎 NEW: Show beautiful modal instead of ugly alert
             setWalletModalData({ currentBalance: availableBalance, requiredAmount });
@@ -398,7 +402,7 @@ export default function ApplicationsScreen({ navigation }) {
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
+          const requiredAmount = res.data?.requiredAmount || getJobTierCost(referralConfirmData.job || {});
           
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });
@@ -844,7 +848,7 @@ export default function ApplicationsScreen({ navigation }) {
           }
 
           // Safety: if balance is insufficient, route to wallet recharge
-          if ((referralConfirmData.currentBalance || 0) < (referralConfirmData.requiredAmount || pricing.referralRequestCost)) {
+          if ((referralConfirmData.currentBalance || 0) < (referralConfirmData.requiredAmount || getJobTierCost(referralConfirmData.job || {}))) {
             navigation.navigate('WalletRecharge');
             return;
           }
