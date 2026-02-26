@@ -64,11 +64,20 @@ export default function EarningsScreen({ navigation }) {
     loadReferralPoints();
   }, [loadReferralPoints]);
 
+  // Safe back navigation — fallback to Profile if no history
+  const handleClose = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('Profile');
+    }
+  };
+
   // Show the breakdown directly (not as modal — visible=true, fullscreen style)
   return (
     <ReferralPointsBreakdown
       visible={true}
-      onClose={() => navigation.goBack()}
+      onClose={handleClose}
       totalPoints={referralPointsData.totalPoints}
       pointsHistory={referralPointsData.pointsHistory}
       pointTypeMetadata={referralPointsData.pointTypeMetadata}
