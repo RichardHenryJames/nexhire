@@ -28,26 +28,33 @@ export default function EarningsScreen({ navigation }) {
   });
   const [loading, setLoading] = useState(true);
 
-  // Load referral points data
+  // Load referral points data + referrer stats
   const loadReferralPoints = useCallback(async () => {
     if (!user) return;
     try {
       setLoading(true);
-      const applicantId = user.applicantId || user.ApplicantID;
-      if (!applicantId) return;
 
-      const result = await refopenAPI.getReferralPointsHistory(applicantId);
-      if (result?.success && result.data) {
-        setReferralPointsData({
-          totalPoints: result.data.totalPoints || 0,
-          pointsHistory: result.data.history || [],
-          pointTypeMetadata: result.data.pointTypeMetadata || {},
-          referralStats: result.data.stats || {},
-          totalPointsFromRewards: result.data.totalPoints || 0
-        });
+      // Load BOTH: points history AND referral stats (two separate APIs)
+      const [pointsResult, statsResult] = await Promise.all([
+        refopenAPI.getReferralPointsHistory(),  // No args — uses auth token
+        refopenAPI.getReferrerStats(),
+      ]);
+
+      const newData = { ...referralPointsData };
+
+      if (pointsResult?.success && pointsResult.data) {
+        newData.totalPoints = pointsResult.data.totalPoints || 0;
+        newData.pointsHistory = pointsResult.data.history || [];
+        newData.pointTypeMetadata = pointsResult.data.pointTypeMetadata || {};
       }
+
+      if (statsResult?.success && statsResult.data) {
+        newData.referralStats = statsResult.data;
+      }
+
+      setReferralPointsData(newData);
     } catch (error) {
-      console.error('Error loading referral points:', error);
+      console.error('Error loading earnings data:', error);
     } finally {
       setLoading(false);
     }
