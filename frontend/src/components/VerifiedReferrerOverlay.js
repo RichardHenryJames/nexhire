@@ -253,8 +253,8 @@ export default function VerifiedReferrerOverlay({
   const benefits = [
     {
       icon: 'cash-multiple',
-      title: 'Earn up to ₹100 per Referral',
-      description: 'Get up to ₹100 credited to your wallet when you successfully refer someone',
+      title: 'Earn Per Referral',
+      description: 'Get guaranteed cash credited to your wallet for every verified referral. Top referrers earn more than ₹5,000/month!',
       highlight: true,
     },
     {

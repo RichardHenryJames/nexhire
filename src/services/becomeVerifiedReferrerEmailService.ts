@@ -119,8 +119,8 @@ export class BecomeVerifiedReferrerEmailService {
                             <p style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">🚀 Why Verified Members get more:</p>
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Get referrals faster</strong> — Verified members are prioritized when requesting referrals from others</td></tr>
-                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Earn ₹25–₹100 per referral</strong> — Fixed, transparent payouts for every verified referral you submit</td></tr>
-                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Monthly milestone bonuses</strong> — Earn ₹50, ₹100, and ₹200 bonuses at 5, 10, and 20 referrals/month</td></tr>
+                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Earn per referral</strong> — Fixed, transparent payouts for every verified referral you submit. Top referrers earn more than ₹5,000/month!</td></tr>
+                                <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Monthly milestone bonuses</strong> — Earn bonus rewards as you refer more each month</td></tr>
                                 <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Use rewards to get referrals</strong> — Earned cash can be used to request referrals for yourself, or withdraw to bank/UPI</td></tr>
                                 <tr><td style="padding: 6px 0; color: #4a4a4a; font-size: 13px;">• <strong>Verified badge</strong> — Build trust with a verified profile that stands out</td></tr>
                             </table>

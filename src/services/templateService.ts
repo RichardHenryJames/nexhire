@@ -48,7 +48,7 @@ const templates: Record<string, { subject: string; html: string }> = {
     // ========================================
 
     'new_referral_request': {
-        subject: '🚀 {{seekerName}} needs your referral for {{jobTitle}} — Earn up to ₹100!',
+        subject: '🚀 {{seekerName}} needs your referral for {{jobTitle}} — Earn guaranteed rewards!',
         html: `
 <!DOCTYPE html>
 <html>
@@ -100,7 +100,7 @@ const templates: Record<string, { subject: string; html: string }> = {
                                         <p style="margin: 0 0 12px 0; color: #065F46; font-size: 15px; font-weight: 700;">💰 Why Refer?</p>
                                         <table width="100%" cellpadding="0" cellspacing="0">
                                             <tr>
-                                                <td style="padding: 6px 0; color: #047857; font-size: 14px;">💵 <strong>Cash Reward</strong> — Earn <strong>up to ₹100</strong> for a successful referral</td>
+                                                <td style="padding: 6px 0; color: #047857; font-size: 14px;">💵 <strong>Cash Reward</strong> — Earn <strong>guaranteed cash</strong> for every verified referral</td>
                                             </tr>
                                             <tr>
                                                 <td style="padding: 6px 0; color: #047857; font-size: 14px;">⚡ <strong>Speed Bonus</strong> — Refer within <strong>24 hours</strong> to unlock bonus rewards</td>
@@ -1136,7 +1136,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'This email was sent because you create
                                         <p style="margin: 0 0 12px 0; color: #92400E; font-size: 15px; font-weight: 700;">💰 What's In It For You?</p>
                                         <p style="margin: 0 0 12px 0; color: #A16207; font-size: 13px;">Every successful referral earns you <strong>real cash + RefOpen rewards</strong>:</p>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">💵 <strong>Up to ₹100 cash</strong> — Paid directly to your wallet per verified referral</td></tr>
+                                            <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">💵 <strong>Guaranteed cash</strong> — Paid directly to your wallet per verified referral. Top referrers earn more than ₹5,000/month!</td></tr>
                                             <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">⚡ <strong>Speed bonus</strong> — Refer early = higher rewards</td></tr>
                                             <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">🎯 <strong>RefOpen Points</strong> — Earn 50+ points per referral — redeem for rewards</td></tr>
                                             <tr><td style="padding: 5px 0; color: #A16207; font-size: 13px;">🏅 <strong>Badges & Rank</strong> — Top referrers get featured on the leaderboard</td></tr>
