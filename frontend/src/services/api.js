@@ -2878,6 +2878,19 @@ if (!resumeId) {
   }
 
   /**
+   * Get all active promo codes with smart recommendations
+   */
+  async getPromoCodes() {
+    if (!this.token) {
+      await this.init();
+    }
+    if (!this.token) {
+      return { success: false, error: 'Authentication required' };
+    }
+    return this.apiCall('/wallet/promo-codes');
+  }
+
+  /**
    * Get manual payment settings (bank/UPI details)
    */
   async getManualPaymentSettings() {

@@ -372,13 +372,22 @@ const ManualRechargeScreen = ({ navigation }) => {
         {/* ═══ 3. PROMO CODE ═══ */}
         <View style={[styles.section, { paddingVertical: showPromoInput ? 10 : 8, paddingHorizontal: 12, marginBottom: 10 }]}>
           {!showPromoInput ? (
-            <TouchableOpacity
-              onPress={() => setShowPromoInput(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Ionicons name="pricetag-outline" size={14} color={colors.primary} />
-              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, marginLeft: 5 }}>Got a promo code?</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+              <TouchableOpacity
+                onPress={() => setShowPromoInput(true)}
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+              >
+                <Ionicons name="pricetag-outline" size={14} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, marginLeft: 5 }}>Got a promo code?</Text>
+              </TouchableOpacity>
+              <Text style={{ color: colors.gray500, marginHorizontal: 8, fontSize: 12 }}>|</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('PromoCodes')}
+                style={{ flexDirection: 'row', alignItems: 'center' }}
+              >
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>View coupons</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View>
               <View style={{ flexDirection: 'row', gap: 6 }}>

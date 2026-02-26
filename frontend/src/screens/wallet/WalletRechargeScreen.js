@@ -76,7 +76,7 @@ const BonusPercentBadge = ({ percent }) => {
   );
 };
 
-export default function WalletRechargeScreen({ navigation }) {
+export default function WalletRechargeScreen({ navigation, route }) {
   const { colors } = useTheme();
   const responsive = useResponsive();
   const { pricing } = usePricing();
@@ -96,6 +96,15 @@ export default function WalletRechargeScreen({ navigation }) {
   const [promoResult, setPromoResult] = useState(null);
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
+
+  // Pre-fill promo code from navigation params (e.g. from PromoCodesScreen)
+  useEffect(() => {
+    const incoming = route?.params?.promoCode;
+    if (incoming) {
+      setPromoCode(incoming.toUpperCase());
+      setShowPromoInput(true);
+    }
+  }, [route?.params?.promoCode]);
 
   // Quick amount buttons
   const quickAmounts = [100, 200, 300, 500, 1000];
@@ -425,13 +434,21 @@ export default function WalletRechargeScreen({ navigation }) {
       {/* Promo Code — compact inline */}
       <View style={[styles.section, { paddingVertical: showPromoInput ? 14 : 10 }]}>
         {!showPromoInput ? (
-          <TouchableOpacity
-            onPress={() => setShowPromoInput(true)}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <Ionicons name="pricetag-outline" size={16} color={colors.primary} />
-            <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13, marginLeft: 6 }}>Have a promo code?</Text>
-          </TouchableOpacity>
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <TouchableOpacity
+              onPress={() => setShowPromoInput(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Ionicons name="pricetag-outline" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13, marginLeft: 6 }}>Have a promo code?</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('PromoCodes')}
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
+              <Text style={{ color: colors.gray500, fontSize: 11 }}>Browse available codes →</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
