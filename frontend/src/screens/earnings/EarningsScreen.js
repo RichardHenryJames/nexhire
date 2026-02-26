@@ -34,13 +34,6 @@ export default function EarningsScreen({ navigation }) {
     withdrawalFee: 0
   });
 
-  // Load withdrawable balance when modal opens
-  useEffect(() => {
-    if (visible) {
-      loadWithdrawableBalance();
-    }
-  }, [visible]);
-
   const loadWithdrawableBalance = async () => {
     try {
       const response = await refopenAPI.getWithdrawableBalance();
