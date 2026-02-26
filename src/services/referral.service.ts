@@ -1068,24 +1068,8 @@ export class ReferralService {
      */
     private static async checkAndAwardMilestoneBonus(referrerId: string, requestId: string): Promise<void> {
         try {
-            // Look up referrer's org tier (referrer = employee at some company)
-            const tierQuery = `
-                SELECT ISNULL(o.Tier, 'Standard') as Tier
-                FROM Users u
-                INNER JOIN Applicants a ON u.UserID = a.UserID
-                INNER JOIN WorkExperiences we ON a.ApplicantID = we.ApplicantID AND we.IsCurrent = 1
-                LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
-                WHERE u.UserID = @param0
-            `;
-            const tierResult = await dbService.executeQuery(tierQuery, [referrerId]);
-            const referrerTier = (tierResult.recordset?.[0]?.Tier || 'Standard') as 'Standard' | 'Premium' | 'Elite';
-
-            // Standard referrers get NO milestone bonuses (per pricing plan)
-            const milestones = await PricingService.getMilestoneBonusesByTier(referrerTier);
-            if (!milestones) {
-                console.log(`Skipping milestone check for ${referrerId} — Standard tier (no milestones)`);
-                return;
-            }
+            // Flat milestones for all referrers regardless of tier
+            const milestones = await PricingService.getMilestoneBonuses();
 
             // Count verified referrals this month for this referrer
             const countQuery = `
@@ -1129,7 +1113,7 @@ export class ReferralService {
                     // Track as referral reward points too
                     await this.awardReferralPoints(referrerId, requestId, milestone.amount, milestone.type);
 
-                    console.log(`Milestone bonus awarded: ${milestone.type} (₹${milestone.amount}, ${referrerTier} tier) to ${referrerId}`);
+                    console.log(`Milestone bonus awarded: ${milestone.type} (₹${milestone.amount}) to ${referrerId}`);
                     break; // Only award the highest unawarded milestone
                 }
             }

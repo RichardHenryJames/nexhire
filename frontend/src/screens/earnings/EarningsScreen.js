@@ -24,7 +24,6 @@ export default function EarningsScreen({ navigation }) {
   const [pointsHistory, setPointsHistory] = useState([]);
   const [pointTypeMetadata, setPointTypeMetadata] = useState({});
   const [referralStats, setReferralStats] = useState({});
-  const [organizationTier, setOrganizationTier] = useState('Standard');
   
   // Withdrawable data (just for display)
   const [withdrawableData, setWithdrawableData] = useState({
@@ -52,10 +51,6 @@ export default function EarningsScreen({ navigation }) {
         const profileResult = await refopenAPI.getApplicantProfile(userId);
         if (profileResult?.success && profileResult?.data?.referralStats) {
           setReferralStats(profileResult.data.referralStats);
-        }
-        // Get referrer's org tier for milestone display
-        if (profileResult?.success && profileResult?.data?.organizationTier) {
-          setOrganizationTier(profileResult.data.organizationTier);
         }
       }
 
@@ -283,18 +278,13 @@ export default function EarningsScreen({ navigation }) {
             </View>
           </View>
 
-          {/* 🎯 Monthly Milestone Progress Bar — tier-specific */}
-          {organizationTier !== 'Standard' ? (() => {
+          {/* 🎯 Monthly Milestone Progress Bar — flat for all referrers */}
+          {(() => {
             const verified = referralStats.verifiedReferrals || 0;
-            const isPremium = organizationTier === 'Premium';
-            const milestones = isPremium ? [
-              { count: 5, bonus: pricing.premiumMilestone5Bonus || 100, color: '#3B82F6', emoji: '⭐' },
-              { count: 10, bonus: pricing.premiumMilestone10Bonus || 250, color: '#F59E0B', emoji: '🔥' },
-              { count: 20, bonus: pricing.premiumMilestone20Bonus || 500, color: '#10B981', emoji: '🏆' },
-            ] : [
-              { count: 5, bonus: pricing.eliteMilestone5Bonus || 200, color: '#3B82F6', emoji: '⭐' },
-              { count: 10, bonus: pricing.eliteMilestone10Bonus || 500, color: '#F59E0B', emoji: '🔥' },
-              { count: 20, bonus: pricing.eliteMilestone20Bonus || 1000, color: '#10B981', emoji: '🏆' },
+            const milestones = [
+              { count: 5, bonus: pricing.milestone5Bonus || 50, color: '#3B82F6', emoji: '⭐' },
+              { count: 10, bonus: pricing.milestone10Bonus || 100, color: '#F59E0B', emoji: '🔥' },
+              { count: 20, bonus: pricing.milestone20Bonus || 200, color: '#10B981', emoji: '🏆' },
             ];
             const maxCount = 25;
             const progress = Math.min(verified / maxCount, 1);
@@ -360,14 +350,7 @@ export default function EarningsScreen({ navigation }) {
                 </View>
               </View>
             );
-          })() : (
-            <View style={styles.milestoneSection}>
-              <Text style={styles.milestoneSectionTitle}>🎯 Monthly Milestones</Text>
-              <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 20 }}>
-                Milestone bonuses are available for referrers at Premium and Elite companies. Keep referring to earn per-referral payouts of ₹{pricing.standardReferrerPayout || 25} each!
-              </Text>
-            </View>
-          )}
+          })()}
 
           {/* Points Breakdown by Type */}
           {Object.keys(pointsBreakdown).length > 0 ? (
