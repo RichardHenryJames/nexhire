@@ -373,7 +373,7 @@ function AuthStack() {
       }}
       initialRouteName={getInitialRoute()}
     >
-      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Sign In - RefOpen Job Referral Platform' }} />
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
       <Stack.Screen

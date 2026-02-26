@@ -19,6 +19,7 @@ export default function EarningsScreen({ navigation }) {
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [fadeAnim] = useState(new Animated.Value(1));
   const [expandedFaq, setExpandedFaq] = useState(null);
+  const [expandedCategories, setExpandedCategories] = useState({});
 
   // FAQ data (frontend-only, not DB driven)
   const faqData = [
@@ -218,6 +219,30 @@ export default function EarningsScreen({ navigation }) {
         title: 'General Points', 
         color: '#6B7280',
         description: 'Other referral activities'
+      },
+      milestone_5: { 
+        icon: '⭐', 
+        title: '5th Referral Milestone', 
+        color: '#3B82F6',
+        description: 'Bonus for reaching 5 verified referrals'
+      },
+      milestone_10: { 
+        icon: '🔥', 
+        title: '10th Referral Milestone', 
+        color: '#F59E0B',
+        description: 'Bonus for reaching 10 verified referrals'
+      },
+      milestone_15: { 
+        icon: '🏆', 
+        title: '15th Referral Milestone', 
+        color: '#EF4444',
+        description: 'Bonus for reaching 15 verified referrals'
+      },
+      milestone_20: { 
+        icon: '💎', 
+        title: '20th Referral Milestone', 
+        color: '#10B981',
+        description: 'Bonus for reaching 20 verified referrals'
       }
     };
     
@@ -363,6 +388,10 @@ export default function EarningsScreen({ navigation }) {
                   {milestones.map((m) => {
                     const reached = verified >= m.count;
                     const isNext = !reached && (milestones.findIndex(ms => verified < ms.count) === milestones.indexOf(m));
+                    // For hidden milestones, get actual earned amount from points breakdown
+                    const earnedAmount = m.hidden && reached
+                      ? (pointsBreakdown[`milestone_${m.count}`]?.total || m.bonus || '???')
+                      : m.bonus;
                     return (
                       <View key={m.count} style={[
                         styles.milestoneCard,
@@ -374,7 +403,7 @@ export default function EarningsScreen({ navigation }) {
                         {m.hidden && !reached ? (
                           <Text style={[styles.milestoneCardBonus, { color: m.color }]}>₹XXX</Text>
                         ) : (
-                          <Text style={[styles.milestoneCardBonus, reached && { color: m.color }]}>₹{m.bonus || '???'}</Text>
+                          <Text style={[styles.milestoneCardBonus, reached && { color: m.color }]}>₹{earnedAmount}</Text>
                         )}
                         {reached && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>✓ Earned</Text>}
                         {isNext && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>{m.count - verified} more</Text>}
@@ -433,7 +462,7 @@ export default function EarningsScreen({ navigation }) {
                     </View>
                     
                     {/* Individual entries for this type */}
-                    {(category.entries || []).map((entry, index) => {
+                    {(category.entries || []).slice(0, expandedCategories[category.type] ? undefined : 3).map((entry, index) => {
                       const isConversion = entry.isConversion || entry.pointsEarned < 0;
                       const pointsValue = Math.abs(entry.pointsEarned || 0);
                       
@@ -449,6 +478,16 @@ export default function EarningsScreen({ navigation }) {
                         </View>
                       );
                     })}
+                    {(category.entries || []).length > 3 && (
+                      <TouchableOpacity
+                        onPress={() => setExpandedCategories(prev => ({ ...prev, [category.type]: !prev[category.type] }))}
+                        style={{ alignItems: 'center', paddingVertical: 6 }}
+                      >
+                        <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>
+                          {expandedCategories[category.type] ? 'Show less' : `Show all ${category.entries.length} entr${category.entries.length === 1 ? 'y' : 'ies'}`}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })}
