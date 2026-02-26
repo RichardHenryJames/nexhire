@@ -414,7 +414,6 @@ export default function EarningsScreen({ navigation }) {
             </View>
           </View>
         </ScrollView>
-        </View>
       </View>
     </View>
   );
