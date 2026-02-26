@@ -364,7 +364,7 @@ export default function EarningsScreen({ navigation }) {
                         isNext && { borderColor: m.color, borderStyle: 'dashed' }
                       ]}>
                         <Text style={styles.milestoneCardEmoji}>{m.emoji}</Text>
-                        <Text style={[styles.milestoneCardCount, reached && { color: m.color }]}>{m.count}th referral</Text>
+                        <Text style={[styles.milestoneCardCount, reached && { color: m.color }]}>{m.count} referrals</Text>
                         <Text style={[styles.milestoneCardBonus, reached && { color: m.color }]}>₹{m.bonus}</Text>
                         {reached && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>✓ Earned</Text>}
                         {isNext && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>{m.count - verified} more</Text>}

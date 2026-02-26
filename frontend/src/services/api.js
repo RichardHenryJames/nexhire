@@ -1946,7 +1946,7 @@ if (!resumeId) {
           aiAccessDurationHours: 360,
           aiAccessDurationDays: 15,
           referralRequestCost: 49,
-          openToAnyReferralCost: 99,
+          openToAnyReferralCost: 249,
           jobPublishCost: 0,
           welcomeBonus: 0,
           referralSignupBonus: 25,
