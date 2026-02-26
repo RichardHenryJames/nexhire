@@ -30,9 +30,41 @@ export default function EarningsScreen({ navigation }) {
     totalEarned: 0,
     totalWithdrawn: 0,
     canWithdraw: false,
-    minimumWithdrawal: 10,
+    minimumWithdrawal: 200,
     withdrawalFee: 0
   });
+
+  // Load all data on mount
+  useEffect(() => {
+    loadAllData();
+  }, []);
+
+  const loadAllData = async () => {
+    try {
+      const userId = user?.UserID || user?.userId || user?.id || user?.sub;
+      
+      // 1. Load referralStats from Profile API (the ONLY source of totalReferralsMade/verifiedReferrals)
+      if (userId) {
+        const profileResult = await refopenAPI.getApplicantProfile(userId);
+        if (profileResult?.success && profileResult?.data?.referralStats) {
+          setReferralStats(profileResult.data.referralStats);
+        }
+      }
+
+      // 2. Load points history + metadata
+      const pointsResult = await refopenAPI.getReferralPointsHistory();
+      if (pointsResult?.success && pointsResult.data) {
+        setTotalPoints(pointsResult.data.totalPoints || 0);
+        setPointsHistory(pointsResult.data.history || []);
+        setPointTypeMetadata(pointsResult.data.pointTypeMetadata || {});
+      }
+
+      // 3. Load withdrawable balance
+      await loadWithdrawableBalance();
+    } catch (error) {
+      console.error('Error loading earnings data:', error);
+    }
+  };
 
   const loadWithdrawableBalance = async () => {
     try {
