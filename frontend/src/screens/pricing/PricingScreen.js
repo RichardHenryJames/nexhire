@@ -109,7 +109,7 @@ export default function PricingScreen() {
       tier: 'Elite',
       price: pricing.eliteReferralCost,
       accent: '#F59E0B',
-      icon: 'diamond-outline',
+      icon: 'trophy-outline',
     },
   ];
 
