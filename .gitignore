@@ -60,3 +60,4 @@ frontend/android-keystore.jks
 frontend/credentials.json
 *.keystore
 *.jks
+.expo/
