@@ -8,6 +8,7 @@ import TabHeader from '../../components/TabHeader';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
+import { getReferralCostForJob } from '../../utils/pricingUtils';
 import JobCard from '../../components/jobs/JobCard';
 import AdCard from '../../components/ads/AdCard';
 import FilterModal from '../../components/jobs/FilterModal';
@@ -296,6 +297,9 @@ export default function JobsScreen({ navigation, route }) {
   // 💎 NEW: Referral confirmation modal state
   const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
   const [referralConfirmData, setReferralConfirmData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, jobId: null, jobTitle: '', companyName: '', job: null });
+
+  // 💰 Tier-based cost helper
+  const getJobTierCost = (job) => getReferralCostForJob(job, pricing);
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
@@ -1329,7 +1333,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         // 💎 NEW: Show confirmation modal (whether sufficient balance or not)
         setReferralConfirmData({
           currentBalance: availableBalance, // Use available, not total
-          requiredAmount: pricing.referralRequestCost,
+          requiredAmount: getJobTierCost(job),
           holdAmount: holdAmount, // Pass hold info for display
           jobId: job.JobID || job.id, // Store JobID to correctly identify the job later
           jobTitle: job.Title || 'this job',
@@ -1490,7 +1494,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         // ✅ NEW: Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           const currentBalance = res.data?.currentBalance || 0;
-          const requiredAmount = res.data?.requiredAmount || pricing.referralRequestCost;
+          const requiredAmount = res.data?.requiredAmount || getJobTierCost(referralConfirmData?.job || {});
 
           // 💎 NEW: Show beautiful modal instead of ugly alert
           setWalletModalData({ currentBalance, requiredAmount });

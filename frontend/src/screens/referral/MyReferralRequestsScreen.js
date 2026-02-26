@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
+import { getReferralCostForJob } from '../../utils/pricingUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
@@ -610,7 +611,7 @@ export default function MyReferralRequestsScreen() {
                 ? (Date.now() - new Date(cancelTarget.request.RequestedAt).getTime()) / (1000 * 60 * 60)
                 : 999;
               const currentTier = hoursElapsed < 1 ? 0 : hoursElapsed <= 24 ? 1 : 2;
-              const heldAmount = cancelTarget?.request?.OpenToAnyCompany ? pricing.openToAnyReferralCost : pricing.referralRequestCost;
+              const heldAmount = cancelTarget?.request?.OpenToAnyCompany ? pricing.openToAnyReferralCost : getReferralCostForJob(cancelTarget?.request || {}, pricing);
               const tiers = [
                 { label: 'Within 1 hour', fee: '₹0 (Free)', color: '#10B981' },
                 { label: '1 – 24 hours', fee: '₹10', color: '#F59E0B' },

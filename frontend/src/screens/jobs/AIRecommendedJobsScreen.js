@@ -16,6 +16,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
 import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
+import { getReferralCostForJob } from '../../utils/pricingUtils';
 import JobCard from '../../components/jobs/JobCard';
 import WalletRechargeModal from '../../components/WalletRechargeModal';
 import { typography } from '../../styles/theme';
@@ -43,6 +44,9 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, note: '' });
+
+  // 💰 Tier-based cost helper
+  const getJobTierCost = (job) => getReferralCostForJob(job, pricing);
 
   // Load primary resume once
   const loadPrimaryResume = useCallback(async () => {
@@ -187,7 +191,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       });
       if (res?.success) {
         setReferredJobIds(prev => new Set([...prev, id])); // Mark as referred
-        const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || pricing.referralRequestCost;
+        const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || getJobTierCost(job);
         const availableBalance = res.data?.availableBalanceAfter;
 
         let message = 'Referral sent! You\'ll only be charged when someone refers you.';
@@ -241,10 +245,10 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       if (walletBalance?.success) {
         const balance = walletBalance.data?.balance || 0;
 
-        if (balance < pricing.referralRequestCost) {
+        if (balance < getJobTierCost(job)) {
           setWalletModalData({
             currentBalance: balance,
-            requiredAmount: pricing.referralRequestCost,
+            requiredAmount: getJobTierCost(job),
             note: 'Recharge your wallet to ask for a referral.',
           });
           setShowWalletModal(true);
