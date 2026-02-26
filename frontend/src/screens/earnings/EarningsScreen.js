@@ -306,7 +306,12 @@ export default function EarningsScreen({ navigation }) {
             return (
               <View style={styles.milestoneSection}>
                 <Text style={styles.milestoneSectionTitle}>🎯 Monthly Milestones ({currentMonth})</Text>
-                <Text style={styles.milestoneSubheading}>Bonus rewards on top of your per-referral earnings</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 6 }}>
+                  <View style={{ backgroundColor: '#10B981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>EXTRA</Text>
+                  </View>
+                  <Text style={styles.milestoneSubheading}>rewards on top of your per-referral earnings</Text>
+                </View>
                 
                 <View style={styles.milestoneBarContainer}>
                   <View style={styles.milestoneBarTrack}>
@@ -454,7 +459,7 @@ export default function EarningsScreen({ navigation }) {
                 <Text style={styles.emptyStateEmoji}>🎯</Text>
                 <Text style={styles.emptyStateTitle}>No Points Yet</Text>
                 <Text style={styles.emptyStateDescription}>
-                  Start earning points by referring candidates for jobs at your company!
+                  Start earning by referring candidates for jobs at your company!
                 </Text>
               </View>
             </View>
@@ -575,7 +580,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderColor: colors.border,
   },
   milestoneSectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  milestoneSubheading: { fontSize: 13, color: colors.textSecondary, marginBottom: 14, fontWeight: '600' },
+  milestoneSubheading: { fontSize: 13, color: colors.textSecondary },
   milestoneBarContainer: { marginBottom: 12 },
   milestoneBarTrack: { height: 8, backgroundColor: colors.border, borderRadius: 4, position: 'relative', overflow: 'visible' },
   milestoneBarFill: { height: '100%', backgroundColor: '#3B82F6', borderRadius: 4, position: 'absolute', left: 0, top: 0 },
