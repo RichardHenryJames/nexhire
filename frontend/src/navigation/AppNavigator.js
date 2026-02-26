@@ -61,12 +61,12 @@ import ShareEarnScreen from "../screens/ShareEarnScreen";
 // ?? NEW: Wallet screens
 import WalletScreen from "../screens/wallet/WalletScreen";
 import WalletTransactionsScreen from "../screens/wallet/WalletTransactionsScreen";
-import WalletRechargeScreen from "../screens/wallet/WalletRechargeScreen";
 import ManualRechargeScreen from "../screens/wallet/ManualRechargeScreen";
 import SubmitPaymentScreen from "../screens/wallet/SubmitPaymentScreen";
 import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
 import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 import WalletHoldsScreen from "../screens/wallet/WalletHoldsScreen";
+import PromoCodesScreen from "../screens/wallet/PromoCodesScreen";
 import EarningsScreen from "../screens/earnings/EarningsScreen";
 import PricingScreen from "../screens/pricing/PricingScreen";
 
@@ -261,6 +261,7 @@ const linking = {
           WithdrawalRequests: "wallet/withdrawals",
           PaymentSuccess: "wallet/payment-success",
           WalletHolds: "wallet/holds",
+          PromoCodes: "promo-codes",
           
           // Profile Views screen
           ProfileViews: "ProfileViews",
@@ -813,6 +814,11 @@ function MainStack() {
       <Stack.Screen
         name="WalletHolds"
         component={WalletHoldsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="PromoCodes"
+        component={PromoCodesScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

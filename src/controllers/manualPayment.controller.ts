@@ -311,6 +311,32 @@ export const rejectPayment = async (
 /**
  * GET /api/wallet/bonus-packs - Get active bonus packs (public)
  */
+/**
+ * GET /api/wallet/promo-codes - Get all promo codes with smart recommendations
+ */
+export const getPromoCodes = async (
+  request: HttpRequest,
+  context: InvocationContext
+): Promise<HttpResponseInit> => {
+  try {
+    const user = authenticate(request);
+    const codes = await PromoService.getPromoCodesForUser(user.userId);
+    return {
+      status: 200,
+      jsonBody: { success: true, data: codes }
+    };
+  } catch (error: any) {
+    console.error('Error getting promo codes:', error);
+    if (error.name === 'AuthenticationError') {
+      return { status: 401, jsonBody: { success: false, message: 'Unauthorized' } };
+    }
+    return {
+      status: 500,
+      jsonBody: { success: false, message: 'Failed to get promo codes' }
+    };
+  }
+};
+
 export const getBonusPacks = async (
   request: HttpRequest,
   context: InvocationContext

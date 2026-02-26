@@ -194,6 +194,7 @@ import {
   rejectPayment,
   getBonusPacks,
   validatePromoCode,
+  getPromoCodes,
 } from "./src/controllers/manualPayment.controller";
 
 // Import support ticket controller
@@ -1540,6 +1541,13 @@ app.http("wallet-validate-promo", {
   authLevel: "anonymous",
   route: "wallet/validate-promo",
   handler: withErrorHandling(validatePromoCode),
+});
+
+app.http("wallet-promo-codes", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "wallet/promo-codes",
+  handler: withErrorHandling(getPromoCodes),
 });
 
 // ========================================================================

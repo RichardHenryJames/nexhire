@@ -153,6 +153,145 @@ export class PromoService {
   }
 
   /**
+   * Get all active promo codes with smart eligibility/recommendations for a user
+   */
+  static async getPromoCodesForUser(userId: string): Promise<any[]> {
+    try {
+      // 1. Fetch all active, non-expired promo codes
+      const codesResult = await dbService.executeQuery(`
+        SELECT pc.CodeID, pc.Code, pc.Type, pc.Value, pc.MinRechargeAmount, pc.MaxBonusAmount,
+               pc.MaxUses, pc.CurrentUses, pc.PerUserLimit, pc.ExpiresAt, pc.Description,
+               ISNULL(pu.UserUsages, 0) AS UserUsages
+        FROM PromoCodes pc
+        LEFT JOIN (
+          SELECT CodeID, COUNT(*) AS UserUsages
+          FROM PromoCodeUsages
+          WHERE UserID = @param0
+          GROUP BY CodeID
+        ) pu ON pc.CodeID = pu.CodeID
+        WHERE pc.IsActive = 1
+          AND (pc.ExpiresAt IS NULL OR pc.ExpiresAt > GETUTCDATE())
+          AND (pc.MaxUses IS NULL OR pc.CurrentUses < pc.MaxUses)
+        ORDER BY pc.Code
+      `, [userId]);
+
+      const codes = codesResult.recordset || [];
+
+      // 2. Fetch user profile for eligibility checks
+      const profileResult = await dbService.executeQuery(`
+        SELECT a.GraduationYear, a.Institution, a.TotalExperienceMonths
+        FROM Users u
+        LEFT JOIN Applicants a ON u.UserID = a.UserID
+        WHERE u.UserID = @param0
+      `, [userId]);
+
+      const profile = profileResult.recordset?.[0] || {};
+
+      // 3. Check if user has current work experience
+      const workResult = await dbService.executeQuery(`
+        SELECT TOP 1 1 AS HasWork
+        FROM WorkExperiences
+        WHERE UserID = @param0
+      `, [userId]);
+
+      const hasAnyWork = (workResult.recordset?.length || 0) > 0;
+
+      const currentWorkResult = await dbService.executeQuery(`
+        SELECT TOP 1 1 AS HasCurrentWork
+        FROM WorkExperiences
+        WHERE UserID = @param0 AND (IsCurrent = 1 OR EndDate IS NULL)
+      `, [userId]);
+
+      const hasCurrentWork = (currentWorkResult.recordset?.length || 0) > 0;
+
+      // 4. Determine eligibility for each code
+      const currentYear = new Date().getFullYear();
+      const gradYear = profile.GraduationYear ? parseInt(profile.GraduationYear, 10) : null;
+
+      return codes.map((code: any) => {
+        const exhausted = code.UserUsages >= code.PerUserLimit;
+        const remainingUses = code.PerUserLimit - code.UserUsages;
+
+        // Calculate sample bonus (on min recharge amount)
+        let sampleBonus = 0;
+        if (code.Type === 'FLAT_BONUS') {
+          sampleBonus = code.Value;
+        } else if (code.Type === 'PERCENT_BONUS') {
+          sampleBonus = Math.round((code.MinRechargeAmount * code.Value) / 100);
+        }
+        if (code.MaxBonusAmount !== null && sampleBonus > code.MaxBonusAmount) {
+          sampleBonus = code.MaxBonusAmount;
+        }
+
+        // Smart recommendation logic
+        let recommended = false;
+        let recommendReason = '';
+
+        switch (code.Code) {
+          case 'FRESHER':
+            // Recommended for recent graduates with no work experience
+            if (gradYear && gradYear >= currentYear - 2 && !hasAnyWork) {
+              recommended = true;
+              recommendReason = 'Perfect for fresh graduates like you!';
+            } else if (!hasAnyWork && !gradYear) {
+              recommended = true;
+              recommendReason = 'Great for those starting their career!';
+            }
+            break;
+
+          case 'SWITCH':
+            // Recommended for experienced professionals not currently employed
+            if (hasAnyWork && !hasCurrentWork) {
+              recommended = true;
+              recommendReason = 'Made for career switchers like you!';
+            }
+            break;
+
+          case 'CAMPUS100':
+            // Recommended for current students or very recent graduates
+            if (gradYear && gradYear >= currentYear && !hasAnyWork) {
+              recommended = true;
+              recommendReason = 'Exclusive campus offer for students!';
+            }
+            break;
+
+          case 'FIRST50':
+            // Recommended if user has never used any promo code
+            if (code.UserUsages === 0) {
+              recommended = true;
+              recommendReason = 'Your first-time welcome bonus!';
+            }
+            break;
+
+          case 'EXTRA25':
+            // Recommended for bigger recharges
+            recommended = true;
+            recommendReason = 'Extra 25% on every recharge!';
+            break;
+        }
+
+        return {
+          code: code.Code,
+          type: code.Type,
+          value: code.Value,
+          minRecharge: code.MinRechargeAmount,
+          maxBonus: code.MaxBonusAmount,
+          description: code.Description,
+          sampleBonus,
+          perUserLimit: code.PerUserLimit,
+          remainingUses: Math.max(0, remainingUses),
+          exhausted,
+          recommended: recommended && !exhausted,
+          recommendReason: exhausted ? '' : recommendReason,
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching promo codes for user:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get all active bonus packs
    */
   static async getBonusPacks(): Promise<any[]> {
