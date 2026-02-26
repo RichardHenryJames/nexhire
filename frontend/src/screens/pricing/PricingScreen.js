@@ -49,7 +49,7 @@ const FeatureRow = ({ icon, label, value, sub, colors }) => (
 );
 
 // ─── Tier Card ─────────────────────────────────────────────
-const TierCard = ({ tier, price, payout, accent, icon, popular, colors, styles }) => (
+const TierCard = ({ tier, price, accent, icon, popular, colors, styles }) => (
   <View style={[
     styles.tierCard,
     popular && { borderColor: colors.primary, borderWidth: 2 },
@@ -70,15 +70,15 @@ const TierCard = ({ tier, price, payout, accent, icon, popular, colors, styles }
     <View style={styles.tierDivider} />
     <View style={styles.tierDetail}>
       <Ionicons name="checkmark-circle" size={16} color={colors.success || '#10B981'} />
-      <Text style={styles.tierDetailText}>Referrer earns {fmt(payout)}</Text>
-    </View>
-    <View style={styles.tierDetail}>
-      <Ionicons name="checkmark-circle" size={16} color={colors.success || '#10B981'} />
       <Text style={styles.tierDetailText}>Direct request to verified employee</Text>
     </View>
     <View style={styles.tierDetail}>
       <Ionicons name="checkmark-circle" size={16} color={colors.success || '#10B981'} />
       <Text style={styles.tierDetailText}>Pay only if someone refers you</Text>
+    </View>
+    <View style={styles.tierDetail}>
+      <Ionicons name="checkmark-circle" size={16} color={colors.success || '#10B981'} />
+      <Text style={styles.tierDetailText}>Auto-refund if no one picks up</Text>
     </View>
   </View>
 );
@@ -95,14 +95,12 @@ export default function PricingScreen() {
     {
       tier: 'Standard',
       price: pricing.referralRequestCost,
-      payout: pricing.standardReferrerPayout,
       accent: '#3B82F6',
       icon: 'person-outline',
     },
     {
       tier: 'Premium',
       price: pricing.premiumReferralCost,
-      payout: pricing.premiumReferrerPayout,
       accent: '#8B5CF6',
       icon: 'star-outline',
       popular: true,
@@ -110,7 +108,6 @@ export default function PricingScreen() {
     {
       tier: 'Elite',
       price: pricing.eliteReferralCost,
-      payout: pricing.eliteReferrerPayout,
       accent: '#F59E0B',
       icon: 'diamond-outline',
     },
@@ -160,7 +157,7 @@ export default function PricingScreen() {
             <Text style={styles.sectionTitle}>AI & Career Tools</Text>
             <View style={styles.card}>
               <FeatureRow
-                icon="sparkles-outline"
+                icon="sparkles"
                 label="AI Job Recommendations"
                 value={fmt(pricing.aiJobsCost)}
                 sub={`${pricing.aiAccessDurationDays}-day access`}
@@ -191,60 +188,11 @@ export default function PricingScreen() {
               />
             </View>
 
-            {/* ── Referrer Earnings ── */}
-            <Text style={styles.sectionTitle}>Referrer Rewards</Text>
-            <Text style={styles.sectionSub}>
-              Earn by helping others land jobs
-            </Text>
-            <View style={styles.card}>
-              <FeatureRow
-                icon="cash-outline"
-                label="Standard Referral Payout"
-                value={fmt(pricing.standardReferrerPayout)}
-                sub="Per accepted referral"
-                colors={colors}
-              />
-              <FeatureRow
-                icon="cash-outline"
-                label="Premium Referral Payout"
-                value={fmt(pricing.premiumReferrerPayout)}
-                sub="Per accepted referral"
-                colors={colors}
-              />
-              <FeatureRow
-                icon="cash-outline"
-                label="Elite Referral Payout"
-                value={fmt(pricing.eliteReferrerPayout)}
-                sub="Per accepted referral"
-                colors={colors}
-              />
-            </View>
-
-            {/* ── Milestone Bonuses ── */}
-            <Text style={styles.sectionTitle}>Milestone Bonuses</Text>
-            <View style={styles.milestonesRow}>
-              {[
-                { count: 5, bonus: pricing.milestone5Bonus, emoji: '🎯' },
-                { count: 10, bonus: pricing.milestone10Bonus, emoji: '🔥' },
-                { count: 20, bonus: pricing.milestone20Bonus, emoji: '🏆' },
-              ].map((m) => (
-                <View key={m.count} style={styles.milestoneChip}>
-                  <Text style={{ fontSize: 24 }}>{m.emoji}</Text>
-                  <Text style={styles.milestoneCount}>{m.count} referrals</Text>
-                  <Text style={styles.milestoneBonus}>+{fmt(m.bonus)}</Text>
-                </View>
-              ))}
-            </View>
-
             {/* ── Other Info ── */}
             <View style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
                 <Text style={styles.infoText}>Hold-based billing — you're charged only when someone refers you. If no one picks up your request in 2 weeks, the hold is released.</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="wallet-outline" size={20} color={colors.primary} />
-                <Text style={styles.infoText}>Minimum withdrawal: {fmt(pricing.minimumWithdrawal)}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Ionicons name="infinite-outline" size={20} color={colors.primary} />
