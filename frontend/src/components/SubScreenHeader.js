@@ -114,6 +114,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    alignSelf: 'stretch',
+    width: '100%',
     ...HEADER_CONTAINER_BASE,
   },
   backButton: {

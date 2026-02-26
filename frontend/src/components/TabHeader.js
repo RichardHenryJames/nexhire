@@ -206,6 +206,8 @@ const styles = StyleSheet.create({
   },
   container: {
     ...HEADER_CONTAINER_BASE,
+    alignSelf: 'stretch',
+    width: '100%',
   },
   headerRow: {
     flexDirection: 'row',
