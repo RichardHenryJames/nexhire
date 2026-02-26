@@ -1083,7 +1083,17 @@ export class ReferralService {
             const countResult = await dbService.executeQuery(countQuery, [referrerId]);
             const count = countResult.recordset?.[0]?.VerifiedThisMonth || 0;
 
-            // Check each milestone (award only once per milestone per month)
+            // Resolve UserID → ApplicantID (ReferralRewards.ReferrerID FK → Applicants.ApplicantID)
+            const applicantQuery = `SELECT ApplicantID FROM Applicants WHERE UserID = @param0`;
+            const applicantResult = await dbService.executeQuery(applicantQuery, [referrerId]);
+            const applicantId = applicantResult.recordset?.[0]?.ApplicantID;
+            if (!applicantId) {
+                console.warn('Milestone check: No ApplicantID found for referrer UserID:', referrerId);
+                return;
+            }
+
+            // Check each milestone — use === so bonus triggers ONLY at exact threshold
+            // e.g. milestone_5 triggers only when count is exactly 5, not 6, 7, 8, 9
             const milestonesToCheck = [
                 { threshold: 20, amount: milestones.m20, type: 'milestone_20' },
                 { threshold: 10, amount: milestones.m10, type: 'milestone_10' },
@@ -1091,27 +1101,27 @@ export class ReferralService {
             ];
 
             for (const milestone of milestonesToCheck) {
-                if (count >= milestone.threshold) {
-                    // Check if already awarded this milestone this month
+                if (count === milestone.threshold) {
+                    // Safety: Check if already awarded this milestone this month (race condition guard)
                     const existingQuery = `
                         SELECT RewardID FROM ReferralRewards
                         WHERE ReferrerID = @param0 AND PointsType = @param1
                           AND MONTH(AwardedAt) = MONTH(GETUTCDATE())
                           AND YEAR(AwardedAt) = YEAR(GETUTCDATE())
                     `;
-                    const existing = await dbService.executeQuery(existingQuery, [referrerId, milestone.type]);
+                    const existing = await dbService.executeQuery(existingQuery, [applicantId, milestone.type]);
                     if (existing.recordset?.length) continue; // Already awarded
 
-                    // Award milestone bonus to wallet (WITHDRAWABLE earnings)
+                    // Track in ReferralRewards FIRST (so duplicate check works for concurrent requests)
+                    await this.awardReferralPoints(applicantId, requestId, milestone.amount, milestone.type);
+
+                    // Then credit wallet (WITHDRAWABLE earnings)
                     await WalletService.creditBonus(
                         referrerId,
                         milestone.amount,
                         'REFERRAL_EARNINGS',
                         `🎉 Milestone bonus: ${milestone.threshold}th verified referral this month`
                     );
-
-                    // Track as referral reward points too
-                    await this.awardReferralPoints(referrerId, requestId, milestone.amount, milestone.type);
 
                     console.log(`Milestone bonus awarded: ${milestone.type} (₹${milestone.amount}) to ${referrerId}`);
                     break; // Only award the highest unawarded milestone
@@ -1124,16 +1134,33 @@ export class ReferralService {
 
     /**
      * Award points to referrer with enhanced tracking
+     * @param referrerIdOrApplicantId - Can be UserID or ApplicantID (will resolve to ApplicantID for FK)
      */
-    private static async awardReferralPoints(referrerId: string, requestId: string, points: number, pointType: string = 'general'): Promise<void> {
+    private static async awardReferralPoints(referrerIdOrApplicantId: string, requestId: string, points: number, pointType: string = 'general'): Promise<void> {
         try {
+            // Resolve to ApplicantID (ReferralRewards.ReferrerID FK → Applicants.ApplicantID)
+            // Try as ApplicantID first, then as UserID
+            let applicantId = referrerIdOrApplicantId;
+            const checkQuery = `
+                SELECT ApplicantID FROM Applicants 
+                WHERE ApplicantID = @param0 
+                   OR UserID = @param0
+            `;
+            const checkResult = await dbService.executeQuery(checkQuery, [referrerIdOrApplicantId]);
+            if (checkResult.recordset?.length) {
+                applicantId = checkResult.recordset[0].ApplicantID;
+            } else {
+                console.warn('awardReferralPoints: No applicant found for ID:', referrerIdOrApplicantId);
+                return;
+            }
+
             // Check if reward already exists for this type
             const existingRewardQuery = `
                 SELECT RewardID FROM ReferralRewards 
                 WHERE ReferrerID = @param0 AND RequestID = @param1 AND PointsType = @param2
             `;
             
-            const existingRewardResult = await dbService.executeQuery(existingRewardQuery, [referrerId, requestId, pointType]);
+            const existingRewardResult = await dbService.executeQuery(existingRewardQuery, [applicantId, requestId, pointType]);
             
             if (existingRewardResult.recordset && existingRewardResult.recordset.length > 0) {
                 // Points already awarded for this type
@@ -1150,7 +1177,7 @@ export class ReferralService {
                 )
             `;
             
-            await dbService.executeQuery(insertRewardQuery, [rewardId, referrerId, requestId, points, pointType]);
+            await dbService.executeQuery(insertRewardQuery, [rewardId, applicantId, requestId, points, pointType]);
 
             // Update referrer's total points in Applicants table
             const updatePointsQuery = `
@@ -1159,7 +1186,7 @@ export class ReferralService {
                 WHERE ApplicantID = @param0
             `;
             
-            await dbService.executeQuery(updatePointsQuery, [referrerId, points]);
+            await dbService.executeQuery(updatePointsQuery, [applicantId, points]);
         } catch (error) {
             console.error('Error awarding referral points:', error);
             // Don't rethrow - we don't want to break the main referral flow if points can't be awarded
