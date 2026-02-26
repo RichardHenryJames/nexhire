@@ -25,8 +25,8 @@ const DEFAULT_PRICING = {
   ELITE_REFERRAL_COST: 199,
   // Tier-based referrer payouts (fixed, transparent — replaces old random ₹20-40)
   STANDARD_REFERRER_PAYOUT: 25,
-  PREMIUM_REFERRER_PAYOUT: 50,
-  ELITE_REFERRER_PAYOUT: 100,
+  PREMIUM_REFERRER_PAYOUT: 40,
+  ELITE_REFERRER_PAYOUT: 80,
   // Milestone bonuses (monthly) — flat for all tiers
   MILESTONE_5_BONUS: 50,
   MILESTONE_10_BONUS: 100,

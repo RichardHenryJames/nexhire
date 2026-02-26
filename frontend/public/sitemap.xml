@@ -60,6 +60,12 @@
     <priority>0.5</priority>
   </url>
   <url>
+    <loc>https://refopen.com/pricing</loc>
+    <lastmod>2026-02-26</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://refopen.com/support</loc>
     <lastmod>2026-01-21</lastmod>
     <changefreq>monthly</changefreq>
