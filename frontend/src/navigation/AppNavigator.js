@@ -882,12 +882,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Terms"
         component={TermsScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Terms of Service' }}
       />
       <Stack.Screen
         name="PrivacyPolicy"
         component={PrivacyPolicyScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Privacy Policy' }}
       />
       <Stack.Screen
         name="AboutUs"
@@ -901,12 +901,12 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Disclaimer"
         component={DisclaimerScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Disclaimer' }}
       />
       <Stack.Screen
         name="FAQ"
         component={FAQScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Frequently Asked Questions' }}
       />
       <Stack.Screen
         name="Pricing"
@@ -938,7 +938,7 @@ export default function AppNavigator() {
       <Stack.Screen
         name="Support"
         component={SupportScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Help & Support' }}
       />
       
       {/* Public Resume Analyzer Tool - accessible without auth */}
@@ -953,27 +953,27 @@ export default function AppNavigator() {
       />
 
       {/* Service Screens */}
-      <Stack.Screen name="ATSBeatSheet" component={ATSBeatSheetScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="InterviewDecoded" component={InterviewDecodedScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="SalarySpy" component={SalarySpyScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="OfferCoach" component={OfferCoachScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="LinkedInOptimizer" component={LinkedInOptimizerScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="BlindReview" component={BlindReviewScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CareerSimulator" component={CareerSimulatorScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="MarketPulse" component={MarketPulseScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ATSBeatSheet" component={ATSBeatSheetScreen} options={{ headerShown: false, title: 'ATS Resume Builder - Beat Tracking Systems' }} />
+      <Stack.Screen name="InterviewDecoded" component={InterviewDecodedScreen} options={{ headerShown: false, title: 'Interview Prep - AI Mock Practice' }} />
+      <Stack.Screen name="SalarySpy" component={SalarySpyScreen} options={{ headerShown: false, title: 'Salary Checker - Know Your Worth' }} />
+      <Stack.Screen name="OfferCoach" component={OfferCoachScreen} options={{ headerShown: false, title: 'Offer Negotiation Coach' }} />
+      <Stack.Screen name="LinkedInOptimizer" component={LinkedInOptimizerScreen} options={{ headerShown: false, title: 'LinkedIn Profile Optimizer' }} />
+      <Stack.Screen name="BlindReview" component={BlindReviewScreen} options={{ headerShown: false, title: 'Blind Resume Review' }} />
+      <Stack.Screen name="CareerSimulator" component={CareerSimulatorScreen} options={{ headerShown: false, title: 'Career Path Simulator' }} />
+      <Stack.Screen name="MarketPulse" component={MarketPulseScreen} options={{ headerShown: false, title: 'Job Market Pulse - Hiring Trends' }} />
       
       {/* Public Ask Referral Screen - accessible without auth but actions require login */}
       <Stack.Screen
         name="AskReferralPublic"
         component={AskReferralScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Ask for Referral' }}
       />
       
       {/* Public Job Details Screen - accessible without auth but actions require login */}
       <Stack.Screen
         name="JobDetailsPublic"
         component={JobDetailsScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Job Details' }}
       />
       
       {/* Public Password Reset Screens - accessible without auth */}
