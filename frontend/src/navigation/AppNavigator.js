@@ -68,6 +68,7 @@ import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen
 import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
 import WalletHoldsScreen from "../screens/wallet/WalletHoldsScreen";
 import EarningsScreen from "../screens/earnings/EarningsScreen";
+import PricingScreen from "../screens/pricing/PricingScreen";
 
 // Legal/Compliance Screens
 import TermsScreen from "../screens/legal/TermsScreen";
@@ -123,6 +124,7 @@ const linking = {
       AboutUs: "about",
       Disclaimer: "disclaimer",
       FAQ: "faq",
+      Pricing: "pricing",
       Support: "support",
       
       // Public Tools screens - accessible without auth
@@ -899,6 +901,15 @@ export default function AppNavigator() {
         name="FAQ"
         component={FAQScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Pricing"
+        component={PricingScreen}
+        options={{
+          headerShown: false,
+          title: "Pricing - RefOpen Referral & AI Tools",
+          headerBackTitleVisible: false,
+        }}
       />
       <Stack.Screen
         name="Blog"

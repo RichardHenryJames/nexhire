@@ -8,7 +8,7 @@ import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import SubScreenHeader from '../../components/SubScreenHeader';
 
-const FAQItem = ({ question, answer, colors, styles }) => {
+const FAQItem = ({ question, answer, colors, styles, linkText, linkScreen, navigation }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -28,6 +28,16 @@ const FAQItem = ({ question, answer, colors, styles }) => {
       {isExpanded && (
     <View style={styles.answerContainer}>
  <Text style={styles.answer}>{answer}</Text>
+      {linkText && linkScreen && (
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}
+          onPress={() => navigation.navigate(linkScreen)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="pricetag-outline" size={14} color={colors.primary} style={{ marginRight: 4 }} />
+          <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>{linkText}</Text>
+        </TouchableOpacity>
+      )}
      </View>
       )}
     </View>
@@ -72,7 +82,9 @@ export default function FAQScreen() {
         },
         {
           question: 'Is Refopen free to use?',
-          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nReferral requests start from ₹49 per request (paid from wallet credits). Open-to-any-company requests cost ₹249.\n\nAdd money to wallet via bank transfer or UPI.'
+          answer: 'Yes! Basic features are completely free:\n• Creating and maintaining your profile\n• Browsing all job listings\n• Applying to jobs directly\n• Receiving referral requests (for employees)\n\nPaid features like referral requests and AI tools are wallet-based — check the Pricing page for current rates.\n\nAdd money to wallet via bank transfer or UPI.',
+          linkText: 'View Pricing',
+          linkScreen: 'Pricing'
         },
         {
           question: 'How do I complete my profile?',
@@ -134,7 +146,7 @@ export default function FAQScreen() {
         },
         {
           question: 'What is AI Jobs feature?',
-          answer: 'AI Jobs uses your profile to find personalized job matches:\n• Analyzes your skills, experience, and preferences\n• Recommends jobs that best match your profile\n• Costs ₹99 for 15 days of access\n• Access from the Home screen → AI Jobs section\n\nThis helps you discover opportunities you might have missed!'
+          answer: 'AI Jobs uses your profile to find personalized job matches:\n• Analyzes your skills, experience, and preferences\n• Recommends jobs that best match your profile\n• Affordable access for a limited period\n• Access from the Home screen → AI Jobs section\n\nThis helps you discover opportunities you might have missed!'
         },
         {
           question: 'What types of jobs are available on Refopen?',
@@ -151,7 +163,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How does the Refopen Wallet work?',
-          answer: 'The Refopen Wallet is your in-app payment account:\n1. Go to Wallet → Add Money\n2. Note down our bank account details or UPI ID\n3. Transfer the desired amount using your preferred method\n4. Submit payment proof with transaction reference number\n5. Our team verifies and credits your wallet within 24 hours\n6. Use wallet credits for referral requests (from ₹49) and AI Jobs (₹99 for 15 days)\n\nCredits never expire while your account is active.'
+          answer: 'The Refopen Wallet is your in-app payment account:\n1. Go to Wallet → Add Money\n2. Note down our bank account details or UPI ID\n3. Transfer the desired amount using your preferred method\n4. Submit payment proof with transaction reference number\n5. Our team verifies and credits your wallet within 24 hours\n6. Use wallet credits for referral requests, AI tools, and more\n\nCredits never expire while your account is active.'
         },
         {
           question: 'How do I add money to my wallet?',
@@ -167,7 +179,9 @@ export default function FAQScreen() {
         },
         {
           question: 'Do wallet credits expire?',
-          answer: 'No, your wallet credits do not expire as long as your account remains active. You can use them anytime for:\n• Referral request fees (from ₹49 per request)\n• AI-powered job recommendations (₹99 for 15-day access)\n• Future premium features'
+          answer: 'No, your wallet credits do not expire as long as your account remains active. You can use them anytime for:\n• Referral requests\n• AI-powered job recommendations\n• Resume tools and other premium features\n\nCheck the Pricing page for current rates.',
+          linkText: 'View Pricing',
+          linkScreen: 'Pricing'
         },
         {
           question: 'How do I get a refund?',
@@ -320,6 +334,9 @@ export default function FAQScreen() {
                 answer={faq.answer}
                 colors={colors}
                 styles={styles}
+                linkText={faq.linkText}
+                linkScreen={faq.linkScreen}
+                navigation={navigation}
               />
             ))}
           </View>
