@@ -18,11 +18,40 @@ export default function EarningsScreen({ navigation }) {
   const { isMobile, isDesktop } = responsive;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [fadeAnim] = useState(new Animated.Value(1));
+  const [expandedFaq, setExpandedFaq] = useState(null);
+
+  // FAQ data (frontend-only, not DB driven)
+  const faqData = [
+    {
+      question: 'How do I earn referral earnings?',
+      answer: 'When you refer a candidate for a job and the job seeker verifies your referral, you earn a cash payout directly to your wallet. The payout amount depends on the company tier — ₹25 for Standard, ₹50 for Premium, and ₹100 for Elite companies.'
+    },
+    {
+      question: 'What are milestone bonuses?',
+      answer: 'Milestone bonuses are extra cash rewards for hitting referral targets each month. You earn ₹50 at 5 verified referrals, ₹100 at 10, and ₹200 at 20 referrals in a single month. These are flat bonuses available to all referrers regardless of company tier.'
+    },
+    {
+      question: 'What are RefPoints?',
+      answer: 'RefPoints are activity points earned for submitting referral proofs, getting verifications, quick responses, and monthly streaks. They track your referral activity and contribution to the platform.'
+    },
+    {
+      question: 'How do I withdraw my earnings?',
+      answer: 'Go to your Wallet and tap Withdraw. You can withdraw via UPI or bank transfer once your balance reaches the minimum withdrawal amount of ₹200. Withdrawals are processed within 24-48 hours.'
+    },
+    {
+      question: 'When do I get paid for a referral?',
+      answer: 'You get paid once the job seeker confirms (verifies) your referral. After verification, the earning is credited to your wallet instantly. Unverified referrals do not earn payouts.'
+    },
+    {
+      question: 'Do milestone bonuses reset every month?',
+      answer: 'Yes, milestone progress resets at the start of each calendar month. You can earn milestone bonuses every month by hitting the targets again.'
+    },
+  ];
 
   // Data state (loaded from APIs)
   const [totalPoints, setTotalPoints] = useState(0);
   const [pointsHistory, setPointsHistory] = useState([]);
-  const [pointTypeMetadata, setPointTypeMetadata] = useState({});
+
   const [referralStats, setReferralStats] = useState({});
   
   // Withdrawable data (just for display)
@@ -59,7 +88,6 @@ export default function EarningsScreen({ navigation }) {
       if (pointsResult?.success && pointsResult.data) {
         setTotalPoints(pointsResult.data.totalPoints || 0);
         setPointsHistory(pointsResult.data.history || []);
-        setPointTypeMetadata(pointsResult.data.pointTypeMetadata || {});
       }
 
       // 3. Load withdrawable balance
@@ -152,25 +180,8 @@ export default function EarningsScreen({ navigation }) {
   
   
 
-  // 🔧 UPDATED: Get point type display info with better fallbacks
+  // Point type display info (frontend-only)
   const getPointTypeInfo = (type) => {
-    
-    
-    
-    // Use backend metadata if available, with fallback to default
-    const backendMetadata = pointTypeMetadata[type];
-    
-    if (backendMetadata) {
-      
-      return {
-        icon: backendMetadata.icon || '🎯', // 🔧 Add fallback emoji
-        title: backendMetadata.title || 'Points',
-        description: backendMetadata.description || 'Referral activity points',
-        color: backendMetadata.color || colors.primary
-      };
-    }
-    
-    // 🔧 Improved fallbacks for unknown types with guaranteed emojis
     const typeDefaults = {
       proof_submission: { 
         icon: '📸', 
@@ -411,6 +422,39 @@ export default function EarningsScreen({ navigation }) {
               </View>
             </View>
           )}
+
+          {/* FAQ Section — frontend only, collapsible like Resume Analyzer */}
+          <View style={styles.faqSection}>
+            <Text style={styles.faqSectionTitle}>Frequently Asked Questions</Text>
+            <View style={styles.faqSubtitleRow}>
+              <Text style={styles.faqSectionSubtitle}>
+                Have a question? Find answers below or{' '}
+              </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Support')}>
+                <Text style={styles.faqSupportLink}>contact support</Text>
+              </TouchableOpacity>
+            </View>
+            {faqData.map((faq, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.faqItem}
+                onPress={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.faqQuestionRow}>
+                  <Text style={styles.faqQuestion}>{faq.question}</Text>
+                  <Ionicons
+                    name={expandedFaq === idx ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color={colors.textSecondary}
+                  />
+                </View>
+                {expandedFaq === idx && (
+                  <Text style={styles.faqAnswer}>{faq.answer}</Text>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
 
 
         </ScrollView>
@@ -1168,5 +1212,62 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   paymentMethodTabTextActive: {
     color: '#fff',
+  },
+  // FAQ Section
+  faqSection: {
+    paddingVertical: 20,
+    marginBottom: 24,
+  },
+  faqSectionTitle: {
+    fontSize: responsive.isMobile ? 20 : 24,
+    fontWeight: typography.weights?.bold || 'bold',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  faqSectionSubtitle: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  faqSubtitleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    maxWidth: 400,
+    alignSelf: 'center',
+  },
+  faqSupportLink: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.primary,
+    fontWeight: typography.weights?.semibold || '600',
+    textDecorationLine: 'underline',
+    lineHeight: 22,
+  },
+  faqItem: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingVertical: 14,
+  },
+  faqQuestionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  faqQuestion: {
+    fontSize: typography.sizes?.md || 16,
+    fontWeight: typography.weights?.semibold || '600',
+    color: colors.text,
+    flex: 1,
+    marginRight: 12,
+  },
+  faqAnswer: {
+    fontSize: typography.sizes?.sm || 14,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginTop: 8,
   },
 });

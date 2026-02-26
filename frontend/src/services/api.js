@@ -2304,8 +2304,7 @@ if (!resumeId) {
           success: true,
           data: {
             totalPoints: result.data.totalPoints || 0,
-            history: result.data.history || [],
-            pointTypeMetadata: result.data.pointTypeMetadata || {} // 🆕 Backend-driven metadata
+            history: result.data.history || []
           }
         };
       }
@@ -2318,7 +2317,7 @@ if (!resumeId) {
       return {
         success: true,
         data: {
-          totalPoints: 25, // 🔧 FIXED: Use actual points from your database
+          totalPoints: 25,
           history: [
             {
               rewardId: '1EB9FA71-DA42-4C0B-B164-436104612143',
@@ -2328,28 +2327,7 @@ if (!resumeId) {
               requestId: 'A9E357B5-5B97-498D-996C-650AE10AD44E',
               description: 'Base referral proof submitted'
             }
-          ],
-          // 🆕 Mock metadata for testing  
-          pointTypeMetadata: {
-            proof_submission: {
-              icon: '📸',
-              title: 'Proof Submissions',
-              description: 'Base points for submitting referral screenshots',
-              color: '#3B82F6'
-            },
-            verification: {
-              icon: '✅',
-              title: 'Verifications',
-              description: 'Bonus points when job seekers confirm referrals',
-              color: '#10B981'
-            },
-            quick_response_bonus: {
-              icon: '⚡',
-              title: 'Quick Response Bonus',
-              description: 'Extra points for responding within 24 hours',
-              color: '#F59E0B'
-            }
-          }
+          ]
         }
       };
     }
