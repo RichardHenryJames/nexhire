@@ -483,6 +483,9 @@ export class JobService {
             VALUES (${placeholders.join(', ')});
             SELECT j.*, jt.Value as JobTypeName, o.Name as OrganizationName, ISNULL(o.Tier, 'Standard') as OrganizationTier
             FROM Jobs j
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            WHERE j.JobID = @param0;
         `;
 
         // Debug logging
@@ -640,6 +643,12 @@ export class JobService {
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
                 ISNULL(o.Tier, 'Standard') as OrganizationTier
             FROM Jobs j
+            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+            ${whereClause}
+        `;
+        }
 
         let fetched: any[];
 
