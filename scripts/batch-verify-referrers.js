@@ -105,13 +105,12 @@ async function batchVerify() {
         .input('uid', sql.UniqueIdentifier, row.UserID)
         .query('UPDATE Users SET IsVerifiedReferrer = 1, UpdatedAt = GETUTCDATE() WHERE UserID = @uid');
 
-      // 2. Mark work experience as verified
+      // 2. Mark work experience as verified (but NOT CompanyEmailVerified - that requires actual OTP)
       await pool.request()
         .input('weid', sql.UniqueIdentifier, row.WorkExperienceID)
         .query(`
           UPDATE WorkExperiences
-          SET VerificationStatus = 1, VerifiedAt = GETUTCDATE(),
-              CompanyEmailVerified = 1, CompanyEmailVerifiedAt = GETUTCDATE()
+          SET VerificationStatus = 1, VerifiedAt = GETUTCDATE()
           WHERE WorkExperienceID = @weid
         `);
 

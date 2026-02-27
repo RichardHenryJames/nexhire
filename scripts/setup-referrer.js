@@ -168,20 +168,20 @@ async function setupReferrer() {
         INSERT INTO WorkExperiences (
           WorkExperienceID, ApplicantID, OrganizationID, CompanyName, JobTitle,
           EmploymentType, StartDate, EndDate, IsCurrent, Location, Country,
-          VerificationStatus, VerifiedAt, CompanyEmailVerified, CompanyEmailVerifiedAt,
+          VerificationStatus, VerifiedAt,
           CreatedAt, UpdatedAt, IsActive
         )
         VALUES (
           NEWID(), @applicantId, @orgId, @companyName, 'Senior Software Engineer',
           'Full-time', @startDate, NULL, 1, 'Bangalore, India', 'India',
-          1, GETUTCDATE(), 1, GETUTCDATE(),
+          1, GETUTCDATE(),
           GETUTCDATE(), GETUTCDATE(), 1
         )
       `);
     console.log(`\n✅ Added work experience:`);
     console.log(`   🏢 ${orgName} — Senior Software Engineer`);
     console.log(`   📅 ${startDateStr} → Present (2y 5m)`);
-    console.log(`   ✓  Verified + CompanyEmailVerified`);
+    console.log(`   ✓  Verified (CompanyEmailVerified requires actual OTP)`);
 
     // ─── Step 6: Update Applicants table ───────────────
     await pool.request()
