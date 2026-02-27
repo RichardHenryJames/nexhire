@@ -94,7 +94,7 @@ export default function PricingScreen() {
 
                 <View style={styles.benefitRow}>
                   <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
-                  <Text style={styles.benefitText}>Direct request to a verified employee</Text>
+                  <Text style={styles.benefitText}>Direct request to verified employees</Text>
                 </View>
                 <View style={styles.benefitRow}>
                   <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
@@ -181,7 +181,7 @@ export default function PricingScreen() {
             <TouchableOpacity
               style={styles.ctaButton}
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('Wallet')}
+              onPress={() => navigation.navigate('WalletRecharge')}
             >
               <Ionicons name="wallet-outline" size={20} color="#fff" />
               <Text style={styles.ctaText}>Add Money to Wallet</Text>
