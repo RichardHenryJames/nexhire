@@ -2136,6 +2136,7 @@ if (!resumeId) {
           minSalary: requestData.minSalary || undefined,
           salaryCurrency: requestData.salaryCurrency || undefined,
           salaryPeriod: requestData.salaryPeriod || undefined,
+          preferredLocations: requestData.preferredLocations || undefined,
         };
         
         if (!payload.resumeID) {
