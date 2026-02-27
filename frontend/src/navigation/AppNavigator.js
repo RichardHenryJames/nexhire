@@ -292,7 +292,7 @@ function JobSeekerFlow() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: colors.background, overflow: 'hidden' },
+        cardStyle: { backgroundColor: colors.background, overflowX: 'hidden' },
         gestureEnabled: true,
         gestureDirection: 'horizontal',
         cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
@@ -322,7 +322,7 @@ function EmployerFlow() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: colors.background, overflow: 'hidden' },
+        cardStyle: { backgroundColor: colors.background, overflowX: 'hidden' },
         gestureEnabled: true,
         gestureDirection: 'horizontal',
         cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
@@ -366,7 +366,7 @@ function AuthStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: colors.background, overflow: 'hidden' },
+        cardStyle: { backgroundColor: colors.background, overflowX: 'hidden' },
         gestureEnabled: true,
         gestureDirection: 'horizontal',
         cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
@@ -599,7 +599,7 @@ function MainStack() {
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: colors.background, overflow: 'hidden' },
+        cardStyle: { backgroundColor: colors.background, overflowX: 'hidden' },
         gestureEnabled: true,
         gestureDirection: 'horizontal',
         cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
