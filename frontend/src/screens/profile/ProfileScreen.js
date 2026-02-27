@@ -442,19 +442,21 @@ export default function ProfileScreen({ navigation, route }) {
 
             {userType === 'JobSeeker' && (
               <>
-                {/* Referral Points Button */}
-                <TouchableOpacity 
-                  style={styles.actionButtonThird}
-                  onPress={() => navigation.navigate('Earnings')}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.actionButtonIcon, { backgroundColor: '#FFF4E6' }]}>
-                    <Ionicons name="gift" size={20} color="#FF9500" />
-                  </View>
-                  <View style={styles.actionButtonContent}>
-                    <Text style={styles.actionButtonLabel}>Earnings</Text>
-                  </View>
-                </TouchableOpacity>
+                {/* Earnings Button - only for verified referrers */}
+                {isVerifiedReferrer && (
+                  <TouchableOpacity 
+                    style={styles.actionButtonThird}
+                    onPress={() => navigation.navigate('Earnings')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.actionButtonIcon, { backgroundColor: '#FFF4E6' }]}>
+                      <Ionicons name="gift" size={20} color="#FF9500" />
+                    </View>
+                    <View style={styles.actionButtonContent}>
+                      <Text style={styles.actionButtonLabel}>Earnings</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
 
                 {/* Share & Earn Button */}
                 <TouchableOpacity 

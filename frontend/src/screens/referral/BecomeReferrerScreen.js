@@ -434,7 +434,7 @@ export default function BecomeReferrerScreen({ navigation }) {
       <Text style={styles.sectionTitle}>Why become a referrer?</Text>
       
       {[
-        { icon: 'cash-outline', color: '#10B981', title: 'Earn upto ₹100 & exciting RefPoints', desc: 'Get paid for every successful referral you make' },
+        { icon: 'cash-outline', color: '#10B981', title: 'Earn Per Referral & exciting RefPoints', desc: 'Top referrers earn more than ₹5,000/month!' },
         { icon: 'briefcase-outline', color: '#EC4899', title: 'Post jobs for free', desc: 'Post referral jobs at your company at no cost' },
         { icon: 'ribbon-outline', color: '#8B5CF6', title: 'Verified badge', desc: 'Stand out with a verified referrer badge on your profile' },
         { icon: 'notifications-outline', color: '#F59E0B', title: 'Get notified instantly', desc: 'Receive alerts when someone needs a referral at your company' },

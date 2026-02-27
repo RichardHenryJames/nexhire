@@ -178,12 +178,12 @@ export default function ProfileSlider({ visible, onClose }) {
           onPress: () => navigateTo('Wallet'),
           rightText: walletBalance !== null ? `₹${walletBalance}` : null,
         },
-        {
+        ...((isVerifiedReferrer || isAdmin) ? [{
           icon: 'trending-up-outline',
           label: 'Earnings',
           onPress: () => navigateTo('Earnings'),
           highlight: true,
-        },
+        }] : []),
         {
           icon: 'megaphone-outline',
           label: 'Social Share',
