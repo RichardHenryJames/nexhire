@@ -14,12 +14,14 @@ import { Ionicons } from '@expo/vector-icons';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 
 export default function OrganizationDetailsScreen({ route, navigation }) {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet } = responsive;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -212,7 +214,25 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
                     </Text>
                   </View>
                 )}
-              </View>
+                {/* Tier badge - admin only */}
+                {organization.tier && user?.userType === 'Admin' && (
+                  <View style={[
+                    styles.badge,
+                    { backgroundColor: organization.tier === 'Elite' ? '#8B5CF615' : organization.tier === 'Premium' ? '#F59E0B15' : colors.gray200 }
+                  ]}>
+                    <Ionicons
+                      name={organization.tier === 'Elite' ? 'diamond' : organization.tier === 'Premium' ? 'star' : 'business'}
+                      size={12}
+                      color={organization.tier === 'Elite' ? '#8B5CF6' : organization.tier === 'Premium' ? '#F59E0B' : colors.gray500}
+                    />
+                    <Text style={[
+                      styles.badgeText,
+                      { color: organization.tier === 'Elite' ? '#8B5CF6' : organization.tier === 'Premium' ? '#F59E0B' : colors.gray500 }
+                    ]}>
+                      {organization.tier}
+                    </Text>
+                  </View>
+                )}
 
               {/* Quick Links */}
               <View style={styles.quickLinksRow}>
