@@ -1699,6 +1699,7 @@ BEGIN
         MinSalary DECIMAL(12,2) NULL,
         SalaryCurrency NVARCHAR(10) NULL DEFAULT ('INR'),
         SalaryPeriod NVARCHAR(20) NULL DEFAULT ('Annual'),
+        PreferredLocations NVARCHAR(500) NULL,
         CONSTRAINT PK__Referral__33A8519A5B6D3FB8 PRIMARY KEY (RequestID)
     );
     PRINT 'Created table ReferralRequests';
