@@ -1646,6 +1646,30 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       return { valid: false, reason: 'Name too long with taglines' };
     }
 
+    // Reject: Numbered prefixes like "01 Hypertherm", "10 Fitness" (number + space + name)
+    // Allow known patterns: 1-800, 1st, 21st, 100x, 10x, 1Password, etc.
+    const knownNumberedNames = /^(1-800|1-888|1-877|1st|2nd|3rd|21st|100x|10x|1Password|1mg|3M|8am|8VC|360|365|23andMe)/i;
+    if (/^\d{1,2}\s+[A-Z]/i.test(trimmed) && !knownNumberedNames.test(trimmed)) {
+      return { valid: false, reason: 'Numbered prefix (likely scraped rank or ID)' };
+    }
+
+    // Reject: Names that are clearly street addresses
+    if (/^\d+\s+(street|avenue|road|rd|blvd|drive|dr|lane|ln|way|mill|place|pl)\b/i.test(trimmed) ||
+        /\d+\s+(street|avenue|road|rd)\s*$/i.test(trimmed)) {
+      return { valid: false, reason: 'Street address instead of company name' };
+    }
+
+    // Reject: HTML entities in name (scraper didn't decode properly)
+    if (/&#\d+;|&amp;|&lt;|&gt;|&quot;/.test(trimmed)) {
+      return { valid: false, reason: 'Contains HTML entities (not decoded)' };
+    }
+
+    // Reject: Pure numbers or mostly numbers (like "034", "169Pi" with <3 alpha chars)
+    const alphaChars = (trimmed.match(/[a-zA-Z]/g) || []).length;
+    if (alphaChars < 2) {
+      return { valid: false, reason: 'Too few alphabetic characters' };
+    }
+
     return { valid: true };
   }
 
@@ -1655,6 +1679,17 @@ Apply now to join a dynamic team that's building the future! 🌟`;
    */
   private static sanitizeCompanyName(name: string): string {
     let cleaned = name.trim();
+
+    // Decode HTML entities FIRST (scrapers sometimes pass encoded names)
+    cleaned = cleaned
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x27;/g, "'")
+      .replace(/&#x2F;/g, '/')
+      .replace(/&nbsp;/g, ' ');
 
     // Strip pipe-separated taglines: "Nubis | Salesforce Solutions" → "Nubis"
     // Skip if first part is too short (e.g. "R|O|C") or pipe is part of the name
@@ -1667,6 +1702,24 @@ Apply now to join a dynamic team that's building the future! 🌟`;
 
     // Strip 4-digit numbered prefix: "6032-DePuy Synthes" → "DePuy Synthes"
     cleaned = cleaned.replace(/^\d{4,}-/, '').trim();
+
+    // Strip 1-2 digit numbered prefix with space: "01 Hypertherm" → "Hypertherm", "10 Fitness" → "Fitness"  
+    // Skip known patterns: 1-800, 1st, 100x, 10x, 1Password, 1mg, 3M, 360, 23andMe, etc.
+    const knownNumbered = /^(1-800|1-888|1-877|1st|2nd|3rd|21st|100x|10x|1Password|1mg|3M|8am|8VC|360|365|23andMe)/i;
+    if (/^\d{1,2}\s+[A-Z]/i.test(cleaned) && !knownNumbered.test(cleaned)) {
+      cleaned = cleaned.replace(/^\d{1,2}\s+/, '').trim();
+    }
+
+    // Strip parenthetical suffixes that are just clarifiers: "LILT (Production)" → "LILT"
+    if (/\([^)]+\)\s*$/.test(cleaned)) {
+      const withoutParens = cleaned.replace(/\s*\([^)]+\)\s*$/, '').trim();
+      if (withoutParens.length >= 3) {
+        cleaned = withoutParens;
+      }
+    }
+
+    // Collapse multiple spaces
+    cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
 
     // Strip long dash taglines (only if result > 60 chars and part after dash looks like a tagline)
     if (cleaned.length > 60 && cleaned.includes(' - ')) {
