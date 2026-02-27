@@ -1673,8 +1673,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     }
 
     // Reject: Names that are clearly street addresses
-    if (/^\d+\s+(street|avenue|road|rd|blvd|drive|dr|lane|ln|way|mill|place|pl)\b/i.test(trimmed) ||
-        /\d+\s+(street|avenue|road|rd)\s*$/i.test(trimmed)) {
+    // Catches: "198 Waterman Avenue", "1855 Powder Mill Rd", "221 B Baker ST"
+    if (/^\d+\s+.*\b(street|avenue|road|rd|blvd|boulevard|drive|dr|lane|ln|way|mill|place|pl|court|ct|circle|cir)\b/i.test(trimmed) ||
+        /\b\d+\s+(street|avenue|road|rd|blvd|drive)\s*$/i.test(trimmed)) {
       return { valid: false, reason: 'Street address instead of company name' };
     }
 
@@ -1683,9 +1684,11 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       return { valid: false, reason: 'Contains HTML entities (not decoded)' };
     }
 
-    // Reject: Pure numbers or mostly numbers (like "034", "169Pi" with <3 alpha chars)
+    // Reject: Pure numbers or mostly numbers (like "034", "169Pi" with <2 alpha chars)
+    // Exception: known brands with few alpha chars (3M, 100x, 10x, 8am, 8VC, etc.)
+    const knownFewAlpha = /^(3M|100x|10x|8am|8VC|1mg|1X|H1|R1|S3|N2)$/i;
     const alphaChars = (trimmed.match(/[a-zA-Z]/g) || []).length;
-    if (alphaChars < 2) {
+    if (alphaChars < 2 && !knownFewAlpha.test(trimmed)) {
       return { valid: false, reason: 'Too few alphabetic characters' };
     }
 
@@ -1764,6 +1767,12 @@ Apply now to join a dynamic team that's building the future! 🌟`;
 
   // 🏢 ENHANCED: Get or create organization with Fortune 500 matching AND smart normalization
   private static async getOrCreateOrganizationWithEnhancements(companyName: string, source: string, job: ScrapedJob): Promise<number> {
+    // 🛡️ PRE-CHECK: Reject email addresses BEFORE sanitization (sanitizer converts @ to space)
+    if (/@.*\.[a-z]{2,}$/i.test(companyName.trim())) {
+      console.warn(`⚠️ Skipping email address as company name: "${companyName}"`);
+      throw new Error(`Invalid company name: Email address`);
+    }
+
     // 🧹 STEP 0: Sanitize company name (strip taglines, numbered prefixes, etc.)
     const cleanName = this.sanitizeCompanyName(companyName);
     
