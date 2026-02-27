@@ -1349,7 +1349,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       // FIRST: Try exact match on original name (prevents duplicates)
       if (originalName) {
         const exactNameQuery = `
-          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry, Tier 
           FROM Organizations 
           WHERE Name = @param0 AND IsActive = 1
         `;
@@ -1376,7 +1376,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       
       // Use indexed NormalizedName column for fast lookups (index: IX_Organizations_NormalizedName)
       const exactQuery = `
-        SELECT TOP 5 OrganizationID, Name, LogoURL, Website, Industry 
+        SELECT TOP 5 OrganizationID, Name, LogoURL, Website, Industry, Tier 
         FROM Organizations 
         WHERE NormalizedName LIKE @param0 + '%'
           AND IsActive = 1
@@ -1414,7 +1414,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
         console.log(`🔍 Checking HR pattern: "${normalizedName}" -> "${baseCompanyName}"`);
         
         const hrQuery = `
-          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+          SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry, Tier 
           FROM Organizations 
           WHERE Name = @param0 AND IsActive = 1
         `;
@@ -1427,7 +1427,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       
       // FOURTH: Check for core name match (e.g., "HCL Technologies" should match "HCL Technologies Limited")
       const coreNameQuery = `
-        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry 
+        SELECT TOP 1 OrganizationID, Name, LogoURL, Website, Industry, Tier 
         FROM Organizations 
         WHERE (Name LIKE @param0 + '%' OR @param0 LIKE Name + '%')
           AND LEN(Name) >= 3
@@ -1447,7 +1447,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       
       // FIFTH: Fetch potential matches and calculate similarity
       const candidatesQuery = `
-        SELECT TOP 30 OrganizationID, Name, LogoURL, Website, Industry 
+        SELECT TOP 30 OrganizationID, Name, LogoURL, Website, Industry, Tier 
         FROM Organizations 
         WHERE LEN(Name) BETWEEN @param0 AND @param1
           AND IsActive = 1
@@ -1810,6 +1810,10 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       // Don't let scraper overwrite industry, description, or LinkedIn for known companies
       const knownCompany = findFortune500Match(companyName);
       
+      // 🛡️ GUARD: Never overwrite Description, Website, Logo, or Industry for Elite/Premium tier companies
+      // Their data is manually curated and authoritative
+      const isProtectedTier = existingData.Tier === 'Elite' || existingData.Tier === 'Premium';
+      
       const enhancedData = await this.getEnhancedOrganizationData(companyName, source, job);
       
       // Only update if we have new/better information
@@ -1818,7 +1822,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       let paramIndex = 0;
       
       // Update LogoURL if we have one and existing doesn't
-      if (enhancedData.logoUrl && !existingData.LogoURL) {
+      if (enhancedData.logoUrl && !existingData.LogoURL && !isProtectedTier) {
         updates.push(`LogoURL = @param${paramIndex}`);
         params.push(enhancedData.logoUrl);
         paramIndex++;
@@ -1826,7 +1830,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       }
       
       // Update Website if we have one and existing doesn't
-      if (enhancedData.website && !existingData.Website) {
+      if (enhancedData.website && !existingData.Website && !isProtectedTier) {
         updates.push(`Website = @param${paramIndex}`);
         params.push(enhancedData.website);
         paramIndex++;
@@ -1834,8 +1838,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       }
       
       // Update Description if we have better info (from Clearbit)
-      // Don't overwrite for known companies unless existing is auto-generated junk
-      if (enhancedData.description && enhancedData.description !== `${companyName} - ${enhancedData.industry} company`) {
+      // Don't overwrite for known companies or Elite/Premium tier
+      if (enhancedData.description && enhancedData.description !== `${companyName} - ${enhancedData.industry} company` && !isProtectedTier) {
         if (!existingData.Description || existingData.Description.includes('Auto-created from')) {
           if (!knownCompany || !existingData.Description) {
             updates.push(`Description = @param${paramIndex}`);
@@ -1857,8 +1861,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       }
       
       // Update Industry if existing is truly generic and we have better info
-      // NEVER override for known companies (Fortune 500 / Notable) — their industry is authoritative
-      if (!knownCompany) {
+      // NEVER override for known companies (Fortune 500 / Notable) or Elite/Premium tier
+      if (!knownCompany && !isProtectedTier) {
         const trulyGenericIndustries = ['IT Jobs', 'Unknown', '', null];
         if (enhancedData.industry && !trulyGenericIndustries.includes(enhancedData.industry) && 
             trulyGenericIndustries.includes(existingData.Industry)) {
