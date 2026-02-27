@@ -401,17 +401,8 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
       WHERE UserID = @param0
     `, [userId]);
 
-    // 9. Increment VerifiedReferrersCount in Organizations table
-    // Only increment if user doesn't already have another verified entry for this same organization
-    if (organizationId && !userAlreadyVerifiedForOrg) {
-      await dbService.executeQuery(`
-        UPDATE Organizations
-        SET VerifiedReferrersCount = ISNULL(VerifiedReferrersCount, 0) + 1,
-            UpdatedAt = GETUTCDATE()
-        WHERE OrganizationID = @param0
-      `, [organizationId]);
-      console.log(`Incremented VerifiedReferrersCount for OrganizationID ${organizationId}`);
-    }
+    // 9. VerifiedReferrersCount is handled by nightly reconciliation timer
+    // No manual increment needed - timer recalculates from actual data daily
 
     return {
       success: true,
