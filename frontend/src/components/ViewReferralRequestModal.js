@@ -439,6 +439,14 @@ export default function ViewReferralRequestModal({
                 ) : null}
               </View>
             )}
+
+            {/* Preferred Locations for open-to-any requests */}
+            {referralRequest?.OpenToAnyCompany && referralRequest?.PreferredLocations ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 }}>
+                <Ionicons name="location-outline" size={12} color={colors.primary} />
+                <Text style={{ fontSize: 11, color: colors.primary }}>Preferred: {referralRequest.PreferredLocations}</Text>
+              </View>
+            ) : null}
           </View>
 
           {/* Reward Info Banner */}

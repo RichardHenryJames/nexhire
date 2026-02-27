@@ -88,6 +88,7 @@ const [formData, setFormData] = useState({
   minSalary: '',
   salaryCurrency: 'INR',
   salaryPeriod: 'Annual',
+  preferredLocations: '',
 });
 
 const [errors, setErrors] = useState({});
@@ -504,6 +505,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
         minSalary: openToAnyCompany && formData.minSalary ? parseFloat(formData.minSalary) : undefined,
         salaryCurrency: openToAnyCompany && formData.minSalary ? formData.salaryCurrency : undefined,
         salaryPeriod: openToAnyCompany && formData.minSalary ? formData.salaryPeriod : undefined,
+        preferredLocations: openToAnyCompany && formData.preferredLocations?.trim() ? formData.preferredLocations.trim() : undefined,
       };
 
 
@@ -755,9 +757,9 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
                 )}
               </View>
 
-              {/* Open to any company checkbox */}
+              {/* Open to any company checkbox - highlighted */}
               <TouchableOpacity
-                style={styles.checkboxRow}
+                style={[styles.checkboxRow, { backgroundColor: openToAnyCompany ? '#10B98110' : colors.primary + '08', borderWidth: 1, borderColor: openToAnyCompany ? '#10B981' : colors.primary + '30', borderRadius: 10, padding: 12, marginTop: 8 }]}
                 onPress={() => {
                   setOpenToAnyCompany(prev => !prev);
                   if (!openToAnyCompany) {
@@ -772,7 +774,10 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
                 <View style={[styles.checkbox, openToAnyCompany && styles.checkboxChecked]}>
                   {openToAnyCompany && <Ionicons name="checkmark" size={14} color="#fff" />}
                 </View>
-                <Text style={styles.checkboxLabel}>I'm flexible on company, just match me with the right role</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.checkboxLabel, { fontWeight: '600' }]}>I'm flexible on company, just match me with the right role</Text>
+                  <Text style={{ fontSize: 11, color: colors.gray500, marginTop: 2 }}>Your request is broadcast to referrers across all companies</Text>
+                </View>
               </TouchableOpacity>
 
           {/* Salary Preferences - only when open to any company */}
@@ -802,6 +807,22 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
                   <Text style={styles.salarySuffixText}>{formData.salaryPeriod === 'Annual' ? '/yr' : '/mo'}</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          )}
+
+          {/* Preferred Locations - only when open to any company */}
+          {openToAnyCompany && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Preferred Locations <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}>(optional)</Text></Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Bangalore, Hyderabad, Remote"
+                placeholderTextColor={colors.gray500}
+                value={formData.preferredLocations}
+                onChangeText={(value) => updateFormData('preferredLocations', value)}
+                maxLength={200}
+              />
+              <Text style={{ fontSize: 11, color: colors.gray400, marginTop: 4 }}>Comma-separated city preferences</Text>
             </View>
           )}
 

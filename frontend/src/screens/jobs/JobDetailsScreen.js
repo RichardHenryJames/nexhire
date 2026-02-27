@@ -629,12 +629,15 @@ const { jobId, fromReferralRequest } = route.params || {};
   };
 
   const formatLocation = () => {
-    const locationParts = [];
-    if (job.City) locationParts.push(job.City);
-    if (job.State) locationParts.push(job.State);
-    if (job.Country) locationParts.push(job.Country);
-    
-    let location = locationParts.join(', ') || job.Location || 'Location not specified';
+    // Prefer Location field (has city+area from scraper), fallback to City/State/Country
+    let location = job.Location;
+    if (!location) {
+      const locationParts = [];
+      if (job.City) locationParts.push(job.City);
+      if (job.State) locationParts.push(job.State);
+      if (job.Country) locationParts.push(job.Country);
+      location = locationParts.join(', ') || 'Location not specified';
+    }
     
     if (job.IsRemote) {
       location += ' (Remote)';

@@ -259,11 +259,11 @@ export class ReferralService {
                     INSERT INTO ReferralRequests (
                         RequestID, ExtJobID, ApplicantID, ResumeID, Status, RequestedAt,
                         OrganizationID, ReferralMessage, JobTitle, JobURL,
-                        OpenToAnyCompany, MinSalary, SalaryCurrency, SalaryPeriod
+                        OpenToAnyCompany, MinSalary, SalaryCurrency, SalaryPeriod, PreferredLocations
                     ) VALUES (
                         @param0, @param1, @param2, @param3, 'Pending', GETUTCDATE(),
                         @param4, @param5, @param6, @param7,
-                        @param8, @param9, @param10, @param11
+                        @param8, @param9, @param10, @param11, @param12
                     )`;
                 
                 const organizationId = dto.organizationId && dto.organizationId !== '999999' 
@@ -272,7 +272,8 @@ export class ReferralService {
                 await dbService.executeQuery(insertQuery, [
                     requestId, dto.extJobID, applicantId, dto.resumeID, organizationId, 
                     dto.referralMessage || null, dto.jobTitle, dto.jobUrl || null,
-                    dto.openToAnyCompany ? 1 : 0, dto.minSalary || null, dto.salaryCurrency || null, dto.salaryPeriod || null
+                    dto.openToAnyCompany ? 1 : 0, dto.minSalary || null, dto.salaryCurrency || null, dto.salaryPeriod || null,
+                    dto.preferredLocations || null
                 ]);
                 
                 // Update referrer stats for external referrals
@@ -376,6 +377,7 @@ export class ReferralService {
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
                     rr.OrganizationID, rr.ReferralMessage, rr.JobTitle, rr.JobURL,
                     rr.OpenToAnyCompany, rr.MinSalary, rr.SalaryCurrency, rr.SalaryPeriod,
+                    rr.PreferredLocations,
                     -- ✅ DERIVE referral type from data presence (no ReferralType column)
                     CASE WHEN rr.ExtJobID IS NOT NULL THEN 'external' ELSE 'internal' END as ReferralType,
                     -- Internal job data (will be null for external)
@@ -593,7 +595,8 @@ export class ReferralService {
                     j.ExperienceMin as JobExperienceMin,
                     j.ExperienceMax as JobExperienceMax,
                     -- ✅ AssignedReferrerID now stores UserID directly
-                    rr.AssignedReferrerID as AssignedReferrerUserID
+                    rr.AssignedReferrerID as AssignedReferrerUserID,
+                    rr.PreferredLocations
                 FROM ReferralRequests rr
                 -- ✅ CHANGED: LEFT JOIN instead of INNER JOIN to include external referrals
                 LEFT JOIN Jobs j ON rr.JobID = j.JobID
@@ -1010,6 +1013,7 @@ export class ReferralService {
                     rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
                     rr.JobURL, rr.ReferralMessage,
                     rr.OpenToAnyCompany, rr.MinSalary, rr.SalaryCurrency, rr.SalaryPeriod,
+                    rr.PreferredLocations,
                     -- For INTERNAL referrals (JobID not null)
                     j.Title as InternalJobTitle,
                     jo.Name as InternalCompanyName,
