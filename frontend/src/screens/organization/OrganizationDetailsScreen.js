@@ -221,7 +221,7 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
                     { backgroundColor: organization.tier === 'Elite' ? '#8B5CF615' : organization.tier === 'Premium' ? '#F59E0B15' : colors.gray200 }
                   ]}>
                     <Ionicons
-                      name={organization.tier === 'Elite' ? 'diamond' : organization.tier === 'Premium' ? 'star' : 'business'}
+                      name={organization.tier === 'Elite' ? 'trophy' : organization.tier === 'Premium' ? 'star' : 'business'}
                       size={12}
                       color={organization.tier === 'Elite' ? '#8B5CF6' : organization.tier === 'Premium' ? '#F59E0B' : colors.gray500}
                     />
