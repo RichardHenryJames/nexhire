@@ -4123,6 +4123,45 @@ app.timer("referralExpirationTimer", {
 });
 
 // ========================================================================
+// NIGHTLY REFERRER COUNT RECONCILIATION
+// ========================================================================
+
+app.timer("referrerCountReconciliationTimer", {
+  schedule: "0 30 3 * * *", // Every day at 3:30 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    context.log("========================================================================");
+    context.log("         REFERRER COUNT RECONCILIATION STARTED");
+    context.log("========================================================================");
+
+    try {
+      const { dbService } = await import("./src/services/database.service");
+
+      // Recalculate VerifiedReferrersCount for all organizations from actual data
+      const result = await dbService.executeQuery(`
+        UPDATE o
+        SET o.VerifiedReferrersCount = ISNULL(counts.ActualCount, 0)
+        FROM Organizations o
+        LEFT JOIN (
+          SELECT w.OrganizationID, COUNT(DISTINCT u.UserID) as ActualCount
+          FROM WorkExperiences w
+          JOIN Applicants a ON w.ApplicantID = a.ApplicantID
+          JOIN Users u ON a.UserID = u.UserID
+          WHERE u.IsVerifiedReferrer = 1 AND u.IsActive = 1 AND (w.IsCurrent = 1 OR w.EndDate IS NULL)
+          GROUP BY w.OrganizationID
+        ) counts ON o.OrganizationID = counts.OrganizationID
+        WHERE o.VerifiedReferrersCount != ISNULL(counts.ActualCount, 0)
+      `, []);
+
+      const rowsAffected = result.rowsAffected?.[0] || 0;
+      context.log(`✅ Reconciliation complete. ${rowsAffected} organizations updated.`);
+
+    } catch (error: any) {
+      context.error(`❌ Referrer count reconciliation failed: ${error.message}`);
+    }
+  }
+});
+
+// ========================================================================
 // IN-APP NOTIFICATION ENDPOINTS
 // ========================================================================
 
