@@ -289,8 +289,7 @@ function Get-OrganizationsToEnrich {
 
     # ✅ OPTIMIZED: Always filter to only organizations with missing data
     # No need to iterate over fully enriched organizations
-    # 🛡️ TIER PROTECTION: Elite orgs are EXCLUDED entirely (manually curated)
-    # Premium orgs are included but only for filling missing fields
+    # 🛡️ TIER PROTECTION: Elite AND Premium orgs are EXCLUDED (manually curated, 100% data)
     $query = @"
 SELECT
     OrganizationID,
@@ -304,7 +303,7 @@ SELECT
     ISNULL(Tier, 'Standard') as Tier
 FROM Organizations
 WHERE IsActive = 1
-  AND ISNULL(Tier, 'Standard') != 'Elite'
+  AND ISNULL(Tier, 'Standard') NOT IN ('Elite', 'Premium')
   AND (
     Website IS NULL OR Website = '' OR
     LogoURL IS NULL OR LogoURL = '' OR
@@ -312,9 +311,7 @@ WHERE IsActive = 1
     Description IS NULL OR Description = '' OR
     Industry IS NULL OR Industry = ''
   )
-ORDER BY 
-  CASE WHEN ISNULL(Tier, 'Standard') = 'Premium' THEN 0 ELSE 1 END,
-  CreatedAt DESC
+ORDER BY CreatedAt DESC
 "@
 
     return Invoke-Sqlcmd -ConnectionString $ConnectionString -Query $query -QueryTimeout 60
@@ -437,11 +434,6 @@ function Enrich-Organization {
 
     $updates = @{}
     $enrichmentCount = 0
-    $isPremium = $Organization.Tier -eq 'Premium'
-
-    if ($isPremium) {
-        Write-Host "      🛡️ Premium tier - only filling missing fields, never overwriting" -ForegroundColor Magenta
-    }
 
     # 1. Find website if missing
  if ([string]::IsNullOrEmpty($Organization.Website) -and -not $SkipWebsites) {
