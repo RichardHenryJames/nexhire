@@ -208,16 +208,8 @@ async function setupReferrer() {
       `);
     console.log(`✅ Users.IsVerifiedReferrer = 1`);
 
-    // ─── Step 8: Increment org verified referrers count ─
-    await pool.request()
-      .input('orgId', sql.Int, orgId)
-      .query(`
-        UPDATE Organizations
-        SET VerifiedReferrersCount = VerifiedReferrersCount + 1,
-            UpdatedAt = GETUTCDATE()
-        WHERE OrganizationID = @orgId
-      `);
-    console.log(`✅ Organizations.VerifiedReferrersCount incremented`);
+    // ─── Step 8: VerifiedReferrersCount handled by nightly reconciliation timer ─
+    console.log(`✅ VerifiedReferrersCount will be updated by nightly timer`);
 
     // ─── Summary ───────────────────────────────────────
     console.log('\n' + '═'.repeat(50));

@@ -511,9 +511,6 @@ export default function BecomeReferrerScreen({ navigation }) {
                       </View>
                     )}
                     <Text style={styles.dropdownText}>{org.name || org.Name}</Text>
-                    {(org.verifiedReferrersCount || org.VerifiedReferrersCount) > 0 && (
-                      <Text style={styles.dropdownBadge}>{org.verifiedReferrersCount || org.VerifiedReferrersCount} referrers</Text>
-                    )}
                   </TouchableOpacity>
                 ))}
               </View>

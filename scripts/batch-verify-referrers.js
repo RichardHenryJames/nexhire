@@ -115,12 +115,7 @@ async function batchVerify() {
           WHERE WorkExperienceID = @weid
         `);
 
-      // 3. Increment org verified referrers count
-      if (row.OrganizationID) {
-        await pool.request()
-          .input('oid', sql.Int, row.OrganizationID)
-          .query('UPDATE Organizations SET VerifiedReferrersCount = VerifiedReferrersCount + 1, UpdatedAt = GETUTCDATE() WHERE OrganizationID = @oid');
-      }
+      // 3. VerifiedReferrersCount handled by nightly reconciliation timer
 
       console.log(`  ✅ ${row.FirstName} ${row.LastName} @ ${row.CompanyName}` +
         (row.OrganizationID ? ` (OrgID: ${row.OrganizationID})` : ' (no org link)'));
