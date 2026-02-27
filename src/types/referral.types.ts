@@ -109,6 +109,7 @@ export interface CreateReferralRequestDto {
     minSalary?: number; // Minimum expected salary (only for openToAnyCompany)
     salaryCurrency?: string; // Currency code: INR, USD, etc.
     salaryPeriod?: string; // 'Annual' or 'Monthly'
+    preferredLocations?: string; // Comma-separated preferred locations (only for openToAnyCompany)
 }
 
 export interface ClaimReferralRequestDto {
