@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Platform,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -181,7 +182,13 @@ export default function PricingScreen() {
             <TouchableOpacity
               style={styles.ctaButton}
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('WalletRecharge')}
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  window.location.href = '/wallet/recharge';
+                } else {
+                  navigation.navigate('WalletRecharge');
+                }
+              }}
             >
               <Ionicons name="wallet-outline" size={20} color="#fff" />
               <Text style={styles.ctaText}>Add Money to Wallet</Text>

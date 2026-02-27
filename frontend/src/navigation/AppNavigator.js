@@ -826,6 +826,11 @@ function MainStack() {
         component={EarningsScreen}
         options={{ headerShown: false }}
       />
+      <Stack.Screen
+        name="Pricing"
+        component={PricingScreen}
+        options={{ headerShown: false, title: 'Pricing - RefOpen Referral & AI Tools' }}
+      />
     </Stack.Navigator>
   );
 }
