@@ -1595,6 +1595,25 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       return { valid: false, reason: 'Staffing agency placeholder' };
     }
 
+    // Reject: Email addresses used as company names
+    if (/@.*\.\w{2,}$/.test(trimmed)) {
+      return { valid: false, reason: 'Email address instead of company name' };
+    }
+
+    // Reject: "Work at X" pattern (job title leaked into company name)
+    if (/^work\s+at\s+/i.test(trimmed)) {
+      return { valid: false, reason: 'Job title prefix (Work at)' };
+    }
+
+    // Reject: Names that are just a personal website domain
+    if (/^[a-z0-9-]+\.(com|org|net|co\.uk)$/i.test(trimmed) && !/\s/.test(trimmed)) {
+      // Allow known company-domains: Bill.com, Cars.com, Alarm.com, Realtor.com, etc.
+      const knownDomainBrands = /^(Bill|Cars|Alarm|Realtor|Crypto|Blockchain|Shine|Impact|Wealth|Job|You|Media|Code|Water|Visit|Capital)\.(com|org|net|io)$/i;
+      if (!knownDomainBrands.test(trimmed)) {
+        return { valid: false, reason: 'Personal website domain instead of company name' };
+      }
+    }
+
     // Reject: Malformed (starts with *, ., or weird patterns)
     if (/^[*.]|\.$/i.test(trimmed)) {
       return { valid: false, reason: 'Malformed name' };
@@ -1690,6 +1709,14 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       .replace(/&#x27;/g, "'")
       .replace(/&#x2F;/g, '/')
       .replace(/&nbsp;/g, ' ');
+
+    // Strip @ location suffixes: "Linde@India" → "Linde India", "Company @ Location" → "Company"
+    if (cleaned.includes('@') && !cleaned.includes('@gmail') && !cleaned.includes('@yahoo') && !cleaned.includes('@outlook')) {
+      cleaned = cleaned.replace(/@/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    }
+
+    // Strip "Work at " prefix if present
+    cleaned = cleaned.replace(/^Work\s+at\s+/i, '').trim();
 
     // Strip pipe-separated taglines: "Nubis | Salesforce Solutions" → "Nubis"
     // Skip if first part is too short (e.g. "R|O|C") or pipe is part of the name
