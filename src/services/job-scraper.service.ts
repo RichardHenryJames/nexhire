@@ -1849,14 +1849,16 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       
     } catch (insertError: any) {
       // Handle race condition: Another process inserted the same organization
-      if (insertError.message && insertError.message.includes('UNIQUE KEY constraint')) {
-        console.log(`🔄 Organization "${canonicalName}" was just created by another process, retrieving it...`);
+      // Can trigger from either Name unique constraint or NormalizedName unique index
+      if (insertError.message && insertError.message.includes('UNIQUE')) {
+        console.log(`🔄 Organization "${canonicalName}" already exists (duplicate detected), retrieving it...`);
         
-        // Retrieve the organization that was just created
+        // Try exact name first, then NormalizedName match
         const retrieveQuery = `
-          SELECT OrganizationID 
+          SELECT TOP 1 OrganizationID 
           FROM Organizations 
-          WHERE Name = @param0 AND IsActive = 1
+          WHERE (Name = @param0 OR NormalizedName = LOWER(REPLACE(REPLACE(@param0, ' ', ''), '.', '')))
+            AND IsActive = 1
         `;
         const retrieveResult = await dbService.executeQuery(retrieveQuery, [canonicalName]);
         

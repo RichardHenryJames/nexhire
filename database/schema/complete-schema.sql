@@ -1344,6 +1344,12 @@ BEGIN
     CREATE NONCLUSTERED INDEX IX_Organizations_NormalizedName ON Organizations(OrganizationID, Name, LogoURL, Website, Industry, NormalizedName, IsActive);
 END
 GO
+-- Unique constraint on NormalizedName for active orgs: prevents duplicates like 'GlobalLogic' vs 'Global Logic'
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'UX_Organizations_NormalizedName_Active')
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UX_Organizations_NormalizedName_Active ON Organizations(NormalizedName) WHERE IsActive = 1;
+END
+GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_Search_Covering')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Organizations_Search_Covering ON Organizations(OrganizationID, LogoURL, Industry, IsActive, IsFortune500, Name);
