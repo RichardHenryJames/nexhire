@@ -357,6 +357,190 @@ INSERT INTO ReferenceMetadata (ReferenceID, RefType, Value, Category, Descriptio
 INSERT INTO ReferenceMetadata (ReferenceID, RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (345, N'Skill', N'Presentation', N'Soft Skill', N'Public speaking', 1, '2025-12-05T18:07:13.406Z', '2025-12-05T18:07:13.406Z');
 INSERT INTO ReferenceMetadata (ReferenceID, RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (346, N'Skill', N'Project Management', N'Soft Skill', N'Managing projects', 1, '2025-12-05T18:07:13.406Z', '2025-12-05T18:07:13.406Z');
 INSERT INTO ReferenceMetadata (ReferenceID, RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (347, N'Skill', N'Stakeholder Management', N'Soft Skill', N'Managing relationships', 1, '2025-12-05T18:07:13.406Z', '2025-12-05T18:07:13.406Z');
+-- Additional Programming Languages
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Haskell', N'Programming Language', N'Functional programming language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Elixir', N'Programming Language', N'Functional concurrent language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Clojure', N'Programming Language', N'Lisp for JVM', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Erlang', N'Programming Language', N'Telecom concurrent language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Lua', N'Programming Language', N'Lightweight scripting language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'F#', N'Programming Language', N'.NET functional language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Julia', N'Programming Language', N'High-performance scientific computing', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'COBOL', N'Programming Language', N'Legacy business language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Fortran', N'Programming Language', N'Scientific computing language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Assembly', N'Programming Language', N'Low-level machine language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Solidity', N'Programming Language', N'Ethereum smart contract language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'VHDL', N'Programming Language', N'Hardware description language', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Verilog', N'Programming Language', N'Hardware description language', 1, GETUTCDATE(), GETUTCDATE());
+-- Design & UX
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Figma', N'Design', N'UI/UX design tool', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Sketch', N'Design', N'macOS design tool', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Adobe XD', N'Design', N'Adobe prototyping tool', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Adobe Photoshop', N'Design', N'Image editing software', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Adobe Illustrator', N'Design', N'Vector graphics editor', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'InVision', N'Design', N'Prototyping platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Wireframing', N'Design', N'UI wireframe creation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Prototyping', N'Design', N'Interactive prototype creation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'UI Design', N'Design', N'User interface design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'UX Design', N'Design', N'User experience design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'UX Research', N'Design', N'User experience research', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Design Systems', N'Design', N'Scalable design component systems', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Responsive Design', N'Design', N'Multi-device layout design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Accessibility', N'Design', N'WCAG compliant design', 1, GETUTCDATE(), GETUTCDATE());
+-- Blockchain & Web3
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Blockchain', N'Blockchain', N'Distributed ledger technology', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Ethereum', N'Blockchain', N'Smart contract platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Smart Contracts', N'Blockchain', N'Self-executing contracts', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Web3', N'Blockchain', N'Decentralized web technologies', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'DeFi', N'Blockchain', N'Decentralized finance', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'NFT', N'Blockchain', N'Non-fungible tokens', 1, GETUTCDATE(), GETUTCDATE());
+-- Game Development
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Unity', N'Game Development', N'Cross-platform game engine', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Unreal Engine', N'Game Development', N'AAA game engine', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Godot', N'Game Development', N'Open-source game engine', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Game Design', N'Game Development', N'Game mechanics and level design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'3D Modeling', N'Game Development', N'3D asset creation', 1, GETUTCDATE(), GETUTCDATE());
+-- Embedded & IoT
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Embedded Systems', N'Embedded', N'Firmware and embedded development', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Arduino', N'Embedded', N'Microcontroller platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Raspberry Pi', N'Embedded', N'Single-board computer', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'IoT', N'Embedded', N'Internet of Things', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'RTOS', N'Embedded', N'Real-time operating systems', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'FPGA', N'Embedded', N'Field-programmable gate arrays', 1, GETUTCDATE(), GETUTCDATE());
+-- Networking
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'TCP/IP', N'Networking', N'Network protocol suite', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'DNS', N'Networking', N'Domain name system', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Load Balancing', N'Networking', N'Traffic distribution', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'CDN', N'Networking', N'Content delivery networks', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'VPN', N'Networking', N'Virtual private networks', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Firewall', N'Networking', N'Network security appliance', 1, GETUTCDATE(), GETUTCDATE());
+-- Enterprise & ERP
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'SAP', N'Enterprise', N'Enterprise resource planning', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Salesforce', N'Enterprise', N'CRM platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'ServiceNow', N'Enterprise', N'IT service management', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Oracle ERP', N'Enterprise', N'Oracle enterprise applications', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Microsoft Dynamics', N'Enterprise', N'Microsoft ERP/CRM', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Workday', N'Enterprise', N'HR and finance cloud', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'HubSpot', N'Enterprise', N'Marketing and CRM platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Jira', N'Enterprise', N'Project tracking tool', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Confluence', N'Enterprise', N'Team documentation tool', 1, GETUTCDATE(), GETUTCDATE());
+-- Monitoring & Observability
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Prometheus', N'Monitoring', N'Metrics monitoring system', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Grafana', N'Monitoring', N'Monitoring dashboards', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Datadog', N'Monitoring', N'Cloud monitoring platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'New Relic', N'Monitoring', N'Application performance monitoring', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Splunk', N'Monitoring', N'Log analytics platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'ELK Stack', N'Monitoring', N'Elasticsearch Logstash Kibana', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'PagerDuty', N'Monitoring', N'Incident management', 1, GETUTCDATE(), GETUTCDATE());
+-- Message Queues & Streaming
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'RabbitMQ', N'Message Queue', N'Message broker', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Apache Kafka', N'Message Queue', N'Event streaming platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Amazon SQS', N'Message Queue', N'AWS message queue service', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Apache Pulsar', N'Message Queue', N'Distributed messaging', 1, GETUTCDATE(), GETUTCDATE());
+-- API & Integration
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Swagger', N'API', N'API documentation framework', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'OpenAPI', N'API', N'API specification standard', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'SOAP', N'API', N'XML-based web services', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'WebSockets', N'API', N'Real-time bidirectional communication', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'OAuth 2.0', N'API', N'Authorization framework', 1, GETUTCDATE(), GETUTCDATE());
+-- AI & ML (additional)
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'GPT', N'AI', N'Generative pre-trained transformers', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'LLM', N'AI', N'Large language models', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Prompt Engineering', N'AI', N'AI prompt design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'RAG', N'AI', N'Retrieval-augmented generation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Generative AI', N'AI', N'AI content generation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'MLOps', N'AI', N'Machine learning operations', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Reinforcement Learning', N'AI', N'Agent-based learning', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Transfer Learning', N'AI', N'Pre-trained model adaptation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Hugging Face', N'AI', N'ML model hub and library', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'LangChain', N'AI', N'LLM application framework', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'OpenCV', N'AI', N'Computer vision library', 1, GETUTCDATE(), GETUTCDATE());
+-- Architecture
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'System Design', N'Architecture', N'Large-scale system architecture', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Event-Driven Architecture', N'Architecture', N'Event-based system design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Serverless', N'Architecture', N'Function-as-a-service architecture', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'SOA', N'Architecture', N'Service-oriented architecture', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'API Gateway', N'Architecture', N'API management layer', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'CQRS', N'Architecture', N'Command query responsibility segregation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Event Sourcing', N'Architecture', N'Event-based state management', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Distributed Systems', N'Architecture', N'Multi-node system design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'High Availability', N'Architecture', N'Fault-tolerant system design', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Scalability', N'Architecture', N'System scaling patterns', 1, GETUTCDATE(), GETUTCDATE());
+-- Data Engineering (additional)
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'ETL', N'Data Engineering', N'Extract transform load pipelines', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Data Pipelines', N'Data Engineering', N'Automated data workflows', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'dbt', N'Data Engineering', N'Data build tool', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Apache Flink', N'Data Engineering', N'Stream processing framework', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Data Modeling', N'Data Engineering', N'Database schema design', 1, GETUTCDATE(), GETUTCDATE());
+-- Cloud Services (additional)
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'AWS RDS', N'Cloud Service', N'Managed relational database', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'AWS ECS', N'Cloud Service', N'Elastic container service', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'AWS EKS', N'Cloud Service', N'Elastic Kubernetes service', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'AWS SageMaker', N'Cloud Service', N'ML training and deployment', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Azure DevOps', N'Cloud Service', N'Microsoft DevOps platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Azure Kubernetes Service', N'Cloud Service', N'Managed Kubernetes on Azure', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Google BigQuery', N'Cloud Service', N'Serverless data warehouse', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'CloudFormation', N'Cloud Service', N'AWS infrastructure as code', 1, GETUTCDATE(), GETUTCDATE());
+-- Containers & Orchestration
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Docker Compose', N'Containers', N'Multi-container Docker apps', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Helm', N'Containers', N'Kubernetes package manager', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Istio', N'Containers', N'Service mesh for Kubernetes', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'OpenShift', N'Containers', N'Red Hat Kubernetes platform', 1, GETUTCDATE(), GETUTCDATE());
+-- Performance & Optimization
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Performance Optimization', N'Performance', N'Application speed tuning', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Caching', N'Performance', N'Data caching strategies', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Database Optimization', N'Performance', N'Query and index tuning', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'SEO', N'Performance', N'Search engine optimization', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Web Performance', N'Performance', N'Core Web Vitals optimization', 1, GETUTCDATE(), GETUTCDATE());
+-- Documentation
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Technical Writing', N'Documentation', N'Technical documentation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'API Documentation', N'Documentation', N'API reference writing', 1, GETUTCDATE(), GETUTCDATE());
+-- Computer Science
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Data Structures', N'Computer Science', N'Fundamental data structures', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Algorithms', N'Computer Science', N'Algorithm design and analysis', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Design Patterns', N'Computer Science', N'Software design patterns', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Object-Oriented Programming', N'Computer Science', N'OOP principles', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Functional Programming', N'Computer Science', N'FP paradigm', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Concurrency', N'Computer Science', N'Parallel programming', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Multithreading', N'Computer Science', N'Thread-based parallelism', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Operating Systems', N'Computer Science', N'OS concepts and internals', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Compiler Design', N'Computer Science', N'Language compiler construction', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Computer Networks', N'Computer Science', N'Networking fundamentals', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Database Management', N'Computer Science', N'DBMS concepts', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Version Control', N'Computer Science', N'Source code management', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Code Review', N'Computer Science', N'Peer code review practices', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Debugging', N'Computer Science', N'Bug diagnosis and fixing', 1, GETUTCDATE(), GETUTCDATE());
+-- Product & Business
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Product Management', N'Product', N'Product strategy and roadmap', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Business Analysis', N'Product', N'Business requirements analysis', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'A/B Testing', N'Product', N'Experimentation and testing', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Analytics', N'Product', N'Data-driven insights', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Google Analytics', N'Product', N'Web analytics platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Growth Hacking', N'Product', N'Rapid growth strategies', 1, GETUTCDATE(), GETUTCDATE());
+-- QA & Quality
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Quality Assurance', N'QA', N'Software quality testing', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Manual Testing', N'QA', N'Manual test execution', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Performance Testing', N'QA', N'Load and stress testing', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'API Testing', N'QA', N'API validation testing', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Regression Testing', N'QA', N'Change impact testing', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Security Testing', N'QA', N'Vulnerability assessment', 1, GETUTCDATE(), GETUTCDATE());
+-- CMS & Content
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'WordPress', N'CMS', N'Content management system', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Drupal', N'CMS', N'Enterprise CMS', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Shopify', N'CMS', N'E-commerce platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Contentful', N'CMS', N'Headless CMS', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Strapi', N'CMS', N'Open-source headless CMS', 1, GETUTCDATE(), GETUTCDATE());
+-- Collaboration
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Slack', N'Collaboration', N'Team messaging platform', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Microsoft Teams', N'Collaboration', N'Microsoft collaboration tool', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Notion', N'Collaboration', N'All-in-one workspace', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Trello', N'Collaboration', N'Kanban project management', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'Asana', N'Collaboration', N'Work management platform', 1, GETUTCDATE(), GETUTCDATE());
+-- Compliance & Governance
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'GDPR', N'Compliance', N'EU data protection regulation', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'SOC 2', N'Compliance', N'Service organization controls', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'HIPAA', N'Compliance', N'Healthcare data compliance', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'PCI DSS', N'Compliance', N'Payment card data security', 1, GETUTCDATE(), GETUTCDATE());
+INSERT INTO ReferenceMetadata (RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (N'Skill', N'ISO 27001', N'Compliance', N'Information security standard', 1, GETUTCDATE(), GETUTCDATE());
 INSERT INTO ReferenceMetadata (ReferenceID, RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (348, N'Certification', N'AWS Certified Solutions Architect', N'Cloud', N'AWS architecture certification', 1, '2025-12-05T18:07:13.416Z', '2025-12-05T18:07:13.416Z');
 INSERT INTO ReferenceMetadata (ReferenceID, RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (349, N'Certification', N'AWS Certified Developer', N'Cloud', N'AWS developer certification', 1, '2025-12-05T18:07:13.416Z', '2025-12-05T18:07:13.416Z');
 INSERT INTO ReferenceMetadata (ReferenceID, RefType, Value, Category, Description, IsActive, CreatedAt, UpdatedAt) VALUES (350, N'Certification', N'AWS Certified DevOps Engineer', N'Cloud', N'AWS DevOps certification', 1, '2025-12-05T18:07:13.416Z', '2025-12-05T18:07:13.416Z');
