@@ -276,6 +276,20 @@ export default function SkillsSelectionModal({
               <View style={styles.emptyDropdown}>
                 <Ionicons name="search-outline" size={32} color="#ccc" />
                 <Text style={styles.emptyText}>No skills found matching "{searchQuery}"</Text>
+                <TouchableOpacity
+                  style={[styles.addCustomBtn, { backgroundColor: colors.primary + '15', borderColor: colors.primary, borderWidth: 1 }]}
+                  onPress={() => {
+                    const customSkill = searchQuery.trim();
+                    if (customSkill.length >= 2) {
+                      toggleSkill(customSkill);
+                      setSearchQuery('');
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+                  <Text style={[styles.addCustomText, { color: colors.primary }]}>Add "{searchQuery.trim()}" as custom skill</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <View>
@@ -497,6 +511,19 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted || '#999',
     textAlign: 'center',
+  },
+  addCustomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  addCustomText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   retryButton: {
     marginTop: 20,
