@@ -26,7 +26,8 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       margin: 0 !important;
       padding: 0 !important;
       height: 100% !important;
-      overflow: auto !important;
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
     }
     #root {
       height: 100dvh !important;
