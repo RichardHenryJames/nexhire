@@ -398,7 +398,7 @@ export const getAdminDashboardReferrals = withAuth(async (
         FROM WorkExperiences we
         INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
         INNER JOIN Users u ON a.UserID = u.UserID
-        WHERE we.IsCurrent = 1 AND we.IsActive = 1 AND we.CompanyEmailVerified = 1
+        WHERE we.IsCurrent = 1 AND we.IsActive = 1 AND u.IsVerifiedReferrer = 1
         AND we.OrganizationID IN (
           SELECT DISTINCT OrganizationID FROM ReferralRequests 
           WHERE RequestedAt >= DATEADD(day, -30, GETUTCDATE())
@@ -413,9 +413,9 @@ export const getAdminDashboardReferrals = withAuth(async (
           STRING_AGG(CONCAT(u.FirstName, ' ', u.LastName), ', ') AS ReferrerNames
         FROM Organizations o
         INNER JOIN WorkExperiences we ON we.OrganizationID = o.OrganizationID
-          AND we.IsCurrent = 1 AND we.IsActive = 1 AND we.CompanyEmailVerified = 1
+          AND we.IsCurrent = 1 AND we.IsActive = 1
         INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-        INNER JOIN Users u ON a.UserID = u.UserID
+        INNER JOIN Users u ON a.UserID = u.UserID AND u.IsVerifiedReferrer = 1
         LEFT JOIN (
           SELECT OrganizationID, 
             COUNT(*) AS ReferralCount,
