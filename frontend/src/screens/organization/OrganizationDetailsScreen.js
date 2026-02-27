@@ -21,7 +21,7 @@ import { showToast } from '../../components/Toast';
 
 export default function OrganizationDetailsScreen({ route, navigation }) {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet } = responsive;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -215,7 +215,7 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
                   </View>
                 )}
                 {/* Tier badge - admin only */}
-                {organization.tier && user?.userType === 'Admin' && (
+                {organization.tier && isAdmin && (
                   <View style={[
                     styles.badge,
                     { backgroundColor: organization.tier === 'Elite' ? '#8B5CF615' : organization.tier === 'Premium' ? '#F59E0B15' : colors.gray200 }
@@ -233,6 +233,7 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
                     </Text>
                   </View>
                 )}
+              </View>
 
               {/* Quick Links */}
               <View style={styles.quickLinksRow}>
