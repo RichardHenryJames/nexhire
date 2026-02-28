@@ -61,8 +61,7 @@ const JobCard = ({
   const parts = [];
   if (job.City) parts.push(job.City);
   if (job.State) parts.push(job.State);
-  if (job.Country) parts.push(job.Country);
-  const loc = parts.join(', ') || job.Location || 'Location not specified';
+  const loc = job.Location || parts.join(', ') || job.Country || 'Location not specified';
 
   const posted = (() => {
     const ds = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
@@ -120,10 +119,12 @@ const JobCard = ({
               <Ionicons name="calendar-outline" size={12} color={colors.gray500 || colors.textSecondary} />
               <Text style={styles.metaText}>{posted}</Text>
             </View>
-            {(job.ExperienceMin != null || job.ExperienceMax != null) && (
+          </View>
+          {(job.ExperienceMin != null || job.ExperienceMax != null) && (
+            <View style={styles.metaRow}>
               <View style={styles.metaItem}>
-                <Ionicons name="briefcase-outline" size={12} color={colors.success} />
-                <Text style={[styles.metaText, { color: colors.success, fontWeight: '600' }]} numberOfLines={1}>
+                <Ionicons name="briefcase-outline" size={12} color={colors.gray500 || colors.textSecondary} />
+                <Text style={styles.metaText} numberOfLines={1}>
                   {job.ExperienceMin != null && job.ExperienceMax != null
                     ? `${job.ExperienceMin} - ${job.ExperienceMax} years exp`
                     : job.ExperienceMin != null
@@ -131,8 +132,8 @@ const JobCard = ({
                       : `Up to ${job.ExperienceMax} years exp`}
                 </Text>
               </View>
-            )}
-          </View>
+            </View>
+          )}
         </View>
       </View>
 
