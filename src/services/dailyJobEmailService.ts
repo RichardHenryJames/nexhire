@@ -179,9 +179,6 @@ export class DailyJobEmailService {
                                         ${infoLine || 'View details'}
                                     </p>
                                 </td>
-                                <td width="70" valign="middle" align="right">
-                                    <a href="${jobUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 500;">View</a>
-                                </td>
                             </tr>
                         </table>
                     </td>

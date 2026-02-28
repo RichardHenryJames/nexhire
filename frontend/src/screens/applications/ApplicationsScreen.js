@@ -583,7 +583,7 @@ export default function ApplicationsScreen({ navigation }) {
                 />
               ) : (
                 <View style={styles.logoPlaceholder}>
-                  <Ionicons name="business-outline" size={24} color="#666" />
+                  <Ionicons name="business" size={20} color={colors.primary} />
                 </View>
               )}
             </View>
@@ -613,7 +613,7 @@ export default function ApplicationsScreen({ navigation }) {
                         }
                       }}
                     >
-                      <Ionicons name="globe-outline" size={18} color="#0066cc" />
+                      <Ionicons name="globe-outline" size={14} color="#0066cc" />
                     </TouchableOpacity>
                   )}
                   
@@ -630,7 +630,7 @@ export default function ApplicationsScreen({ navigation }) {
                         }
                       }}
                     >
-                      <Ionicons name="logo-linkedin" size={18} color="#0077b5" />
+                      <Ionicons name="logo-linkedin" size={14} color="#0077b5" />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -662,7 +662,7 @@ export default function ApplicationsScreen({ navigation }) {
         
         <View style={styles.applicationDetails}>
           <View style={styles.detailItem}>
-            <Ionicons name="calendar" size={16} color={colors.gray500} />
+            <Ionicons name="calendar" size={12} color={colors.gray500} />
             <Text style={styles.detailText}>
               Applied: {formatDate(application.SubmittedAt)}
             </Text>
@@ -670,7 +670,7 @@ export default function ApplicationsScreen({ navigation }) {
           
           {application.ExpectedSalary && (
             <View style={styles.detailItem}>
-              <Ionicons name="cash" size={16} color={colors.gray500} />
+              <Ionicons name="cash" size={12} color={colors.gray500} />
               <Text style={styles.detailText}>
                 Expected: {formatSalary(application.ExpectedSalary, application.CurrencyCode)}
               </Text>
@@ -679,7 +679,7 @@ export default function ApplicationsScreen({ navigation }) {
 
           {application.AvailableFromDate && (
             <View style={styles.detailItem}>
-              <Ionicons name="time" size={16} color={colors.gray500} />
+              <Ionicons name="time" size={12} color={colors.gray500} />
               <Text style={styles.detailText}>
                 Available: {formatDate(application.AvailableFromDate)}
               </Text>
@@ -709,14 +709,14 @@ export default function ApplicationsScreen({ navigation }) {
             const isReferred = referredJobIds.has(application.JobID);
             return isReferred ? (
               <View style={styles.referredPill}>
-                <Ionicons name="checkmark-circle" size={22} color="#10b981" />
+                <Ionicons name="checkmark-circle" size={16} color="#10b981" />
               </View>
             ) : (
               <TouchableOpacity 
                 style={styles.referralButton}
                 onPress={() => handleAskReferral(application)}
               >
-                <Ionicons name="people-outline" size={16} color={colors.warning} />
+                <Ionicons name="people-outline" size={14} color={colors.warning} />
                 <Text style={styles.referralText}>Ask Referral</Text>
               </TouchableOpacity>
             );
@@ -994,7 +994,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
   },
   listContainer: {
-    padding: 16,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   emptyContainer: {
     flex: 1,
@@ -1017,86 +1018,74 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   applicationCard: {
     backgroundColor: colors.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: colors.shadow,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200 || colors.border,
   },
   applicationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   jobInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginRight: 12,
+    gap: 12,
   },
   logoContainer: {
-    marginRight: 12,
     marginTop: 2,
   },
   companyLogo: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 10,
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: 10,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   jobDetails: {
     flex: 1,
   },
   jobTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontSize: 15,
+    fontWeight: '600',
     color: colors.text,
-    marginBottom: 4,
-    lineHeight: 22,
+    marginBottom: 2,
   },
   statusBadge: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 4,
   },
   statusText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
+    fontSize: 10,
+    fontWeight: '600',
   },
   companyName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.textSecondary,
-    marginBottom: 6,
+    fontSize: 14,
+    color: colors.gray600 || colors.textSecondary,
+    marginBottom: 4,
   },
   socialLinksRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     marginTop: 2,
   },
   socialIconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1104,65 +1093,68 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   // Job Type Display Styles (matching JobsScreen)
   jobTypeContainer: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 6,
+    marginLeft: 52,
   },
   jobTypeTag: {
     backgroundColor: colors.primary + '15',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
+    paddingVertical: 2,
+    borderRadius: 10,
   },
   jobTypeText: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.medium,
+    fontSize: 11,
+    fontWeight: '600',
     color: colors.primary,
   },
   applicationDetails: {
-    gap: 8,
-    marginBottom: 12,
+    gap: 6,
+    marginLeft: 52,
+    marginBottom: 6,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   detailText: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    marginLeft: 6,
+    fontSize: 12,
+    color: colors.gray500 || colors.textSecondary,
   },
   coverLetterPreview: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: colors.gray500 || colors.textSecondary,
     fontStyle: 'italic',
-    marginBottom: 12,
-    lineHeight: 18,
+    marginBottom: 6,
+    marginLeft: 52,
+    lineHeight: 16,
   },
   // Application Actions (matching JobsScreen)
   applicationActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
+    justifyContent: 'flex-start',
+    marginLeft: 52,
+    gap: 6,
   },
   withdrawButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.error,
   },
   withdrawButtonText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 11,
     color: colors.error,
-    fontWeight: typography.weights.medium,
+    fontWeight: '600',
   },
   // MATCH JobsScreen: Referral button styles (exact match)
   referralButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: colors.warning,
@@ -1171,21 +1163,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   referralText: {
     color: colors.warning,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+    fontSize: 11,
+    fontWeight: '600',
   },
   // MATCH JobsScreen: Referred status pill (exact match)
   referredPill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 6,
     backgroundColor: colors.success + '15',
     borderWidth: 1,
     borderColor: colors.success,
-    minWidth: 36,
+    minWidth: 28,
   },
   // Empty state styles
   emptyState: {
