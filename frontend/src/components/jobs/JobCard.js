@@ -83,57 +83,58 @@ const JobCard = ({
   const showActions = !hideApply || !hideSave || !hideReferral || showPublish || showDelete || showShare;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.titleRow}>
-          {/* 🏢 Company Logo */}
-          <View style={styles.logoContainer}>
-            {logo ? (
-              <CachedImage 
-                source={{ uri: logo }} 
-                style={styles.logo}
-                
-              />
-            ) : (
-              <View style={styles.logoPlaceholder}>
-                <Ionicons name="business-outline" size={20} color="#666" />
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.card}>
+      <View style={styles.titleRow}>
+        {/* Company Logo */}
+        <View style={styles.logoContainer}>
+          {logo ? (
+            <CachedImage 
+              source={{ uri: logo }} 
+              style={styles.logo}
+            />
+          ) : (
+            <View style={styles.logoPlaceholder}>
+              <Ionicons name="business" size={20} color={colors.primary} />
+            </View>
+          )}
+        </View>
+        
+        {/* Job Details */}
+        <View style={styles.titleContent}>
+          <View style={styles.titleHeader}>
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+            {(jobTypeName || workplaceName) && (
+              <View style={styles.badgeRow}>
+                {jobTypeName ? (<Text style={styles.metaBadge}>{jobTypeName}</Text>) : null}
+                {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
               </View>
             )}
           </View>
-          
-          {/* Job Title and Company */}
-          <View style={styles.titleContent}>
-            <Text style={styles.title} numberOfLines={1}>{title}</Text>
-            <Text style={styles.company} numberOfLines={1}>{org}</Text>
+          <Text style={styles.company} numberOfLines={1}>{org}</Text>
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Ionicons name="location-outline" size={12} color={colors.gray500 || colors.textSecondary} />
+              <Text style={styles.metaText} numberOfLines={1}>{loc}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="calendar-outline" size={12} color={colors.gray500 || colors.textSecondary} />
+              <Text style={styles.metaText}>{posted}</Text>
+            </View>
+            {(job.ExperienceMin != null || job.ExperienceMax != null) && (
+              <View style={styles.metaItem}>
+                <Ionicons name="briefcase-outline" size={12} color={colors.success} />
+                <Text style={[styles.metaText, { color: colors.success, fontWeight: '600' }]} numberOfLines={1}>
+                  {job.ExperienceMin != null && job.ExperienceMax != null
+                    ? `${job.ExperienceMin} - ${job.ExperienceMax} years exp`
+                    : job.ExperienceMin != null
+                      ? `${job.ExperienceMin}+ years exp`
+                      : `Up to ${job.ExperienceMax} years exp`}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </View>
-      
-      <View style={styles.metaRow}>
-        <Text style={styles.meta}>{loc}</Text>
-        <Text style={styles.dot}> • </Text>
-        <Text style={styles.meta}>{posted}</Text>
-      </View>
-
-      {(jobTypeName || workplaceName) && (
-        <View style={styles.metaRowAlt}>
-          {jobTypeName ? (<Text style={styles.metaBadge}>{jobTypeName}</Text>) : null}
-          {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
-        </View>
-      )}
-
-      {/* Experience Required row - show instead of salary */}
-      {(job.ExperienceMin != null || job.ExperienceMax != null) && (
-        <View style={styles.salaryRow}>
-          <Text style={styles.salary} numberOfLines={1}>
-            {job.ExperienceMin != null && job.ExperienceMax != null
-              ? `${job.ExperienceMin} - ${job.ExperienceMax} years exp`
-              : job.ExperienceMin != null
-                ? `${job.ExperienceMin}+ years exp`
-                : `Up to ${job.ExperienceMax} years exp`}
-          </Text>
-        </View>
-      )}
 
       {/* ✅ UPDATED: Show actions row if any action is visible OR if publish button should show */}
       {showActions && (
@@ -142,15 +143,15 @@ const JobCard = ({
           {!hideSave && (
             savedContext ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-                <Ionicons name="bookmark" size={18} color={colors.white} />
+                <Ionicons name="bookmark" size={14} color={colors.white} />
               </TouchableOpacity>
             ) : isSaved ? (
               <TouchableOpacity style={styles.savedPill} onPress={onUnsave} accessibilityLabel="Remove from saved">
-                <Ionicons name="bookmark" size={18} color={colors.white} />
+                <Ionicons name="bookmark" size={14} color={colors.white} />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity style={styles.saveBtn} onPress={onSave} accessibilityLabel="Save job">
-                <Ionicons name="bookmark-outline" size={18} color={colors.primary} />
+                <Ionicons name="bookmark-outline" size={14} color={colors.primary} />
               </TouchableOpacity>
             )
           )}
@@ -159,12 +160,12 @@ const JobCard = ({
           {!hideReferral && !isOwnPostedJob && (
             isReferralRequesting ? (
               <View style={styles.requestingPill} accessibilityRole="text">
-                <Ionicons name="time-outline" size={18} color="#f59e0b" />
+                <Ionicons name="time-outline" size={14} color="#f59e0b" />
                 <Text style={styles.requestingText}>Requesting</Text>
               </View>
             ) : isReferred ? (
               <View style={styles.referredPill} accessibilityRole="text">
-                <Ionicons name="checkmark-circle" size={22} color="#10b981" />
+                <Ionicons name="checkmark-circle" size={16} color="#10b981" />
               </View>
             ) : onAskReferral ? (
               <TouchableOpacity 
@@ -172,7 +173,7 @@ const JobCard = ({
                 onPress={onAskReferral} 
                 accessibilityLabel="Ask for referral"
               >
-                <Ionicons name="people-outline" size={18} color="#ff6600" />
+                <Ionicons name="people-outline" size={14} color="#ff6600" />
                 <Text style={styles.referralText}>Ask Referral</Text>
               </TouchableOpacity>
             ) : null
@@ -181,7 +182,7 @@ const JobCard = ({
           {/* ✅ NEW: Delete button for draft jobs */}
           {showDelete && onDelete && (
             <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} accessibilityLabel="Delete job">
-              <Ionicons name="trash-outline" size={18} color="#fff" />
+              <Ionicons name="trash-outline" size={14} color="#fff" />
               <Text style={styles.deleteText}>Delete</Text>
             </TouchableOpacity>
           )}
@@ -189,7 +190,7 @@ const JobCard = ({
           {/* ✅ NEW: Publish button for employers (draft jobs only) */}
           {showPublish && onPublish && (
             <TouchableOpacity style={styles.publishBtn} onPress={onPublish} accessibilityLabel="Publish job">
-              <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+              <Ionicons name="cloud-upload-outline" size={14} color="#fff" />
               <Text style={styles.publishText}>Publish</Text>
             </TouchableOpacity>
           )}
@@ -198,13 +199,13 @@ const JobCard = ({
           {showShare && (
             <View style={styles.shareContainer}>
               <TouchableOpacity style={[styles.socialIconBtn, { borderColor: '#0077B5' + '40' }]} onPress={onShareLinkedIn} accessibilityLabel="Share on LinkedIn">
-                <Ionicons name="logo-linkedin" size={18} color="#0077B5" />
+                <Ionicons name="logo-linkedin" size={14} color="#0077B5" />
               </TouchableOpacity>
               <TouchableOpacity style={[styles.socialIconBtn, { borderColor: '#25D366' + '40' }]} onPress={onShareWhatsApp} accessibilityLabel="Share on WhatsApp">
-                <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+                <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.shareBtn} onPress={onShare} accessibilityLabel="Share job">
-                <Ionicons name="share-social-outline" size={16} color="#fff" />
+                <Ionicons name="share-social-outline" size={12} color="#fff" />
                 <Text style={styles.shareText}>Share</Text>
               </TouchableOpacity>
             </View>
@@ -213,7 +214,7 @@ const JobCard = ({
           {/* Apply button - only show if not hidden and NOT a referrer-posted job */}
           {!hideApply && !isReferrerPosted && onApply && (
             <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-              <Ionicons name="paper-plane-outline" size={18} color="#fff" />
+              <Ionicons name="paper-plane-outline" size={14} color="#fff" />
               <Text style={styles.applyText}>Apply</Text>
             </TouchableOpacity>
           )}
@@ -226,181 +227,169 @@ const JobCard = ({
 const createStyles = (colors) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    padding: 12,
-    marginHorizontal: 8,
-    marginVertical: 3,
-    borderRadius: 12,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-  },
-  header: {
-    marginBottom: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200 || colors.border,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 4,
+    gap: 12,
   },
   logoContainer: {
-    marginRight: 12,
     marginTop: 2,
   },
   logo: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
     width: 40,
     height: 40,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
+    borderRadius: 10,
+    backgroundColor: colors.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   titleContent: {
     flex: 1,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+  titleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 2,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
   },
   company: {
     fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
+    color: colors.gray600 || colors.textSecondary,
+    marginBottom: 4,
   },
   metaRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  metaRowAlt: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 6,
+    gap: 4,
   },
-  meta: {
+  metaText: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: colors.gray500 || colors.textSecondary,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 6,
   },
   metaBadge: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.primary,
     backgroundColor: colors.primaryLight + '30',
     borderRadius: 10,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginRight: 8,
-  },
-  dot: { color: colors.gray300 },
-  salary: {
-    fontSize: 13,
-    color: colors.success,
-    fontWeight: '600',
-  },
-  salaryRow: {
-    marginTop: 8,
-    marginBottom: 4,
+    paddingVertical: 2,
+    overflow: 'hidden',
   },
   actionsRow: {
-    marginTop: 8,
+    marginTop: 6,
+    marginLeft: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 8,
+    justifyContent: 'flex-start',
+    gap: 6,
   },
   saveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.primary,
   },
   savedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: colors.primary,
   },
-  saveText: { color: colors.primary, marginLeft: 6, fontWeight: '600', fontSize: 13 },
-  savedText: { color: colors.white, marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  saveText: { color: colors.primary, marginLeft: 4, fontWeight: '600', fontSize: 11 },
+  savedText: { color: colors.white, marginLeft: 4, fontWeight: '600', fontSize: 11 },
   referralBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: colors.warning + '20',
     borderWidth: 1,
     borderColor: colors.warning,
   },
-  referralText: { color: colors.warning, marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  referralText: { color: colors.warning, marginLeft: 4, fontWeight: '600', fontSize: 11 },
   referredPill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    borderRadius: 6,
     backgroundColor: colors.success + '15',
     borderWidth: 1,
     borderColor: colors.success,
-    minWidth: 36,
+    minWidth: 28,
   },
   requestingPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: colors.warning + '15',
     borderWidth: 1,
     borderColor: colors.warning
   },
-  requestingText: { color: colors.warning, marginLeft: 6, fontWeight: '600', fontSize: 13 },
+  requestingText: { color: colors.warning, marginLeft: 4, fontWeight: '600', fontSize: 11 },
   deleteBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: colors.error || '#dc2626',
   },
-  deleteText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
+  deleteText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: 11 },
   publishBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: colors.primary,
   },
-  publishText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
+  publishText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: 11 },
   shareContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   socialIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
@@ -410,21 +399,21 @@ const createStyles = (colors) => StyleSheet.create({
   shareBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: '#10b981',
   },
-  shareText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: 12 },
+  shareText: { color: colors.white, marginLeft: 3, fontWeight: '700', fontSize: 10 },
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
     backgroundColor: colors.primary,
   },
-  applyText: { color: colors.white, marginLeft: 6, fontWeight: '700', fontSize: 13 },
+  applyText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: 11 },
 });
 
 export default React.memo(JobCard);

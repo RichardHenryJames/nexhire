@@ -178,11 +178,11 @@ export const createStyles = (colors, responsive = {}) => {
     }),
   },
   jobCardWrapper: {
-    marginBottom: isMobile ? 12 : 0,
+    marginBottom: 0,
     ...(Platform.OS !== 'web' && !isMobile ? {
       width: isTablet ? '50%' : '33.33%',
       paddingHorizontal: 8,
-      marginBottom: 16,
+      marginBottom: 0,
     } : {}),
   },
   loadingContainer: {

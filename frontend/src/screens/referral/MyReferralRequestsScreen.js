@@ -365,7 +365,7 @@ export default function MyReferralRequestsScreen() {
           >
             {isOpenToAny ? (
               <View style={[styles.logoPlaceholder, { backgroundColor: colors.primary + '20' }]}>
-                <Ionicons name="globe-outline" size={24} color={colors.primary} />
+                <Ionicons name="globe-outline" size={20} color={colors.primary} />
               </View>
             ) : request.OrganizationLogo ? (
               <Image
@@ -880,8 +880,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 8,
-    paddingTop: 12,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   description: {
     fontSize: typography.sizes.sm,
@@ -909,45 +909,42 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
 
   requestCard: {
     backgroundColor: colors.surface,
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: 10,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200 || colors.border,
   },
   requestHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    gap: 12,
   },
   statusIconBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
   },
   logoContainer: {
-    marginRight: 12,
+    marginTop: 2,
   },
   companyLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoInitials: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: typography.weights.bold,
     color: '#FFFFFF',
   },
@@ -998,9 +995,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     marginTop: 6,
-    gap: 8,
+    marginLeft: 52,
+    gap: 6,
   },
   statusPill: {
     flexDirection: 'row',
