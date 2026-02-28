@@ -307,7 +307,7 @@ const createStyles = (colors) => StyleSheet.create({
     marginLeft: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'flex-end',
     gap: 6,
   },
   saveBtn: {
