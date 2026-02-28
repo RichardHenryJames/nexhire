@@ -16,6 +16,7 @@ import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -126,69 +127,50 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
         selectedType === type && styles.cardSelected
       ]}
       onPress={() => setSelectedType(type)}
+      activeOpacity={0.8}
     >
-      <View style={styles.cardHeader}>
+      <View style={styles.cardIconBadge}>
         <Ionicons 
           name={icon} 
-          size={40} 
-          color={selectedType === type ? colors.primary : colors.gray500} 
+          size={28} 
+          color={selectedType === type ? '#3B82F6' : '#94A3B8'} 
         />
-        <View style={styles.cardTitleContainer}>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.cardTitleRow}>
           <Text style={[
             styles.cardTitle,
             selectedType === type && styles.cardTitleSelected
           ]}>
             {title}
           </Text>
+          {selectedType === type && (
+            <View style={styles.checkBadge}>
+              <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+            </View>
+          )}
         </View>
-        {selectedType === type && (
-          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
-        )}
+        <Text style={styles.cardDescription}>{description}</Text>
+        <Text style={styles.cardExamples}>{examples}</Text>
       </View>
-      <Text style={styles.cardDescription}>{description}</Text>
-      <Text style={styles.cardExamples}>{examples}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.mainContainer}>
-      {/* Decorative circles */}
-      <View style={styles.decorationCircle1} />
-      <View style={styles.decorationCircle2} />
-      
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <RegistrationWrapper
+      currentStep={1}
+      totalSteps={4}
+      stepLabel="Choose your path"
+      onBack={() => navigation.navigate('Login')}
+      showTrustBadge={true}
+    >
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.innerContainer}>
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.topBar}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
-            </TouchableOpacity>
-
-            {!!selectedType && (
-              <TouchableOpacity
-                style={styles.skipPillButton}
-                onPress={handleSkipToFinal}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="flash-outline" size={14} color={colors.primary} />
-                <Text style={styles.skipPillButtonText}>Skip</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Show Google user info if available */}
+        <View style={styles.content}>
+          {/* Google user card */}
           {(googleUser || pendingGoogleAuth?.user) && (fromGoogleAuth || pendingGoogleAuth) && (
             <View style={styles.googleUserInfo}>
               {(googleUser?.picture || pendingGoogleAuth?.user?.picture) && (
@@ -198,9 +180,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
                 />
               )}
               <View style={styles.googleUserTextContainer}>
-                <Text style={styles.googleUserWelcome}>
-                  ✅ Google Account Connected
-                </Text>
+                <Text style={styles.googleUserWelcome}>Google Account Connected</Text>
                 <Text style={styles.googleUserName}>
                   {googleUser?.name || googleUser?.given_name || pendingGoogleAuth?.user?.name || 'Google User'}
                 </Text>
@@ -208,333 +188,298 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
                   {googleUser?.email || pendingGoogleAuth?.user?.email || 'Email'}
                 </Text>
               </View>
-              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <View style={styles.googleCheckBadge}>
+                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+              </View>
             </View>
           )}
-          
-          <Text style={styles.title}>What's your current situation?</Text>
-          <Text style={styles.subtitle}>
-            This helps us personalize your job search experience
-          </Text>
-        </View>
 
-        <View style={styles.cardsContainer}>
-          <ExperienceCard
-            type="Student"
-            title="I'm a student"
-            icon="school"
-            description="Currently studying or recently graduated"
-            examples="Looking for internships, entry-level positions, or part-time work"
-          />
-
-          <ExperienceCard
-            type="Experienced"
-            title="I have work experience"
-            icon="briefcase"
-            description="Already working or have previous work experience"
-            examples="Looking to refer, seeking new opportunities, or career change"
-          />
-        </View>
-
-        <TouchableOpacity
-          style={[styles.continueButton, !selectedType && styles.continueButtonDisabled]}
-          onPress={handleContinue}
-          disabled={!selectedType}
-        >
-          <Text style={[styles.continueButtonText, !selectedType && styles.continueButtonTextDisabled]}>
-            Continue with Full Setup
-          </Text>
-          <Ionicons 
-            name="arrow-forward" 
-            size={20} 
-            color={selectedType ? colors.white : colors.gray400} 
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.switchFlowButton}
-          onPress={handleSwitchToEmployer}
-          activeOpacity={0.7}
-        >
-          <Ionicons 
-            name="business-outline" 
-            size={20} 
-            color={colors.primary} 
-          />
-          <Text style={styles.switchFlowButtonText}>
-            I'm looking to hire
-          </Text>
-        </TouchableOpacity>
-       
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>What describes you best?</Text>
+            <Text style={styles.subtitle}>
+              We'll personalize your experience based on your background
+            </Text>
           </View>
-        </ScrollView>
+
+          {/* Skip pill */}
+          {!!selectedType && (
+            <TouchableOpacity
+              style={styles.skipPillButton}
+              onPress={handleSkipToFinal}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="flash" size={14} color="#3B82F6" />
+              <Text style={styles.skipPillButtonText}>Quick setup — skip details</Text>
+              <Ionicons name="chevron-forward" size={14} color="#3B82F6" />
+            </TouchableOpacity>
+          )}
+
+          {/* Cards */}
+          <View style={styles.cardsContainer}>
+            <ExperienceCard
+              type="Student"
+              title="Student / Fresh Graduate"
+              icon="school-outline"
+              description="Currently enrolled or recently graduated"
+              examples="Internships · Entry-level roles · Part-time work"
+            />
+            <ExperienceCard
+              type="Experienced"
+              title="Working Professional"
+              icon="briefcase-outline"
+              description="Currently employed or have previous experience"
+              examples="New opportunities · Career switch · Referrals"
+            />
+          </View>
+
+          {/* Continue */}
+          <TouchableOpacity
+            style={[styles.continueButton, !selectedType && styles.continueButtonDisabled]}
+            onPress={handleContinue}
+            disabled={!selectedType}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.continueButtonText, !selectedType && styles.continueButtonTextDisabled]}>
+              Continue
+            </Text>
+            <Ionicons 
+              name="arrow-forward" 
+              size={18} 
+              color={selectedType ? '#FFFFFF' : '#64748B'} 
+            />
+          </TouchableOpacity>
+
+          {/* Switch to employer */}
+          <TouchableOpacity
+            style={styles.switchFlowButton}
+            onPress={handleSwitchToEmployer}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="business-outline" size={18} color="#94A3B8" />
+            <Text style={styles.switchFlowButtonText}>
+              I'm looking to hire instead
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </View>
+      </ScrollView>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  mainContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  decorationCircle1: {
-    position: 'absolute',
-    bottom: -80,
-    right: -60,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: colors.primary + '12',
-    borderWidth: 1,
-    borderColor: colors.primary + '20',
-  },
-  decorationCircle2: {
-    position: 'absolute',
-    bottom: -120,
-    left: -100,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: colors.info + '08',
-    borderWidth: 1,
-    borderColor: colors.info + '15',
-  },
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 20,
+    justifyContent: 'center',
+    paddingVertical: 8,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      alignItems: 'center',
+    } : {}),
   },
   content: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 20,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%',
+    padding: 24,
+    paddingTop: 8,
+    alignSelf: 'center',
   },
   header: {
-    marginBottom: 32,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    padding: 8,
-    marginBottom: 16,
-    backgroundColor: colors.primary + '20',
-    borderRadius: 12,
+    marginBottom: 28,
   },
   title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#F1F5F9',
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
+    fontSize: 15,
+    color: '#94A3B8',
     lineHeight: 22,
   },
-  // Google user info styles
+
+  // Google user info
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     padding: 16,
-    backgroundColor: colors.success + '15',
-    borderRadius: 12,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
   },
   googleUserAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     marginRight: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
   },
-  googleUserTextContainer: {
-    flex: 1,
-  },
+  googleUserTextContainer: { flex: 1 },
   googleUserWelcome: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.bold,
-    color: colors.success,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#22C55E',
     marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   googleUserName: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F1F5F9',
     marginBottom: 1,
   },
   googleUserEmail: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray600,
+    fontSize: 12,
+    color: '#94A3B8',
   },
+  googleCheckBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#22C55E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Skip
+  skipPillButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.2)',
+    marginBottom: 20,
+  },
+  skipPillButtonText: {
+    fontSize: 13,
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+
+  // Cards
   cardsContainer: {
-    gap: 16,
-    marginBottom: 24,
+    gap: 14,
+    marginBottom: 28,
   },
   card: {
-    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 16,
     padding: 20,
-    borderWidth: 2,
-    borderColor: colors.border,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1.5,
+    borderColor: 'rgba(148, 163, 184, 0.1)',
   },
   cardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '15',
+    borderColor: 'rgba(59, 130, 246, 0.5)',
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
   },
-  cardHeader: {
+  cardIconBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  cardBody: {
+    flex: 1,
+  },
+  cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitleContainer: {
-    flex: 1,
-    marginLeft: 16,
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
   cardTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#F1F5F9',
+    flex: 1,
   },
   cardTitleSelected: {
-    color: colors.primary,
+    color: '#60A5FA',
+  },
+  checkBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   cardDescription: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    fontSize: 14,
+    color: '#CBD5E1',
     lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   cardExamples: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    fontSize: 13,
+    color: '#64748B',
     lineHeight: 18,
-    fontStyle: 'italic',
   },
+
+  // Continue button
   continueButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#3B82F6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 14,
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueButtonDisabled: {
-    backgroundColor: colors.gray300,
+    backgroundColor: '#334155',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   continueButtonText: {
-    color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
   continueButtonTextDisabled: {
-    color: colors.gray400,
+    color: '#64748B',
   },
-  skipButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 8,
-    borderWidth: 2,
-    borderColor: colors.primary,
-    backgroundColor: 'transparent',
-  },
-  skipButtonFaded: {
-    borderColor: colors.gray600,
-    backgroundColor: colors.gray600 + '30',
-    opacity: 0.6,
-  },
-  skipButtonText: {
-    color: colors.primary,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-  },
-  skipButtonTextFaded: {
-    color: colors.gray500,
-  },
-  skipHintText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    textAlign: 'center',
-    marginTop: -8,
-    marginBottom: 16,
-    fontStyle: 'italic',
-  },
+
+  // Switch flow
   switchFlowButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    paddingVertical: 14,
     gap: 8,
-    backgroundColor: 'transparent',
+    marginBottom: 8,
   },
   switchFlowButtonText: {
-    fontSize: typography.sizes.md,
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  skipPillButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: colors.primary + '20',
-    borderWidth: 1,
-    borderColor: colors.primary + '40',
-  },
-  skipPillButtonText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-  },
-  headerSwitchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    backgroundColor: colors.primary + '20',
-  },
-  headerSwitchButtonText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
 });

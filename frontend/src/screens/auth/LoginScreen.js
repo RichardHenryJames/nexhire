@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   ScrollView,
   Platform,
   Image,
-  Animated,
   Dimensions,
   Linking,
   Modal,
@@ -25,59 +24,7 @@ import GoogleSignInButton from '../../components/GoogleSignInButton';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 
-const { width, height } = Dimensions.get('window');
-
-// Floating particle component for background effect
-function FloatingParticle({ delay, style }) {
-  const translateY = useRef(new Animated.Value(height)).current;
-  const translateX = useRef(new Animated.Value(Math.random() * width)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: -100,
-          duration: 8000 + Math.random() * 4000,
-          delay,
-          useNativeDriver: true,
-        }),
-        Animated.sequence([
-          Animated.timing(opacity, {
-            toValue: 0.6,
-            duration: 1000,
-            delay,
-            useNativeDriver: true,
-          }),
-          Animated.timing(opacity, {
-            toValue: 0,
-            duration: 1000,
-            delay: 6000,
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    );
-
-    animation.start();
-
-    return () => {
-      animation.stop();
-    };
-  }, [delay]);
-
-  return (
-    <Animated.View
-      style={[
-        style,
-        {
-          transform: [{ translateY }, { translateX }],
-          opacity,
-        },
-      ]}
-    />
-  );
-}
+const { width } = Dimensions.get('window');
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -282,18 +229,13 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={screenStyles.mainContainer}>
       <LinearGradient
-        colors={[colors.background, colors.surface, colors.background]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={['#0F172A', '#131D32', '#0F172A']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
         pointerEvents="none"
         style={Platform.OS === 'web' ? screenStyles.webBackground : StyleSheet.absoluteFill}
       />
-      
-      {/* Floating Particles */}
-      <FloatingParticle delay={0} style={screenStyles.floatingParticle} />
-      <FloatingParticle delay={1000} style={screenStyles.floatingParticle} />
-      <FloatingParticle delay={2000} style={screenStyles.floatingParticle} />
-      
+
       {/* Bottom Decoration */}
       <View style={screenStyles.bottomDecoration}>
         <View style={screenStyles.decorationCircle1} />
@@ -541,7 +483,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   return StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: colors.background, // Dark fallback for web
+    backgroundColor: '#0F172A',
   },
   webBackground: {
     position: 'fixed',
@@ -572,20 +514,13 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     justifyContent: 'center',
     alignItems: isDesktop ? 'center' : 'stretch',
   },
-  floatingParticle: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.white,
-    zIndex: 1,
-  },
   bottomDecoration: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     height: 300,
+    overflow: 'hidden',
     zIndex: 0,
   },
   decorationCircle1: {
@@ -595,9 +530,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: colors.white + '12',
-    borderWidth: 1,
-    borderColor: colors.white + '20',
+    backgroundColor: 'rgba(59, 130, 246, 0.06)',
   },
   decorationCircle2: {
     position: 'absolute',
@@ -606,9 +539,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: colors.white + '08',
-    borderWidth: 1,
-    borderColor: colors.white + '15',
+    backgroundColor: 'rgba(139, 92, 246, 0.04)',
   },
   decorationCircle3: {
     position: 'absolute',
@@ -617,9 +548,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.white + '10',
-    borderWidth: 2,
-    borderColor: colors.white + '25',
+    backgroundColor: 'rgba(59, 130, 246, 0.05)',
   },
   header: {
     alignItems: 'center',
@@ -661,11 +590,11 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(148, 163, 184, 0.15)',
   },
   dividerText: {
     marginHorizontal: spacing.md,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: '#94A3B8',
     fontSize: typography.sizes.sm,
   },
   form: {
@@ -685,9 +614,9 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(148, 163, 184, 0.15)',
+    borderRadius: 14,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
   },
   inputError: {
     borderColor: colors.danger,
@@ -714,24 +643,24 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: '#dadce0',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    backgroundColor: '#3B82F6',
+    borderWidth: 0,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     marginTop: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: '#f1f3f4',
-    borderColor: '#e8eaed',
+    backgroundColor: '#334155',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   forgotPasswordLink: {
     alignSelf: 'flex-end',
@@ -749,10 +678,10 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     alignItems: 'center',
   },
   loginButtonText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: '#3c4043',
-    fontFamily: 'Roboto, sans-serif',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   globalErrorContainer: {
     flexDirection: 'row',
@@ -760,14 +689,14 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     justifyContent: 'center',
     marginTop: spacing.sm,
     padding: spacing.sm,
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    borderRadius: borderRadius.sm,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.5)',
+    borderColor: 'rgba(239, 68, 68, 0.25)',
   },
   globalError: {
     ...themeStyles.bodySmall,
-    color: '#FFD700',
+    color: '#F87171',
     marginLeft: spacing.xs,
   },
   footer: {
