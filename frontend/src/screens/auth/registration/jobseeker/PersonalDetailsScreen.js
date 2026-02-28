@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image,
@@ -13,7 +12,6 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { frontendConfig } from '../../../../config/appConfig';
@@ -24,6 +22,7 @@ import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 // Debounce hook for search
 const useDebounce = (value, delay = 300) => {
@@ -687,26 +686,15 @@ styles.selectionButton,
   );
 
   return (
-    <LinearGradient
-      colors={['#0F172A', '#1E293B', '#0F172A']}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ flex: 1 }}
+    <RegistrationWrapper
+      currentStep={4}
+      totalSteps={4}
+      stepLabel="Create your account"
+      onBack={() => navigation.goBack()}
     >
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.innerContainer}>
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
           <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
-            </TouchableOpacity>
             
             {/* Show Google user info if applicable */}
             {isGoogleUser && googleUser && (
@@ -1336,57 +1324,31 @@ styles.selectionButton,
           </View>
         </View>
       </Modal>
-      </View>
-    </KeyboardAvoidingView>
-    </LinearGradient>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
   scrollContainer: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingTop: 20,
+    padding: 24,
+    paddingTop: 8,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    padding: 8,
-    marginBottom: 16,
-    backgroundColor: colors.primary + '20',
-    borderRadius: 12,
-  },
-  // 🔧 Google user info styles
+  // Google user info card
   googleUserInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
     padding: 20,
-    backgroundColor: colors.success + '15',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: colors.success,
-    shadowColor: colors.success,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
   },
   googleUserAvatar: {
     width: 56,
@@ -1394,43 +1356,45 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 28,
     marginRight: 16,
     borderWidth: 2,
-    borderColor: colors.success,
+    borderColor: 'rgba(34, 197, 94, 0.4)',
   },
   googleUserTextContainer: {
     flex: 1,
   },
   googleUserWelcome: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.success,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#22C55E',
     marginBottom: 4,
   },
   googleUserName: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F1F5F9',
     marginBottom: 2,
   },
   googleUserEmail: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: '#94A3B8',
     marginBottom: 4,
   },
   googleUserNote: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray500,
+    fontSize: 11,
+    color: '#64748B',
     fontStyle: 'italic',
   },
   title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#F1F5F9',
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 15,
+    color: '#94A3B8',
     marginBottom: 24,
+    lineHeight: 22,
   },
   form: {
     backgroundColor: 'transparent',
@@ -1451,42 +1415,46 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 16,
   },
   inputLabel: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.gray600,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   requiredAsterisk: {
-    color: colors.danger,
-    fontWeight: typography.weights.bold,
+    color: '#EF4444',
+    fontWeight: '700',
   },
   prefilledLabel: {
-    color: colors.success,
-    fontWeight: typography.weights.normal,
-    fontSize: typography.sizes.xs,
+    color: '#22C55E',
+    fontWeight: '400',
+    fontSize: 11,
+    textTransform: 'none',
   },
   input: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
+    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderRadius: 12,
     padding: 16,
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    fontSize: 15,
+    color: '#F1F5F9',
   },
   inputPrefilled: {
-    backgroundColor: colors.success + '08',
-    borderColor: colors.success,
-    borderWidth: 1.5,
+    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+    borderColor: 'rgba(34, 197, 94, 0.25)',
+    borderWidth: 1,
   },
   inputError: {
-    borderColor: colors.danger,
+    borderColor: '#EF4444',
   },
   errorText: {
-    color: colors.danger,
-    fontSize: typography.sizes.sm,
+    color: '#EF4444',
+    fontSize: 13,
     marginTop: 4,
   },
-  // 🎁 NEW: Referral code styles
+  // Referral code styles
   referralCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1499,25 +1467,27 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   referralCodeInput: {
     flex: 1,
-    paddingLeft: 40, // Make room for the icon
-    fontWeight: typography.weights.bold,
+    paddingLeft: 40,
+    fontWeight: '700',
     letterSpacing: 1,
   },
   referralCodeHint: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: colors.success + '10',
-    padding: 8,
-    borderRadius: 6,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.15)',
   },
   referralCodeHintText: {
-    fontSize: typography.sizes.xs,
-    color: colors.success,
+    fontSize: 12,
+    color: '#22C55E',
     marginLeft: 6,
     flex: 1,
   },
-  // EMAIL VERIFICATION styles
+  // Email verification styles
   emailRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1528,10 +1498,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'center',
   },
   verifyEmailButtonInline: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   emailVerifyContainer: {
     marginTop: -8,
@@ -1540,26 +1510,26 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   emailVerifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   emailVerifiedText: {
-    fontSize: typography.sizes.sm,
-    color: colors.success,
-    fontWeight: typography.weights.semiBold,
+    fontSize: 13,
+    color: '#22C55E',
+    fontWeight: '600',
     marginLeft: 6,
   },
   verifyEmailButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   verifyEmailButtonDisabled: {
@@ -1567,19 +1537,19 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   verifyEmailButtonText: {
     color: '#fff',
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semiBold,
+    fontSize: 13,
+    fontWeight: '600',
   },
   otpSection: {
-    backgroundColor: colors.surface + '80',
-    borderRadius: 12,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderColor: 'rgba(59, 130, 246, 0.2)',
   },
   otpLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray300,
+    fontSize: 13,
+    color: '#94A3B8',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -1593,37 +1563,37 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     maxWidth: 160,
     minWidth: 130,
-    backgroundColor: colors.background,
-    borderRadius: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: 'rgba(59, 130, 246, 0.3)',
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 20,
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
     letterSpacing: 6,
-    color: colors.text,
+    color: '#F1F5F9',
     textAlign: 'center',
   },
   verifyOtpButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   resendText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
+    fontSize: 13,
+    color: '#3B82F6',
     textAlign: 'center',
   },
-  // 🎉 Welcome Bonus Banner Styles
+  // Welcome Bonus Banner
   welcomeBonusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.4)',
-    borderRadius: 12,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 14,
     padding: 16,
     marginBottom: 20,
   },
@@ -1631,7 +1601,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1640,42 +1610,42 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   welcomeBonusTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 15,
+    fontWeight: '700',
     color: '#22C55E',
     marginBottom: 4,
   },
   welcomeBonusText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
+    fontSize: 13,
+    color: '#F1F5F9',
     lineHeight: 20,
   },
   welcomeBonusAmount: {
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
     color: '#FFD700',
-    fontSize: typography.sizes.md,
+    fontSize: 15,
   },
   welcomeBonusSubtext: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray400,
+    fontSize: 11,
+    color: '#64748B',
     marginTop: 2,
   },
   selectionButton: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
+    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   selectionValue: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    fontSize: 15,
+    color: '#F1F5F9',
   },
   selectionPlaceholder: {
-    color: colors.gray500,
+    color: '#64748B',
   },
   genderContainer: {
     flexDirection: 'row',
@@ -1684,55 +1654,54 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 8,
   },
   genderButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
     borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.15)',
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
   },
   genderButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    borderColor: '#3B82F6',
   },
   genderButtonText: {
-    fontSize: typography.sizes.xs,
-    color: colors.text,
+    fontSize: 13,
+    color: '#94A3B8',
     textAlign: 'center',
-    fontWeight: typography.weights.medium,
+    fontWeight: '500',
   },
   genderButtonTextActive: {
-    color: colors.white,
-    fontWeight: typography.weights.semibold,
+    color: '#3B82F6',
+    fontWeight: '600',
   },
   companyFieldsNotice: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.info + '10',
-    borderRadius: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    borderRadius: 10,
     padding: 12,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.15)',
   },
   companyFieldsNoticeText: {
-    fontSize: typography.sizes.sm,
-    color: colors.info,
+    fontSize: 13,
+    color: '#3B82F6',
     marginLeft: 8,
   },
   summaryContainer: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderRadius: 16,
     padding: 24,
     marginTop: 16,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.1)',
   },
   summaryTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F1F5F9',
     marginBottom: 16,
   },
   summaryItem: {
@@ -1741,39 +1710,46 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingVertical: 8,
   },
   summaryText: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    fontSize: 15,
+    color: '#F1F5F9',
     marginLeft: 8,
   },
   registerButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    padding: 16,
+    backgroundColor: '#3B82F6',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 24,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   registerButtonText: {
-    fontSize: typography.sizes.md,
-    color: colors.white,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
     marginRight: 8,
   },
   buttonDisabled: {
-    backgroundColor: colors.gray400,
+    backgroundColor: '#334155',
+    shadowOpacity: 0,
   },
   loginButton: {
     marginTop: 16,
     alignItems: 'center',
   },
   loginButtonText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
+    fontSize: 14,
+    color: '#3B82F6',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0F172A',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 16,
@@ -1785,7 +1761,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
       bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.background,
+      backgroundColor: '#0F172A',
       borderTopLeftRadius: 0,
       borderTopRightRadius: 0,
       paddingTop: 0,
@@ -1794,7 +1770,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   modalInnerContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0F172A',
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       flex: 'none',
       width: '100%',
@@ -1804,6 +1780,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
+      borderWidth: 1,
+      borderColor: 'rgba(148, 163, 184, 0.1)',
     } : {}),
   },
   modalHeader: {
@@ -1813,47 +1791,48 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: 'rgba(148, 163, 184, 0.1)',
   },
   modalTitle: {
     flex: 1,
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#F1F5F9',
     textAlign: 'center',
   },
   modalItem: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.08)',
   },
   modalItemText: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    fontSize: 15,
+    color: '#F1F5F9',
   },
   companyLogo: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: 10,
     marginRight: 12,
-    backgroundColor: colors.white,
+    backgroundColor: '#1E293B',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(148, 163, 184, 0.1)',
   },
   companyLogoPlaceholder: {
     width: 40,
     height: 40,
-    borderRadius: 8,
+    borderRadius: 10,
     marginRight: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(148, 163, 184, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1868,9 +1847,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   companySelectorLogoPlaceholder: {
     width: 24,
     height: 24,
-    borderRadius: 4,
+    borderRadius: 6,
     marginRight: 8,
-    backgroundColor: colors.gray100,
+    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1880,18 +1859,18 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: colors.surface,
+    backgroundColor: '#1E293B',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
+    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderRadius: 12,
     marginTop: 4,
     maxHeight: 250,
     zIndex: 9999,
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   dropdownScroll: {
     maxHeight: 250,
@@ -1903,11 +1882,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: 'rgba(148, 163, 184, 0.08)',
   },
   dropdownItemText: {
     fontSize: 15,
-    color: colors.text,
+    color: '#F1F5F9',
   },
   dropdownEmpty: {
     padding: 20,
@@ -1915,7 +1894,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: colors.gray500,
+    color: '#64748B',
     fontStyle: 'italic',
   },
   // Terms & Conditions consent styles
@@ -1931,35 +1910,35 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   consentCheckbox: {
     width: 22,
     height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: colors.gray400,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: 'rgba(148, 163, 184, 0.3)',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
   },
   consentCheckboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
   },
   consentCheckboxError: {
-    borderColor: colors.danger || '#EF4444',
+    borderColor: '#EF4444',
   },
   consentText: {
     flex: 1,
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: '#94A3B8',
     lineHeight: 20,
   },
   consentLink: {
-    color: colors.primary,
-    fontWeight: typography.weights.semibold || '600',
+    color: '#3B82F6',
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
   consentErrorText: {
-    fontSize: typography.sizes.xs,
-    color: colors.danger || '#EF4444',
+    fontSize: 12,
+    color: '#EF4444',
     marginTop: 6,
     marginLeft: 32,
   },

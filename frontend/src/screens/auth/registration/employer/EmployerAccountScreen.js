@@ -5,7 +5,6 @@ import {
   TextInput, 
   TouchableOpacity, 
   StyleSheet, 
-  KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
   Image,
@@ -21,6 +20,7 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { frontendConfig } from '../../../../config/appConfig';
 import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 export default function EmployerAccountScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -330,13 +330,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.innerContainer}>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingVertical: 8 }}>
-          <Ionicons name="arrow-back" size={22} color={colors.primary} />
-        </TouchableOpacity>
-
+    <RegistrationWrapper currentStep={4} totalSteps={4} stepLabel="Create your account" onBack={() => navigation.goBack()}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24 }}>
         {/* Show Google user info if applicable */}
         {isGoogleUser && googleUser && (
           <View style={styles.googleUserInfo}>
@@ -654,30 +649,13 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <Ionicons name="checkmark" size={18} color={colors.white} />
         </TouchableOpacity>
       </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
-  scroll: { 
-    flex: 1 
-  },
-  row: { 
-    flexDirection: 'row' 
-  },
+  scroll: { flex: 1 },
+  row: { flexDirection: 'row' },
   // Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
@@ -685,12 +663,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 20,
     marginTop: 16,
     padding: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.success,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.success,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
   },
   googleUserAvatar: {
     width: 48,
@@ -702,64 +678,66 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   googleUserWelcome: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: '#94A3B8',
     marginBottom: 2,
   },
   googleUserName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#F1F5F9',
     marginBottom: 2,
   },
   googleUserEmail: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    fontSize: 13,
+    color: '#64748B',
   },
-  title: { 
-    fontSize: typography.sizes.xl, 
-    fontWeight: typography.weights.bold, 
-    color: colors.text, 
-    marginTop: 8 
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#F1F5F9',
+    letterSpacing: -0.3,
+    marginBottom: 8,
   },
-  subtitle: { 
-    color: colors.gray600, 
-    marginTop: 6, 
-    marginBottom: 16 
+  subtitle: {
+    fontSize: 15,
+    color: '#94A3B8',
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  field: { 
-    marginTop: 12 
-  },
-  label: { 
-    color: colors.gray600, 
-    marginBottom: 6,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+  field: { marginTop: 16 },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   required: {
-    color: colors.danger,
-    fontWeight: typography.weights.bold,
+    color: '#EF4444',
+    fontWeight: '700',
   },
   prefilledLabel: {
-    color: colors.success,
-    fontWeight: typography.weights.normal,
-    fontSize: typography.sizes.xs,
+    color: '#22C55E',
+    fontWeight: '400',
+    fontSize: 11,
   },
-  input: { 
-    backgroundColor: colors.surface, 
-    borderWidth: 1, 
-    borderColor: colors.border, 
-    borderRadius: 8, 
-    padding: 12, 
-    color: colors.text,
-    fontSize: typography.sizes.md,
+  input: {
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderRadius: 12,
+    padding: 14,
+    color: '#F1F5F9',
+    fontSize: 15,
   },
   inputPrefilled: {
-    backgroundColor: colors.success + '08',
-    borderColor: colors.success,
+    backgroundColor: 'rgba(34, 197, 94, 0.06)',
+    borderColor: 'rgba(34, 197, 94, 0.3)',
     borderWidth: 1.5,
   },
-  // 🎁 NEW: Referral code styles
+  // Referral code styles
   referralCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -772,21 +750,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   referralCodeInput: {
     flex: 1,
-    paddingLeft: 40, // Make room for the icon
-    fontWeight: typography.weights.bold,
+    paddingLeft: 40,
+    fontWeight: '700',
     letterSpacing: 1,
   },
   referralCodeHint: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: colors.success + '10',
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
     padding: 8,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   referralCodeHintText: {
-    fontSize: typography.sizes.xs,
-    color: colors.success,
+    fontSize: 11,
+    color: '#22C55E',
     marginLeft: 6,
     flex: 1,
   },
@@ -801,10 +779,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'center',
   },
   verifyEmailButtonInline: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   emailVerifyContainer: {
     marginTop: -4,
@@ -813,46 +791,46 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   emailVerifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    backgroundColor: 'rgba(34, 197, 94, 0.12)',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   emailVerifiedText: {
-    fontSize: typography.sizes.sm,
-    color: colors.success,
-    fontWeight: typography.weights.semiBold,
+    fontSize: 13,
+    color: '#22C55E',
+    fontWeight: '600',
     marginLeft: 6,
   },
   verifyEmailButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   verifyEmailButtonDisabled: {
     opacity: 0.5,
   },
   verifyEmailButtonText: {
-    color: '#fff',
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semiBold,
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
   otpSection: {
-    backgroundColor: colors.surface + '80',
-    borderRadius: 12,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderColor: 'rgba(59, 130, 246, 0.2)',
   },
   otpLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray300,
+    fontSize: 13,
+    color: '#94A3B8',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -866,41 +844,41 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     maxWidth: 160,
     minWidth: 130,
-    backgroundColor: colors.background,
-    borderRadius: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: 'rgba(59, 130, 246, 0.3)',
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 20,
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
     letterSpacing: 6,
-    color: colors.text,
+    color: '#F1F5F9',
     textAlign: 'center',
   },
   verifyOtpButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#3B82F6',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   resendText: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
+    fontSize: 13,
+    color: '#3B82F6',
     textAlign: 'center',
   },
   summaryContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    borderRadius: 16,
     padding: 16,
-    marginTop: 16,
+    marginTop: 20,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(148, 163, 184, 0.1)',
   },
   summaryTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#F1F5F9',
     marginBottom: 12,
   },
   summaryItem: {
@@ -910,32 +888,37 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 8,
   },
   summaryText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: '#94A3B8',
     flex: 1,
   },
-  primaryBtn: { 
-    marginTop: 24, 
-    backgroundColor: colors.primary, 
-    borderRadius: 10, 
-    paddingVertical: 14, 
-    alignItems: 'center', 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    gap: 8 
+  primaryBtn: {
+    marginTop: 28,
+    backgroundColor: '#3B82F6',
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  primaryBtnText: { 
-    color: colors.white, 
-    fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.md,
+  primaryBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 16,
   },
   // DatePicker styles
   datePicker: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'rgba(30, 41, 59, 0.6)',
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
+    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderRadius: 12,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -946,29 +929,29 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'flex-start',
   },
   dateText: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    fontSize: 15,
+    color: '#F1F5F9',
   },
   placeholderText: {
-    color: colors.gray500,
-    fontSize: typography.sizes.md,
+    color: '#64748B',
+    fontSize: 15,
   },
   // Welcome Bonus Banner styles
   welcomeBonusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.4)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(34, 197, 94, 0.2)',
+    borderRadius: 14,
     padding: 16,
     marginBottom: 20,
   },
   welcomeBonusIconContainer: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -977,24 +960,24 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   welcomeBonusTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 15,
+    fontWeight: '700',
     color: '#22C55E',
     marginBottom: 4,
   },
   welcomeBonusText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
+    fontSize: 13,
+    color: '#F1F5F9',
     lineHeight: 20,
   },
   welcomeBonusAmount: {
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
     color: '#FFD700',
-    fontSize: typography.sizes.md,
+    fontSize: 15,
   },
   welcomeBonusSubtext: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray400,
+    fontSize: 11,
+    color: '#64748B',
     marginTop: 2,
   },
   // Terms & Conditions consent styles
@@ -1010,35 +993,35 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   consentCheckbox: {
     width: 22,
     height: 22,
-    borderRadius: 4,
+    borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.gray400,
+    borderColor: '#64748B',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
     backgroundColor: 'transparent',
   },
   consentCheckboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    backgroundColor: '#3B82F6',
+    borderColor: '#3B82F6',
   },
   consentCheckboxError: {
-    borderColor: colors.danger || '#EF4444',
+    borderColor: '#EF4444',
   },
   consentText: {
     flex: 1,
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: '#94A3B8',
     lineHeight: 20,
   },
   consentLink: {
-    color: colors.primary,
-    fontWeight: typography.weights.semibold || '600',
+    color: '#3B82F6',
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
   consentErrorText: {
-    fontSize: typography.sizes.xs,
-    color: colors.danger || '#EF4444',
+    fontSize: 11,
+    color: '#EF4444',
     marginTop: 6,
     marginLeft: 32,
   },
