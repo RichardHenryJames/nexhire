@@ -1,20 +1,10 @@
 /**
- * RefOpen About Page V2 - REVOLUTIONARY DESIGN
+ * RefOpen About Page — Clean, Professional Design
  * 
- * Inspired by: Linear, Vercel, Stripe, Notion, Arc Browser
+ * Inspired by: Linear, Vercel, Stripe
+ * Always dark mode for consistent branding.
  * 
- * Features:
- * - Animated gradient mesh hero with floating orbs
- * - Bento grid layout for features
- * - Scroll-triggered animations
- * - Animated counters
- * - Auto-scrolling company marquee
- * - Glassmorphism cards with glow effects
- * - Gradient text headlines
- * - Modern micro-interactions
- * - 3D-like card transforms
- * 
- * Route: /about-new
+ * Route: /about
  */
 
 import React, { useMemo, useEffect } from 'react';
@@ -49,45 +39,44 @@ const REFOPEN_URL = 'https://www.refopen.com';
 const ASK_REFERRAL_URL = 'https://www.refopen.com/ask-referral';
 
 // ============================================
-// THEME - Dark mode optimized for stunning visuals
+// THEME — Always dark for consistent branding
 // ============================================
 const getColors = (colors, isDark) => ({
-  // Backgrounds
-  bg: colors.text,
-  bgAlt: colors.background,
-  bgCard: 'rgba(17, 24, 39, 0.7)',
-  bgGlass: 'rgba(17, 24, 39, 0.4)',
+  // Backgrounds — true dark with depth
+  bg: '#030712',
+  bgAlt: '#0F172A',
+  bgCard: 'rgba(15, 23, 42, 0.85)',
+  bgGlass: 'rgba(15, 23, 42, 0.6)',
   
-  // Brand Colors
-  primary: colors.indigo,
-  primaryBright: colors.accentLight,
-  accent: colors.cyanLight,
-  accentBright: colors.cyanLight,
-  emerald: colors.successLight,
-  amber: colors.warningLight,
-  rose: colors.roseLight,
-  violet: colors.accentLight,
+  // Brand Colors — vivid and saturated
+  primary: '#818CF8',
+  primaryBright: '#A5B4FC',
+  accent: '#22D3EE',
+  accentBright: '#67E8F9',
+  emerald: '#34D399',
+  amber: '#FBBF24',
+  rose: '#FB7185',
+  violet: '#C4B5FD',
   
-  // Gradients
-  gradHero: [colors.text, colors.background, colors.accentBg, colors.indigo],
-  gradPrimary: [colors.indigo, colors.accent, colors.accent],
-  gradAccent: [colors.cyan, colors.cyanLight, colors.cyanLight],
-  gradEmerald: [colors.success, colors.successLight],
-  gradAmber: [colors.warning, colors.warningLight],
-  gradRose: [colors.rose, colors.roseLight],
-  gradViolet: [colors.accentDark, colors.accentLight],
-  gradMesh: ['rgba(99,102,241,0.15)', 'rgba(34,211,238,0.1)', 'rgba(52,211,153,0.05)'],
+  // Gradients — rich and vibrant
+  gradHero: ['#030712', '#0F172A', '#1E1B4B', '#312E81'],
+  gradPrimary: ['#6366F1', '#818CF8'],
+  gradAccent: ['#06B6D4', '#22D3EE'],
+  gradEmerald: ['#059669', '#10B981'],
+  gradAmber: ['#D97706', '#F59E0B'],
+  gradRose: ['#E11D48', '#FB7185'],
+  gradViolet: ['#7C3AED', '#A78BFA'],
   
-  // Text
-  text: colors.gray50,
-  textSub: colors.gray400,
-  textMuted: colors.gray500,
+  // Text — high contrast on dark bg
+  text: '#F8FAFC',
+  textSub: '#CBD5E1',
+  textMuted: '#64748B',
   
   // Borders & Effects
-  border: 'rgba(255,255,255,0.08)',
-  borderGlow: 'rgba(129,140,248,0.3)',
-  glow: 'rgba(99,102,241,0.4)',
-  glowAccent: 'rgba(34,211,238,0.4)',
+  border: 'rgba(148, 163, 184, 0.12)',
+  borderGlow: 'rgba(99, 102, 241, 0.35)',
+  glow: 'rgba(99, 102, 241, 0.4)',
+  glowAccent: 'rgba(34, 211, 238, 0.4)',
 });
 
 // ============================================
@@ -218,8 +207,8 @@ const GlowButton = ({ title, icon, gradient, onPress, size = 'large', colors }) 
           borderRadius: isLarge ? 16 : 12,
         }}
       >
-        <Text style={{ color: colors.white, fontWeight: '700', fontSize: isLarge ? 16 : 14, marginRight: icon ? 8 : 0 }}>{title}</Text>
-        {icon && <Ionicons name={icon} size={isLarge ? 20 : 16} color={colors.white} />}
+        <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: isLarge ? 16 : 14, marginRight: icon ? 8 : 0 }}>{title}</Text>
+        {icon && <Ionicons name={icon} size={isLarge ? 20 : 16} color="#FFFFFF" />}
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -230,12 +219,12 @@ const GlowButton = ({ title, icon, gradient, onPress, size = 'large', colors }) 
 // ============================================
 const TestimonialCard = ({ item, index, C, colors }) => {
   const gradients = [
-    [colors.indigo, colors.accent],
-    [colors.cyan, colors.cyanLight],
-    [colors.success, colors.successLight],
-    [colors.warning, colors.warningLight],
-    [colors.rose, colors.roseLight],
-    [colors.accentDark, colors.accentLight],
+    ['#6366F1', '#818CF8'],
+    ['#06B6D4', '#22D3EE'],
+    ['#059669', '#10B981'],
+    ['#D97706', '#F59E0B'],
+    ['#E11D48', '#FB7185'],
+    ['#7C3AED', '#A78BFA'],
   ];
 
   return (
@@ -259,7 +248,7 @@ const TestimonialCard = ({ item, index, C, colors }) => {
             colors={gradients[index % gradients.length]}
             style={{ width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}
           >
-            <Text style={{ color: colors.white, fontWeight: '700', fontSize: 16 }}>{item.avatar}</Text>
+            <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 16 }}>{item.avatar}</Text>
           </LinearGradient>
           <View>
             <Text style={{ fontSize: 14, fontWeight: '700', color: C.text }}>{item.name}</Text>
@@ -331,7 +320,7 @@ export default function AboutScreenNew() {
           paddingTop: Platform.OS !== 'web' ? (StatusBar.currentHeight || 44) + 10 : 16,
           borderBottomWidth: 1,
           borderBottomColor: C.border,
-          backgroundColor: 'rgba(3,7,18,0.8)',
+          backgroundColor: 'rgba(3, 7, 18, 0.92)',
           ...(Platform.OS === 'web' ? { backdropFilter: 'blur(20px)', position: 'sticky', top: 0, zIndex: 100 } : {}),
         }}
       >
@@ -496,7 +485,7 @@ export default function AboutScreenNew() {
             {/* Large feature card */}
             <BentoCard span={isLg ? 2 : 1} height={280} gradient={C.gradPrimary} C={C}>
               <Ionicons name="briefcase" size={36} color="rgba(255,255,255,0.9)" style={{ marginBottom: 16 }} />
-              <Text style={{ fontSize: 24, fontWeight: '800', color: colors.white, marginBottom: 10 }}>
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 10 }}>
                 Apply Directly to 125K+ Jobs
               </Text>
               <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.85)', lineHeight: 24 }}>
@@ -507,7 +496,7 @@ export default function AboutScreenNew() {
             {/* Ask Referral card */}
             <BentoCard span={1} height={280} C={C}>
               <LinearGradient colors={C.gradAccent} style={{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                <Ionicons name="hand-right" size={24} color={colors.white} />
+                <Ionicons name="hand-right" size={24} color="#FFFFFF" />
               </LinearGradient>
               <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 }}>Ask for Referral</Text>
               <Text style={{ fontSize: 14, color: C.textSub, lineHeight: 22 }}>
@@ -518,7 +507,7 @@ export default function AboutScreenNew() {
             {/* External Referral */}
             <BentoCard span={1} height={240} C={C}>
               <LinearGradient colors={C.gradEmerald} style={{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                <Ionicons name="globe" size={24} color={colors.white} />
+                <Ionicons name="globe" size={24} color="#FFFFFF" />
               </LinearGradient>
               <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 }}>External Jobs</Text>
               <Text style={{ fontSize: 14, color: C.textSub, lineHeight: 22 }}>
@@ -529,7 +518,7 @@ export default function AboutScreenNew() {
             {/* Track Applications */}
             <BentoCard span={1} height={240} C={C}>
               <LinearGradient colors={C.gradAmber} style={{ width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-                <Ionicons name="analytics" size={24} color={colors.white} />
+                <Ionicons name="analytics" size={24} color="#FFFFFF" />
               </LinearGradient>
               <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 }}>Real-Time Tracking</Text>
               <Text style={{ fontSize: 14, color: C.textSub, lineHeight: 22 }}>
@@ -538,9 +527,9 @@ export default function AboutScreenNew() {
             </BentoCard>
 
             {/* AI Recommendations */}
-            <BentoCard span={1} height={240} gradient={[colors.accentDark, colors.accent, colors.pink]} C={C}>
+            <BentoCard span={1} height={240} gradient={['#7C3AED', '#8B5CF6', '#EC4899']} C={C}>
               <Text style={{ fontSize: 36, marginBottom: 12 }}>✨</Text>
-              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.white, marginBottom: 8 }}>AI-Powered</Text>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 }}>AI-Powered</Text>
               <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 22 }}>
                 AI learns your preferences and surfaces jobs you'll actually love.
               </Text>
@@ -663,7 +652,7 @@ export default function AboutScreenNew() {
                     colors={tool.gradient}
                     style={{ width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' }}
                   >
-                    <Ionicons name={tool.icon} size={20} color={colors.white} />
+                    <Ionicons name={tool.icon} size={20} color="#FFFFFF" />
                   </LinearGradient>
                   {tool.ready && (
                     <View
@@ -715,13 +704,13 @@ export default function AboutScreenNew() {
             {/* Earning card */}
             <BentoCard span={isLg ? 1.5 : 1} height={320} gradient={C.gradEmerald} C={C}>
               <Text style={{ fontSize: 40, marginBottom: 12 }}>💰</Text>
-              <Text style={{ fontSize: 24, fontWeight: '800', color: colors.white, marginBottom: 10 }}>Earn Per Referral</Text>
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 10 }}>Earn Per Referral</Text>
               <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)', lineHeight: 24, marginBottom: 20 }}>
                 Instant rewards for every referral. Plus your company's bonus if they get hired!
               </Text>
               <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 14, padding: 16 }}>
                 <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 2 }}>Top referrers earn</Text>
-                <Text style={{ fontSize: 32, fontWeight: '800', color: colors.white }}>$3K+/month</Text>
+                <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>$3K+/month</Text>
               </View>
             </BentoCard>
 
@@ -771,13 +760,13 @@ export default function AboutScreenNew() {
 
           <View style={{ flexDirection: isLg ? 'row' : 'column' }}>
             {[
-              { icon: 'create', title: 'Post Jobs Free', desc: 'Reach 50K+ qualified professionals instantly.', gradient: [colors.primary, colors.primaryDark] },
-              { icon: 'people', title: 'Referral Network', desc: 'Leverage your employees\' networks for better hires.', gradient: [colors.accent, colors.accentDark] },
-              { icon: 'analytics', title: 'Track & Measure', desc: 'Full analytics on your hiring funnel.', gradient: [colors.cyan, colors.cyan] },
+              { icon: 'create', title: 'Post Jobs Free', desc: 'Reach 50K+ qualified professionals instantly.', gradient: ['#4F46E5', '#6366F1'] },
+              { icon: 'people', title: 'Referral Network', desc: 'Leverage your employees\' networks for better hires.', gradient: ['#7C3AED', '#8B5CF6'] },
+              { icon: 'analytics', title: 'Track & Measure', desc: 'Full analytics on your hiring funnel.', gradient: ['#0891B2', '#06B6D4'] },
             ].map((item, i) => (
               <BentoCard key={i} span={1} height={220} gradient={item.gradient} C={C}>
                 <Ionicons name={item.icon} size={32} color="rgba(255,255,255,0.9)" style={{ marginBottom: 12 }} />
-                <Text style={{ fontSize: 20, fontWeight: '700', color: colors.white, marginBottom: 6 }}>{item.title}</Text>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 6 }}>{item.title}</Text>
                 <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 20 }}>{item.desc}</Text>
               </BentoCard>
             ))}
@@ -836,7 +825,7 @@ export default function AboutScreenNew() {
                 <Ionicons name="logo-twitter" size={24} color={C.textMuted} />
               </TouchableOpacity>
             </View>
-            <Text style={{ fontSize: 12, color: C.textMuted }}>© 2025 RefOpen. All rights reserved.</Text>
+            <Text style={{ fontSize: 12, color: C.textMuted }}>© 2026 RefOpen. All rights reserved.</Text>
           </View>
         </View>
 

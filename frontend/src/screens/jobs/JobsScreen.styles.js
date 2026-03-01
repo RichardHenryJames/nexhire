@@ -317,6 +317,12 @@ export const createStyles = (colors, responsive = {}) => {
   fabReferralRequests: {
     backgroundColor: colors.primary,
   },
+  fabMain: {
+    backgroundColor: colors.primary,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
   fabBadge: {
     position: 'absolute',
     top: -4,
