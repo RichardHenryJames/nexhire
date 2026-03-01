@@ -3,6 +3,8 @@
  * Centralized settings for the enhanced job scraping system
  */
 
+import { BLOCKED_MARKETPLACE_COMPANIES } from '../data/blocked-marketplaces';
+
 export interface EnhancedScraperConfig {
   enabled: boolean;
   maxJobsPerRun: number;
@@ -145,9 +147,9 @@ export const ENHANCED_SCRAPER_CONFIG: EnhancedScraperConfig = {
     'get rich quick', 'work from home scam', 'investment scheme', 'binary options'
   ],
 
-  // Company blacklist - exclude jobs from these companies
+  // Company blacklist - exclude jobs from marketplace/portal companies
   excludeCompanies: [
-    'Turing'
+    ...BLOCKED_MARKETPLACE_COMPANIES,
   ],
 
   // ?? Human-like behavior settings

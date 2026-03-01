@@ -350,10 +350,12 @@ export default function BecomeReferrerScreen({ navigation }) {
         setResendTimer(120);
         showToast(`OTP sent to ${res.data?.email || fullEmail}`, 'success');
       } else {
-        showToast(res.error || 'Failed to send OTP', 'error');
+        showToast(res.message || res.error || 'Failed to send OTP', 'error');
       }
     } catch (err) {
-      showToast('Failed to send OTP. Please try again.', 'error');
+      // apiCall throws on HTTP 4xx — err.data has the response body with message
+      const msg = err?.data?.message || err?.data?.error || err?.message || 'Failed to send OTP. Please try again.';
+      showToast(msg, 'error');
     } finally {
       setSendingOtp(false);
     }
@@ -1313,7 +1315,9 @@ function makeStyles(colors, isDark, responsive = {}) {
       paddingVertical: 12,
       paddingHorizontal: 16,
       borderRadius: 12,
-      backgroundColor: isDark ? colors.gray700 : colors.gray100,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
       gap: 4,
     },
     backButtonText: {

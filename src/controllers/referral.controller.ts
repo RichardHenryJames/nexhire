@@ -532,8 +532,14 @@ export const getCompletedReferrals = withErrorHandling(async (req: HttpRequest, 
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
 
-        // Pass userId directly - AssignedReferrerID stores UserID
-        const result = await ReferralService.getCompletedReferralsByUser(user.userId, page, pageSize);
+        // Check if user is Admin - admins see ALL completed referrals
+        const { dbService } = await import('../services/database.service');
+        const userTypeResult = await dbService.executeQuery(
+            'SELECT UserType FROM Users WHERE UserID = @param0', [user.userId]
+        );
+        const isAdmin = userTypeResult.recordset?.[0]?.UserType === 'Admin';
+
+        const result = await ReferralService.getCompletedReferralsByUser(user.userId, page, pageSize, isAdmin);
         
         return {
             status: 200,

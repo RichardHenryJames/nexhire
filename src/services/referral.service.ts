@@ -904,15 +904,18 @@ export class ReferralService {
      * Get completed referrals by UserID (for closed tab - shows ALL completed referrals regardless of company)
      * AssignedReferrerID stores UserID, so we match directly against that
      */
-    static async getCompletedReferralsByUser(userId: string, page: number = 1, pageSize: number = 20): Promise<PaginatedReferralRequests> {
+    static async getCompletedReferralsByUser(userId: string, page: number = 1, pageSize: number = 20, isAdmin: boolean = false): Promise<PaginatedReferralRequests> {
         try {
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
-            // Filter by completed statuses AND this user as the assigned referrer
+            // Filter by completed statuses
+            // Admin sees ALL completed referrals, normal users see only their own
             const closedStatuses = "('ProofUploaded', 'Completed', 'Verified', 'Unverified')";
-            const whereClause = `WHERE rr.Status IN ${closedStatuses} AND rr.AssignedReferrerID = @param0`;
-            const queryParams = [userId];
+            const whereClause = isAdmin
+                ? `WHERE rr.Status IN ${closedStatuses}`
+                : `WHERE rr.Status IN ${closedStatuses} AND rr.AssignedReferrerID = @param0`;
+            const queryParams = isAdmin ? [] : [userId];
 
             // Count total
             const countQuery = `
