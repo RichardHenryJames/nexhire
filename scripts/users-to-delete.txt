@@ -1,2 +1,1 @@
-vinoshg26@gmail.com
-manu4kumar89@gmail.com
+# Add emails to delete, one per line
