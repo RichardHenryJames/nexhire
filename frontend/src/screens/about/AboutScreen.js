@@ -27,12 +27,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
-// Assets — preloaded for instant render
+// Fast logo — native <img> on web for instant cached render, RN Image on native
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
-if (Platform.OS === 'web') {
-  const img = new window.Image();
-  img.src = typeof RefOpenLogo === 'number' ? '' : (RefOpenLogo?.uri || RefOpenLogo);
-}
+const FastLogo = ({ width, height }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <img
+        src="/refopen-logo.png"
+        alt="RefOpen"
+        width={width}
+        height={height}
+        style={{ objectFit: 'contain' }}
+        loading="eager"
+      />
+    );
+  }
+  return <Image source={RefOpenLogo} style={{ width, height }} resizeMode="contain" fadeDuration={0} />;
+};
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const REFOPEN_URL = 'https://www.refopen.com';
@@ -325,7 +336,7 @@ export default function AboutScreenNew() {
         }}
       >
         <TouchableOpacity onPress={() => Linking.openURL(REFOPEN_URL)}>
-          <Image source={RefOpenLogo} style={{ width: 130, height: 36 }} resizeMode="contain" fadeDuration={0} />
+          <FastLogo width={130} height={36} />
         </TouchableOpacity>
         {isAuthenticated ? (
           <GlowButton title="Get Started" gradient={C.gradPrimary} onPress={() => goToApp()} size="small" colors={colors} />
@@ -809,7 +820,7 @@ export default function AboutScreenNew() {
         <View style={{ paddingVertical: 36, borderTopWidth: 1, borderTopColor: C.border }}>
           <View style={{ alignItems: 'center', ...containerStyle }}>
             <TouchableOpacity onPress={() => Linking.openURL(REFOPEN_URL)} style={{ marginBottom: 20 }}>
-              <Image source={RefOpenLogo} style={{ width: 180, height: 50 }} resizeMode="contain" fadeDuration={0} />
+              <FastLogo width={180} height={50} />
             </TouchableOpacity>
             <Text style={{ fontSize: 14, color: C.textSub, marginBottom: 24 }}>
               Find Jobs · Get Referred · Hire Talent · Earn Rewards
