@@ -289,7 +289,6 @@ export default function LoginScreen({ navigation }) {
           <View style={screenStyles.form}>
             {/* Email Input */}
             <View style={screenStyles.inputGroup}>
-              <Text style={screenStyles.label}>Email Address</Text>
               <View style={[
                 screenStyles.inputContainer,
                 errors.email && screenStyles.inputError
@@ -307,7 +306,7 @@ export default function LoginScreen({ navigation }) {
                     setEmail(text);
                     if (errors.email) setErrors(prev => ({ ...prev, email: null }));
                   }}
-                  placeholder="Enter your email"
+                  placeholder="Email address"
                   placeholderTextColor={colors.placeholder}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -322,7 +321,6 @@ export default function LoginScreen({ navigation }) {
 
             {/* Password Input */}
             <View style={[screenStyles.inputGroup, { marginBottom: 0 }]}>
-              <Text style={screenStyles.label}>Password</Text>
               <View style={[
                 screenStyles.inputContainer,
                 errors.password && screenStyles.inputError
@@ -340,7 +338,7 @@ export default function LoginScreen({ navigation }) {
                     setPassword(text);
                     if (errors.password) setErrors(prev => ({ ...prev, password: null }));
                   }}
-                  placeholder="Enter your password"
+                  placeholder="Password"
                   placeholderTextColor={colors.placeholder}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
@@ -387,7 +385,7 @@ export default function LoginScreen({ navigation }) {
                   </Text>
                 </View>
               ) : (
-                <Text style={screenStyles.loginButtonText}>Sign In</Text>
+                <Text style={screenStyles.loginButtonText}>Continue with Email</Text>
               )}
             </TouchableOpacity>
 

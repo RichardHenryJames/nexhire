@@ -11,6 +11,7 @@ import {
   Linking,
   Platform,
   Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -22,6 +23,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import { usePricing } from '../../contexts/PricingContext';
+import { getReferralCostForJob } from '../../utils/pricingUtils';
 
 /**
  * ReferralTrackingScreen - Shows detailed tracking/history of a referral request
@@ -46,8 +49,10 @@ export default function ReferralTrackingScreen() {
   const [referrerConversation, setReferrerConversation] = useState(null); // Conversation with referrer if exists
   const [referrerUserIds, setReferrerUserIds] = useState([]); // All referrers who interacted with this request
   const [messageExpanded, setMessageExpanded] = useState(false);
+  const { pricing } = usePricing();
   const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [feeTableExpanded, setFeeTableExpanded] = useState(false);
 
   const canWithdraw = ['Pending', 'NotifiedToReferrers', 'Viewed'].includes(currentStatus);
 
@@ -546,37 +551,138 @@ export default function ReferralTrackingScreen() {
         </ScrollView>
       </View>
 
-      {/* Withdraw Confirmation Modal */}
-      <Modal visible={showWithdrawConfirm} transparent animationType="fade" onRequestClose={() => setShowWithdrawConfirm(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowWithdrawConfirm(false)}>
-          <View style={styles.modalCard}>
-            <Ionicons name="warning-outline" size={36} color={colors.warning} style={{ marginBottom: 12 }} />
-            <Text style={styles.modalTitle}>Withdraw Request?</Text>
-            <Text style={styles.modalDesc}>
-              Are you sure you want to withdraw this referral request
-              {request?.JobTitle ? ` for "${request.JobTitle}"` : ''}? The held amount will be released back to your wallet.
+      {/* Withdraw Confirmation Modal — same as MyReferralRequestsScreen */}
+      <Modal
+        visible={showWithdrawConfirm}
+        transparent
+        onRequestClose={() => setShowWithdrawConfirm(false)}
+      >
+        <Pressable style={styles.confirmOverlay} onPress={() => setShowWithdrawConfirm(false)}>
+          <Pressable style={styles.confirmBox} onPress={() => {}}>
+            <View style={styles.confirmHeader}>
+              <View style={styles.confirmIconContainer}>
+                <Ionicons name="warning" size={24} color={colors.warning} />
+              </View>
+              <Text style={styles.confirmTitle}>Withdraw Referral Request</Text>
+            </View>
+
+            <Text style={styles.confirmMessage}>
+              Are you sure you want to withdraw your referral request for{' '}
+              <Text style={styles.jobTitleInModal}>
+                {request?.JobTitle || 'this job'}
+              </Text>
+              ?
             </Text>
-            <View style={styles.modalActions}>
+
+            {(() => {
+              const hoursElapsed = request?.RequestedAt
+                ? (Date.now() - new Date(request.RequestedAt).getTime()) / (1000 * 60 * 60)
+                : 999;
+              const currentTier = hoursElapsed < 1 ? 0 : hoursElapsed <= 24 ? 1 : 2;
+              const heldAmount = request?.OpenToAnyCompany ? pricing.openToAnyReferralCost : getReferralCostForJob(request || {}, pricing);
+              const tiers = [
+                { label: 'Within 1 hour', fee: '₹0 (Free)', color: colors.success },
+                { label: '1 – 24 hours', fee: '₹10', color: colors.warning },
+                { label: 'After 24 hours', fee: '₹20', color: colors.error },
+              ];
+              return (
+                <View style={styles.feeTableContainer}>
+                  <Text style={styles.feeTableNote}>
+                    {currentTier === 0
+                      ? '✅ You are within the free cancellation window. Full amount will be released.'
+                      : `A ${tiers[currentTier].fee} fee will be deducted. Remaining ₹${heldAmount - (currentTier === 1 ? 10 : 20)} released to wallet.`
+                    }
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.feeTableToggle}
+                    onPress={() => setFeeTableExpanded(!feeTableExpanded)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="pricetag-outline" size={13} color={colors.gray500} />
+                    <Text style={styles.feeTableToggleText}>Cancellation Fee Schedule</Text>
+                    <Ionicons
+                      name={feeTableExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.gray500}
+                    />
+                  </TouchableOpacity>
+                  {feeTableExpanded && (
+                    <View style={styles.feeTable}>
+                      <View style={styles.feeTableHeaderRow}>
+                        <Text style={[styles.feeTableHeaderCell, { flex: 1 }]}>Time Since Request</Text>
+                        <Text style={[styles.feeTableHeaderCell, { flex: 1, textAlign: 'right' }]}>Fee</Text>
+                      </View>
+                      {tiers.map((tier, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.feeTableRow,
+                            currentTier === idx && styles.feeTableRowActive,
+                            idx === tiers.length - 1 && { borderBottomWidth: 0 },
+                          ]}
+                        >
+                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            {currentTier === idx && (
+                              <Ionicons name="arrow-forward-circle" size={14} color={tier.color} />
+                            )}
+                            <Text style={[
+                              styles.feeTableCell,
+                              currentTier === idx && { fontWeight: '700', color: colors.textPrimary },
+                            ]}>{tier.label}</Text>
+                          </View>
+                          <Text style={[
+                            styles.feeTableCell,
+                            { flex: 1, textAlign: 'right', color: tier.color, fontWeight: '600' },
+                            currentTier === idx && { fontWeight: '700' },
+                          ]}>{tier.fee}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <View style={styles.feeAutoRefundTip}>
+                    <Ionicons name="information-circle" size={14} color={colors.primary} />
+                    <Text style={styles.feeAutoRefundText}>
+                      Your ₹{heldAmount} is fully refundable if no referral is made within 2 weeks.
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            <Text style={[styles.confirmMessage, { marginBottom: 16, marginTop: 4, fontSize: 11 }]}>
+              This action cannot be undone.
+            </Text>
+
+            <View style={styles.confirmActions}>
               <TouchableOpacity
-                style={styles.modalCancelBtn}
+                style={[styles.confirmBtn, styles.keepBtn]}
                 onPress={() => setShowWithdrawConfirm(false)}
+                activeOpacity={0.8}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 6 }} />
+                <Text style={styles.keepBtnText}>Keep</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.modalWithdrawBtn}
-                onPress={handleWithdraw}
+                style={[styles.confirmBtn, styles.cancelReqBtn]}
+                onPress={() => {
+                  setShowWithdrawConfirm(false);
+                  handleWithdraw();
+                }}
                 disabled={withdrawing}
+                activeOpacity={0.8}
               >
                 {withdrawing ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={colors.dangerDark} />
                 ) : (
-                  <Text style={styles.modalWithdrawText}>Withdraw</Text>
+                  <>
+                    <Ionicons name="close-circle" size={16} color={colors.dangerDark} style={{ marginRight: 6 }} />
+                    <Text style={styles.cancelReqBtnText}>Withdraw</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </TouchableOpacity>
+          </Pressable>
+        </Pressable>
       </Modal>
     </View>
   );
@@ -923,66 +1029,155 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },
-  // Withdraw confirmation modal
-  modalOverlay: {
-    flex: 1,
+  // Withdraw confirmation modal — matches MyReferralRequestsScreen
+  confirmOverlay: {
+    ...Platform.select({
+      web: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 },
+      default: { flex: 1 },
+    }),
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 16,
   },
-  modalCard: {
+  confirmBox: {
+    width: '100%',
+    maxWidth: 420,
     backgroundColor: colors.surface,
     borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    maxWidth: 360,
-    width: '100%',
+    padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalTitle: {
+  confirmHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  confirmIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.warningLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 8,
-  },
-  modalDesc: {
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  modalCancelBtn: {
+    color: colors.textPrimary,
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+  },
+  confirmMessage: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray700,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  jobTitleInModal: {
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  feeTableContainer: {
+    marginBottom: 12,
+  },
+  feeTableToggle: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    gap: 6,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  feeTableToggleText: {
+    flex: 1,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    color: colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  feeTable: {
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
+    overflow: 'hidden',
   },
-  modalCancelText: {
-    fontSize: typography.sizes.sm,
+  feeTableHeaderRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.surfaceHover || colors.gray100,
+  },
+  feeTableHeaderCell: {
+    fontSize: 11,
     fontWeight: typography.weights.semibold,
-    color: colors.text,
+    color: colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  modalWithdrawBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+  feeTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     alignItems: 'center',
-    backgroundColor: colors.error,
   },
-  modalWithdrawText: {
+  feeTableRowActive: {
+    backgroundColor: (colors.primaryLight) + '40',
+  },
+  feeTableCell: {
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: '#FFFFFF',
+    color: colors.gray700,
+  },
+  feeTableNote: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  feeAutoRefundTip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: (colors.primaryLight) + '30',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: (colors.primary) + '20',
+  },
+  feeAutoRefundText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.gray600 || colors.gray500,
+    lineHeight: 16,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  confirmBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  keepBtn: {
+    backgroundColor: colors.gray100,
+  },
+  keepBtnText: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  cancelReqBtn: {
+    backgroundColor: colors.dangerLight,
+  },
+  cancelReqBtnText: {
+    color: colors.danger,
+    fontWeight: typography.weights.semibold,
   },
 });

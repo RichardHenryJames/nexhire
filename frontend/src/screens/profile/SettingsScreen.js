@@ -338,6 +338,7 @@ export default function SettingsScreen({ navigation, route }) {
         currentLocation: jobSeekerProfile.currentLocation,
         linkedInProfile: jobSeekerProfile.linkedInProfile,
         githubProfile: jobSeekerProfile.githubProfile,
+        portfolioURL: jobSeekerProfile.portfolioURL,
         isOpenToWork: jobSeekerProfile.isOpenToWork,
         openToRefer: jobSeekerProfile.openToRefer,
       });
@@ -682,6 +683,17 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.githubProfile}
               onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, githubProfile: text }))}
               placeholder="https://github.com/username"
+              placeholderTextColor={colors.gray400}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Portfolio / Website</Text>
+            <TextInput
+              style={styles.textInput}
+              value={jobSeekerProfile.portfolioURL}
+              onChangeText={(text) => setJobSeekerProfile(prev => ({ ...prev, portfolioURL: text }))}
+              placeholder="https://yourportfolio.com"
               placeholderTextColor={colors.gray400}
             />
           </View>
