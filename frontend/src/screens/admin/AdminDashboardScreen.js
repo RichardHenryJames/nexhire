@@ -23,6 +23,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import { useCustomAlert } from '../../components/CustomAlert';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -34,6 +35,7 @@ export default function AdminDashboardScreen() {
   const route = useRoute();
   const { colors } = useTheme();
   const { user, isAdmin } = useAuth();
+  const { showConfirm } = useCustomAlert();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
@@ -1087,21 +1089,29 @@ export default function AdminDashboardScreen() {
               {!userData.IsVerifiedReferrer && userData.UserType !== 'Admin' && (
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 4 }}
-                  onPress={async (e) => {
+                  onPress={(e) => {
                     e.stopPropagation?.();
-                    const confirmed = Platform.OS === 'web' ? window.confirm(`Make ${userData.FirstName} ${userData.LastName} a verified referrer?`) : true;
-                    if (!confirmed) return;
-                    try {
-                      const res = await refopenAPI.adminMakeReferrer(userData.UserID);
-                      if (res.success) {
-                        showToast(res.message, 'success');
-                        loadUsers(usersPagination.page, usersFilters);
-                      } else {
-                        showToast(res.error || 'Failed', 'error');
-                      }
-                    } catch (err) {
-                      showToast(err?.data?.message || err?.message || 'Failed', 'error');
-                    }
+                    showConfirm({
+                      title: 'Make Verified Referrer',
+                      message: `Make ${userData.FirstName} ${userData.LastName} a verified referrer?\n\nThis will allow them to claim referral requests and earn rewards.`,
+                      icon: 'shield-checkmark',
+                      iconColor: colors.primary,
+                      confirmText: 'Make Referrer',
+                      confirmStyle: 'default',
+                      onConfirm: async () => {
+                        try {
+                          const res = await refopenAPI.adminMakeReferrer(userData.UserID);
+                          if (res.success) {
+                            showToast(res.message, 'success');
+                            loadUsers(usersPagination.page, usersFilters);
+                          } else {
+                            showToast(res.error || 'Failed', 'error');
+                          }
+                        } catch (err) {
+                          showToast(err?.data?.message || err?.message || 'Failed', 'error');
+                        }
+                      },
+                    });
                   }}
                 >
                   <Ionicons name="shield-checkmark" size={12} color={colors.white} />
@@ -1111,23 +1121,29 @@ export default function AdminDashboardScreen() {
               {userData.UserType !== 'Admin' && (
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.error, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 4 }}
-                  onPress={async (e) => {
+                  onPress={(e) => {
                     e.stopPropagation?.();
-                    const confirmed = Platform.OS === 'web'
-                      ? window.confirm(`DELETE ${userData.FirstName} ${userData.LastName} (${userData.Email})? This cannot be undone.`)
-                      : true;
-                    if (!confirmed) return;
-                    try {
-                      const res = await refopenAPI.adminDeleteUser(userData.UserID);
-                      if (res.success) {
-                        showToast(res.message, 'success');
-                        loadUsers(usersPagination.page, usersFilters);
-                      } else {
-                        showToast(res.error || 'Failed', 'error');
-                      }
-                    } catch (err) {
-                      showToast(err?.data?.message || err?.message || 'Failed', 'error');
-                    }
+                    showConfirm({
+                      title: 'Delete User',
+                      message: `Permanently delete ${userData.FirstName} ${userData.LastName} (${userData.Email})?\n\nThis will remove all their data including referrals, applications, messages, and wallet. This cannot be undone.`,
+                      icon: 'trash',
+                      iconColor: colors.error,
+                      confirmText: 'Delete User',
+                      confirmStyle: 'destructive',
+                      onConfirm: async () => {
+                        try {
+                          const res = await refopenAPI.adminDeleteUser(userData.UserID);
+                          if (res.success) {
+                            showToast(res.message, 'success');
+                            loadUsers(usersPagination.page, usersFilters);
+                          } else {
+                            showToast(res.error || 'Failed', 'error');
+                          }
+                        } catch (err) {
+                          showToast(err?.data?.message || err?.message || 'Failed', 'error');
+                        }
+                      },
+                    });
                   }}
                 >
                   <Ionicons name="trash" size={12} color={colors.white} />
