@@ -114,18 +114,18 @@ const darkTheme = {
   accentDark: '#7C3AED',
 
   // ── Surfaces ─────────────────────────────────────
-  surface: '#1E293B',
-  surfaceElevated: '#334155',
-  background: '#0F172A',
-  card: '#1E293B',
+  surface: '#18181B',
+  surfaceElevated: '#27272A',
+  background: '#09090B',
+  card: '#18181B',
 
   // ── Text ─────────────────────────────────────────
-  text: '#F1F5F9',
-  textPrimary: '#F1F5F9',
-  textSecondary: '#94A3B8',
-  textMuted: '#64748B',
-  textLight: '#64748B',
-  textInverse: '#0F172A',
+  text: '#FAFAFA',
+  textPrimary: '#FAFAFA',
+  textSecondary: '#A1A1AA',
+  textMuted: '#71717A',
+  textLight: '#71717A',
+  textInverse: '#09090B',
 
   // ── Status — success ─────────────────────────────
   success: '#10B981',
@@ -165,27 +165,27 @@ const darkTheme = {
   roseLight: '#FB7185',
   pink: '#EC4899',
 
-  // ── Neutral — slate scale ────────────────────────
+  // ── Neutral — zinc scale ─────────────────────────
   white: '#FFFFFF',
   black: '#000000',
-  gray50: '#1E293B',
-  gray100: '#334155',
-  gray200: '#475569',
-  gray300: '#64748B',
-  gray400: '#94A3B8',
-  gray500: '#CBD5E1',
-  gray600: '#E2E8F0',
-  gray700: '#F1F5F9',
-  gray800: '#F8FAFC',
-  gray900: '#FFFFFF',
+  gray50: '#18181B',
+  gray100: '#27272A',
+  gray200: '#3F3F46',
+  gray300: '#52525B',
+  gray400: '#71717A',
+  gray500: '#A1A1AA',
+  gray600: '#D4D4D8',
+  gray700: '#E4E4E7',
+  gray800: '#F4F4F5',
+  gray900: '#FAFAFA',
 
   // ── Borders ──────────────────────────────────────
-  border: 'rgba(148, 163, 184, 0.12)',
-  borderLight: 'rgba(148, 163, 184, 0.2)',
-  borderSubtle: 'rgba(148, 163, 184, 0.08)',
+  border: 'rgba(161, 161, 170, 0.12)',
+  borderLight: 'rgba(161, 161, 170, 0.2)',
+  borderSubtle: 'rgba(161, 161, 170, 0.08)',
 
   // ── Inputs ───────────────────────────────────────
-  inputBackground: 'rgba(30, 41, 59, 0.6)',
+  inputBackground: 'rgba(24, 24, 27, 0.6)',
 
   // ── Shadow ───────────────────────────────────────
   shadow: '#000000',

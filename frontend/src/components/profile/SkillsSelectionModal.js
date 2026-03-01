@@ -431,8 +431,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.inputBackground,
     marginHorizontal: 16,
     marginTop: 12,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 14,
   },
   searchIcon: {
     marginRight: 8,

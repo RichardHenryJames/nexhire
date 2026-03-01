@@ -584,11 +584,11 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.gray50,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
   },
   searchIconContainer: {
     padding: 4,

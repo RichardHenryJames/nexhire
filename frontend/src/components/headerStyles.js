@@ -25,6 +25,10 @@ export const HEADER_PADDING = {
 export const HEADER_ELEVATION = {
   zIndex: 10000,
   elevation: 10,
+  shadowColor: '#000000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.06,
+  shadowRadius: 4,
 };
 
 export const HEADER_STICKY = Platform.OS === 'web'

@@ -13,11 +13,11 @@ export const createStyles = (colors, responsive = {}) => {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderRadius: 8,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 10,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 40,
   },
   searchIcon: {
     marginRight: 8,
@@ -41,9 +41,13 @@ export const createStyles = (colors, responsive = {}) => {
   // Quick Filters Styles
   quickFiltersContainer: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: 8,
+    borderBottomWidth: 0,
+    paddingVertical: 10,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
   quickFiltersScroll: {
     paddingHorizontal: 16,

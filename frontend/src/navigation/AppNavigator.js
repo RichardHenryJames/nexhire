@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Platform, Animated } from "react-native";
+import { Platform } from "react-native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -112,34 +112,6 @@ import MarketPulseScreen from "../screens/services/MarketPulseScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
-
-// Animated tab icon with bounce on focus
-const AnimatedTabIcon = ({ name, size, color, focused }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const isFirstRender = useRef(true);
-
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (focused) {
-      scaleAnim.setValue(0.5);
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 4,
-        tension: 200,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [focused]);
-
-  return (
-    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <Ionicons name={name} size={size} color={color} />
-    </Animated.View>
-  );
-};
 
 // Deep Linking Configuration with unique paths
 const linking = {
@@ -502,21 +474,27 @@ function MainTabNavigator() {
             iconName = focused ? "stats-chart" : "stats-chart-outline";
           }
 
-          return <AnimatedTabIcon name={iconName} size={size} color={color} focused={focused} />;
+          return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.gray500,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: Platform.OS === 'ios' ? 84 : Platform.OS === 'web' ? 52 : 58,
+          borderTopWidth: 0,
+          borderTopColor: 'transparent',
+          height: Platform.OS === 'ios' ? 84 : Platform.OS === 'web' ? 56 : 60,
           paddingBottom: Platform.OS === 'ios' ? 28 : Platform.OS === 'web' ? 4 : 6,
-          paddingTop: Platform.OS === 'web' ? 4 : 6,
+          paddingTop: Platform.OS === 'web' ? 6 : 8,
+          shadowColor: colors.black,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 6,
+          elevation: 12,
         },
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: "600",
+          letterSpacing: 0.2,
           marginBottom: Platform.OS === 'android' ? 2 : 0,
         },
         tabBarItemStyle: {
