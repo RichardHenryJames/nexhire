@@ -397,7 +397,7 @@ const createStyles = (colors, responsive = {}) => {
     paddingHorizontal: 4,
   },
   homeBadgeText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 10,
     fontWeight: typography.weights.bold,
   },
@@ -499,11 +499,11 @@ const createStyles = (colors, responsive = {}) => {
   aboutCard: {
     marginHorizontal: 24,
     marginVertical: 16,
-    backgroundColor: '#18181B', // COLORS.bgCard from AboutScreen
+    backgroundColor: colors.background, // COLORS.bgCard from AboutScreen
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#27272A', // COLORS.border from AboutScreen
+    borderColor: colors.gray800, // COLORS.border from AboutScreen
     overflow: 'hidden',
   },
 

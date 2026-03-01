@@ -214,7 +214,7 @@ export default function SkillsSelectionModal({
         
         {/* Info Text */}
         <View style={styles.infoContainer}>
-          <Ionicons name="information-circle-outline" size={16} color="#666" />
+          <Ionicons name="information-circle-outline" size={16} color={colors.textSecondary} />
           <Text style={styles.infoText}>
             {activeTab === 'primary' 
               ? 'Select up to 10 core skills you excel at'
@@ -224,18 +224,18 @@ export default function SkillsSelectionModal({
         
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Type to search and add skills..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearch}>
-              <Ionicons name="close-circle" size={20} color="#999" />
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -256,7 +256,7 @@ export default function SkillsSelectionModal({
                     onPress={() => toggleSkill(skillValue)}
                     style={styles.removeSkillButton}
                   >
-                    <Ionicons name="close-circle" size={18} color="#fff" />
+                    <Ionicons name="close-circle" size={18} color={colors.white} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -274,7 +274,7 @@ export default function SkillsSelectionModal({
           <ScrollView style={styles.dropdownList} showsVerticalScrollIndicator={false}>
             {filteredSkills.length === 0 ? (
               <View style={styles.emptyDropdown}>
-                <Ionicons name="search-outline" size={32} color="#ccc" />
+                <Ionicons name="search-outline" size={32} color={colors.gray300} />
                 <Text style={styles.emptyText}>No skills found matching "{searchQuery}"</Text>
                 <TouchableOpacity
                   style={[styles.addCustomBtn, { backgroundColor: colors.primary + '15', borderColor: colors.primary, borderWidth: 1 }]}
@@ -319,7 +319,7 @@ export default function SkillsSelectionModal({
           </ScrollView>
         ) : allSkills.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="warning-outline" size={48} color="#ff9500" />
+            <Ionicons name="warning-outline" size={48} color={colors.orange} />
             <Text style={styles.emptyText}>No skills loaded</Text>
             <Text style={styles.emptySubtext}>Please try closing and reopening this screen</Text>
             <TouchableOpacity 
@@ -331,7 +331,7 @@ export default function SkillsSelectionModal({
           </View>
         ) : (
           <View style={styles.instructionContainer}>
-            <Ionicons name="information-circle-outline" size={48} color="#ccc" />
+            <Ionicons name="information-circle-outline" size={48} color={colors.gray300} />
             <Text style={styles.instructionText}>Start typing to search and add skills</Text>
           </View>
         )}
@@ -344,7 +344,7 @@ export default function SkillsSelectionModal({
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#fff',
+    backgroundColor: colors.background,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       alignItems: 'center',
     } : {}),
@@ -361,7 +361,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#e0e0e0',
+    borderBottomColor: colors.border,
   },
   closeButton: {
     padding: 4,
@@ -388,8 +388,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#e0e0e0',
-    backgroundColor: colors.gray100 || '#f8f8f8',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.gray100,
   },
   tab: {
     flex: 1,
@@ -399,12 +399,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   tabActive: {
     borderBottomWidth: 2,
     borderBottomColor: colors.primary,
-    backgroundColor: colors.surface || '#fff',
+    backgroundColor: colors.surface,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.textSecondary || '#666',
+    color: colors.textSecondary,
   },
   tabTextActive: {
     color: colors.primary,
@@ -422,13 +422,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   infoText: {
     fontSize: 13,
-    color: colors.textSecondary || '#666',
+    color: colors.textSecondary,
     flex: 1,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.inputBackground || '#f5f5f5',
+    backgroundColor: colors.inputBackground,
     marginHorizontal: 16,
     marginTop: 12,
     borderRadius: 8,
@@ -455,7 +455,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   loadingText: {
     marginTop: 12,
     fontSize: 15,
-    color: colors.textSecondary || '#666',
+    color: colors.textSecondary,
   },
   skillsList: {
     flex: 1,
@@ -472,9 +472,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: colors.inputBackground || '#f5f5f5',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: colors.border || '#e0e0e0',
+    borderColor: colors.border,
     marginRight: 8,
     marginBottom: 8,
   },
@@ -484,7 +484,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   skillChipText: {
     fontSize: 14,
-    color: colors.text || '#333',
+    color: colors.text,
   },
   skillChipTextSelected: {
     color: colors.primary,
@@ -503,13 +503,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textSecondary || '#666',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   emptySubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: colors.textMuted || '#999',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   addCustomBtn: {
@@ -533,7 +533,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
-    color: colors.white || '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -541,20 +541,20 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     padding: 12,
-    backgroundColor: colors.surface || '#f9f9f9',
+    backgroundColor: colors.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border || '#e0e0e0',
+    borderColor: colors.border,
   },
   selectedSkillsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text || '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   noSelectionText: {
     fontSize: 13,
-    color: colors.textMuted || '#999',
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   selectedSkillsGrid: {
@@ -574,7 +574,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   selectedSkillText: {
     fontSize: 13,
-    color: colors.white || '#fff',
+    color: colors.white,
     fontWeight: '500',
   },
   removeSkillButton: {
@@ -591,16 +591,16 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 14,
-    backgroundColor: colors.surface || '#fff',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#f0f0f0',
+    borderBottomColor: colors.border,
   },
   dropdownItemSelected: {
     backgroundColor: colors.primary + '15',
   },
   dropdownItemText: {
     fontSize: 15,
-    color: colors.text || '#333',
+    color: colors.text,
     flex: 1,
   },
   dropdownItemTextSelected: {
@@ -622,7 +622,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   instructionText: {
     marginTop: 16,
     fontSize: 15,
-    color: colors.textMuted || '#999',
+    color: colors.textMuted,
     textAlign: 'center',
   },
   summaryContainer: {
@@ -631,9 +631,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.gray100 || '#f8f8f8',
+    backgroundColor: colors.gray100,
     borderTopWidth: 1,
-    borderTopColor: colors.border || '#e0e0e0',
+    borderTopColor: colors.border,
   },
   summaryTitle: {
     fontSize: 14,
@@ -642,6 +642,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   summaryText: {
     fontSize: 14,
-    color: colors.textSecondary || '#666',
+    color: colors.textSecondary,
   },
 });

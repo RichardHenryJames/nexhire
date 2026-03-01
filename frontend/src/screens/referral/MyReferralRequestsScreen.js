@@ -163,17 +163,17 @@ export default function MyReferralRequestsScreen() {
       case 'Viewed':
         return colors.primary; // Blue - someone viewed it
       case 'Claimed':
-        return '#F59E0B'; // Amber - being worked on
+        return colors.warning; // Amber - being worked on
       case 'ProofUploaded':
-        return '#8B5CF6'; // Purple - proof submitted
+        return colors.accent; // Purple - proof submitted
       case 'Completed':
         return colors.success;
       case 'Verified':
-        return '#ffd700';
+        return colors.gold;
       case 'Unverified':
-        return '#ef4444'; // Red - not verified
+        return colors.error; // Red - not verified
       case 'Refunded':
-        return '#10B981'; // Green - money returned
+        return colors.success; // Green - money returned
       case 'Cancelled':
         return colors.danger;
       case 'Expired':
@@ -334,8 +334,8 @@ export default function MyReferralRequestsScreen() {
     // Generate a color based on company name
     const getCompanyColor = (name) => {
       const colorPalette = [
-        '#6366F1', '#8B5CF6', '#EC4899', '#EF4444', '#F59E0B',
-        '#10B981', '#14B8A6', '#06B6D4', '#3B82F6', '#6366F1'
+        colors.indigo, colors.accent, colors.pink, colors.error, colors.warning,
+        colors.success, colors.cyan, colors.cyan, colors.primary, colors.indigo
       ];
       if (!name) return colorPalette[0];
       let hash = 0;
@@ -414,7 +414,7 @@ export default function MyReferralRequestsScreen() {
               )}
               {isExternalJob && (
                 <>
-                  <Text style={[styles.jobTypePill, { color: '#8B5CF6' }]}>External</Text>
+                  <Text style={[styles.jobTypePill, { color: colors.accent }]}>External</Text>
                   <Text style={styles.metaDot}>•</Text>
                 </>
               )}
@@ -426,8 +426,8 @@ export default function MyReferralRequestsScreen() {
             {/* Salary row - separate line */}
             {request.OpenToAnyCompany && request.MinSalary ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <Ionicons name="cash-outline" size={12} color="#10B981" style={{ marginRight: 4 }} />
-                <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '500' }}>
+                <Ionicons name="cash-outline" size={12} color={colors.success} style={{ marginRight: 4 }} />
+                <Text style={{ color: colors.success, fontSize: 12, fontWeight: '500' }}>
                   Min {request.SalaryCurrency === 'USD' ? '$' : '₹'}{request.MinSalary?.toLocaleString()}{request.SalaryPeriod === 'Annual' ? '/yr' : '/mo'}
                 </Text>
               </View>
@@ -486,7 +486,7 @@ export default function MyReferralRequestsScreen() {
               style={styles.withdrawBtn}
               onPress={() => handleCancelRequest(request.RequestID)}
             >
-              <Ionicons name="close-circle-outline" size={14} color="#EF4444" />
+              <Ionicons name="close-circle-outline" size={14} color={colors.error} />
               <Text style={styles.withdrawBtnText}>Withdraw</Text>
             </TouchableOpacity>
           )}
@@ -497,7 +497,7 @@ export default function MyReferralRequestsScreen() {
               style={styles.verifyBtn}
               onPress={() => handleVerifyReferral(request.RequestID)}
             >
-              <Ionicons name="checkmark-circle-outline" size={14} color="#FFFFFF" />
+              <Ionicons name="checkmark-circle-outline" size={14} color={colors.white} />
               <Text style={styles.verifyBtnText}>Verify</Text>
             </TouchableOpacity>
           )}
@@ -508,7 +508,7 @@ export default function MyReferralRequestsScreen() {
             onPress={() => handleViewTracking(request)}
           >
             <Text style={styles.trackBtnText}>Track</Text>
-            <Ionicons name="arrow-forward" size={14} color="#fff" style={{ marginLeft: 4 }} />
+            <Ionicons name="arrow-forward" size={14} color={colors.white} style={{ marginLeft: 4 }} />
           </TouchableOpacity>
         </View>
       </View>
@@ -561,22 +561,22 @@ export default function MyReferralRequestsScreen() {
           animationType="slide"
           onRequestClose={() => setShowProofViewer(false)}
         >
-          <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={{ flex: 1, backgroundColor: colors.black }}>
             <TouchableOpacity
               style={{ position: 'absolute', top: 40, right: 20, zIndex: 10 }}
               onPress={() => setShowProofViewer(false)}
             >
-              <Ionicons name="close" size={32} color="#fff" />
+              <Ionicons name="close" size={32} color={colors.white} />
             </TouchableOpacity>
             <Image
               source={{ uri: viewingProof.ProofFileURL }}
               style={{ flex: 1, resizeMode: 'contain' }}
             />
             <View style={{ padding: 16, backgroundColor: 'rgba(0,0,0,0.6)' }}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', marginBottom: 8 }}>
+              <Text style={{ color: colors.white, fontWeight: 'bold', marginBottom: 8 }}>
                 Proof Description
               </Text>
-              <Text style={{ color: '#fff' }}>
+              <Text style={{ color: colors.white }}>
                 {viewingProof.ProofDescription || 'No description provided'}
               </Text>
             </View>
@@ -593,7 +593,7 @@ export default function MyReferralRequestsScreen() {
           <Pressable style={styles.confirmBox} onPress={() => {}}>
             <View style={styles.confirmHeader}>
               <View style={styles.confirmIconContainer}>
-                <Ionicons name="warning" size={24} color="#f59e0b" />
+                <Ionicons name="warning" size={24} color={colors.warning} />
               </View>
               <Text style={styles.confirmTitle}>Withdraw Referral Request</Text>
             </View>
@@ -613,9 +613,9 @@ export default function MyReferralRequestsScreen() {
               const currentTier = hoursElapsed < 1 ? 0 : hoursElapsed <= 24 ? 1 : 2;
               const heldAmount = cancelTarget?.request?.OpenToAnyCompany ? pricing.openToAnyReferralCost : getReferralCostForJob(cancelTarget?.request || {}, pricing);
               const tiers = [
-                { label: 'Within 1 hour', fee: '₹0 (Free)', color: '#10B981' },
-                { label: '1 – 24 hours', fee: '₹10', color: '#F59E0B' },
-                { label: 'After 24 hours', fee: '₹20', color: '#EF4444' },
+                { label: 'Within 1 hour', fee: '₹0 (Free)', color: colors.success },
+                { label: '1 – 24 hours', fee: '₹10', color: colors.warning },
+                { label: 'After 24 hours', fee: '₹20', color: colors.error },
               ];
               return (
                 <View style={styles.feeTableContainer}>
@@ -694,7 +694,7 @@ export default function MyReferralRequestsScreen() {
                 <Ionicons
                   name="checkmark-circle"
                   size={16}
-                  color="#10B981"
+                  color={colors.success}
                   style={{ marginRight: 6 }}
                 />
                 <Text style={styles.keepBtnText}>Keep</Text>
@@ -711,7 +711,7 @@ export default function MyReferralRequestsScreen() {
                 <Ionicons
                   name="close-circle"
                   size={16}
-                  color="#dc2626"
+                  color={colors.dangerDark}
                   style={{ marginRight: 6 }}
                 />
                 <Text style={styles.cancelReqBtnText}>Withdraw</Text>
@@ -762,7 +762,7 @@ export default function MyReferralRequestsScreen() {
                   )}
                   {verifyTarget?.request?.ProofFileURL && (
                     <TouchableOpacity
-                      style={{ flex: verifyTarget?.request?.ProofDescription ? 0 : 1, backgroundColor: '#007AFF10', borderRadius: 8, padding: 8, alignItems: 'center', justifyContent: 'center', minWidth: 80 }}
+                      style={{ flex: verifyTarget?.request?.ProofDescription ? 0 : 1, backgroundColor: colors.primaryBg, borderRadius: 8, padding: 8, alignItems: 'center', justifyContent: 'center', minWidth: 80 }}
                       onPress={() => {
                         if (Platform.OS === 'web') {
                           window.open(verifyTarget.request.ProofFileURL, '_blank');
@@ -771,9 +771,9 @@ export default function MyReferralRequestsScreen() {
                         }
                       }}
                     >
-                      <Ionicons name="document-attach" size={20} color="#007AFF" />
-                      <Text style={{ color: '#007AFF', fontSize: 10, fontWeight: '600', marginTop: 4, textAlign: 'center' }}>View Proof</Text>
-                      <Ionicons name="open-outline" size={12} color="#007AFF" style={{ marginTop: 2 }} />
+                      <Ionicons name="document-attach" size={20} color={colors.primary} />
+                      <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '600', marginTop: 4, textAlign: 'center' }}>View Proof</Text>
+                      <Ionicons name="open-outline" size={12} color={colors.primary} style={{ marginTop: 2 }} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -789,16 +789,16 @@ export default function MyReferralRequestsScreen() {
 
             {/* Dispute Warning */}
             <View style={{
-              backgroundColor: '#F59E0B' + '0D',
-              borderColor: '#F59E0B' + '35',
+              backgroundColor: colors.warning + '0D',
+              borderColor: colors.warning + '35',
               borderWidth: 1,
               borderRadius: 10,
               padding: 12,
               marginBottom: 16,
             }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                <Ionicons name="warning" size={15} color="#F59E0B" />
-                <Text style={{ color: '#F59E0B', fontWeight: '700', fontSize: 12, marginLeft: 6 }}>Before clicking 'No'</Text>
+                <Ionicons name="warning" size={15} color={colors.warning} />
+                <Text style={{ color: colors.warning, fontWeight: '700', fontSize: 12, marginLeft: 6 }}>Before clicking 'No'</Text>
               </View>
               <Text style={{ color: colors.text, fontSize: 12, lineHeight: 18 }}>
                 This will raise a dispute. Our team will review the proof and respond within 2 working days. If found invalid, you'll get a full refund.
@@ -946,7 +946,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   logoInitials: {
     fontSize: 15,
     fontWeight: typography.weights.bold,
-    color: '#FFFFFF',
+    color: colors.white,
   },
   requestInfo: {
     flex: 1,
@@ -1020,12 +1020,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#EF4444',
+    borderColor: colors.error,
     gap: 4,
   },
   withdrawBtnText: {
     fontSize: typography.sizes.xs,
-    color: '#EF4444',
+    color: colors.error,
     fontWeight: typography.weights.semibold,
   },
   verifyBtn: {
@@ -1033,13 +1033,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     borderRadius: 6,
     gap: 4,
   },
   verifyBtnText: {
     fontSize: typography.sizes.xs,
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights.semibold,
   },
   viewProofCardBtn: {
@@ -1047,15 +1047,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#8B5CF620',
+    backgroundColor: colors.accentBg,
     borderRadius: 6,
     gap: 4,
     borderWidth: 1,
-    borderColor: '#8B5CF640',
+    borderColor: colors.accentBg,
   },
   viewProofCardBtnText: {
     fontSize: typography.sizes.xs,
-    color: '#8B5CF6',
+    color: colors.accent,
     fontWeight: typography.weights.semibold,
   },
   seekerMessageRow: {
@@ -1111,7 +1111,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   externalBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight || '#F3E8FF',
+    backgroundColor: colors.primaryLight,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -1239,7 +1239,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.warningLight || '#FFFBEB',
+    backgroundColor: colors.warningLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1301,7 +1301,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
   },
   feeTableRowActive: {
-    backgroundColor: (colors.primaryLight || '#EEF2FF') + '40',
+    backgroundColor: (colors.primaryLight) + '40',
   },
   feeTableCell: {
     fontSize: typography.sizes.sm,
@@ -1319,10 +1319,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 6,
     marginTop: 10,
     padding: 10,
-    backgroundColor: (colors.primaryLight || '#EEF2FF') + '30',
+    backgroundColor: (colors.primaryLight) + '30',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: (colors.primary || '#6366F1') + '20',
+    borderColor: (colors.primary) + '20',
   },
   feeAutoRefundText: {
     flex: 1,
@@ -1354,7 +1354,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   cancelReqBtn: {
-    backgroundColor: colors.dangerLight || '#FEE2E2',
+    backgroundColor: colors.dangerLight,
   },
   cancelReqBtnText: {
     color: colors.danger,
@@ -1413,11 +1413,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   referrerMessageLabel: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
-    color: '#6ee7b7',
+    color: colors.successLight,
   },
   referrerMessageText: {
     fontSize: typography.sizes.sm,
-    color: colors.textSecondary || '#a3e635',
+    color: colors.textSecondary,
     fontStyle: 'italic',
     lineHeight: 20,
   },
@@ -1427,14 +1427,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: colors.primary,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
     gap: 8,
   },
   viewProofBtnText: {
-    color: '#007AFF',
+    color: colors.primary,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },
@@ -1444,7 +1444,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   noBtnText: {
-    color: '#f87171',
+    color: colors.dangerLight,
     fontWeight: typography.weights.semibold,
   },
   yesBtn: {

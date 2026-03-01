@@ -45,7 +45,7 @@ const FeatureRow = ({ icon, label, value, sub, colors }) => (
       <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }}>{label}</Text>
       {sub ? <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{sub}</Text> : null}
     </View>
-    <Text style={{ fontSize: 15, fontWeight: '700', color: value === 'Free' ? (colors.success || '#10B981') : colors.text }}>{value}</Text>
+    <Text style={{ fontSize: 15, fontWeight: '700', color: value === 'Free' ? (colors.success) : colors.text }}>{value}</Text>
   </View>
 );
 
@@ -94,15 +94,15 @@ export default function PricingScreen() {
                 <View style={styles.pricingDivider} />
 
                 <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                   <Text style={styles.benefitText}>Direct request to verified employees</Text>
                 </View>
                 <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                   <Text style={styles.benefitText}>You're only charged when someone refers you</Text>
                 </View>
                 <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success || '#10B981'} />
+                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
                   <Text style={styles.benefitText}>Auto-refund if no one picks up in 2 weeks</Text>
                 </View>
               </View>
@@ -112,10 +112,10 @@ export default function PricingScreen() {
             <View style={styles.openCard}>
               <View style={styles.openCardInner}>
                 <View style={styles.pricingIconRow}>
-                  <View style={[styles.pricingIconCircle, { backgroundColor: '#8B5CF614' }]}>
-                    <Ionicons name="globe-outline" size={24} color="#8B5CF6" />
+                  <View style={[styles.pricingIconCircle, { backgroundColor: colors.accentBg }]}>
+                    <Ionicons name="globe-outline" size={24} color={colors.accent} />
                   </View>
-                  <Badge text="WIDE REACH" color="#8B5CF6" bg="#8B5CF620" />
+                  <Badge text="WIDE REACH" color={colors.accent} bg={colors.accentBg} />
                 </View>
 
                 <Text style={styles.pricingLabel}>Open-to-Any Company</Text>
@@ -190,7 +190,7 @@ export default function PricingScreen() {
                 }
               }}
             >
-              <Ionicons name="wallet-outline" size={20} color="#fff" />
+              <Ionicons name="wallet-outline" size={20} color={colors.white} />
               <Text style={styles.ctaText}>Add Money to Wallet</Text>
             </TouchableOpacity>
 
@@ -315,11 +315,11 @@ const createStyles = (colors, responsive = {}) => {
 
     // ── Open-to-any card
     openCard: {
-      backgroundColor: '#8B5CF60A',
+      backgroundColor: colors.accentBg,
       borderRadius: 18,
       marginTop: 16,
       borderWidth: 1,
-      borderColor: '#8B5CF625',
+      borderColor: colors.accentBg,
       overflow: 'hidden',
     },
     openCardInner: {
@@ -327,7 +327,7 @@ const createStyles = (colors, responsive = {}) => {
     },
     openPrice: {
       fontSize: 32, fontWeight: '800',
-      color: '#8B5CF6',
+      color: colors.accent,
       marginBottom: 6,
     },
 
@@ -376,7 +376,7 @@ const createStyles = (colors, responsive = {}) => {
       marginBottom: 16,
     },
     ctaText: {
-      color: '#fff',
+      color: colors.white,
       fontSize: 16,
       fontWeight: '700',
     },

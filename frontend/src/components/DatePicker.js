@@ -57,7 +57,7 @@ export default function DatePicker({
     if (!colors.background) return false;
     const bg = colors.background.toLowerCase();
     // Check for common dark backgrounds
-    if (bg === '#0f0f23' || bg === '#1a1a2e' || bg === '#121212' || bg === '#111827') return true;
+    if (bg === colors.background || bg === colors.background || bg === colors.background || bg === colors.text) return true;
     // Check if hex color is dark (first digit of RGB is 0-3)
     if (bg.startsWith('#') && bg.length >= 4) {
       const firstHex = bg.charAt(1);
@@ -402,7 +402,7 @@ const createStyles = (colors) => StyleSheet.create({
     zIndex: 1000,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: colors.black,
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.1,
         shadowRadius: 8,

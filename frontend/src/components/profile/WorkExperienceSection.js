@@ -175,7 +175,7 @@ const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, co
               <Text style={styles.itemCompany}>{companyName}</Text>
               {isVerified ? (
                 <View style={styles.verifiedBadge}>
-                  <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                  <Ionicons name="shield-checkmark" size={12} color={colors.success} />
                 </View>
               ) : editable && (
                 <TouchableOpacity 
@@ -206,7 +206,7 @@ const ExperienceItem = ({ item, onEdit, onVerify, onDelete, editable, isLast, co
               <Ionicons name="create-outline" size={18} color={colors.primary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => onDelete(item)} style={styles.actionButton}>
-              <Ionicons name="trash-outline" size={18} color={colors.danger || '#FF3B30'} />
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
             </TouchableOpacity>
           </View>
         )}
@@ -888,9 +888,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: colors.gray300 || '#D1D5DB',
+    backgroundColor: colors.gray300,
     borderWidth: 2,
-    borderColor: colors.gray400 || '#9CA3AF',
+    borderColor: colors.gray400,
     zIndex: 1,
   },
   timelineDotActive: {
@@ -911,7 +911,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   timelineLine: {
     width: 2,
     flex: 1,
-    backgroundColor: colors.gray300 || '#D1D5DB',
+    backgroundColor: colors.gray300,
     marginTop: 4,
   },
   timelineCard: {
@@ -921,7 +921,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -944,7 +944,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: colors.gray200 || '#E5E7EB',
+    backgroundColor: colors.gray200,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -959,7 +959,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   itemCompany: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray700 || '#374151',
+    color: colors.gray700,
     marginBottom: 6,
   },
   dateRow: {
@@ -969,10 +969,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   itemDates: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.gray500 || '#6B7280',
+    color: colors.gray500,
   },
   currentBadge: {
-    backgroundColor: '#DEF7EC',
+    backgroundColor: colors.successBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 12,
@@ -981,10 +981,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   currentBadgeText: {
     fontSize: 10,
     fontWeight: typography.weights?.semibold || '600',
-    color: '#047857',
+    color: colors.successDark,
   },
   verifiedBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successBg,
     padding: 4,
     borderRadius: 10,
   },
@@ -1008,7 +1008,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: colors.gray50 || '#F9FAFB',
+    backgroundColor: colors.gray50,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
@@ -1036,19 +1036,19 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   // Removed saveButton style as it's now in footer
   formContainer: { padding: 20, paddingBottom: 40 },
   formScroll: { flex: 1 },
-  label: { fontSize: typography.sizes?.sm || 14, color: colors.gray700 || '#374151', marginBottom: 6 },
+  label: { fontSize: typography.sizes?.sm || 14, color: colors.gray700, marginBottom: 6 },
   input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 12, fontSize: typography.sizes?.md || 16, color: colors.text, marginBottom: 12, flexDirection: 'row', alignItems: 'center', outlineStyle: 'none' },
   companyInput: { flex: 1, fontSize: typography.sizes?.md || 16, color: colors.text, padding: 0, outlineStyle: 'none' },
   inputDisabled: { opacity: 0.6 },
   // ? ADDED STYLES FOR SMART VALIDATION
   errorInput: { 
-    borderColor: colors.danger || '#E53E3E', 
+    borderColor: colors.danger, 
     borderWidth: 2 
   },
-  validationText: { color: colors.danger || '#E53E3E', marginTop: -8, marginBottom: 8, fontSize: 12 },
+  validationText: { color: colors.danger, marginTop: -8, marginBottom: 8, fontSize: 12 },
   infoContainer: {
-    backgroundColor: '#FEF3C7',
-    borderColor: '#F59E0B',
+    backgroundColor: colors.warningBg,
+    borderColor: colors.warning,
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
@@ -1058,7 +1058,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 8,
   },
   infoText: {
-    color: '#92400E',
+    color: colors.warningDark,
     fontSize: typography.sizes?.sm || 14,
     flex: 1,
   },
@@ -1077,7 +1077,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   confirmButtons: { flexDirection: 'row', gap: 10, width: '100%' },
   confirmCancel: { flex: 1, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   confirmCancelText: { color: colors.text, fontSize: typography.sizes?.md || 16 },
-  confirmDelete: { flex: 1, backgroundColor: colors.danger || '#FF3B30', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  confirmDelete: { flex: 1, backgroundColor: colors.danger, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   confirmDeleteText: { color: colors.white, fontSize: typography.sizes?.md || 16, fontWeight: typography.weights?.bold || 'bold' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   multiline: { height: 100, textAlignVertical: 'top' },
@@ -1091,7 +1091,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 24,
     paddingTop: 20,
     borderTopWidth: 1, 
-    borderTopColor: colors.border || '#E5E7EB',
+    borderTopColor: colors.border,
   },
   modalCancelButton: {
     flexDirection: 'row',
@@ -1101,12 +1101,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E7EB',
-    backgroundColor: colors.surface || '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   modalCancelButtonText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.gray600,
     fontWeight: typography.weights?.medium || '500',
   },
   modalSaveButton: {
@@ -1116,13 +1116,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: colors.primary || '#007AFF',
+    backgroundColor: colors.primary,
     minWidth: 100,
     justifyContent: 'center',
   },
   modalSaveButtonText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.white || '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights?.bold || 'bold',
   },
   jobTitleDropdown: {
@@ -1130,15 +1130,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: colors.surface || '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border || '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
     zIndex: 9999,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -1153,12 +1153,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#f0f0f0',
-    backgroundColor: colors.surface || '#fff',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   dropdownItemText: {
     fontSize: 15,
-    color: colors.text || '#333',
+    color: colors.text,
   },
   dropdownEmpty: {
     padding: 20,
@@ -1166,7 +1166,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: colors.textMuted || '#999',
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   orgDropdownItem: {
@@ -1174,8 +1174,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#f0f0f0',
-    backgroundColor: colors.surface || '#fff',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
     gap: 10,
   },
   orgLogoSmall: {
@@ -1187,13 +1187,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: colors.gray200 || '#E5E7EB',
+    backgroundColor: colors.gray200,
     justifyContent: 'center',
     alignItems: 'center',
   },
   orgMetaSmall: {
     fontSize: 12,
-    color: colors.gray500 || '#6B7280',
+    color: colors.gray500,
     marginTop: 2,
   },
   // Company Email Verification Styles
@@ -1201,10 +1201,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 16,
     marginBottom: 16,
     padding: 16,
-    backgroundColor: colors.gray50 || '#F9FAFB',
+    backgroundColor: colors.gray50,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E7EB',
+    borderColor: colors.border,
   },
   verificationHeader: {
     flexDirection: 'row',
@@ -1219,7 +1219,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   verificationSubtitle: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.gray600,
     marginBottom: 16,
     lineHeight: 20,
   },
@@ -1233,9 +1233,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 8,
     overflow: 'hidden',
     minWidth: 0, // Allow shrinking
@@ -1251,38 +1251,38 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 12,
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray500 || '#6B7280',
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    color: colors.gray500,
+    backgroundColor: colors.gray100,
     borderLeftWidth: 1,
-    borderLeftColor: colors.border || '#E5E7EB',
+    borderLeftColor: colors.border,
     flexShrink: 0, // Don't shrink the domain
   },
   differentDomainLink: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.primary || '#6366F1',
+    color: colors.primary,
     marginTop: 6,
     textDecorationLine: 'underline',
   },
   emailInput: {
     flex: 1,
-    backgroundColor: colors.surface || '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     fontSize: typography.sizes?.md || 16,
     color: colors.text,
   },
   emailInputValid: {
-    borderColor: '#10B981',
+    borderColor: colors.success,
     borderWidth: 2,
   },
   emailInputInvalid: {
-    borderColor: '#F59E0B',
+    borderColor: colors.warning,
     borderWidth: 1,
   },
   verifyButton: {
-    backgroundColor: colors.primary || '#6366F1',
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
@@ -1290,16 +1290,16 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
   },
   verifyButtonDisabled: {
-    backgroundColor: colors.gray400 || '#9CA3AF',
+    backgroundColor: colors.gray400,
   },
   verifyButtonText: {
-    color: colors.white || '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights?.semibold || '600',
     fontSize: typography.sizes?.sm || 14,
   },
   domainHint: {
     fontSize: typography.sizes?.xs || 12,
-    color: '#F59E0B',
+    color: colors.warning,
     marginTop: 4,
     fontStyle: 'italic',
   },
@@ -1308,7 +1308,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   otpLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray700 || '#374151',
+    color: colors.gray700,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -1321,9 +1321,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   otpInput: {
     width: 50,
     height: 50,
-    backgroundColor: colors.surface || '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 2,
-    borderColor: colors.border || '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 10,
     fontSize: 24,
     fontWeight: typography.weights?.bold || 'bold',
@@ -1339,20 +1339,20 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 8,
   },
   resendButtonText: {
-    color: colors.primary || '#6366F1',
+    color: colors.primary,
     fontSize: typography.sizes?.sm || 14,
   },
   submitOtpButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
   },
   submitOtpButtonDisabled: {
-    backgroundColor: colors.gray400 || '#9CA3AF',
+    backgroundColor: colors.gray400,
   },
   submitOtpButtonText: {
-    color: colors.white || '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights?.semibold || '600',
     fontSize: typography.sizes?.sm || 14,
   },
@@ -1369,11 +1369,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: colors.successBg,
     padding: 16,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#10B981',
+    borderColor: colors.success,
   },
   verifiedTextContainer: {
     flex: 1,
@@ -1381,15 +1381,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   verifiedText: {
     fontSize: typography.sizes?.md || 16,
     fontWeight: typography.weights?.semibold || '600',
-    color: '#065F46',
+    color: colors.successDark,
   },
   verifiedEmail: {
     fontSize: typography.sizes?.sm || 14,
-    color: '#047857',
+    color: colors.successDark,
     marginTop: 2,
   },
   verificationError: {
-    color: colors.danger || '#E53E3E',
+    color: colors.danger,
     fontSize: typography.sizes?.sm || 14,
     marginTop: 8,
     textAlign: 'center',

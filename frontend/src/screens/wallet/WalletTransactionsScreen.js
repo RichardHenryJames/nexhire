@@ -81,7 +81,7 @@ export default function WalletTransactionsScreen({ navigation }) {
   const renderTransaction = ({ item }) => {
     const isCredit = item.TransactionType === 'Credit';
     const icon = isCredit ? 'arrow-down-circle' : 'arrow-up-circle';
-    const iconColor = isCredit ? '#10B981' : '#EF4444';
+    const iconColor = isCredit ? colors.success : colors.error;
 
     return (
       <View style={styles.transactionCard}>
@@ -103,7 +103,7 @@ export default function WalletTransactionsScreen({ navigation }) {
 
           <View style={styles.transactionFooter}>
             <View style={styles.transactionDate}>
-              <Ionicons name="time-outline" size={14} color="#999" />
+              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
               <Text style={styles.dateText}>
                 {new Date(item.CreatedAt).toLocaleDateString('en-IN', {
                   day: 'numeric',
@@ -145,7 +145,7 @@ export default function WalletTransactionsScreen({ navigation }) {
             style={styles.balanceAddButton}
             onPress={() => navigation.navigate('WalletRecharge')}
           >
-            <Ionicons name="add-circle" size={24} color="#FFF" />
+            <Ionicons name="add-circle" size={24} color={colors.white} />
             <Text style={styles.balanceAddButtonText}>Add Money</Text>
           </TouchableOpacity>
         </View>
@@ -169,7 +169,7 @@ export default function WalletTransactionsScreen({ navigation }) {
           <Ionicons
             name="arrow-down-circle"
             size={16}
-            color={filter === 'Credit' ? '#FFF' : '#10B981'}
+            color={filter === 'Credit' ? colors.white : colors.success}
           />
           <Text style={[styles.filterText, filter === 'Credit' && styles.filterTextActive]}>
             Credits
@@ -183,7 +183,7 @@ export default function WalletTransactionsScreen({ navigation }) {
           <Ionicons
             name="arrow-up-circle"
             size={16}
-            color={filter === 'Debit' ? '#FFF' : '#EF4444'}
+            color={filter === 'Debit' ? colors.white : colors.error}
           />
           <Text style={[styles.filterText, filter === 'Debit' && styles.filterTextActive]}>
             Debits
@@ -198,7 +198,7 @@ export default function WalletTransactionsScreen({ navigation }) {
 
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color="#007AFF" />
+        <ActivityIndicator size="small" color={colors.primary} />
         <Text style={styles.footerText}>Loading more...</Text>
       </View>
     );
@@ -206,7 +206,7 @@ export default function WalletTransactionsScreen({ navigation }) {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="receipt-outline" size={80} color="#CCC" />
+      <Ionicons name="receipt-outline" size={80} color={colors.gray300} />
       <Text style={styles.emptyText}>No transactions found</Text>
       <Text style={styles.emptySubtext}>
         {filter === 'all'
@@ -221,7 +221,7 @@ export default function WalletTransactionsScreen({ navigation }) {
       <View style={styles.container}>
         <View style={styles.innerContainer}>
           <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingText}>Loading transactions...</Text>
           </View>
         </View>
@@ -286,7 +286,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 16,
   },
   balanceCard: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     padding: 20,
     borderRadius: 16,
     marginBottom: 16,
@@ -304,7 +304,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   balanceCardAmount: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: colors.white,
   },
   balanceAddButton: {
     flexDirection: 'row',
@@ -316,7 +316,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 6,
   },
   balanceAddButtonText: {
-    color: '#FFF',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -347,7 +347,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
   },
   filterTextActive: {
-    color: '#FFF',
+    color: colors.white,
   },
   transactionCard: {
     flexDirection: 'row',
@@ -357,7 +357,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -427,15 +427,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 4,
   },
   statusPending: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.warningBg,
   },
   statusFailed: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.errorBg,
   },
   statusText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#666',
+    color: colors.textSecondary,
   },
   emptyContainer: {
     alignItems: 'center',

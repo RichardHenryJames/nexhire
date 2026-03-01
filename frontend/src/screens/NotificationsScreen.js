@@ -21,28 +21,28 @@ import refopenAPI from '../services/api';
 import TabHeader from '../components/TabHeader';
 import { colors as brandColors } from '../styles/theme';
 
-const TYPE_COLORS = {
-  message_received: brandColors.primary,
-  referral_request_new: '#8B5CF6',
-  referral_claimed: '#10B981',
-  referral_submitted: '#8B5CF6',
-  referral_verified: '#10B981',
-  referral_rejected: '#EF4444',
-  referral_cancelled: '#EF4444',
-  referral_expired: '#F59E0B',
-  referral_verify_reminder: '#F59E0B',
-  social_share_approved: '#10B981',
-  social_share_rejected: '#EF4444',
-  withdrawal_approved: '#10B981',
-  withdrawal_rejected: '#EF4444',
-  wallet_credited: '#10B981',
-  wallet_debited: '#F59E0B',
-  manual_payment_approved: '#10B981',
-  manual_payment_rejected: '#EF4444',
-  support_reply: brandColors.primary,
-  profile_viewed: '#8B5CF6',
-  welcome: brandColors.primary,
-};
+const getTypeColors = (colors) => ({
+  message_received: colors.primary,
+  referral_request_new: colors.accent,
+  referral_claimed: colors.success,
+  referral_submitted: colors.accent,
+  referral_verified: colors.success,
+  referral_rejected: colors.error,
+  referral_cancelled: colors.error,
+  referral_expired: colors.warning,
+  referral_verify_reminder: colors.warning,
+  social_share_approved: colors.success,
+  social_share_rejected: colors.error,
+  withdrawal_approved: colors.success,
+  withdrawal_rejected: colors.error,
+  wallet_credited: colors.success,
+  wallet_debited: colors.warning,
+  manual_payment_approved: colors.success,
+  manual_payment_rejected: colors.error,
+  support_reply: colors.primary,
+  profile_viewed: colors.accent,
+  welcome: colors.primary,
+});
 
 const ICON_MAP = {
   chatbubbles: 'chatbubbles',
@@ -245,6 +245,7 @@ export default function NotificationsScreen() {
 
   const renderNotification = (item) => {
     const iconName = ICON_MAP[item.Icon] || 'notifications';
+    const TYPE_COLORS = getTypeColors(colors);
     const typeColor = TYPE_COLORS[item.NotificationType] || colors.primary;
     const hasActionButtons = ['referral_submitted', 'referral_verify_reminder'].includes(item.NotificationType);
 
@@ -324,15 +325,15 @@ export default function NotificationsScreen() {
                 style={({ pressed }) => ({
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: pressed ? '#059669' : '#10B981',
+                  backgroundColor: pressed ? colors.successDark : colors.success,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 6,
                   gap: 4,
                 })}
               >
-                <Ionicons name="checkmark-circle-outline" size={14} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Verify Now</Text>
+                <Ionicons name="checkmark-circle-outline" size={14} color={colors.white} />
+                <Text style={{ color: colors.white, fontSize: 12, fontWeight: '700' }}>Verify Now</Text>
               </Pressable>
             </View>
           )}

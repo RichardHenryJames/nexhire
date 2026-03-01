@@ -85,7 +85,7 @@ const createStyles = (colors) => StyleSheet.create({
     elevation: 4 
   },
   text: { 
-    color: colors.textInverse || '#FFFFFF', 
+    color: colors.textInverse, 
     fontSize: typography.sizes?.sm || 14, 
     fontWeight: typography.weights?.medium || '500',
     textAlign: 'center'

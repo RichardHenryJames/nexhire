@@ -20,23 +20,22 @@ import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
-import { colors as brandColors } from '../../styles/theme';
 import SubScreenHeader from '../../components/SubScreenHeader';
 
 // Status configurations
-const STATUS_CONFIG = {
-  Open: { color: brandColors.primary, bg: '#EFF6FF', label: 'Open', icon: 'mail-unread' },
-  InProgress: { color: '#F59E0B', bg: '#FFFBEB', label: 'In Progress', icon: 'time' },
-  Resolved: { color: '#10B981', bg: '#ECFDF5', label: 'Resolved', icon: 'checkmark-circle' },
-  Closed: { color: '#6B7280', bg: '#F3F4F6', label: 'Closed', icon: 'close-circle' },
-};
+const getStatusConfig = (colors) => ({
+  Open: { color: colors.primary, bg: colors.primaryBg, label: 'Open', icon: 'mail-unread' },
+  InProgress: { color: colors.warning, bg: colors.warningBg, label: 'In Progress', icon: 'time' },
+  Resolved: { color: colors.success, bg: colors.successBg, label: 'Resolved', icon: 'checkmark-circle' },
+  Closed: { color: colors.gray500, bg: colors.gray100, label: 'Closed', icon: 'close-circle' },
+});
 
-const PRIORITY_CONFIG = {
-  Low: { color: '#6B7280', bg: '#F3F4F6', label: 'Low' },
-  Medium: { color: brandColors.primary, bg: '#EFF6FF', label: 'Medium' },
-  High: { color: '#F59E0B', bg: '#FFFBEB', label: 'High' },
-  Urgent: { color: '#DC2626', bg: '#FEE2E2', label: 'Urgent' },
-};
+const getPriorityConfig = (colors) => ({
+  Low: { color: colors.gray500, bg: colors.gray100, label: 'Low' },
+  Medium: { color: colors.primary, bg: colors.primaryBg, label: 'Medium' },
+  High: { color: colors.warning, bg: colors.warningBg, label: 'High' },
+  Urgent: { color: colors.dangerDark, bg: colors.errorBg, label: 'Urgent' },
+});
 
 const CATEGORY_ICONS = {
   Technical: 'bug-outline',
@@ -55,6 +54,8 @@ export default function AdminSupportScreen() {
   const { isAdmin } = useAuth();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const STATUS_CONFIG = useMemo(() => getStatusConfig(colors), [colors]);
+  const PRIORITY_CONFIG = useMemo(() => getPriorityConfig(colors), [colors]);
 
   // State
   const [loading, setLoading] = useState(true);
@@ -303,24 +304,24 @@ export default function AdminSupportScreen() {
     return (
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: isDark ? '#1E3A5F' : '#EFF6FF' }]}>
+          <View style={[styles.statCard, { backgroundColor: isDark ? colors.primaryDark : colors.primaryBg }]}>
             <Ionicons name="mail-unread" size={24} color={colors.info} />
             <Text style={[styles.statNumber, { color: colors.info }]}>{stats.OpenTickets || 0}</Text>
             <Text style={[styles.statLabel, { color: statLabelColor }]}>Open</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: isDark ? '#422006' : '#FFFBEB' }]}>
+          <View style={[styles.statCard, { backgroundColor: isDark ? colors.warningDark : colors.warningBg }]}>
             <Ionicons name="time" size={24} color={colors.warning} />
             <Text style={[styles.statNumber, { color: colors.warning }]}>{stats.InProgressTickets || 0}</Text>
             <Text style={[styles.statLabel, { color: statLabelColor }]}>In Progress</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: isDark ? '#064E3B' : '#ECFDF5' }]}>
+          <View style={[styles.statCard, { backgroundColor: isDark ? colors.successDark : colors.successBg }]}>
             <Ionicons name="checkmark-circle" size={24} color={colors.success} />
             <Text style={[styles.statNumber, { color: colors.success }]}>{stats.ResolvedTickets || 0}</Text>
             <Text style={[styles.statLabel, { color: statLabelColor }]}>Resolved</Text>
           </View>
         </View>
         <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: isDark ? '#450A0A' : '#FEE2E2' }]}>
+          <View style={[styles.statCard, { backgroundColor: isDark ? colors.dangerDark : colors.errorBg }]}>
             <Ionicons name="alert-circle" size={24} color={colors.error} />
             <Text style={[styles.statNumber, { color: colors.error }]}>{stats.UrgentPending || 0}</Text>
             <Text style={[styles.statLabel, { color: statLabelColor }]}>Urgent</Text>
@@ -584,9 +585,9 @@ export default function AdminSupportScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#EF444415',
+                    backgroundColor: colors.errorBg,
                     borderWidth: 1,
-                    borderColor: '#EF4444',
+                    borderColor: colors.error,
                     borderRadius: 10,
                     padding: 12,
                     marginTop: 12,
@@ -596,11 +597,11 @@ export default function AdminSupportScreen() {
                   disabled={refunding}
                 >
                   {refunding ? (
-                    <ActivityIndicator color="#EF4444" size="small" />
+                    <ActivityIndicator color={colors.error} size="small" />
                   ) : (
                     <>
-                      <Ionicons name="wallet-outline" size={18} color="#EF4444" style={{ marginRight: 8 }} />
-                      <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 14 }}>
+                      <Ionicons name="wallet-outline" size={18} color={colors.error} style={{ marginRight: 8 }} />
+                      <Text style={{ color: colors.error, fontWeight: '700', fontSize: 14 }}>
                         Refund Seeker & Mark as Refunded
                       </Text>
                     </>

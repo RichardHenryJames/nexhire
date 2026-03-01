@@ -85,6 +85,7 @@ const ConfettiParticle = ({ delay, startX, color, size = 12 }) => {
 
 // Sparkle component
 const Sparkle = ({ delay, x, y }) => {
+  const { colors } = useTheme();
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -131,7 +132,7 @@ const Sparkle = ({ delay, x, y }) => {
         opacity,
       }}
     >
-      <FontAwesome5 name="star" size={16} color="#FFD700" />
+      <FontAwesome5 name="star" size={16} color={colors.gold} />
     </Animated.View>
   );
 };
@@ -167,9 +168,9 @@ export default function ReferralSuccessOverlay({
 
   // Confetti colors
   const confettiColors = [
-    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7',
-    '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E9',
-    '#F8B500', '#FF69B4', '#00CED1', '#FF7F50', '#9370DB',
+    colors.dangerLight, colors.cyanLight, colors.cyanLight, colors.successLight, colors.warningBg,
+    colors.accentLight, colors.cyanLight, colors.warningLight, colors.accentLight, colors.info,
+    colors.warning, colors.pink, colors.cyan, colors.orange, colors.accent,
   ];
 
   // Generate confetti particles
@@ -315,7 +316,7 @@ export default function ReferralSuccessOverlay({
       <View style={styles.overlay}>
         {/* Gradient Background - Dark elegant theme */}
         <LinearGradient
-          colors={['#0d1117', '#161b22', '#21262d']}
+          colors={[colors.background, colors.background, colors.gray800]}
           style={styles.gradientBg}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -382,13 +383,13 @@ export default function ReferralSuccessOverlay({
             ]}
           >
             <LinearGradient
-              colors={['#00c853', '#69f0ae']}
+              colors={[colors.success, colors.successLight]}
               style={styles.checkGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.checkIconContainer}>
-                <Ionicons name="checkmark" size={56} color="#FFFFFF" />
+                <Ionicons name="checkmark" size={56} color={colors.white} />
               </View>
             </LinearGradient>
           </Animated.View>
@@ -420,7 +421,7 @@ export default function ReferralSuccessOverlay({
             <Text style={styles.broadcastText}>
               Broadcast completed in <Text style={styles.broadcastTimeBold}>{broadcastTime ? broadcastTime.toFixed(1) : '2.0'} Sec</Text>
             </Text>
-            <MaterialCommunityIcons name="lightning-bolt" size={20} color="#FFD700" style={styles.lightningIcon} />
+            <MaterialCommunityIcons name="lightning-bolt" size={20} color={colors.gold} style={styles.lightningIcon} />
           </Animated.View>
         </View>
       </View>
@@ -469,7 +470,7 @@ const createStyles = (colors, isDarkMode) =>
       marginBottom: 24,
       ...Platform.select({
         ios: {
-          shadowColor: '#00c853',
+          shadowColor: colors.success,
           shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.5,
           shadowRadius: 20,
@@ -498,7 +499,7 @@ const createStyles = (colors, isDarkMode) =>
     title: {
       fontSize: 22,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: colors.white,
       textAlign: 'center',
       marginBottom: 20,
       paddingHorizontal: 10,
@@ -527,7 +528,7 @@ const createStyles = (colors, isDarkMode) =>
     },
     broadcastTimeBold: {
       fontWeight: '800',
-      color: '#FFFFFF',
+      color: colors.white,
     },
     lightningIcon: {
       marginLeft: 6,

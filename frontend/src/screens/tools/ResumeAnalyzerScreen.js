@@ -63,7 +63,7 @@ const extractRefOpenJobId = (url) => {
 // Score color helper
 const getScoreColor = (score, colors) => {
   if (score >= 80) return colors.success;
-  if (score >= 60) return '#22C55E';
+  if (score >= 60) return colors.success;
   if (score >= 40) return colors.warning;
   return colors.error;
 };
@@ -756,9 +756,9 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
                   <View style={styles.featuresGrid}>
                     {[
                       { icon: 'speedometer', color: colors.primary, title: 'Match Score', desc: 'See how well you fit the role' },
-                      { icon: 'key', color: '#F59E0B', title: 'Missing Keywords', desc: 'Find keywords to add' },
-                      { icon: 'checkmark-circle', color: '#10B981', title: 'Your Strengths', desc: 'Know what stands out' },
-                      { icon: 'bulb', color: '#8B5CF6', title: 'Improvement Tips', desc: 'Get specific suggestions' },
+                      { icon: 'key', color: colors.warning, title: 'Missing Keywords', desc: 'Find keywords to add' },
+                      { icon: 'checkmark-circle', color: colors.success, title: 'Your Strengths', desc: 'Know what stands out' },
+                      { icon: 'bulb', color: colors.accent, title: 'Improvement Tips', desc: 'Get specific suggestions' },
                     ].map((feat, idx) => (
                       <View key={idx} style={styles.featureCard}>
                         <View style={[styles.featureIconCircle, { backgroundColor: feat.color + '18' }]}>
@@ -833,9 +833,9 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
               <View style={styles.featuresGrid}>
                 {[
                   { icon: 'speedometer', color: colors.primary, title: 'Match Score', desc: 'See how well you fit the role' },
-                  { icon: 'key', color: '#F59E0B', title: 'Missing Keywords', desc: 'Find keywords to add' },
-                  { icon: 'checkmark-circle', color: '#10B981', title: 'Your Strengths', desc: 'Know what stands out' },
-                  { icon: 'bulb', color: '#8B5CF6', title: 'Improvement Tips', desc: 'Get specific suggestions' },
+                  { icon: 'key', color: colors.warning, title: 'Missing Keywords', desc: 'Find keywords to add' },
+                  { icon: 'checkmark-circle', color: colors.success, title: 'Your Strengths', desc: 'Know what stands out' },
+                  { icon: 'bulb', color: colors.accent, title: 'Improvement Tips', desc: 'Get specific suggestions' },
                 ].map((feat, idx) => (
                   <View key={idx} style={styles.featureCard}>
                     <View style={[styles.featureIconCircle, { backgroundColor: feat.color + '18' }]}>
@@ -869,7 +869,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
                   style={styles.getStartedGradient}
                 >
                   <Text style={styles.getStartedText}>Get started</Text>
-                  <Ionicons name="arrow-down" size={18} color="#fff" />
+                  <Ionicons name="arrow-down" size={18} color={colors.white} />
                 </LinearGradient>
               </TouchableOpacity>
               )}
@@ -1303,7 +1303,7 @@ const createStyles = (colors, width, isMobile, isTablet, isDesktop) =>
     getStartedText: {
       fontSize: typography.sizes.md,
       fontWeight: typography.weights.bold,
-      color: '#fff',
+      color: colors.white,
     },
     // FAQ Section
     faqSection: {
@@ -1592,7 +1592,7 @@ const createStyles = (colors, width, isMobile, isTablet, isDesktop) =>
       paddingHorizontal: spacing.lg,
       paddingBottom: 40,
       paddingTop: spacing.md,
-      shadowColor: '#000',
+      shadowColor: colors.black,
       shadowOffset: { width: 0, height: -4 },
       shadowOpacity: 0.15,
       shadowRadius: 12,

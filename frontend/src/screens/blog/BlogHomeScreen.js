@@ -141,7 +141,7 @@ export default function BlogHomeScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.featuredBadge}>
-              <Ionicons name="star" size={14} color="#F59E0B" />
+              <Ionicons name="star" size={14} color={colors.warning} />
               <Text style={styles.featuredBadgeText}>Featured</Text>
             </View>
             <Text style={styles.featuredTitle}>How to Get a Job Referral: Complete Guide for 2026</Text>
@@ -185,7 +185,7 @@ export default function BlogHomeScreen() {
             onPress={() => navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Jobs' } })}
           >
             <Text style={styles.ctaButtonText}>Browse Jobs & Get Referrals</Text>
-            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+            <Ionicons name="arrow-forward" size={18} color={colors.white} />
           </TouchableOpacity>
         </View>
       </View>
@@ -248,7 +248,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   featuredBadgeText: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: '#F59E0B',
+    color: colors.warning,
   },
   featuredTitle: {
     fontSize: typography.sizes.xl,
@@ -368,7 +368,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   ctaTitle: {
     fontSize: typography.sizes.xl,
     fontWeight: typography.weights.bold,
-    color: '#FFFFFF',
+    color: colors.white,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -382,7 +382,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 8,

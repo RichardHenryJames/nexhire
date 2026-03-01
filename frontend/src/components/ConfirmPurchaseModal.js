@@ -13,13 +13,13 @@ import { useTheme } from '../contexts/ThemeContext';
 import WalletRechargeModal from './WalletRechargeModal';
 
 // Centralized content configuration based on context type
-const CONTEXT_CONFIG = {
+const getContextConfig = (colors) => ({
   referral: {
     headerIcon: 'people',
     headerTitle: 'Request Referral',
     itemPrefix: 'Request referral for',
     amountLabel: 'Will be held',
-    amountColor: '#F59E0B', // Orange for "held"
+    amountColor: colors.warning, // Orange for "held"
     securityNote: 'Your amount is secure. It is charged only after a successful referral.',
     benefitsHeading: 'Next steps:',
     benefits: [
@@ -33,7 +33,7 @@ const CONTEXT_CONFIG = {
   },
   'ai-jobs': {
     headerIcon: 'bulb',
-    headerIconColor: '#FFD700',
+    headerIconColor: colors.gold,
     headerTitle: 'AI Recommended Jobs',
     itemPrefix: '',
     amountLabel: 'Will be deducted',
@@ -93,7 +93,7 @@ const CONTEXT_CONFIG = {
     proceedIcon: 'checkmark',
     proceedText: 'Confirm',
   },
-};
+});
 
 /**
  * 🎨 Generic Confirm Purchase Modal
@@ -118,6 +118,7 @@ export default function ConfirmPurchaseModal({
   const styles = useMemo(() => createStyles(colors), [colors]);
   
   const hasInsufficientBalance = !isFree && currentBalance < requiredAmount;
+  const CONTEXT_CONFIG = getContextConfig(colors);
   const config = CONTEXT_CONFIG[contextType] || CONTEXT_CONFIG.generic;
 
   // For insufficient balance, delegate to WalletRechargeModal
@@ -160,7 +161,7 @@ export default function ConfirmPurchaseModal({
       <View style={styles.overlay}>
         <View style={styles.modalContainer}>
           {/* Header */}
-          <View style={[styles.header, contextType === 'ai-jobs' && { backgroundColor: '#1a1a2e' }]}>
+          <View style={[styles.header, contextType === 'ai-jobs' && { backgroundColor: colors.background }]}>
             <Ionicons 
               name={config.headerIcon} 
               size={24} 
@@ -213,7 +214,7 @@ export default function ConfirmPurchaseModal({
             {/* Security Note - for referral context */}
             {config.showSecurityNote && config.securityNote && (
               <View style={styles.holdInfoBox}>
-                <Ionicons name="shield-checkmark" size={20} color="#10B981" style={{ marginRight: 8 }} />
+                <Ionicons name="shield-checkmark" size={20} color={colors.success} style={{ marginRight: 8 }} />
                 <Text style={styles.holdInfoText}>{config.securityNote}</Text>
               </View>
             )}
@@ -334,7 +335,7 @@ const createStyles = (colors) => StyleSheet.create({
     color: colors.text,
   },
   kvValueOk: {
-    color: '#10B981',
+    color: colors.success,
   },
   kvDivider: {
     height: 1,

@@ -322,7 +322,7 @@ export default function ViewReferralRequestModal({
                   style={styles.candidateAvatarCompact}
                 />
               ) : (
-                <View style={[styles.avatarPlaceholderCompact, { backgroundColor: '#667eea' }]}>
+                <View style={[styles.avatarPlaceholderCompact, { backgroundColor: colors.indigo }]}>
                   <Text style={styles.avatarInitialsCompact}>
                     {applicantName.charAt(0).toUpperCase()}
                   </Text>
@@ -373,28 +373,28 @@ export default function ViewReferralRequestModal({
               {/* View Job pill — internal */}
               {referralRequest?.JobID && !referralRequest?.ExtJobID && (
                 <TouchableOpacity 
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
                   onPress={() => {
                     onClose();
                     navigation.navigate('JobDetails', { jobId: referralRequest.JobID, fromReferralRequest: true });
                   }}
                 >
-                  <Ionicons name="briefcase-outline" size={13} color="#10B981" />
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#10B981' }}>View Job</Text>
+                  <Ionicons name="briefcase-outline" size={13} color={colors.success} />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.success }}>View Job</Text>
                 </TouchableOpacity>
               )}
 
               {/* View Job pill — external */}
               {referralRequest?.ExtJobID && referralRequest?.JobURL && (
                 <TouchableOpacity 
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.successBg, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}
                   onPress={() => {
                     if (Platform.OS === 'web') { window.open(referralRequest.JobURL, '_blank'); }
                     else { Linking.openURL(referralRequest.JobURL).catch(() => showToast('Could not open URL', 'error')); }
                   }}
                 >
-                  <Ionicons name="link-outline" size={13} color="#10B981" />
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#10B981' }}>View Job</Text>
+                  <Ionicons name="link-outline" size={13} color={colors.success} />
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: colors.success }}>View Job</Text>
                 </TouchableOpacity>
               )}
 
@@ -451,14 +451,14 @@ export default function ViewReferralRequestModal({
 
           {/* Reward Info Banner */}
           <View style={styles.rewardBannerCompact}>
-            <Ionicons name="gift" size={20} color="#ffd700" />
+            <Ionicons name="gift" size={20} color={colors.gold} />
             <View style={styles.rewardTextContainerCompact}>
               <Text style={styles.rewardTitleCompact}>Earn Guaranteed Rewards!</Text>
               <Text style={styles.rewardDescriptionCompact}>
                 Earn guaranteed rewards for this referral. Top referrers earn more than <Text style={styles.rewardHighlight}>₹5,000/month!</Text>
               </Text>
               <TouchableOpacity onPress={() => { if (onClose) onClose(); setTimeout(() => navigation.navigate('Earnings'), 300); }}>
-                <Text style={{ fontSize: 12, color: '#059669', fontWeight: '700', marginTop: 4 }}>View Earnings →</Text>
+                <Text style={{ fontSize: 12, color: colors.successDark, fontWeight: '700', marginTop: 4 }}>View Earnings →</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -682,7 +682,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   avatarInitialsCompact: {
     fontSize: 18,
     fontWeight: typography.weights.bold,
-    color: '#FFFFFF',
+    color: colors.white,
   },
   candidateInfoCompact: {
     flex: 1,
@@ -730,12 +730,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   rewardBannerCompact: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.warningBg,
     padding: 12,
     borderRadius: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#fcd34d',
+    borderColor: colors.warningLight,
     gap: 10,
   },
   rewardTextContainerCompact: {
@@ -744,16 +744,16 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   rewardTitleCompact: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
-    color: '#92400e',
+    color: colors.warningDark,
     marginBottom: 2,
   },
   rewardDescriptionCompact: {
     fontSize: typography.sizes.xs,
-    color: '#78350f',
+    color: colors.warningDark,
   },
   rewardHighlight: {
     fontWeight: typography.weights.bold,
-    color: '#059669',
+    color: colors.successDark,
   },
   
   // Job Details Compact - inline row style

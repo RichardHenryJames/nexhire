@@ -223,13 +223,13 @@ export default function ReferralTrackingScreen() {
         description: 'A referrer has viewed your request',
       },
       'Claimed': {
-        color: '#F59E0B',
+        color: colors.warning,
         icon: 'hand-left-outline',
         label: 'Claimed by Referrer',
         description: 'A referrer is working on your referral',
       },
       'ProofUploaded': {
-        color: '#8B5CF6',
+        color: colors.accent,
         icon: 'document-attach-outline',
         label: 'Proof Submitted',
         description: 'Referrer has submitted proof of referral',
@@ -241,7 +241,7 @@ export default function ReferralTrackingScreen() {
         description: 'Your referral has been completed',
       },
       'Verified': {
-        color: '#FFD700',
+        color: colors.gold,
         icon: 'trophy',
         label: 'Verified',
         description: 'You have verified the referral',
@@ -296,7 +296,7 @@ export default function ReferralTrackingScreen() {
               {request.OpenToAnyCompany ? 'Any Company' : (request.CompanyName || 'Company')}
             </Text>
             {request.OpenToAnyCompany && request.MinSalary ? (
-              <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '500', marginTop: 2 }}>
+              <Text style={{ color: colors.success, fontSize: 12, fontWeight: '500', marginTop: 2 }}>
                 {request.SalaryCurrency === 'USD' ? '$' : '₹'}{request.MinSalary?.toLocaleString()}{request.SalaryPeriod === 'Annual' ? '/yr' : '/mo'} min
               </Text>
             ) : null}
@@ -363,7 +363,7 @@ export default function ReferralTrackingScreen() {
             disabled={messagingReferrer}
           >
             <View style={styles.messageBtnContent}>
-              <Ionicons name="chatbubble-outline" size={18} color="#fff" />
+              <Ionicons name="chatbubble-outline" size={18} color={colors.white} />
               <Text style={styles.messageReferrerTextTop}>
                 {(referrerConversation.TotalUnreadFromReferrers || referrerConversation.UnreadCount) > 0 
                   ? 'Message Referrer' 
@@ -739,10 +739,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   messageReferrerTextTop: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: '#fff',
+    color: colors.white,
   },
   unreadBadge: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     borderRadius: 12,
     minWidth: 24,
     height: 24,
@@ -754,7 +754,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   unreadBadgeText: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
-    color: '#fff',
+    color: colors.white,
   },
   timelineMessage: {
     fontSize: typography.sizes.sm,

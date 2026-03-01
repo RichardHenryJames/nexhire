@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -659,7 +659,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
               <TextInput
                 style={styles.textInput}
                 placeholder={experienceType === 'Student' ? "e.g., 2025 (expected)" : "e.g., 2022"}
-                placeholderTextColor="#64748B"
+                placeholderTextColor={colors.textMuted}
                 value={formData.graduationYear}
                 onChangeText={(text) => setFormData({ ...formData, graduationYear: text })}
                 keyboardType="numeric"
@@ -672,7 +672,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
               <TextInput
                 style={styles.textInput}
                 placeholder="e.g., 3.8/4.0, 85%, First Class"
-                placeholderTextColor="#64748B"
+                placeholderTextColor={colors.textMuted}
                 value={formData.gpa}
                 onChangeText={(text) => setFormData({ ...formData, gpa: text })}
               />
@@ -686,7 +686,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
                 <TextInput
                   style={styles.textInput}
                   placeholder="Enter your college/school name"
-                  placeholderTextColor="#64748B"
+                  placeholderTextColor={colors.textMuted}
                   value={formData.customCollege}
                   onChangeText={(text) => setFormData({ ...formData, customCollege: text })}
                 />
@@ -701,7 +701,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             activeOpacity={0.85}
           >
             <Text style={styles.continueButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={isContinueEnabled ? '#FFFFFF' : '#64748B'} />
+            <Ionicons name="arrow-forward" size={18} color={isContinueEnabled ? colors.white : colors.textMuted} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -846,13 +846,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
     marginBottom: 8,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   form: {
@@ -860,29 +860,29 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 28,
   },
   selectionButton: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
   },
   selectionButtonDisabled: {
-    backgroundColor: 'rgba(30, 41, 59, 0.3)',
-    borderColor: 'rgba(148, 163, 184, 0.06)',
+    backgroundColor: colors.surfaceOverlay,
+    borderColor: colors.borderFaint,
   },
   selectionLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: colors.textSecondary,
     marginBottom: 8,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   selectionLabelDisabled: {
-    color: '#475569',
+    color: colors.gray200,
   },
   requiredAsterisk: {
-    color: '#EF4444',
+    color: colors.error,
     fontWeight: '700',
   },
   selectionValueContainer: {
@@ -892,14 +892,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   selectionValue: {
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
     flex: 1,
   },
   selectionValueDisabled: {
-    color: '#475569',
+    color: colors.gray200,
   },
   selectionPlaceholder: {
-    color: '#64748B',
+    color: colors.textMuted,
   },
   inputContainer: {
     gap: 8,
@@ -907,24 +907,24 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   required: {
-    color: '#EF4444',
+    color: colors.error,
   },
   textInput: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
   },
   continueButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -932,19 +932,19 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 14,
     gap: 8,
-    shadowColor: '#3B82F6',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   continueButtonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: colors.surfaceElevated,
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.2,
@@ -952,7 +952,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   // Modal styles — kept functional, modernized colors
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       position: 'fixed',
       top: 0,
@@ -961,13 +961,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
       bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#0F172A',
+      backgroundColor: colors.background,
       zIndex: 9999,
     } : {}),
   },
   modalInnerContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       flex: 'none',
       width: '100%',
@@ -986,12 +986,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.1)',
+    borderBottomColor: colors.borderThin,
   },
   modalTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
   },
@@ -999,17 +999,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     margin: 16,
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
   },
   searchInput: {
     flex: 1,
     padding: 12,
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
     marginLeft: 8,
   },
   clearButton: {
@@ -1023,7 +1023,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     marginTop: 16,
     textAlign: 'center',
   },
@@ -1035,19 +1035,19 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: '#EF4444',
+    color: colors.error,
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 20,
   },
   retryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1057,7 +1057,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.08)',
+    borderBottomColor: colors.borderFaint,
     minHeight: 72,
   },
   modalItemContent: {
@@ -1066,27 +1066,27 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalItemText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#F1F5F9',
+    color: colors.text,
     marginBottom: 3,
   },
   modalItemType: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.textMuted,
     marginBottom: 2,
   },
   modalItemLocation: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   modalItemWebsite: {
     fontSize: 13,
-    color: '#3B82F6',
+    color: colors.primary,
     marginBottom: 2,
   },
   modalItemRegion: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   emptyContainer: {
@@ -1097,40 +1097,40 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 16,
   },
   emptySubtext: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },
   categoryHeader: {
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    backgroundColor: colors.primaryGlow,
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.08)',
+    borderBottomColor: colors.borderFaint,
   },
   categoryHeaderText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#3B82F6',
+    color: colors.primary,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   fieldHelpContainer: {
-    backgroundColor: 'rgba(30, 41, 59, 0.4)',
+    backgroundColor: colors.surfaceOverlay,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.08)',
+    borderBottomColor: colors.borderFaint,
   },
   fieldHelpText: {
     fontSize: 13,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     textAlign: 'center',
   },
 });

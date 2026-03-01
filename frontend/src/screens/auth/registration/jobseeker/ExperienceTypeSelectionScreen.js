@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -133,7 +133,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
         <Ionicons 
           name={icon} 
           size={28} 
-          color={selectedType === type ? '#3B82F6' : '#94A3B8'} 
+          color={selectedType === type ? colors.primary : colors.textSecondary} 
         />
       </View>
       <View style={styles.cardBody}>
@@ -146,7 +146,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
           </Text>
           {selectedType === type && (
             <View style={styles.checkBadge}>
-              <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+              <Ionicons name="checkmark" size={14} color={colors.white} />
             </View>
           )}
         </View>
@@ -189,7 +189,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
                 </Text>
               </View>
               <View style={styles.googleCheckBadge}>
-                <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                <Ionicons name="checkmark" size={14} color={colors.white} />
               </View>
             </View>
           )}
@@ -209,9 +209,9 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
               onPress={handleSkipToFinal}
               activeOpacity={0.7}
             >
-              <Ionicons name="flash" size={14} color="#3B82F6" />
+              <Ionicons name="flash" size={14} color={colors.primary} />
               <Text style={styles.skipPillButtonText}>Quick setup — skip details</Text>
-              <Ionicons name="chevron-forward" size={14} color="#3B82F6" />
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
             </TouchableOpacity>
           )}
 
@@ -246,7 +246,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             <Ionicons 
               name="arrow-forward" 
               size={18} 
-              color={selectedType ? '#FFFFFF' : '#64748B'} 
+              color={selectedType ? colors.white : colors.textMuted} 
             />
           </TouchableOpacity>
 
@@ -256,11 +256,11 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             onPress={handleSwitchToEmployer}
             activeOpacity={0.7}
           >
-            <Ionicons name="business-outline" size={18} color="#94A3B8" />
+            <Ionicons name="business-outline" size={18} color={colors.textSecondary} />
             <Text style={styles.switchFlowButtonText}>
               I'm looking to hire instead
             </Text>
-            <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -293,13 +293,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
     marginBottom: 8,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     lineHeight: 22,
   },
 
@@ -309,10 +309,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     padding: 16,
-    backgroundColor: 'rgba(34, 197, 94, 0.08)',
+    backgroundColor: colors.successGlowSubtle,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.2)',
+    borderColor: colors.successBorder,
   },
   googleUserAvatar: {
     width: 44,
@@ -320,13 +320,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 22,
     marginRight: 12,
     borderWidth: 2,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
+    borderColor: colors.successBorderStrong,
   },
   googleUserTextContainer: { flex: 1 },
   googleUserWelcome: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#22C55E',
+    color: colors.success,
     marginBottom: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -334,18 +334,18 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   googleUserName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
     marginBottom: 1,
   },
   googleUserEmail: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: colors.textSecondary,
   },
   googleCheckBadge: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#22C55E',
+    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -359,14 +359,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    backgroundColor: colors.primaryGlow,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.2)',
+    borderColor: colors.primaryGlowStrong,
     marginBottom: 20,
   },
   skipPillButtonText: {
     fontSize: 13,
-    color: '#3B82F6',
+    color: colors.primary,
     fontWeight: '600',
   },
 
@@ -378,21 +378,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(148, 163, 184, 0.1)',
+    borderColor: colors.borderThin,
   },
   cardSelected: {
-    borderColor: 'rgba(59, 130, 246, 0.5)',
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    borderColor: colors.borderFocus,
+    backgroundColor: colors.primaryGlow,
   },
   cardIconBadge: {
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    backgroundColor: colors.borderFaint,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
@@ -409,36 +409,36 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
     flex: 1,
   },
   cardTitleSelected: {
-    color: '#60A5FA',
+    color: colors.primaryLight,
   },
   checkBadge: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
   },
   cardDescription: {
     fontSize: 14,
-    color: '#CBD5E1',
+    color: colors.gray500,
     lineHeight: 20,
     marginBottom: 6,
   },
   cardExamples: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.textMuted,
     lineHeight: 18,
   },
 
   // Continue button
   continueButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -447,25 +447,25 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 14,
     gap: 8,
     marginBottom: 12,
-    shadowColor: '#3B82F6',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   continueButtonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: colors.surfaceElevated,
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.2,
   },
   continueButtonTextDisabled: {
-    color: '#64748B',
+    color: colors.textMuted,
   },
 
   // Switch flow
@@ -479,7 +479,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   switchFlowButtonText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
 });

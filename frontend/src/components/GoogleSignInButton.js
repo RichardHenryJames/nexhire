@@ -40,7 +40,7 @@ const GoogleSignInButton = ({ onPress, loading = false, disabled = false, style 
           <Ionicons 
             name="logo-google" 
             size={iconSize} 
-            color="#4285F4" 
+            color={colors.primary} 
             style={styles.icon}
           />
         )}
@@ -61,7 +61,7 @@ const createStyles = (colors) => StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -74,7 +74,7 @@ const createStyles = (colors) => StyleSheet.create({
     borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,

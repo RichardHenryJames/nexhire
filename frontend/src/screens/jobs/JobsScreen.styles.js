@@ -338,21 +338,3 @@ export const createStyles = (colors, responsive = {}) => {
   },
 });
 };
-
-// For backward compatibility
-export const styles = createStyles({
-  primary: '#3B82F6',
-  primaryLight: '#60A5FA',
-  surface: '#FFFFFF',
-  background: '#F9FAFB',
-  text: '#1F2937',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  border: '#E5E7EB',
-  gray50: '#F9FAFB',
-  gray100: '#F3F4F6',
-  white: '#FFFFFF',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  shadow: '#000000',
-});

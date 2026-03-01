@@ -135,11 +135,11 @@ export default function StreakTracker({ compact = false }) {
   if (compact) {
     // Compact mode: just flame + number for header bar
     return (
-      <View style={[compactStyles.container, { backgroundColor: streak > 0 ? '#FF6B0020' : colors.surface }]}>
+      <View style={[compactStyles.container, { backgroundColor: streak > 0 ? colors.orangeBg : colors.surface }]}>
         <Animated.Text style={[compactStyles.flame, { transform: [{ scale: pulseAnim }] }]}>
           {streak > 0 ? '🔥' : '❄️'}
         </Animated.Text>
-        <Text style={[compactStyles.count, { color: streak > 0 ? '#FF6B00' : colors.gray500 }]}>
+        <Text style={[compactStyles.count, { color: streak > 0 ? colors.orange : colors.gray500 }]}>
           {streak}
         </Text>
       </View>
@@ -147,12 +147,12 @@ export default function StreakTracker({ compact = false }) {
   }
 
   return (
-    <Animated.View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: '#FF6B00' }]}>
+    <Animated.View style={[styles.container, { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.orange }]}>
       {/* Milestone celebration overlay */}
       {showMilestone && (
         <View style={styles.milestoneOverlay}>
           <Text style={styles.milestoneEmoji}>🎉</Text>
-          <Text style={[styles.milestoneText, { color: '#FF6B00' }]}>
+          <Text style={[styles.milestoneText, { color: colors.orange }]}>
             {milestoneReached}-Day Streak!
           </Text>
         </View>
@@ -165,7 +165,7 @@ export default function StreakTracker({ compact = false }) {
             {streak > 0 ? '🔥' : '❄️'}
           </Animated.Text>
           <View>
-            <Text style={[styles.streakCount, { color: streak > 0 ? '#FF6B00' : colors.gray500 }]}>
+            <Text style={[styles.streakCount, { color: streak > 0 ? colors.orange : colors.gray500 }]}>
               {streak}
             </Text>
             <Text style={[styles.streakLabel, { color: colors.gray500 }]}>
@@ -186,7 +186,7 @@ export default function StreakTracker({ compact = false }) {
 
         {/* Best streak badge */}
         {longestStreak > streak && (
-          <View style={[styles.bestBadge, { backgroundColor: '#FFD70020' }]}>
+          <View style={[styles.bestBadge, { backgroundColor: colors.warningBg }]}>
             <Text style={styles.bestText}>Best: {longestStreak}</Text>
           </View>
         )}
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   milestoneOverlay: {
     position: 'absolute', top: -10, right: 12,
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#FFF3E0', paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: '#FFF4E6', paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 12, zIndex: 10,
   },
   milestoneEmoji: { fontSize: 16 },
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   messageText: { fontSize: 13, fontWeight: '700' },
   messageSub: { fontSize: 11, marginTop: 1 },
   bestBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  bestText: { fontSize: 10, fontWeight: '700', color: '#B8860B' },
+  bestText: { fontSize: 10, fontWeight: '700', color: '#FFD700' },
   progressSection: { marginTop: 10 },
   progressBg: {
     height: 4,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 2,
-    backgroundColor: '#FF6B00',
+    backgroundColor: '#FF9500',
   },
   progressLabel: { fontSize: 10, marginTop: 4, textAlign: 'right' },
 });

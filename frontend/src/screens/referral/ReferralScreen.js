@@ -313,19 +313,19 @@ export default function ReferralScreen({ navigation }) {
       case 'Pending':
         return colors.gray600;
       case 'NotifiedToReferrers':
-        return '#10B981'; // Green - notified
+        return colors.success; // Green - notified
       case 'Viewed':
         return colors.primary; // Blue
       case 'Claimed':
-        return '#F59E0B'; // Amber
+        return colors.warning; // Amber
       case 'ProofUploaded':
-        return '#8B5CF6'; // Purple
+        return colors.accent; // Purple
       case 'Completed':
         return colors.success;
       case 'Verified':
-        return '#ffd700';
+        return colors.gold;
       case 'Unverified':
-        return '#ef4444'; // Red - not verified
+        return colors.error; // Red - not verified
       case 'Cancelled':
         return colors.danger;
       case 'Expired':
@@ -395,7 +395,7 @@ export default function ReferralScreen({ navigation }) {
 
     // Generate consistent color from name
     const getAvatarColor = (name) => {
-      const avatarColors = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#6366F1'];
+      const avatarColors = [colors.accent, colors.primary, colors.success, colors.warning, colors.error, colors.pink, colors.indigo];
       if (!name) return avatarColors[0];
       let hash = 0;
       for (let i = 0; i < name.length; i++) {
@@ -506,7 +506,7 @@ export default function ReferralScreen({ navigation }) {
                     }
                   }}
                 >
-                  <Ionicons name="eye" size={14} color="#fff" />
+                  <Ionicons name="eye" size={14} color={colors.white} />
                   <Text style={styles.viewRequestText}>View Proof</Text>
                 </TouchableOpacity>
               )}
@@ -516,14 +516,14 @@ export default function ReferralScreen({ navigation }) {
           {/* Verified Badge */}
           {request.Status === 'Verified' && (
             <View style={styles.verifiedBadgeCorner}>
-              <Ionicons name="trophy" size={14} color="#F59E0B" />
+              <Ionicons name="trophy" size={14} color={colors.warning} />
             </View>
           )}
 
           {/* Unverified Badge */}
           {request.Status === 'Unverified' && (
-            <View style={[styles.verifiedBadgeCorner, { backgroundColor: '#EF444415', borderRadius: 8, padding: 4 }]}>
-              <Ionicons name="alert-circle" size={14} color="#EF4444" />
+            <View style={[styles.verifiedBadgeCorner, { backgroundColor: colors.errorBg, borderRadius: 8, padding: 4 }]}>
+              <Ionicons name="alert-circle" size={14} color={colors.error} />
             </View>
           )}
         </View>
@@ -626,7 +626,7 @@ export default function ReferralScreen({ navigation }) {
                 organizationId: currentVerifiedCompany.organizationId
               })}
             >
-              <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+              <Ionicons name="add-circle" size={20} color={colors.white} />
               <Text style={styles.postJobButtonText}>Post Job</Text>
             </TouchableOpacity>
             <TouchableOpacity 
@@ -635,14 +635,14 @@ export default function ReferralScreen({ navigation }) {
                 initialTab: draftJobsCount > 0 ? 'draft' : 'published'
               })}
             >
-              <Ionicons name="cloud-upload" size={20} color="#FFFFFF" />
+              <Ionicons name="cloud-upload" size={20} color={colors.white} />
               <Text style={styles.postJobButtonText}>Publish{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.postJobButton, { backgroundColor: '#F59E0B' }]}
+              style={[styles.postJobButton, { backgroundColor: colors.warning }]}
               onPress={() => navigation.navigate('Earnings')}
             >
-              <Ionicons name="cash-outline" size={20} color="#FFFFFF" />
+              <Ionicons name="cash-outline" size={20} color={colors.white} />
               <Text style={styles.postJobButtonText}>Earnings</Text>
             </TouchableOpacity>
           </View>
@@ -769,7 +769,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: colors.danger || '#EF4444',
+    backgroundColor: colors.danger,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -780,7 +780,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderColor: colors.surface,
   },
   messagesBadgeText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 10,
     fontWeight: typography.weights.bold,
   },
@@ -814,7 +814,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 6,
   },
   postJobButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
   },
@@ -978,7 +978,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   avatarInitials: {
     fontSize: 18,
     fontWeight: typography.weights.bold,
-    color: '#FFFFFF',
+    color: colors.white,
   },
   logoContainer: {
     marginRight: 10,

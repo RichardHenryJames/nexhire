@@ -396,7 +396,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
               <View style={styles.rowHeader}>
                 <Text style={styles.rowTitle}>Component</Text>
                 <TouchableOpacity onPress={() => removeComponentRow(editingContext, index)}>
-                  <Ionicons name="trash-outline" size={18} color={colors.danger || '#FF3B30'} />
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
                 </TouchableOpacity>
               </View>
 
@@ -487,7 +487,7 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
     <View style={styles.modalContainer}>
       <View style={styles.modalHeader}>
         <TouchableOpacity onPress={() => setShowSalaryModal(false)}>
-          <Ionicons name="close" size={24} color={colors.text || '#000000'} />
+          <Ionicons name="close" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.modalTitle}>Edit Salary Breakdown</Text>
         {/* Removed Save button from header */}
@@ -528,11 +528,11 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
       {!embedded && (
         <View style={styles.sectionHeader}>
           <View style={styles.headerLeft}>
-            <Ionicons name="cash" size={20} color={colors.primary || '#007AFF'} />
+            <Ionicons name="cash" size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Salary Breakdown</Text>
           </View>
           <TouchableOpacity style={styles.editButton} onPress={() => setShowSalaryModal(true)}>
-            <Ionicons name="create" size={16} color={colors.primary || '#007AFF'} />
+            <Ionicons name="create" size={16} color={colors.primary} />
             <Text style={styles.editButtonText}>Edit</Text>
           </TouchableOpacity>
         </View>
@@ -587,25 +587,25 @@ const SalaryBreakdownSection = forwardRef(function SalaryBreakdownSection(
 export default SalaryBreakdownSection;
 
 const createStyles = (colors) => StyleSheet.create({
-  container: { backgroundColor: colors.surface || '#FFFFFF', margin: 16, marginBottom: 8, padding: 20, borderRadius: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5 },
+  container: { backgroundColor: colors.surface, margin: 16, marginBottom: 8, padding: 20, borderRadius: 12, shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3.84, elevation: 5 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sectionTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text || '#000' },
+  sectionTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
   editButton: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8 },
-  editButtonText: { fontSize: typography.sizes?.sm || 14, color: colors.primary || '#007AFF', fontWeight: typography.weights?.medium || '500' },
+  editButtonText: { fontSize: typography.sizes?.sm || 14, color: colors.primary, fontWeight: typography.weights?.medium || '500' },
 
   compactContainer: { gap: 8 },
   compactBlock: { marginBottom: 6 },
-  kvRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: (colors.border || '#E5E7EB') + '70' },
-  kvLabel: { fontSize: typography.sizes?.xs || 12, color: colors.gray600 || '#6B7280', fontWeight: typography.weights?.medium || '500' },
-  kvValue: { fontSize: typography.sizes?.sm || 14, color: colors.text || '#111827' },
+  kvRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: (colors.border) + '70' },
+  kvLabel: { fontSize: typography.sizes?.xs || 12, color: colors.gray600, fontWeight: typography.weights?.medium || '500' },
+  kvValue: { fontSize: typography.sizes?.sm || 14, color: colors.text },
   kvRowMuted: { paddingTop: 6 },
-  kvMutedText: { fontSize: typography.sizes?.xs || 12, color: colors.gray500 || '#9CA3AF', fontStyle: 'italic' },
-  noDataText: { fontSize: typography.sizes?.sm || 14, color: colors.gray500 || '#9CA3AF', textAlign: 'center', padding: 20, fontStyle: 'italic' },
+  kvMutedText: { fontSize: typography.sizes?.xs || 12, color: colors.gray500, fontStyle: 'italic' },
+  noDataText: { fontSize: typography.sizes?.sm || 14, color: colors.gray500, textAlign: 'center', padding: 20, fontStyle: 'italic' },
 
-  modalContainer: { flex: 1, backgroundColor: colors.background || '#FFFFFF' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border || '#E0E0E0' },
-  modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text || '#000000' },
+  modalContainer: { flex: 1, backgroundColor: colors.background },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border },
+  modalTitle: { fontSize: typography.sizes?.lg || 18, fontWeight: typography.weights?.bold || 'bold', color: colors.text },
 
   segmented: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 8 },
   segmentBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
@@ -646,7 +646,7 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 12,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border || '#E0E0E0',
+    borderTopColor: colors.border,
     backgroundColor: colors.background,
   },
   salaryModalCancelButton: {

@@ -440,7 +440,7 @@ export default function CreateJobScreen({ navigation }) {
               </TouchableOpacity>
               {employerCompany && jobData.organizationId === employerCompany.id && (
                 <Text style={styles.fieldHint}>
-                  <Ionicons name="checkmark-circle" size={12} color="#10B981" /> Your registered company
+                  <Ionicons name="checkmark-circle" size={12} color={colors.success} /> Your registered company
                 </Text>
               )}
               {errors.companyName && <Text style={styles.errorText}>{errors.companyName}</Text>}
@@ -993,7 +993,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     maxHeight: 250,
     zIndex: 1000,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
+      ios: { shadowColor: colors.black, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
       android: { elevation: 8 },
       web: { boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
     }),

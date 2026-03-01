@@ -229,7 +229,7 @@ export default function LoginScreen({ navigation }) {
   return (
     <View style={screenStyles.mainContainer}>
       <LinearGradient
-        colors={['#0F172A', '#131D32', '#0F172A']}
+        colors={colors.gradientBackground}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         pointerEvents="none"
@@ -297,7 +297,7 @@ export default function LoginScreen({ navigation }) {
                 <Ionicons 
                   name="mail-outline" 
                   size={20} 
-                  color="rgba(255, 255, 255, 0.8)" 
+                  color={colors.icon} 
                   style={screenStyles.inputIcon}
                 />
                 <TextInput
@@ -308,7 +308,7 @@ export default function LoginScreen({ navigation }) {
                     if (errors.email) setErrors(prev => ({ ...prev, email: null }));
                   }}
                   placeholder="Enter your email"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  placeholderTextColor={colors.placeholder}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -330,7 +330,7 @@ export default function LoginScreen({ navigation }) {
                 <Ionicons 
                   name="lock-closed-outline" 
                   size={20} 
-                  color="rgba(255, 255, 255, 0.8)" 
+                  color={colors.icon} 
                   style={screenStyles.inputIcon}
                 />
                 <TextInput
@@ -341,7 +341,7 @@ export default function LoginScreen({ navigation }) {
                     if (errors.password) setErrors(prev => ({ ...prev, password: null }));
                   }}
                   placeholder="Enter your password"
-                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  placeholderTextColor={colors.placeholder}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoComplete="password"
@@ -353,7 +353,7 @@ export default function LoginScreen({ navigation }) {
                   <Ionicons 
                     name={showPassword ? "eye-outline" : "eye-off-outline"} 
                     size={20} 
-                    color="rgba(255, 255, 255, 0.8)" 
+                    color={colors.icon} 
                   />
                 </TouchableOpacity>
               </View>
@@ -449,7 +449,7 @@ export default function LoginScreen({ navigation }) {
         <View style={screenStyles.modalOverlay}>
           <View style={screenStyles.modalContent}>
             <View style={screenStyles.modalIconContainer}>
-              <Ionicons name="globe-outline" size={40} color="#f59e0b" />
+              <Ionicons name="globe-outline" size={40} color={colors.warning} />
             </View>
             <Text style={screenStyles.modalTitle}>Open in Browser</Text>
             <Text style={screenStyles.modalMessage}>
@@ -460,7 +460,7 @@ export default function LoginScreen({ navigation }) {
             </Text>
             
             <TouchableOpacity style={screenStyles.modalCopyButton} onPress={handleCopyLink}>
-              <Ionicons name="copy-outline" size={18} color="#000" />
+              <Ionicons name="copy-outline" size={18} color={colors.black} />
               <Text style={screenStyles.modalCopyButtonText}>Copy Link</Text>
             </TouchableOpacity>
             
@@ -483,7 +483,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   return StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
   },
   webBackground: {
     position: 'fixed',
@@ -530,7 +530,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: 'rgba(59, 130, 246, 0.06)',
+    backgroundColor: colors.primaryGlowSubtle,
   },
   decorationCircle2: {
     position: 'absolute',
@@ -539,7 +539,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     width: 350,
     height: 350,
     borderRadius: 175,
-    backgroundColor: 'rgba(139, 92, 246, 0.04)',
+    backgroundColor: colors.accentGlowSubtle,
   },
   decorationCircle3: {
     position: 'absolute',
@@ -548,7 +548,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+    backgroundColor: colors.primaryGlowFaint,
   },
   header: {
     alignItems: 'center',
@@ -566,7 +566,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     textAlign: 'center',
     lineHeight: 26,
     fontWeight: typography.weights.bold,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowColor: colors.textShadow,
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
@@ -590,11 +590,11 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+    backgroundColor: colors.borderSubtle,
   },
   dividerText: {
     marginHorizontal: spacing.md,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     fontSize: typography.sizes.sm,
   },
   form: {
@@ -614,17 +614,17 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.15)',
+    borderColor: colors.borderSubtle,
     borderRadius: 14,
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
   },
   inputError: {
     borderColor: colors.danger,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: colors.dangerGlow,
   },
   inputIcon: {
     marginLeft: spacing.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.icon,
   },
   input: {
     flex: 1,
@@ -638,12 +638,12 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   },
   errorText: {
     ...themeStyles.caption,
-    color: '#FFD700', // Gold/Yellow for errors on blue background
+    color: colors.gold,
     marginTop: spacing.xs,
     fontWeight: '600',
   },
   loginButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     borderWidth: 0,
     borderRadius: 14,
     paddingVertical: 16,
@@ -651,14 +651,14 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     marginTop: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#3B82F6',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: colors.surfaceElevated,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -680,7 +680,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   loginButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: colors.white,
     letterSpacing: 0.2,
   },
   globalErrorContainer: {
@@ -689,14 +689,14 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     justifyContent: 'center',
     marginTop: spacing.sm,
     padding: spacing.sm,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    backgroundColor: colors.dangerGlow,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.25)',
+    borderColor: colors.dangerBorder,
   },
   globalError: {
     ...themeStyles.bodySmall,
-    color: '#F87171',
+    color: colors.dangerLight,
     marginLeft: spacing.xs,
   },
   footer: {
@@ -706,7 +706,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   },
   footerText: {
     ...themeStyles.body,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: colors.textBright,
   },
   linkText: {
     ...themeStyles.body,
@@ -718,19 +718,19 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   devHelper: {
     marginTop: spacing.xl,
     padding: spacing.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.overlayLight,
     borderRadius: borderRadius.md,
     alignItems: 'center',
   },
   devHelperTitle: {
     ...themeStyles.bodySmall,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.icon,
     marginBottom: spacing.sm,
   },
   devButton: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: colors.overlayMedium,
     borderRadius: borderRadius.sm,
   },
   devButtonText: {
@@ -754,47 +754,47 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   inAppBrowserWarning: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+    backgroundColor: colors.warningBackground,
     borderWidth: 2,
-    borderColor: 'rgba(245, 158, 11, 0.5)',
+    borderColor: colors.warningBorder,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     marginBottom: spacing.lg,
   },
   inAppBrowserWarningTitle: {
     fontSize: typography.sizes.base,
-    color: '#fbbf24',
+    color: colors.warningLight,
     fontWeight: typography.weights.bold,
     marginBottom: 4,
   },
   inAppBrowserWarningText: {
     fontSize: typography.sizes.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.icon,
     lineHeight: 18,
   },
   openBrowserButton: {
     marginTop: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.warning,
     borderRadius: borderRadius.sm,
     alignSelf: 'flex-start',
   },
   openBrowserButtonText: {
     fontSize: typography.sizes.sm,
-    color: '#000',
+    color: colors.black,
     fontWeight: typography.weights.bold,
   },
   inAppBrowserHint: {
     fontSize: typography.sizes.xs,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.textDimmed,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
   // Modal styles for in-app browser warning
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: colors.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -807,13 +807,13 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     maxWidth: 340,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: colors.overlayLight,
   },
   modalIconContainer: {
     width: 70,
     height: 70,
     borderRadius: 35,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    backgroundColor: colors.warningGlow,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -827,27 +827,27 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   },
   modalMessage: {
     fontSize: typography.sizes.sm,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.icon,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 16,
   },
   modalInstructions: {
     fontSize: typography.sizes.sm,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.textDimmed,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 20,
   },
   modalBold: {
     fontWeight: typography.weights.bold,
-    color: '#fbbf24',
+    color: colors.warningLight,
   },
   modalCopyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f59e0b',
+    backgroundColor: colors.warning,
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 12,
@@ -858,14 +858,14 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   modalCopyButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
-    color: '#000',
+    color: colors.black,
   },
   modalUseEmailButton: {
     paddingVertical: 12,
   },
   modalUseEmailText: {
     fontSize: typography.sizes.sm,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.textDimmed,
     textDecorationLine: 'underline',
   },
 });

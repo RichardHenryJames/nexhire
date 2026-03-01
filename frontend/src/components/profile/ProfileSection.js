@@ -121,7 +121,7 @@ export default function ProfileSection({
             <Ionicons
    name={collapsed ? 'chevron-down' : 'chevron-up'}
    size={18}
-           color={colors.gray500 || '#6B7280'}
+           color={colors.gray500}
             style={{ marginLeft: 6 }}
   />
           </TouchableOpacity>
@@ -163,7 +163,7 @@ onPress={handleCancelPress}
         accessibilityRole="button"
   accessibilityLabel={`Cancel editing ${title}`}
      >
-      <Ionicons name="close" size={16} color={colors.gray600 || '#6B7280'} />
+      <Ionicons name="close" size={16} color={colors.gray600} />
           <Text style={styles.cancelButtonText}>Cancel</Text>
     </TouchableOpacity>
       {!hideSaveButton && (
@@ -198,12 +198,12 @@ onPress={handleCancelPress}
 
 const createStyles = (colors) => StyleSheet.create({
   container: {
-    backgroundColor: colors.surface || '#FFFFFF',
+    backgroundColor: colors.surface,
     margin: 16,
     marginBottom: 8,
     padding: 20,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
@@ -224,7 +224,7 @@ const createStyles = (colors) => StyleSheet.create({
   sectionTitle: {
     fontSize: typography.sizes?.lg || 18,
     fontWeight: typography.weights?.bold || 'bold',
-    color: colors.text || '#000000',
+    color: colors.text,
     marginRight: 4,
   },
   editButton: {
@@ -235,7 +235,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   editButtonText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.primary || '#007AFF',
+    color: colors.primary,
     fontWeight: typography.weights?.medium || '500',
   },
   
@@ -248,7 +248,7 @@ const createStyles = (colors) => StyleSheet.create({
     marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border || '#E5E7EB',
+    borderTopColor: colors.border,
   },
   cancelButton: {
     flexDirection: 'row',
@@ -258,12 +258,12 @@ const createStyles = (colors) => StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E7EB',
-    backgroundColor: colors.surface || '#FFFFFF',
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
   },
   cancelButtonText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray600 || '#6B7280',
+    color: colors.gray600,
     fontWeight: typography.weights?.medium || '500',
   },
   saveButton: {
@@ -273,16 +273,16 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    backgroundColor: colors.primary || '#007AFF',
+    backgroundColor: colors.primary,
     minWidth: 100,
     justifyContent: 'center',
   },
   saveButtonText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.white || '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights?.bold || 'bold',
   },
   saveButtonTextDisabled: {
-    color: colors.gray300 || '#D1D5DB',
+    color: colors.gray300,
   },
 });

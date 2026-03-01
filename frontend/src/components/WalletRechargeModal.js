@@ -135,7 +135,7 @@ export default function WalletRechargeModal({
             {/* Security Note - based on config */}
             {config.showSecurityNote && config.securityNote && (
               <View style={styles.holdInfoBox}>
-                <Ionicons name="shield-checkmark" size={20} color="#10B981" style={{ marginRight: 8 }} />
+                <Ionicons name="shield-checkmark" size={20} color={colors.success} style={{ marginRight: 8 }} />
                 <Text style={styles.holdInfoText}>{config.securityNote}</Text>
               </View>
             )}

@@ -92,7 +92,7 @@ export default function AdminVerificationsScreen() {
   };
 
   const getMethodLabel = (m) => m === 'Aadhaar' ? '🪪 Aadhaar Card' : m === 'CollegeEmail' ? '🎓 College Email' : m === 'CompanyEmail' ? '🏢 Company Email' : m;
-  const getMethodColor = (m) => m === 'Aadhaar' ? '#F59E0B' : m === 'CollegeEmail' ? '#8B5CF6' : '#3B82F6';
+  const getMethodColor = (m) => m === 'Aadhaar' ? colors.warning : m === 'CollegeEmail' ? colors.accent : colors.primary;
 
   const styles = makeStyles(colors, responsive);
 
@@ -104,8 +104,8 @@ export default function AdminVerificationsScreen() {
           <Text style={{ fontSize: 12, fontWeight: '700', color: getMethodColor(v.Method) }}>{getMethodLabel(v.Method)}</Text>
         </View>
         {v.Status !== 'Pending' && (
-          <View style={{ backgroundColor: (v.Status === 'Approved' ? '#10B981' : '#EF4444') + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: '700', color: v.Status === 'Approved' ? '#10B981' : '#EF4444' }}>{v.Status}</Text>
+          <View style={{ backgroundColor: (v.Status === 'Approved' ? colors.success : colors.error) + '20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: v.Status === 'Approved' ? colors.success : colors.error }}>{v.Status}</Text>
           </View>
         )}
         <Text style={{ fontSize: 11, color: colors.textSecondary }}>
@@ -131,16 +131,16 @@ export default function AdminVerificationsScreen() {
 
       {/* College */}
       {v.CollegeName && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#8B5CF610', padding: 8, borderRadius: 8 }}>
-          <Ionicons name="school" size={16} color="#8B5CF6" style={{ marginRight: 8 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: colors.accentBg, padding: 8, borderRadius: 8 }}>
+          <Ionicons name="school" size={16} color={colors.accent} style={{ marginRight: 8 }} />
           <Text style={{ fontSize: 13, color: colors.text, fontWeight: '500' }}>{v.CollegeName}</Text>
         </View>
       )}
 
       {/* Rejection reason */}
       {v.Status === 'Rejected' && v.RejectionReason && (
-        <View style={{ backgroundColor: '#EF444410', padding: 10, borderRadius: 8, marginBottom: 10 }}>
-          <Text style={{ color: '#EF4444', fontSize: 13 }}><Text style={{ fontWeight: '600' }}>Reason: </Text>{v.RejectionReason}</Text>
+        <View style={{ backgroundColor: colors.errorBg, padding: 10, borderRadius: 8, marginBottom: 10 }}>
+          <Text style={{ color: colors.error, fontSize: 13 }}><Text style={{ fontWeight: '600' }}>Reason: </Text>{v.RejectionReason}</Text>
         </View>
       )}
 
@@ -169,11 +169,11 @@ export default function AdminVerificationsScreen() {
       {showActions && v.Status === 'Pending' && (
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(v.VerificationID)}>
-            <Ionicons name="checkmark-circle" size={18} color="#fff" />
+            <Ionicons name="checkmark-circle" size={18} color={colors.white} />
             <Text style={styles.btnText}>Approve</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(v)}>
-            <Ionicons name="close-circle" size={18} color="#fff" />
+            <Ionicons name="close-circle" size={18} color={colors.white} />
             <Text style={styles.btnText}>Reject</Text>
           </TouchableOpacity>
         </View>
@@ -190,10 +190,10 @@ export default function AdminVerificationsScreen() {
       {/* Sub Tabs */}
       <View style={styles.subTabsRow}>
         <TouchableOpacity style={[styles.subTab, subTab === 'pending' && styles.subTabActive]} onPress={() => setSubTab('pending')}>
-          <Text style={[styles.subTabText, subTab === 'pending' && { color: '#F59E0B', fontWeight: '700' }]}>Pending ({stats.pending})</Text>
+          <Text style={[styles.subTabText, subTab === 'pending' && { color: colors.warning, fontWeight: '700' }]}>Pending ({stats.pending})</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.subTab, subTab === 'completed' && styles.subTabCompleted]} onPress={() => setSubTab('completed')}>
-          <Text style={[styles.subTabText, subTab === 'completed' && { color: '#10B981', fontWeight: '700' }]}>Completed ({stats.approved + stats.rejected})</Text>
+          <Text style={[styles.subTabText, subTab === 'completed' && { color: colors.success, fontWeight: '700' }]}>Completed ({stats.approved + stats.rejected})</Text>
         </TouchableOpacity>
       </View>
 
@@ -223,7 +223,7 @@ export default function AdminVerificationsScreen() {
       <Modal visible={rejectModalVisible} transparent animationType="fade" onRequestClose={() => setRejectModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Ionicons name="close-circle" size={40} color="#EF4444" />
+            <Ionicons name="close-circle" size={40} color={colors.error} />
             <Text style={styles.modalTitle}>Reject Verification</Text>
             {selectedItem && (
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 12 }}>
@@ -243,8 +243,8 @@ export default function AdminVerificationsScreen() {
               <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.border }]} onPress={() => setRejectModalVisible(false)}>
                 <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#EF4444' }]} onPress={confirmReject}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Reject</Text>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.error }]} onPress={confirmReject}>
+                <Text style={{ color: colors.white, fontWeight: '600' }}>Reject</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -261,13 +261,13 @@ function makeStyles(colors, responsive) {
     content: { padding: 16, ...(isDesktop ? { maxWidth: 700, alignSelf: 'center', width: '100%' } : {}) },
     subTabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 16 },
     subTab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-    subTabActive: { borderBottomWidth: 2, borderBottomColor: '#F59E0B' },
-    subTabCompleted: { borderBottomWidth: 2, borderBottomColor: '#10B981' },
+    subTabActive: { borderBottomWidth: 2, borderBottomColor: colors.warning },
+    subTabCompleted: { borderBottomWidth: 2, borderBottomColor: colors.success },
     subTabText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
     card: { backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
-    approveBtn: { flex: 1, backgroundColor: '#10B981', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    rejectBtn: { flex: 1, backgroundColor: '#EF4444', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    btnText: { color: '#fff', fontWeight: '600', marginLeft: 6 },
+    approveBtn: { flex: 1, backgroundColor: colors.success, paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    rejectBtn: { flex: 1, backgroundColor: colors.error, paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    btnText: { color: colors.white, fontWeight: '600', marginLeft: 6 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalBox: { backgroundColor: colors.card, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, alignItems: 'center' },
     modalTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 8, marginBottom: 4 },

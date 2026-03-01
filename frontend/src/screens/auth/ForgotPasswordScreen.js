@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,13 +19,14 @@ import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 import API from '../../services/api';
 
+const colors = authDarkColors;
+
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
-  const colors = authDarkColors;
   const responsive = useResponsive();
   const { isDesktop } = responsive;
 
@@ -192,7 +193,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                   disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#3c4043" size="small" />
+                    <ActivityIndicator color={colors.surfaceElevated} size="small" />
                   ) : (
                     <Text style={styles.submitButtonText}>Send Reset Link</Text>
                   )}
@@ -248,11 +249,9 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'transparent',
     borderRadius: borderRadius.xl,
     padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
     maxWidth: 450,
     width: '100%',
     alignSelf: 'center',
@@ -276,7 +275,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: colors.primaryGlowStrong,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
@@ -284,13 +283,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: '#ffffff',
+    color: colors.white,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: typography.sizes.md,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSubtle,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -303,20 +302,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: colors.textBright,
     marginBottom: spacing.xs,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: colors.inputBackgroundLight,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.md,
   },
   inputError: {
-    borderColor: '#ef4444',
+    borderColor: colors.error,
   },
   inputIcon: {
     marginRight: spacing.sm,
@@ -325,34 +324,34 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     fontSize: typography.sizes.md,
-    color: '#ffffff',
+    color: colors.white,
   },
   errorText: {
     fontSize: typography.sizes.sm,
-    color: '#ef4444',
+    color: colors.error,
     marginTop: spacing.xs,
   },
   submitButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: borderRadius.md,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.md,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   buttonDisabled: {
-    backgroundColor: '#f1f3f4',
+    backgroundColor: colors.textSecondary,
     opacity: 0.7,
   },
   submitButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: '#3c4043',
+    color: colors.surfaceElevated,
   },
   loginLink: {
     flexDirection: 'row',
@@ -371,7 +370,7 @@ const styles = StyleSheet.create({
   },
   helpText: {
     fontSize: typography.sizes.sm,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSubtle,
   },
   helpLink: {
     color: authDarkColors.primary,
@@ -386,7 +385,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: colors.primaryGlowStrong,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.xl,
@@ -394,13 +393,13 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: '#ffffff',
+    color: colors.white,
     marginBottom: spacing.md,
     textAlign: 'center',
   },
   successMessage: {
     fontSize: typography.sizes.md,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.icon,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: spacing.md,
@@ -408,7 +407,7 @@ const styles = StyleSheet.create({
   },
   successNote: {
     fontSize: typography.sizes.sm,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: colors.textDimmed,
     textAlign: 'center',
     fontStyle: 'italic',
     marginBottom: spacing.xl,
@@ -425,7 +424,7 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: '#ffffff',
+    color: colors.white,
   },
   resendLink: {
     marginTop: spacing.lg,

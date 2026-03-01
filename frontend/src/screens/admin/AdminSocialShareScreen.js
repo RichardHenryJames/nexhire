@@ -74,10 +74,10 @@ export default function AdminSocialShareScreen() {
     } catch (err) { showToast('Failed to reject claim', 'error'); }
   };
 
-  const getPlatformColor = (p) => p === 'LinkedIn' ? '#0A66C2' : p === 'Instagram' ? '#E4405F' : p === 'Facebook' ? '#1877F2' : colors.text;
+  const getPlatformColor = (p) => p === 'LinkedIn' ? colors.primaryDark : p === 'Instagram' ? colors.rose : p === 'Facebook' ? colors.primary : colors.text;
   const getPlatformIcon = (p) => p === 'LinkedIn' ? 'logo-linkedin' : p === 'Instagram' ? 'logo-instagram' : p === 'Facebook' ? 'logo-facebook' : 'share-social';
   const renderPlatformIcon = (p) => p === 'Twitter' ? <Text style={{ fontSize: 20, fontWeight: '900', color: colors.text }}>𝕏</Text> : <Ionicons name={getPlatformIcon(p)} size={18} color={getPlatformColor(p)} />;
-  const getStatusColor = (s) => s === 'Pending' ? '#F59E0B' : s === 'Approved' ? '#10B981' : '#EF4444';
+  const getStatusColor = (s) => s === 'Pending' ? colors.warning : s === 'Approved' ? colors.success : colors.error;
 
   const styles = makeStyles(colors, responsive);
 
@@ -105,8 +105,8 @@ export default function AdminSocialShareScreen() {
 
       {/* Rejection reason */}
       {claim.Status === 'Rejected' && claim.RejectionReason && (
-        <View style={{ backgroundColor: '#EF444410', padding: 10, borderRadius: 8, marginBottom: 10 }}>
-          <Text style={{ color: '#EF4444', fontSize: 13 }}><Text style={{ fontWeight: '600' }}>Reason: </Text>{claim.RejectionReason}</Text>
+        <View style={{ backgroundColor: colors.errorBg, padding: 10, borderRadius: 8, marginBottom: 10 }}>
+          <Text style={{ color: colors.error, fontSize: 13 }}><Text style={{ fontWeight: '600' }}>Reason: </Text>{claim.RejectionReason}</Text>
         </View>
       )}
 
@@ -137,11 +137,11 @@ export default function AdminSocialShareScreen() {
       {claim.Status === 'Pending' && (
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <TouchableOpacity style={styles.approveBtn} onPress={() => handleApprove(claim.ClaimID)}>
-            <Ionicons name="checkmark" size={18} color="#fff" />
+            <Ionicons name="checkmark" size={18} color={colors.white} />
             <Text style={styles.btnText}>Approve</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(claim)}>
-            <Ionicons name="close" size={18} color="#fff" />
+            <Ionicons name="close" size={18} color={colors.white} />
             <Text style={styles.btnText}>Reject</Text>
           </TouchableOpacity>
         </View>
@@ -156,10 +156,10 @@ export default function AdminSocialShareScreen() {
       {/* Sub Tabs */}
       <View style={styles.subTabsRow}>
         <TouchableOpacity style={[styles.subTab, subTab === 'pending' && styles.subTabActive]} onPress={() => setSubTab('pending')}>
-          <Text style={[styles.subTabText, subTab === 'pending' && { color: '#F59E0B', fontWeight: '700' }]}>Pending ({stats.pending || 0})</Text>
+          <Text style={[styles.subTabText, subTab === 'pending' && { color: colors.warning, fontWeight: '700' }]}>Pending ({stats.pending || 0})</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.subTab, subTab === 'completed' && styles.subTabCompleted]} onPress={() => setSubTab('completed')}>
-          <Text style={[styles.subTabText, subTab === 'completed' && { color: '#10B981', fontWeight: '700' }]}>Completed ({(stats.approved || 0) + (stats.rejected || 0)})</Text>
+          <Text style={[styles.subTabText, subTab === 'completed' && { color: colors.success, fontWeight: '700' }]}>Completed ({(stats.approved || 0) + (stats.rejected || 0)})</Text>
         </TouchableOpacity>
       </View>
 
@@ -186,7 +186,7 @@ export default function AdminSocialShareScreen() {
       <Modal visible={rejectModalVisible} transparent animationType="fade" onRequestClose={() => setRejectModalVisible(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Ionicons name="close-circle" size={40} color="#EF4444" />
+            <Ionicons name="close-circle" size={40} color={colors.error} />
             <Text style={styles.modalTitle}>Reject Claim</Text>
             {selectedClaim && (
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 12 }}>
@@ -206,8 +206,8 @@ export default function AdminSocialShareScreen() {
               <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.border }]} onPress={() => setRejectModalVisible(false)}>
                 <Text style={{ color: colors.text, fontWeight: '600' }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#EF4444' }]} onPress={confirmReject}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Reject</Text>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: colors.error }]} onPress={confirmReject}>
+                <Text style={{ color: colors.white, fontWeight: '600' }}>Reject</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -224,13 +224,13 @@ function makeStyles(colors, responsive) {
     content: { padding: 16, ...(isDesktop ? { maxWidth: 700, alignSelf: 'center', width: '100%' } : {}) },
     subTabsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 16 },
     subTab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-    subTabActive: { borderBottomWidth: 2, borderBottomColor: '#F59E0B' },
-    subTabCompleted: { borderBottomWidth: 2, borderBottomColor: '#10B981' },
+    subTabActive: { borderBottomWidth: 2, borderBottomColor: colors.warning },
+    subTabCompleted: { borderBottomWidth: 2, borderBottomColor: colors.success },
     subTabText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
     card: { backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: colors.border },
-    approveBtn: { flex: 1, backgroundColor: '#10B981', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    rejectBtn: { flex: 1, backgroundColor: '#EF4444', paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
-    btnText: { color: '#fff', fontWeight: '600', marginLeft: 6 },
+    approveBtn: { flex: 1, backgroundColor: colors.success, paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    rejectBtn: { flex: 1, backgroundColor: colors.error, paddingVertical: 12, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    btnText: { color: colors.white, fontWeight: '600', marginLeft: 6 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalBox: { backgroundColor: colors.card, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, alignItems: 'center' },
     modalTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 8, marginBottom: 4 },

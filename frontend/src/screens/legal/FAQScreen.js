@@ -354,7 +354,7 @@ export default function FAQScreen() {
             onPress={() => navigation.navigate('Support')}
             activeOpacity={0.7}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#fff" />
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={colors.white} />
             <Text style={styles.supportButtonText}>Create Support Ticket</Text>
           </TouchableOpacity>
           
@@ -524,7 +524,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 16,
   },
   supportButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

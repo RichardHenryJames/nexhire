@@ -704,20 +704,20 @@ const createStyles = (colors) => StyleSheet.create({
   },
   resumeCount: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.textSecondary || '#6B7280',
+    color: colors.textSecondary,
     fontWeight: typography.weights?.medium || '500',
   },
   primaryIndicator: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.textSecondary || '#9CA3AF',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.primary || '#007AFF',
+    borderColor: colors.primary,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -725,7 +725,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   addButtonText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.primary || '#007AFF',
+    color: colors.primary,
     fontWeight: typography.weights?.medium || '500',
   },
 
@@ -737,13 +737,13 @@ const createStyles = (colors) => StyleSheet.create({
   resumeCard: {
     width: CARD_WIDTH,
     height: CARD_WIDTH + 20, // ? FIXED: Slightly taller to accommodate buttons
-    backgroundColor: colors.surface || colors.background || '#FFFFFF',
+    backgroundColor: colors.surface || colors.background,
     borderRadius: 12,
     padding: 14, // ? ADJUSTED: Better padding for content
     marginHorizontal: CARD_MARGIN,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E7EB',
-    shadowColor: '#000',
+    borderColor: colors.border,
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -756,7 +756,7 @@ const createStyles = (colors) => StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: colors.warning || '#F59E0B',
+    backgroundColor: colors.warning,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 6, // ? REDUCED: Smaller padding for compact badge
@@ -767,7 +767,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   primaryBadgeText: {
     fontSize: typography.sizes?.xs || 9, // ? REDUCED: Smaller text for compact badge
-    color: colors.white || '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights?.bold || 'bold',
   },
   resumeHeader: {
@@ -776,7 +776,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   fileType: {
     fontSize: typography.sizes?.xs || 10, // ? REDUCED: Smaller file type text
-    color: colors.textSecondary || '#6B7280',
+    color: colors.textSecondary,
     fontWeight: typography.weights?.medium || '500',
     marginTop: 2, // ? REDUCED: Less margin
   },
@@ -786,14 +786,14 @@ const createStyles = (colors) => StyleSheet.create({
   },
   resumeLabel: {
     fontSize: typography.sizes?.sm || 13, // ? SLIGHTLY INCREASED: Better readability
-    color: colors.text || '#111827',
+    color: colors.text,
     fontWeight: typography.weights?.medium || '500',
     marginBottom: 3, // ? ADJUSTED: Better spacing
     lineHeight: 16, // ? ADJUSTED: Better line height
   },
   resumeDate: {
     fontSize: typography.sizes?.xs || 10, // ? REDUCED: Even smaller date text
-    color: colors.textSecondary || '#9CA3AF',
+    color: colors.textSecondary,
   },
   resumeActions: {
     flexDirection: 'row',
@@ -803,7 +803,7 @@ const createStyles = (colors) => StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background || '#F3F4F6',
+    backgroundColor: colors.background,
     paddingHorizontal: 10, // ? SLIGHTLY INCREASED: Better button size
     paddingVertical: 5, // ? SLIGHTLY INCREASED: Better button size
     borderRadius: 6,
@@ -811,20 +811,20 @@ const createStyles = (colors) => StyleSheet.create({
   },
   actionButtonText: {
     fontSize: typography.sizes?.xs || 11, // ? SLIGHTLY INCREASED: Better readability
-    color: colors.text || '#374151',
+    color: colors.text,
     fontWeight: typography.weights?.medium || '500',
   },
   primaryButton: {
-    backgroundColor: colors.warning + '20' || '#F59E0B20',
+    backgroundColor: colors.warningBg,
   },
   primaryButtonText: {
-    color: colors.warning || '#F59E0B',
+    color: colors.warning,
   },
   deleteButton: {
-    backgroundColor: colors.danger + '20' || '#EF444420',
+    backgroundColor: colors.errorBg,
   },
   deleteButtonText: {
-    color: colors.danger || '#EF4444',
+    color: colors.danger,
   },
 
   // ? NEW: Beautiful Delete Modal Styles
@@ -836,13 +836,13 @@ const createStyles = (colors) => StyleSheet.create({
     padding: 20,
   },
   deleteModalContainer: {
-    backgroundColor: colors.surface || colors.background || '#FFFFFF',
+    backgroundColor: colors.surface || colors.background,
     borderRadius: 20,
     padding: 28,
     width: '100%',
     maxWidth: 350,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 10,
@@ -855,7 +855,7 @@ const createStyles = (colors) => StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.danger + '15' || '#EF444415',
+    backgroundColor: colors.danger + '15' || colors.errorBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -863,13 +863,13 @@ const createStyles = (colors) => StyleSheet.create({
   deleteModalTitle: {
     fontSize: typography.sizes?.xl || 24,
     fontWeight: typography.weights?.bold || 'bold',
-    color: colors.text || '#111827',
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   deleteModalMessage: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.textSecondary || '#6B7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 28,
@@ -881,7 +881,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   deleteModalCancelButton: {
     flex: 1,
-    backgroundColor: colors.background || '#F3F4F6',
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -891,11 +891,11 @@ const createStyles = (colors) => StyleSheet.create({
   deleteModalCancelText: {
     fontSize: typography.sizes?.md || 16,
     fontWeight: typography.weights?.semibold || '600',
-    color: colors.text || '#374151',
+    color: colors.text,
   },
   deleteModalDeleteButton: {
     flex: 1,
-    backgroundColor: colors.danger || '#EF4444',
+    backgroundColor: colors.danger,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
@@ -909,7 +909,7 @@ const createStyles = (colors) => StyleSheet.create({
   deleteModalDeleteText: {
     fontSize: typography.sizes?.md || 16,
     fontWeight: typography.weights?.bold || 'bold',
-    color: colors.white || '#FFFFFF',
+    color: colors.white,
   },
 
   // Empty State Styles
@@ -922,14 +922,14 @@ const createStyles = (colors) => StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: typography.sizes?.lg || 18,
-    color: colors.textSecondary || '#6B7280',
+    color: colors.textSecondary,
     fontWeight: typography.weights?.medium || '500',
     marginTop: 16, // ? INCREASED: More space from icon
     marginBottom: 8, // ? INCREASED: More space before description
   },
   emptyStateText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.textSecondary || '#9CA3AF',
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 32, // ? INCREASED: More space before button
@@ -938,12 +938,12 @@ const createStyles = (colors) => StyleSheet.create({
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary || '#007AFF',
+    backgroundColor: colors.primary,
     paddingHorizontal: 24, // ? INCREASED: Wider button
     paddingVertical: 14, // ? INCREASED: Taller button
     borderRadius: 12, // ? INCREASED: More rounded corners
     gap: 8,
-    shadowColor: '#000', // ? ADDED: Shadow for better visual hierarchy
+    shadowColor: colors.black, // ? ADDED: Shadow for better visual hierarchy
     shadowOffset: {
       width: 0,
       height: 2,
@@ -954,7 +954,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   uploadButtonText: {
     fontSize: typography.sizes?.md || 16, // ? INCREASED: Larger text
-    color: colors.white || '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights?.semibold || '600', // ? INCREASED: Bolder text
   },
 
@@ -965,7 +965,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.textSecondary || '#6B7280',
+    color: colors.textSecondary,
     marginTop: 8,
   },
   uploadingIndicator: {
@@ -977,13 +977,13 @@ const createStyles = (colors) => StyleSheet.create({
   },
   uploadingText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.primary || '#007AFF',
+    color: colors.primary,
   },
 
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.background || '#FFFFFF',
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -992,34 +992,34 @@ const createStyles = (colors) => StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#E5E7EB',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: typography.sizes?.lg || 18,
     fontWeight: typography.weights?.bold || 'bold',
-    color: colors.text || '#111827',
+    color: colors.text,
   },
   uploadButtonModal: {
     fontSize: typography.sizes?.md || 16,
-    color: colors.primary || '#007AFF',
+    color: colors.primary,
     fontWeight: typography.weights?.medium || '500',
   },
   uploadButtonDisabled: {
-    color: colors.textSecondary || '#9CA3AF',
+    color: colors.textSecondary,
   },
   modalContent: {
     padding: 20,
   },
   modalDescription: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.textSecondary || '#6B7280',
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 20,
   },
   selectedFile: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background || '#F3F4F6',
+    backgroundColor: colors.background,
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
@@ -1028,32 +1028,32 @@ const createStyles = (colors) => StyleSheet.create({
   selectedFileName: {
     flex: 1,
     fontSize: typography.sizes?.sm || 14,
-    color: colors.text || '#111827',
+    color: colors.text,
     fontWeight: typography.weights?.medium || '500',
   },
   selectedFileSize: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.textSecondary || '#9CA3AF',
+    color: colors.textSecondary,
   },
   labelInputLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.text || '#374151',
+    color: colors.text,
     fontWeight: typography.weights?.medium || '500',
     marginBottom: 8,
   },
   labelInput: {
-    backgroundColor: colors.surface || '#FFFFFF',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E7EB',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 16,
     fontSize: typography.sizes?.md || 16,
-    color: colors.text || '#111827',
+    color: colors.text,
     marginBottom: 8,
   },
   labelHint: {
     fontSize: typography.sizes?.xs || 12,
-    color: colors.textSecondary || '#9CA3AF',
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   uploadingContainer: {
@@ -1065,7 +1065,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   uploadingModalText: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.primary || '#007AFF',
+    color: colors.primary,
   },
 });
 

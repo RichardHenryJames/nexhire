@@ -388,7 +388,7 @@ export default function PostReferralJobScreen({ navigation, route }) {
             <Ionicons name="business" size={20} color={colors.primary} style={{ marginRight: 8 }} />
             <Text style={styles.companyName}>{jobData.companyName}</Text>
             <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
               <Text style={styles.verifiedText}>Verified</Text>
             </View>
           </View>
@@ -491,10 +491,10 @@ export default function PostReferralJobScreen({ navigation, route }) {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <>
-              <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+              <Ionicons name="add-circle" size={20} color={colors.white} />
               <Text style={styles.submitButtonText}>Save Draft</Text>
             </>
           )}
@@ -874,7 +874,7 @@ const createStyles = (colors, responsive = {}) =>
       gap: 8,
     },
     publishButtonText: {
-      color: '#FFFFFF',
+      color: colors.white,
       fontSize: typography.sizes?.md || 16,
       fontWeight: '600',
     },
@@ -889,7 +889,7 @@ const createStyles = (colors, responsive = {}) =>
       marginTop: 24,
     },
     submitButtonText: {
-      color: '#FFFFFF',
+      color: colors.white,
       fontSize: typography.sizes?.md || 16,
       fontWeight: '600',
     },

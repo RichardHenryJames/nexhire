@@ -485,7 +485,7 @@ export default function SettingsScreen({ navigation, route }) {
         value={value}
         onValueChange={onToggle}
         trackColor={{ false: colors.gray300, true: colors.primary }}
-        thumbColor="#FFF"
+        thumbColor={colors.white}
       />
     </View>
   );
@@ -511,7 +511,7 @@ export default function SettingsScreen({ navigation, route }) {
               disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.white} />
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
@@ -695,7 +695,7 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.isOpenToWork}
               onValueChange={(v) => setJobSeekerProfile(prev => ({ ...prev, isOpenToWork: v }))}
               trackColor={{ false: colors.gray300, true: colors.primary }}
-              thumbColor="#FFF"
+              thumbColor={colors.white}
             />
           </View>
 
@@ -708,7 +708,7 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.openToRefer}
               onValueChange={(v) => setJobSeekerProfile(prev => ({ ...prev, openToRefer: v }))}
               trackColor={{ false: colors.gray300, true: colors.primary }}
-              thumbColor="#FFF"
+              thumbColor={colors.white}
             />
           </View>
         </ScrollView>
@@ -796,7 +796,7 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.allowRecruitersToContact}
               onValueChange={(v) => setJobSeekerProfile(prev => ({ ...prev, allowRecruitersToContact: v }))}
               trackColor={{ false: colors.gray300, true: colors.primary }}
-              thumbColor="#FFF"
+              thumbColor={colors.white}
             />
           </View>
 
@@ -809,7 +809,7 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.hideCurrentCompany}
               onValueChange={(v) => setJobSeekerProfile(prev => ({ ...prev, hideCurrentCompany: v }))}
               trackColor={{ false: colors.gray300, true: colors.primary }}
-              thumbColor="#FFF"
+              thumbColor={colors.white}
             />
           </View>
 
@@ -822,7 +822,7 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.hideSalaryDetails}
               onValueChange={(v) => setJobSeekerProfile(prev => ({ ...prev, hideSalaryDetails: v }))}
               trackColor={{ false: colors.gray300, true: colors.primary }}
-              thumbColor="#FFF"
+              thumbColor={colors.white}
             />
           </View>
 
@@ -969,7 +969,7 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.immediatelyAvailable}
               onValueChange={(v) => setJobSeekerProfile(prev => ({ ...prev, immediatelyAvailable: v }))}
               trackColor={{ false: colors.gray300, true: colors.primary }}
-              thumbColor="#FFF"
+              thumbColor={colors.white}
             />
           </View>
 
@@ -982,7 +982,7 @@ export default function SettingsScreen({ navigation, route }) {
               value={jobSeekerProfile.willingToRelocate}
               onValueChange={(v) => setJobSeekerProfile(prev => ({ ...prev, willingToRelocate: v }))}
               trackColor={{ false: colors.gray300, true: colors.primary }}
-              thumbColor="#FFF"
+              thumbColor={colors.white}
             />
           </View>
         </ScrollView>
@@ -1115,7 +1115,7 @@ export default function SettingsScreen({ navigation, route }) {
                       }));
                     }
                   }}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.EmailEnabled ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1128,7 +1128,7 @@ export default function SettingsScreen({ navigation, route }) {
                 <Switch
                   value={notificationPrefs.PushEnabled}
                   onValueChange={(value) => setNotificationPrefs(prev => ({ ...prev, PushEnabled: value }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.PushEnabled ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1151,7 +1151,7 @@ export default function SettingsScreen({ navigation, route }) {
                     DailyJobRecommendationEmail: value,
                     ...(value ? { EmailEnabled: true } : {})
                   }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.DailyJobRecommendationEmail ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1171,7 +1171,7 @@ export default function SettingsScreen({ navigation, route }) {
                     ReferralClaimedEmail: value,
                     ...(value ? { EmailEnabled: true } : {})
                   }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.ReferralClaimedEmail ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1194,7 +1194,7 @@ export default function SettingsScreen({ navigation, route }) {
                     ReferralRequestEmail: value,
                     ...(value ? { EmailEnabled: true } : {})
                   }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.ReferralRequestEmail ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1214,7 +1214,7 @@ export default function SettingsScreen({ navigation, route }) {
                     ReferralVerifiedEmail: value,
                     ...(value ? { EmailEnabled: true } : {})
                   }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.ReferralVerifiedEmail ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1234,7 +1234,7 @@ export default function SettingsScreen({ navigation, route }) {
                     ReferrerNotificationEmail: value,
                     ...(value ? { EmailEnabled: true } : {})
                   }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.ReferrerNotificationEmail ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1257,7 +1257,7 @@ export default function SettingsScreen({ navigation, route }) {
                     MarketingEmail: value,
                     ...(value ? { EmailEnabled: true } : {})
                   }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.MarketingEmail ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1277,7 +1277,7 @@ export default function SettingsScreen({ navigation, route }) {
                     WeeklyDigestEmail: value,
                     ...(value ? { EmailEnabled: true } : {})
                   }))}
-                  trackColor={{ false: colors.gray300, true: colors.primaryLight || colors.primary + '40' }}
+                  trackColor={{ false: colors.gray300, true: colors.primaryLight }}
                   thumbColor={notificationPrefs.WeeklyDigestEmail ? colors.primary : colors.gray100}
                 />
               </View>
@@ -1301,7 +1301,7 @@ export default function SettingsScreen({ navigation, route }) {
     >
       <View style={styles.logoutModalOverlay}>
         <View style={styles.logoutModalContent}>
-          <Ionicons name="log-out-outline" size={48} color="#FF3B30" />
+          <Ionicons name="log-out-outline" size={48} color={colors.error} />
           <Text style={styles.logoutModalTitle}>Logout?</Text>
           <Text style={styles.logoutModalSubtitle}>Are you sure you want to logout?</Text>
           <View style={styles.logoutModalButtons}>
@@ -1436,7 +1436,7 @@ export default function SettingsScreen({ navigation, route }) {
               disabled={passwordLoading}
             >
               {passwordLoading ? (
-                <ActivityIndicator size="small" color="#FFF" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <Text style={styles.logoutModalButtonConfirmText}>
                   {hasPassword ? 'Change' : 'Set'}
@@ -1563,7 +1563,7 @@ export default function SettingsScreen({ navigation, route }) {
 
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={() => setShowLogoutModal(true)}>
-          <Ionicons name="log-out-outline" size={20} color="#FF3B30" />
+          <Ionicons name="log-out-outline" size={20} color={colors.error} />
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
@@ -1691,10 +1691,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 24,
     borderWidth: 1,
-    borderColor: '#FF3B30',
+    borderColor: colors.error,
   },
   logoutText: {
-    color: '#FF3B30',
+    color: colors.error,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
@@ -1737,7 +1737,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 8,
   },
   saveButtonText: {
-    color: '#FFF',
+    color: colors.white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1792,7 +1792,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.text,
   },
   chipTextSelected: {
-    color: '#FFF',
+    color: colors.white,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -1866,7 +1866,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.gray100,
   },
   logoutModalButtonConfirm: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.error,
   },
   logoutModalButtonCancelText: {
     color: colors.text,
@@ -1874,7 +1874,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontWeight: '600',
   },
   logoutModalButtonConfirmText: {
-    color: '#FFF',
+    color: colors.white,
     fontSize: 15,
     fontWeight: '600',
     textAlign: 'center',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -177,14 +177,14 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
     >
       <View style={styles.cardHeader}>
         <View style={styles.cardIconBadge}>
-          <Ionicons name={icon} size={24} color={selectedType === type ? '#3B82F6' : '#94A3B8'} />
+          <Ionicons name={icon} size={24} color={selectedType === type ? colors.primary : colors.textSecondary} />
         </View>
         <View style={styles.cardBody}>
           <View style={styles.cardTitleRow}>
             <Text style={[styles.cardTitle, selectedType === type && styles.cardTitleSelected]}>{title}</Text>
             {selectedType === type && (
               <View style={styles.cardCheckBadge}>
-                <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                <Ionicons name="checkmark" size={12} color={colors.white} />
               </View>
             )}
           </View>
@@ -245,7 +245,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
                 onPress={handleContinue}
               >
                 <Text style={styles.skipPillButtonText}>Skip</Text>
-                <Ionicons name="arrow-forward" size={14} color="#3B82F6" />
+                <Ionicons name="arrow-forward" size={14} color={colors.primary} />
               </TouchableOpacity>
             )}
 
@@ -407,26 +407,26 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
     letterSpacing: -0.3,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   cardsContainer: { gap: 14, marginBottom: 28 },
   card: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1.5,
-    borderColor: 'rgba(148, 163, 184, 0.1)',
+    borderColor: colors.borderThin,
   },
   cardSelected: {
-    borderColor: 'rgba(59, 130, 246, 0.5)',
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    borderColor: colors.borderFocus,
+    backgroundColor: colors.primaryGlow,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -437,7 +437,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: 'rgba(148, 163, 184, 0.08)',
+    backgroundColor: colors.borderFaint,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -455,31 +455,31 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
   },
   cardTitleSelected: {
-    color: '#3B82F6',
+    color: colors.primary,
   },
   cardSubtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: colors.textMuted,
     fontWeight: '500',
   },
   cardDescription: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 8,
   },
   companySelector: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
@@ -487,7 +487,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
+    borderColor: colors.borderFocus,
   },
   companySelectorLeft: {
     flexDirection: 'row',
@@ -501,41 +501,41 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 6,
-    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+    backgroundColor: colors.borderSubtle,
     justifyContent: 'center',
     alignItems: 'center',
   },
   companySelectorLabel: {
     fontSize: 13,
-    color: '#3B82F6',
+    color: colors.primary,
     fontWeight: '600',
     flexShrink: 1,
   },
   continueButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     borderRadius: 14,
     gap: 8,
-    shadowColor: '#3B82F6',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
   },
   continueButtonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: colors.surfaceElevated,
     shadowOpacity: 0,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '700',
   },
   continueButtonTextDisabled: {
-    color: '#64748B',
+    color: colors.textMuted,
   },
   switchFlowButton: {
     marginTop: 16,
@@ -550,7 +550,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   switchFlowButtonText: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   skipPillButton: {
@@ -561,28 +561,28 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+    backgroundColor: colors.primaryGlow,
   },
   skipPillButtonText: {
     fontSize: 13,
-    color: '#3B82F6',
+    color: colors.primary,
     fontWeight: '600',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       position: 'fixed',
       top: 0, left: 0, right: 0, bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#0F172A',
+      backgroundColor: colors.background,
       zIndex: 9999,
     } : {}),
   },
   modalInnerContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       flex: 'none',
       width: '100%',
@@ -601,21 +601,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.1)',
+    borderBottomColor: colors.borderThin,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
   },
   textInput: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
   },
   modalItem: {
     flexDirection: 'row',
@@ -623,11 +623,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.08)',
+    borderBottomColor: colors.borderFaint,
   },
   modalItemText: {
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
   },
   companyLogo: {
     width: 40,
@@ -639,7 +639,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(148, 163, 184, 0.1)',
+    backgroundColor: colors.borderThin,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -654,7 +654,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 16,
   },

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -363,7 +363,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const OrgPickerButton = () => {
     return (
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Company <Text style={{ color: '#EF4444' }}>*</Text></Text>
+        <Text style={styles.inputLabel}>Company <Text style={{ color: colors.error }}>*</Text></Text>
         <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
           {formData.currentCompany ? (
             <View style={styles.companySelectorContent}>
@@ -690,13 +690,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
     marginBottom: 8,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 15,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   form: {
@@ -709,30 +709,30 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   required: {
-    color: '#F87171',
+    color: colors.dangerLight,
   },
   textInput: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
   },
   multilineInput: {
     height: 100,
     textAlignVertical: 'top',
   },
   selectionButton: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -741,64 +741,64 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   selectionValue: {
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
     flex: 1,
   },
   selectionPlaceholder: {
-    color: '#64748B',
+    color: colors.textMuted,
   },
   toggleContainer: {
     flexDirection: 'row',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
     overflow: 'hidden',
   },
   toggleOption: {
     flex: 1,
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     padding: 12,
     alignItems: 'center',
   },
   toggleOptionSelected: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
   },
   toggleText: {
     fontSize: 14,
-    color: '#94A3B8',
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   toggleTextSelected: {
-    color: '#FFFFFF',
+    color: colors.white,
   },
   continueButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
     borderRadius: 14,
     gap: 8,
-    shadowColor: '#3B82F6',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
   },
   continueButtonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: colors.surfaceElevated,
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '700',
   },
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       position: 'fixed',
       top: 0,
@@ -807,13 +807,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
       bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#0F172A',
+      backgroundColor: colors.background,
       zIndex: 9999,
     } : {}),
   },
   modalInnerContainer: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: colors.background,
     ...(Platform.OS === 'web' && responsive.isDesktop ? {
       flex: 'none',
       width: '100%',
@@ -832,12 +832,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 24,
     paddingTop: Platform.OS === 'ios' ? 60 : 24,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.12)',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#F1F5F9',
+    color: colors.text,
   },
   modalItem: {
     flexDirection: 'row',
@@ -845,19 +845,19 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.12)',
+    borderBottomColor: colors.border,
   },
   modalItemSelected: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderLeftWidth: 3,
-    borderLeftColor: '#3B82F6',
+    borderLeftColor: colors.primary,
   },
   modalItemText: {
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
   },
   modalItemTextSelected: {
-    color: '#3B82F6',
+    color: colors.primary,
     fontWeight: '600',
   },
   // Company selector styles with logo support
@@ -871,14 +871,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     height: 24,
     borderRadius: 4,
     marginRight: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
   },
   companySelectorLogoPlaceholder: {
     width: 24,
     height: 24,
     borderRadius: 4,
     marginRight: 8,
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -887,18 +887,18 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     height: 40,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
   },
   companyLogoPlaceholder: {
     width: 40,
     height: 40,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -910,15 +910,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+    backgroundColor: colors.surfaceOverlayDark,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.12)',
+    borderColor: colors.border,
     borderRadius: 12,
     marginTop: 4,
     maxHeight: 250,
     zIndex: 9999,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -933,11 +933,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   dropdownItem: {
     padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(148, 163, 184, 0.12)',
+    borderBottomColor: colors.border,
   },
   dropdownItemText: {
     fontSize: 15,
-    color: '#F1F5F9',
+    color: colors.text,
   },
   dropdownEmpty: {
     padding: 20,
@@ -945,7 +945,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: '#64748B',
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
 });

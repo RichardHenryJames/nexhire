@@ -29,21 +29,20 @@ const CATEGORIES = [
   { id: 'Jobs', label: 'Jobs/Applications', icon: 'briefcase-outline' },
   { id: 'Other', label: 'Other', icon: 'help-circle-outline' },
 ];
-import { colors as brandColors } from '../../styles/theme';
-
 // Status colors and labels
-const STATUS_CONFIG = {
-  Open: { color: brandColors.primary, bg: '#EFF6FF', label: 'Open' },
-  InProgress: { color: '#F59E0B', bg: '#FFFBEB', label: 'In Progress' },
-  Resolved: { color: '#10B981', bg: '#ECFDF5', label: 'Resolved' },
-  Closed: { color: '#6B7280', bg: '#F3F4F6', label: 'Closed' },
-};
+const getStatusConfig = (colors) => ({
+  Open: { color: colors.primary, bg: colors.primaryBg, label: 'Open' },
+  InProgress: { color: colors.warning, bg: colors.warningBg, label: 'In Progress' },
+  Resolved: { color: colors.success, bg: colors.successBg, label: 'Resolved' },
+  Closed: { color: colors.gray500, bg: colors.gray100, label: 'Closed' },
+});
 
 export default function SupportScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const STATUS_CONFIG = useMemo(() => getStatusConfig(colors), [colors]);
 
   // State
   const [activeTab, setActiveTab] = useState('new'); // 'new' | 'history'
@@ -287,7 +286,7 @@ export default function SupportScreen() {
       {/* Error Message */}
       {errorMessage ? (
         <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={20} color="#DC2626" />
+          <Ionicons name="alert-circle" size={20} color={colors.dangerDark} />
           <Text style={styles.errorText}>{errorMessage}</Text>
         </View>
       ) : null}
@@ -295,7 +294,7 @@ export default function SupportScreen() {
       {/* Success Message */}
       {successMessage ? (
         <View style={styles.successBox}>
-          <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+          <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           <Text style={styles.successText}>{successMessage}</Text>
         </View>
       ) : null}
@@ -761,32 +760,32 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.errorBg,
     padding: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: colors.errorBg,
   },
   errorText: {
     flex: 1,
     fontSize: 14,
-    color: '#DC2626',
+    color: colors.dangerDark,
     fontWeight: '500',
   },
   successBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: colors.successBg,
     padding: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: colors.successBg,
   },
   successText: {
     flex: 1,
     fontSize: 14,
-    color: '#059669',
+    color: colors.successDark,
     fontWeight: '500',
   },
 

@@ -1175,7 +1175,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     if (loading && data.length === 0) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
        <Text style={[styles.loadingText, { marginTop: 12 }]}>Loading jobs...</Text>
         </View>
    );
@@ -1184,7 +1184,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     if (smartPaginating && data.length === 0) {
       return (
       <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
           <Text style={[styles.loadingText, { marginTop: 12 }]}>Finding more opportunities...</Text>
         </View>
       );
@@ -1205,7 +1205,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
           {hasMoreToLoad && (
             <TouchableOpacity
-              style={[styles.clearAllButton, { marginTop: 16, backgroundColor: '#0066cc' }]}
+              style={[styles.clearAllButton, { marginTop: 16, backgroundColor: colors.primaryDark }]}
               onPress={() => {
                 setSmartPaginating(true);
                 loadMoreJobs();
@@ -1601,7 +1601,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           }}
           centerContent={
             <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
+              <Ionicons name="search" size={20} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search jobs..."
@@ -1614,18 +1614,18 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                   }
                 }}
                 onSubmitEditing={handleSearchSubmit}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-                  <Ionicons name="close-circle" size={20} color="#666" />
+                  <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               )}
             </View>
           }
           rightContent={
             <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
-              <Ionicons name="options-outline" size={24} color="#0066cc" />
+              <Ionicons name="options-outline" size={24} color={colors.primaryDark} />
             </TouchableOpacity>
           }
           showMessages={false}
@@ -1648,7 +1648,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Ionicons
                       name={'bulb-outline'}
                       size={14}
-                      color={'#666'}
+                      color={colors.textSecondary}
                     />
                   </TouchableOpacity>
                 </View>
@@ -1661,7 +1661,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
                       {quickJobTypeLabel}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1673,7 +1673,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
                       {quickWorkplaceLabel}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1685,7 +1685,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
                       {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1697,7 +1697,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
                       {quickCompanyLabel}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1711,7 +1711,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                       triggerReload();
                     }}
                   >
-                    <Ionicons name="people" size={14} color={filters.postedByType === 2 ? '#0066cc' : '#666'} style={{ marginRight: 4 }} />
+                    <Ionicons name="people" size={14} color={filters.postedByType === 2 ? colors.primaryDark : colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={[styles.quickFilterText, filters.postedByType === 2 && styles.quickFilterActiveText]}>
                       Referrer Jobs
                     </Text>
@@ -1737,7 +1737,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             onPress={() => navigation.navigate('SavedJobs')}
             activeOpacity={0.8}
           >
-            <Ionicons name="bookmark" size={20} color="#FFFFFF" />
+            <Ionicons name="bookmark" size={20} color={colors.white} />
             {savedCount > 0 && (
               <View style={styles.fabBadge}>
                 <Text style={styles.fabBadgeText}>{savedCount}</Text>
@@ -1750,7 +1750,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             onPress={() => navigation.navigate('Applications')}
             activeOpacity={0.8}
           >
-            <Ionicons name="briefcase" size={20} color="#FFFFFF" />
+            <Ionicons name="briefcase" size={20} color={colors.white} />
             {appliedCount > 0 && (
               <View style={styles.fabBadge}>
                 <Text style={styles.fabBadgeText}>{appliedCount}</Text>
@@ -1763,7 +1763,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             onPress={() => navigation.navigate('MyReferralRequests')}
             activeOpacity={0.8}
           >
-            <Ionicons name="people" size={20} color="#FFFFFF" />
+            <Ionicons name="people" size={20} color={colors.white} />
             {myReferralRequestsCount > 0 && (
               <View style={styles.fabBadge}>
                 <Text style={styles.fabBadgeText}>{myReferralRequestsCount}</Text>

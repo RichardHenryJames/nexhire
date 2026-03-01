@@ -58,7 +58,7 @@ export default function RegistrationWrapper({
     <View style={styles.root}>
       {/* Gradient background */}
       <LinearGradient
-        colors={['#0F172A', '#131D32', '#0F172A']}
+        colors={colors.gradientBackground}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -73,7 +73,7 @@ export default function RegistrationWrapper({
       <View style={styles.topNav}>
         {onBack ? (
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={20} color="#94A3B8" />
+            <Ionicons name="arrow-back" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         ) : (
           <View style={{ width: 40 }} />
@@ -114,7 +114,7 @@ export default function RegistrationWrapper({
       {/* Trust footer */}
       {showTrustBadge && (
         <View style={styles.trustFooter}>
-          <Ionicons name="shield-checkmark" size={14} color="#64748B" />
+          <Ionicons name="shield-checkmark" size={14} color={colors.textMuted} />
           <Text style={styles.trustText}>
             Your data is encrypted & secure
           </Text>
@@ -128,7 +128,7 @@ const createStyles = (colors, responsive = {}) =>
   StyleSheet.create({
     root: {
       flex: 1,
-      backgroundColor: '#0F172A',
+      backgroundColor: colors.background,
       overflow: 'hidden',
     },
     orbTopRight: {
@@ -138,7 +138,7 @@ const createStyles = (colors, responsive = {}) =>
       width: 200,
       height: 200,
       borderRadius: 100,
-      backgroundColor: 'rgba(59, 130, 246, 0.06)',
+      backgroundColor: colors.primaryGlowSubtle,
     },
     orbBottomLeft: {
       position: 'absolute',
@@ -147,7 +147,7 @@ const createStyles = (colors, responsive = {}) =>
       width: 220,
       height: 220,
       borderRadius: 110,
-      backgroundColor: 'rgba(139, 92, 246, 0.05)',
+      backgroundColor: colors.accentGlowSubtle,
     },
     topNav: {
       flexDirection: 'row',
@@ -162,7 +162,7 @@ const createStyles = (colors, responsive = {}) =>
       width: 40,
       height: 40,
       borderRadius: 12,
-      backgroundColor: 'rgba(148, 163, 184, 0.1)',
+      backgroundColor: colors.overlayLight,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -175,18 +175,18 @@ const createStyles = (colors, responsive = {}) =>
       width: '100%',
       maxWidth: 200,
       height: 4,
-      backgroundColor: 'rgba(148, 163, 184, 0.15)',
+      backgroundColor: colors.borderSubtle,
       borderRadius: 2,
       overflow: 'hidden',
     },
     progressFill: {
       height: '100%',
-      backgroundColor: '#3B82F6',
+      backgroundColor: colors.primary,
       borderRadius: 2,
     },
     progressText: {
       fontSize: 11,
-      color: '#64748B',
+      color: colors.textMuted,
       marginTop: 4,
       fontWeight: '500',
       letterSpacing: 0.3,
@@ -203,7 +203,7 @@ const createStyles = (colors, responsive = {}) =>
     },
     trustText: {
       fontSize: 11,
-      color: '#64748B',
+      color: colors.textMuted,
       fontWeight: '500',
       letterSpacing: 0.2,
     },

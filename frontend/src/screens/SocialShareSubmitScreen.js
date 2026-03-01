@@ -31,9 +31,9 @@ const REFOPEN_SOCIALS = {
   website: 'https://refopen.com',
 };
 
-const PLATFORM_CONFIG = {
+const getPlatformConfig = (colors) => ({
   LinkedIn: {
-    color: '#0A66C2',
+    color: colors.primaryDark,
     icon: 'logo-linkedin',
     reward: 30,
     hashtags: '#RefOpen #JobReferrals #CareerGrowth',
@@ -52,7 +52,7 @@ const PLATFORM_CONFIG = {
   },
   Twitter: {
     displayName: 'X (Twitter)',
-    color: '#000000',
+    color: colors.black || '#000000',
     icon: 'logo-twitter',
     useXLogo: true,
     reward: 20,
@@ -71,7 +71,7 @@ Follow: ${REFOPEN_SOCIALS.linkedin}
     ],
   },
   Instagram: {
-    color: '#E4405F',
+    color: colors.rose,
     icon: 'logo-instagram',
     reward: 20,
     hashtags: '#RefOpen #JobReferrals #CareerTips',
@@ -92,7 +92,7 @@ RefOpen connects you with employees who can refer you directly. No more endless 
     ],
   },
   Facebook: {
-    color: '#1877F2',
+    color: colors.primary,
     icon: 'logo-facebook',
     reward: 15,
     hashtags: '#RefOpen #JobReferrals',
@@ -111,13 +111,14 @@ Found RefOpen - a platform where employees from top companies can give you direc
       '✅ Post must be public for 7 days',
     ],
   },
-};
+});
 
 export default function SocialShareSubmitScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { colors, isDark } = useTheme();
   const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const PLATFORM_CONFIG = useMemo(() => getPlatformConfig(colors), [colors]);
 
   const platform = route.params?.platform || 'LinkedIn';
   const config = PLATFORM_CONFIG[platform] || PLATFORM_CONFIG.LinkedIn;
@@ -322,17 +323,17 @@ export default function SocialShareSubmitScreen() {
         {/* Already Claimed/Pending */}
         {!canSubmit && existingClaim && (
           <View style={[styles.statusCard, { 
-            backgroundColor: existingClaim.Status === 'Pending' ? '#FF950020' : '#10B98120',
-            borderColor: existingClaim.Status === 'Pending' ? '#FF9500' : '#10B981',
+            backgroundColor: existingClaim.Status === 'Pending' ? colors.orangeBg : colors.successBg,
+            borderColor: existingClaim.Status === 'Pending' ? colors.orange : colors.success,
           }]}>
             <Ionicons 
               name={existingClaim.Status === 'Pending' ? 'time' : 'checkmark-circle'} 
               size={24} 
-              color={existingClaim.Status === 'Pending' ? '#FF9500' : '#10B981'} 
+              color={existingClaim.Status === 'Pending' ? colors.orange : colors.success} 
             />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={[styles.statusTitle, { 
-                color: existingClaim.Status === 'Pending' ? '#FF9500' : '#10B981' 
+                color: existingClaim.Status === 'Pending' ? colors.orange : colors.success 
               }]}>
                 {existingClaim.Status === 'Pending' ? 'Claim Pending Review' : 'Already Claimed!'}
               </Text>
@@ -349,12 +350,12 @@ export default function SocialShareSubmitScreen() {
         {/* Previous Claim Rejected - Can Resubmit */}
         {canSubmit && rejectedClaim && (
           <View style={[styles.statusCard, { 
-            backgroundColor: '#EF444420',
-            borderColor: '#EF4444',
+            backgroundColor: colors.errorBg,
+            borderColor: colors.error,
           }]}>
-            <Ionicons name="close-circle" size={24} color="#EF4444" />
+            <Ionicons name="close-circle" size={24} color={colors.error} />
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={[styles.statusTitle, { color: '#EF4444' }]}>
+              <Text style={[styles.statusTitle, { color: colors.error }]}>
                 Previous Claim Rejected
               </Text>
               <Text style={styles.statusDesc}>
@@ -401,13 +402,13 @@ export default function SocialShareSubmitScreen() {
               style={[styles.submitButton, { backgroundColor: config.color, marginTop: 10, marginBottom: 20 }]}
               onPress={() => copyToClipboard(config.samplePost)}
             >
-              <Ionicons name="copy-outline" size={18} color="#FFF" />
+              <Ionicons name="copy-outline" size={18} color={colors.white} />
               <Text style={styles.submitButtonText}>Copy & Post on {config.displayName || platform}</Text>
             </TouchableOpacity>
 
             {/* Disclaimer */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF950010', borderRadius: 10, padding: 12, marginBottom: 16, gap: 8 }}>
-              <Ionicons name="warning-outline" size={16} color="#FF9500" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.orangeBg, borderRadius: 10, padding: 12, marginBottom: 16, gap: 8 }}>
+              <Ionicons name="warning-outline" size={16} color={colors.orange} />
               <Text style={{ flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 }}>
                 You must follow <Text style={{ fontWeight: '700', color: colors.text }} onPress={() => Linking.openURL(REFOPEN_SOCIALS.linkedin)}>RefOpen on LinkedIn</Text> to be eligible for credits on any platform.
               </Text>
@@ -415,7 +416,7 @@ export default function SocialShareSubmitScreen() {
 
             {/* Post URL Input */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Post URL <Text style={{ color: '#EF4444' }}>*</Text></Text>
+              <Text style={styles.sectionTitle}>Post URL <Text style={{ color: colors.error }}>*</Text></Text>
               <TextInput
                 style={styles.input}
                 placeholder={`Paste your ${platform} post URL here`}
@@ -429,7 +430,7 @@ export default function SocialShareSubmitScreen() {
 
             {/* Screenshot Upload */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Screenshot <Text style={{ color: '#EF4444' }}>*</Text></Text>
+              <Text style={styles.sectionTitle}>Screenshot <Text style={{ color: colors.error }}>*</Text></Text>
               <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
                 {screenshotUri ? (
                   <View style={{ alignItems: 'center' }}>
@@ -452,10 +453,10 @@ export default function SocialShareSubmitScreen() {
               disabled={submitting || uploading}
             >
               {(submitting || uploading) ? (
-                <ActivityIndicator color="#FFF" />
+                <ActivityIndicator color={colors.white} />
               ) : (
                 <>
-                  <Ionicons name="paper-plane" size={20} color="#FFF" />
+                  <Ionicons name="paper-plane" size={20} color={colors.white} />
                   <Text style={styles.submitButtonText}>Submit for ₹{config.reward}</Text>
                 </>
               )}
@@ -526,7 +527,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
     marginTop: 2,
   },
   rewardBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -534,7 +535,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   rewardAmount: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFF',
+    color: colors.white,
   },
   statusCard: {
     flexDirection: 'row',
@@ -687,7 +688,7 @@ const createStyles = (colors, isDark) => StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFF',
+    color: colors.white,
   },
   noteBox: {
     flexDirection: 'row',

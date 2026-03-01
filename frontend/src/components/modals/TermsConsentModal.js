@@ -98,7 +98,7 @@ export default function TermsConsentModal({ visible, onAccept, loading }) {
 
           <TouchableOpacity style={s.checkRow} onPress={() => setChecked(!checked)} activeOpacity={0.7}>
             <View style={[s.checkbox, checked && s.checkboxOn]}>
-              {checked && <Ionicons name="checkmark" size={13} color="#fff" />}
+              {checked && <Ionicons name="checkmark" size={13} color={colors.white} />}
             </View>
             <Text style={s.checkLabel}>
               I agree to the{' '}
@@ -114,7 +114,7 @@ export default function TermsConsentModal({ visible, onAccept, loading }) {
             disabled={!checked || loading}
             activeOpacity={0.8}
           >
-            {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.btnText}>Continue</Text>}
+            {loading ? <ActivityIndicator color={colors.white} size="small" /> : <Text style={s.btnText}>Continue</Text>}
           </TouchableOpacity>
         </View>
       </View>
@@ -147,13 +147,13 @@ const createStyles = (colors) =>
       alignItems: 'center',
       ...(Platform.OS === 'web'
         ? { boxShadow: '0 12px 40px rgba(0,0,0,0.25)' }
-        : { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 24, elevation: 16 }),
+        : { shadowColor: colors.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 24, elevation: 16 }),
     },
 
     // ── Main consent view ──
     iconCircle: {
       width: 56, height: 56, borderRadius: 28,
-      backgroundColor: (colors.primary || '#4F46E5') + '14',
+      backgroundColor: (colors.primary) + '14',
       justifyContent: 'center', alignItems: 'center', marginBottom: 16,
     },
     title: { fontSize: 18, fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: 16 },
@@ -169,7 +169,7 @@ const createStyles = (colors) =>
     inline: { color: colors.primary, fontWeight: '600' },
     btn: { width: '100%', backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center' },
     btnOff: { opacity: 0.45 },
-    btnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    btnText: { color: colors.white, fontSize: 16, fontWeight: '600' },
 
     // ── Reader view ──
     readerCard: {

@@ -19,11 +19,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import refopenAPI from '../services/api';
 import { showToast } from '../components/Toast';
 
-const PLATFORMS = [
-  { key: 'LinkedIn', icon: 'logo-linkedin', color: '#0A66C2', reward: 30, label: 'Post about RefOpen' },
-  { key: 'Twitter', icon: null, color: '#000', reward: 20, label: 'Post about RefOpen', useXLogo: true },
-  { key: 'Instagram', icon: 'logo-instagram', color: '#E4405F', reward: 20, label: 'Post or Story' },
-  { key: 'Facebook', icon: 'logo-facebook', color: '#1877F2', reward: 15, label: 'Share about RefOpen' },
+const getPlatforms = (colors) => [
+  { key: 'LinkedIn', icon: 'logo-linkedin', color: colors.primaryDark, reward: 30, label: 'Post about RefOpen' },
+  { key: 'Twitter', icon: null, color: colors.black, reward: 20, label: 'Post about RefOpen', useXLogo: true },
+  { key: 'Instagram', icon: 'logo-instagram', color: colors.rose, reward: 20, label: 'Post or Story' },
+  { key: 'Facebook', icon: 'logo-facebook', color: colors.primary, reward: 15, label: 'Share about RefOpen' },
 ];
 
 export default function ShareEarnScreen() {
@@ -83,8 +83,8 @@ export default function ShareEarnScreen() {
         {/* Post on Social Media */}
         <View style={{ marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#E91E6320', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="megaphone" size={18} color="#E91E63" />
+            <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.errorBg, alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="megaphone" size={18} color={colors.rose} />
             </View>
             <Text style={{ marginLeft: 10, fontSize: 16, fontWeight: '700', color: colors.text }}>
               Post on Social Media
@@ -93,7 +93,7 @@ export default function ShareEarnScreen() {
 
           {/* 2x2 Grid */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            {PLATFORMS.map((p) => {
+            {getPlatforms(colors).map((p) => {
               const isApproved = approvedPlatforms.includes(p.key);
               return (
                 <TouchableOpacity
@@ -105,7 +105,7 @@ export default function ShareEarnScreen() {
                     borderRadius: 16,
                     padding: 16,
                     borderWidth: 2,
-                    borderColor: isApproved ? '#10B981' : (p.key === 'Twitter' && isDark ? colors.text : p.color),
+                    borderColor: isApproved ? colors.success : (p.key === 'Twitter' && isDark ? colors.text : p.color),
                     opacity: isApproved ? 0.7 : 1,
                   }}
                   disabled={isApproved}
@@ -118,18 +118,18 @@ export default function ShareEarnScreen() {
                       alignItems: 'center', justifyContent: 'center',
                     }}>
                       {p.useXLogo ? (
-                        <Text style={{ fontSize: 22, fontWeight: '900', color: isDark ? colors.background : '#FFF' }}>𝕏</Text>
+                        <Text style={{ fontSize: 22, fontWeight: '900', color: isDark ? colors.background : colors.white }}>𝕏</Text>
                       ) : (
-                        <Ionicons name={p.icon} size={24} color="#FFF" />
+                        <Ionicons name={p.icon} size={24} color={colors.white} />
                       )}
                     </View>
                     {isApproved ? (
-                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' }}>
-                        <Ionicons name="checkmark" size={18} color="#FFF" />
+                      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="checkmark" size={18} color={colors.white} />
                       </View>
                     ) : (
-                      <View style={{ backgroundColor: '#10B98120', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-                        <Text style={{ fontSize: 14, color: '#10B981', fontWeight: '800' }}>₹{p.reward}</Text>
+                      <View style={{ backgroundColor: colors.successBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                        <Text style={{ fontSize: 14, color: colors.success, fontWeight: '800' }}>₹{p.reward}</Text>
                       </View>
                     )}
                   </View>
@@ -165,8 +165,8 @@ export default function ShareEarnScreen() {
             <Text style={{ marginLeft: 10, fontSize: 16, fontWeight: '700', color: colors.text }}>
               Invite Friends
             </Text>
-            <View style={{ marginLeft: 'auto', backgroundColor: '#10B98120', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
-              <Text style={{ fontSize: 12, color: '#10B981', fontWeight: '700' }}>₹25 each!</Text>
+            <View style={{ marginLeft: 'auto', backgroundColor: colors.successBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+              <Text style={{ fontSize: 12, color: colors.success, fontWeight: '700' }}>₹25 each!</Text>
             </View>
           </View>
 
@@ -194,8 +194,8 @@ export default function ShareEarnScreen() {
                 }}
                 onPress={() => copyText(referralCode, 'Code')}
               >
-                <Ionicons name="copy-outline" size={18} color="#FFF" />
-                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Copy</Text>
+                <Ionicons name="copy-outline" size={18} color={colors.white} />
+                <Text style={{ color: colors.white, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Copy</Text>
               </TouchableOpacity>
             </View>
 
@@ -225,13 +225,13 @@ export default function ShareEarnScreen() {
               <View style={{ alignItems: 'center', flex: 1 }}>
                 <Ionicons name="person-add" size={20} color={colors.primary} />
                 <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>They get</Text>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#10B981' }}>₹25</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: colors.success }}>₹25</Text>
               </View>
               <View style={{ width: 1, height: 40, backgroundColor: colors.border }} />
               <View style={{ alignItems: 'center', flex: 1 }}>
-                <Ionicons name="gift" size={20} color="#F59E0B" />
+                <Ionicons name="gift" size={20} color={colors.warning} />
                 <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>You get</Text>
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#10B981' }}>₹25</Text>
+                <Text style={{ fontSize: 16, fontWeight: '800', color: colors.success }}>₹25</Text>
               </View>
             </View>
           </View>

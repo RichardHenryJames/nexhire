@@ -434,10 +434,10 @@ export default function BecomeReferrerScreen({ navigation }) {
       <Text style={styles.sectionTitle}>Why become a referrer?</Text>
       
       {[
-        { icon: 'cash-outline', color: '#10B981', title: 'Earn Per Referral & exciting RefPoints', desc: 'Top referrers earn more than ₹5,000/month!' },
-        { icon: 'briefcase-outline', color: '#EC4899', title: 'Post jobs for free', desc: 'Post referral jobs at your company at no cost' },
-        { icon: 'ribbon-outline', color: '#8B5CF6', title: 'Verified badge', desc: 'Stand out with a verified referrer badge on your profile' },
-        { icon: 'notifications-outline', color: '#F59E0B', title: 'Get notified instantly', desc: 'Receive alerts when someone needs a referral at your company' },
+        { icon: 'cash-outline', color: colors.success, title: 'Earn Per Referral & exciting RefPoints', desc: 'Top referrers earn more than ₹5,000/month!' },
+        { icon: 'briefcase-outline', color: colors.pink, title: 'Post jobs for free', desc: 'Post referral jobs at your company at no cost' },
+        { icon: 'ribbon-outline', color: colors.accent, title: 'Verified badge', desc: 'Stand out with a verified referrer badge on your profile' },
+        { icon: 'notifications-outline', color: colors.warning, title: 'Get notified instantly', desc: 'Receive alerts when someone needs a referral at your company' },
       ].map((item, idx) => (
         <View key={idx} style={styles.advantageCard}>
           <View style={[styles.advantageIcon, { backgroundColor: item.color + '15' }]}>
@@ -657,10 +657,10 @@ export default function BecomeReferrerScreen({ navigation }) {
               disabled={!companyEmail || sendingOtp}
             >
               {sendingOtp ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <>
-                  <Ionicons name="mail" size={18} color="#fff" />
+                  <Ionicons name="mail" size={18} color={colors.white} />
                   <Text style={styles.primaryButtonText}>Send OTP</Text>
                 </>
               )}
@@ -670,7 +670,7 @@ export default function BecomeReferrerScreen({ navigation }) {
           /* OTP Input */
           <View style={styles.otpContainer}>
             <View style={styles.otpSentBadge}>
-              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               <Text style={styles.otpSentText}>OTP sent to {fullEmail}</Text>
             </View>
 
@@ -702,10 +702,10 @@ export default function BecomeReferrerScreen({ navigation }) {
               disabled={otp.join('').length !== 4 || verifying}
             >
               {verifying ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <>
-                  <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                  <Ionicons name="shield-checkmark" size={18} color={colors.white} />
                   <Text style={styles.primaryButtonText}>Verify & Become Referrer</Text>
                 </>
               )}
@@ -769,7 +769,7 @@ export default function BecomeReferrerScreen({ navigation }) {
                 style={styles.nextButtonGradient}
               >
                 <Text style={styles.nextButtonText}>Get Started</Text>
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
+                <Ionicons name="arrow-forward" size={18} color={colors.white} />
               </LinearGradient>
             </TouchableOpacity>
           )}
@@ -787,11 +787,11 @@ export default function BecomeReferrerScreen({ navigation }) {
                 style={styles.nextButtonGradient}
               >
                 {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={colors.white} />
                 ) : (
                   <>
                     <Text style={styles.nextButtonText}>Continue to Verify</Text>
-                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                    <Ionicons name="arrow-forward" size={18} color={colors.white} />
                   </>
                 )}
               </LinearGradient>
@@ -866,7 +866,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       paddingBottom: 12,
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border || (isDark ? '#333' : '#E5E7EB'),
+      borderBottomColor: colors.border || (isDark ? colors.gray700 : colors.border),
       width: '100%',
       ...(isDesktop ? { maxWidth: 900, alignSelf: 'center' } : {}),
     },
@@ -940,7 +940,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       borderRadius: 12,
       marginBottom: 8,
       borderWidth: 1,
-      borderColor: isDark ? colors.border || '#333' : '#F3F4F6',
+      borderColor: isDark ? colors.border : colors.gray100,
     },
     advantageIcon: {
       width: 42,
@@ -980,7 +980,7 @@ function makeStyles(colors, isDark, responsive = {}) {
     stepBubbleText: {
       fontSize: 14,
       fontWeight: '700',
-      color: '#fff',
+      color: colors.white,
     },
     howItWorksContent: {
       flex: 1,
@@ -1067,7 +1067,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       backgroundColor: colors.surface,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: isDark ? '#444' : '#E5E7EB',
+      borderColor: isDark ? colors.gray600 : colors.border,
       paddingHorizontal: 14,
       paddingVertical: Platform.OS === 'ios' ? 14 : 11,
       fontSize: 15,
@@ -1077,7 +1077,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       backgroundColor: colors.surface,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: isDark ? '#444' : '#E5E7EB',
+      borderColor: isDark ? colors.gray600 : colors.border,
       marginTop: 4,
       overflow: 'hidden',
     },
@@ -1087,7 +1087,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       paddingVertical: 12,
       paddingHorizontal: 14,
       borderBottomWidth: 0.5,
-      borderBottomColor: isDark ? '#333' : '#F3F4F6',
+      borderBottomColor: isDark ? colors.gray700 : colors.gray100,
     },
     dropdownLogo: {
       width: 28,
@@ -1098,7 +1098,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       width: 28,
       height: 28,
       borderRadius: 6,
-      backgroundColor: isDark ? '#333' : '#F3F4F6',
+      backgroundColor: isDark ? colors.gray700 : colors.gray100,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -1157,10 +1157,10 @@ function makeStyles(colors, isDark, responsive = {}) {
       borderRightWidth: 0,
     },
     emailDomainBox: {
-      backgroundColor: isDark ? '#2A2A2A' : '#F3F4F6',
+      backgroundColor: isDark ? colors.gray800 : colors.gray100,
       borderWidth: 1,
       borderLeftWidth: 0,
-      borderColor: isDark ? '#444' : '#E5E7EB',
+      borderColor: isDark ? colors.gray600 : colors.border,
       borderTopRightRadius: 10,
       borderBottomRightRadius: 10,
       paddingHorizontal: 12,
@@ -1198,7 +1198,7 @@ function makeStyles(colors, isDark, responsive = {}) {
     primaryButtonText: {
       fontSize: 15,
       fontWeight: '700',
-      color: '#fff',
+      color: colors.white,
     },
     // OTP
     otpContainer: {
@@ -1207,7 +1207,7 @@ function makeStyles(colors, isDark, responsive = {}) {
     otpSentBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#10B981' + '15',
+      backgroundColor: colors.success + '15',
       paddingHorizontal: 12,
       paddingVertical: 8,
       borderRadius: 10,
@@ -1216,7 +1216,7 @@ function makeStyles(colors, isDark, responsive = {}) {
     },
     otpSentText: {
       fontSize: 13,
-      color: '#10B981',
+      color: colors.success,
       fontWeight: '600',
       flex: 1,
     },
@@ -1231,7 +1231,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       height: 56,
       borderRadius: 12,
       borderWidth: 2,
-      borderColor: isDark ? '#444' : '#E5E7EB',
+      borderColor: isDark ? colors.gray600 : colors.border,
       backgroundColor: colors.surface,
       textAlign: 'center',
       fontSize: 22,
@@ -1242,11 +1242,11 @@ function makeStyles(colors, isDark, responsive = {}) {
       borderColor: colors.primary,
     },
     otpBoxError: {
-      borderColor: colors.error || '#EF4444',
+      borderColor: colors.error,
     },
     otpErrorText: {
       fontSize: 13,
-      color: colors.error || '#EF4444',
+      color: colors.error,
       textAlign: 'center',
       marginBottom: 12,
     },
@@ -1263,7 +1263,7 @@ function makeStyles(colors, isDark, responsive = {}) {
     bottomBar: {
       backgroundColor: colors.surface,
       borderTopWidth: 1,
-      borderTopColor: isDark ? '#333' : '#E5E7EB',
+      borderTopColor: isDark ? colors.gray700 : colors.border,
       paddingHorizontal: 20,
       paddingTop: 12,
       paddingBottom: Platform.OS === 'ios' ? 30 : 16,
@@ -1276,7 +1276,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       gap: 24,
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: isDark ? '#333' : '#E5E7EB',
+      borderBottomColor: isDark ? colors.gray700 : colors.border,
     },
     stepIndicatorItem: {
       alignItems: 'center',
@@ -1286,7 +1286,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       width: 8,
       height: 8,
       borderRadius: 4,
-      backgroundColor: isDark ? '#555' : '#D1D5DB',
+      backgroundColor: isDark ? colors.gray500 : colors.borderLight,
     },
     stepDotActive: {
       backgroundColor: colors.primary,
@@ -1313,7 +1313,7 @@ function makeStyles(colors, isDark, responsive = {}) {
       paddingVertical: 12,
       paddingHorizontal: 16,
       borderRadius: 12,
-      backgroundColor: isDark ? '#333' : '#F3F4F6',
+      backgroundColor: isDark ? colors.gray700 : colors.gray100,
       gap: 4,
     },
     backButtonText: {
@@ -1335,7 +1335,7 @@ function makeStyles(colors, isDark, responsive = {}) {
     nextButtonText: {
       fontSize: 15,
       fontWeight: '700',
-      color: '#fff',
+      color: colors.white,
     },
   });
 }

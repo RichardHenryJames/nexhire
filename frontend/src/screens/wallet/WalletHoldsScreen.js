@@ -60,13 +60,13 @@ export default function WalletHoldsScreen({ navigation }) {
   const getStatusConfig = (status) => {
     switch (status) {
       case 'Active':
-        return { icon: 'time-outline', color: '#F59E0B', bg: '#FEF3C7', label: 'On Hold' };
+        return { icon: 'time-outline', color: colors.warning, bg: colors.warningBg, label: 'On Hold' };
       case 'Converted':
-        return { icon: 'checkmark-circle', color: '#EF4444', bg: '#FEE2E2', label: 'Charged' };
+        return { icon: 'checkmark-circle', color: colors.error, bg: colors.errorBg, label: 'Charged' };
       case 'Released':
-        return { icon: 'arrow-undo-circle', color: '#10B981', bg: '#D1FAE5', label: 'Released' };
+        return { icon: 'arrow-undo-circle', color: colors.success, bg: colors.successBg, label: 'Released' };
       default:
-        return { icon: 'help-circle', color: '#999', bg: '#F3F4F6', label: status };
+        return { icon: 'help-circle', color: colors.textMuted, bg: colors.gray100, label: status };
     }
   };
 
@@ -116,12 +116,12 @@ export default function WalletHoldsScreen({ navigation }) {
 
           {/* Show resolved date for non-active */}
           {item.Status === 'Converted' && item.ConvertedAt && (
-            <Text style={[styles.holdResolvedDate, { color: '#EF4444' }]}>
+            <Text style={[styles.holdResolvedDate, { color: colors.error }]}>
               Charged on {formatDate(item.ConvertedAt)}
             </Text>
           )}
           {item.Status === 'Released' && item.ReleasedAt && (
-            <Text style={[styles.holdResolvedDate, { color: '#10B981' }]}>
+            <Text style={[styles.holdResolvedDate, { color: colors.success }]}>
               Released on {formatDate(item.ReleasedAt)}
             </Text>
           )}
@@ -155,14 +155,14 @@ export default function WalletHoldsScreen({ navigation }) {
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Available</Text>
-              <Text style={[styles.summaryValue, { color: '#10B981' }]}>
+              <Text style={[styles.summaryValue, { color: colors.success }]}>
                 ₹{summary.availableBalance?.toFixed(2)}
               </Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>On Hold</Text>
-              <Text style={[styles.summaryValue, { color: '#F59E0B' }]}>
+              <Text style={[styles.summaryValue, { color: colors.warning }]}>
                 ₹{summary.totalHoldAmount?.toFixed(2)}
               </Text>
             </View>
@@ -178,9 +178,9 @@ export default function WalletHoldsScreen({ navigation }) {
       {/* Filter Tabs */}
       <View style={styles.filterContainer}>
         {[
-          { key: 'Active', label: 'Active', icon: 'time-outline', color: '#F59E0B' },
-          { key: 'Converted', label: 'Charged', icon: 'checkmark-circle', color: '#EF4444' },
-          { key: 'Released', label: 'Released', icon: 'arrow-undo-circle', color: '#10B981' },
+          { key: 'Active', label: 'Active', icon: 'time-outline', color: colors.warning },
+          { key: 'Converted', label: 'Charged', icon: 'checkmark-circle', color: colors.error },
+          { key: 'Released', label: 'Released', icon: 'arrow-undo-circle', color: colors.success },
         ].map((f) => (
           <TouchableOpacity
             key={f.key}
@@ -190,7 +190,7 @@ export default function WalletHoldsScreen({ navigation }) {
             <Ionicons
               name={f.icon}
               size={14}
-              color={filter === f.key ? '#FFF' : f.color}
+              color={filter === f.key ? colors.white : f.color}
             />
             <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
               {f.label}
@@ -357,7 +357,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     color: colors.textSecondary,
   },
   filterTextActive: {
-    color: '#FFF',
+    color: colors.white,
   },
   // Hold Card
   holdCard: {

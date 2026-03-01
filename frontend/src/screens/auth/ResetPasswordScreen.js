@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 import API from '../../services/api';
 
+const colors = authDarkColors;
+
 export default function ResetPasswordScreen({ navigation, route }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,7 +31,6 @@ export default function ResetPasswordScreen({ navigation, route }) {
   const [errors, setErrors] = useState({});
   const [tokenError, setTokenError] = useState('');
 
-  const colors = authDarkColors;
   const responsive = useResponsive();
   const { isDesktop } = responsive;
 
@@ -138,7 +139,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
           <View style={[styles.card, isDesktop && styles.cardDesktop]}>
             <View style={styles.errorContainer}>
               <View style={styles.errorIconContainer}>
-                <Ionicons name="warning-outline" size={48} color="#EF4444" />
+                <Ionicons name="warning-outline" size={48} color={colors.error} />
               </View>
               <Text style={styles.errorTitle}>Invalid Reset Link</Text>
               <Text style={styles.errorMessage}>{tokenError}</Text>
@@ -177,7 +178,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
           <View style={[styles.card, isDesktop && styles.cardDesktop]}>
             <View style={styles.successContainer}>
               <View style={styles.successIconContainer}>
-                <Ionicons name="checkmark-circle" size={64} color="#10B981" />
+                <Ionicons name="checkmark-circle" size={64} color={colors.successDark} />
               </View>
               <Text style={styles.successTitle}>Password Reset!</Text>
               <Text style={styles.successMessage}>
@@ -313,7 +314,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
                   disabled={loading}
                 >
                   {loading ? (
-                    <ActivityIndicator color="#3c4043" size="small" />
+                    <ActivityIndicator color={colors.surfaceElevated} size="small" />
                   ) : (
                     <Text style={styles.submitButtonText}>Reset Password</Text>
                   )}
@@ -353,11 +354,9 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   card: {
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    backgroundColor: 'transparent',
     borderRadius: borderRadius.xl,
     padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
     width: '100%',
     maxWidth: 420,
     alignSelf: 'center',
@@ -373,7 +372,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+    backgroundColor: colors.primaryGlowStrong,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
@@ -381,13 +380,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: '#ffffff',
+    color: colors.white,
     marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: typography.sizes.base,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: colors.textSubtle,
     textAlign: 'center',
     lineHeight: 22,
   },
@@ -400,20 +399,20 @@ const styles = StyleSheet.create({
   label: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.medium,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: colors.textBright,
     marginBottom: spacing.xs,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: colors.overlayLight,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: colors.overlayMedium,
     paddingHorizontal: spacing.md,
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: colors.error,
   },
   inputIcon: {
     marginRight: spacing.sm,
@@ -422,18 +421,18 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     fontSize: typography.sizes.base,
-    color: '#ffffff',
+    color: colors.white,
   },
   eyeIcon: {
     padding: spacing.xs,
   },
   fieldError: {
     fontSize: typography.sizes.sm,
-    color: '#EF4444',
+    color: colors.error,
     marginTop: spacing.xs,
   },
   submitButton: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.white,
     borderRadius: borderRadius.md,
     paddingVertical: 14,
     alignItems: 'center',
@@ -441,12 +440,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   buttonDisabled: {
-    backgroundColor: '#f1f3f4',
+    backgroundColor: colors.textSecondary,
   },
   submitButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: '#3c4043',
+    color: colors.surfaceElevated,
   },
   linkButton: {
     flexDirection: 'row',
@@ -471,13 +470,13 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: '#ffffff',
+    color: colors.white,
     marginBottom: spacing.md,
     textAlign: 'center',
   },
   successMessage: {
     fontSize: typography.sizes.base,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.icon,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: spacing.xl,
@@ -495,7 +494,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-    color: '#ffffff',
+    color: colors.white,
   },
   // Error styles
   errorContainer: {
@@ -508,13 +507,13 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
-    color: '#ffffff',
+    color: colors.white,
     marginBottom: spacing.md,
     textAlign: 'center',
   },
   errorMessage: {
     fontSize: typography.sizes.base,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: colors.icon,
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: spacing.xl,

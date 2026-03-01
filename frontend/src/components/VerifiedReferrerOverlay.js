@@ -85,6 +85,7 @@ const ConfettiParticle = ({ delay, startX, color, size = 12 }) => {
 
 // Sparkle component
 const Sparkle = ({ delay, x, y }) => {
+  const { colors } = useTheme();
   const scale = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -131,7 +132,7 @@ const Sparkle = ({ delay, x, y }) => {
         opacity,
       }}
     >
-      <FontAwesome5 name="star" size={16} color="#FFD700" />
+      <FontAwesome5 name="star" size={16} color={colors.gold} />
     </Animated.View>
   );
 };
@@ -159,9 +160,9 @@ export default function VerifiedReferrerOverlay({
 
   // Confetti colors - celebratory gold/green theme
   const confettiColors = [
-    '#FFD700', '#FFA500', '#00c853', '#69f0ae', '#4CAF50',
-    '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800',
-    '#00BCD4', '#03A9F4', '#2196F3', '#9C27B0', '#E91E63',
+    colors.gold, colors.orange, colors.success, colors.successLight, colors.success,
+    colors.success, colors.success, colors.warningLight, colors.gold, colors.orange,
+    colors.cyan, colors.info, colors.primary, colors.accentDark, colors.rose,
   ];
 
   // Generate confetti particles
@@ -295,7 +296,7 @@ export default function VerifiedReferrerOverlay({
       <View style={styles.overlay}>
         {/* Gradient Background */}
         <LinearGradient
-          colors={['#0d1117', '#161b22', '#1a2332']}
+          colors={[colors.background, colors.background, colors.background]}
           style={styles.gradientBg}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -328,7 +329,7 @@ export default function VerifiedReferrerOverlay({
           onPress={onClose}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="close" size={28} color="#FFFFFF" />
+          <Ionicons name="close" size={28} color={colors.white} />
         </TouchableOpacity>
 
         {/* Scrollable Content */}
@@ -348,13 +349,13 @@ export default function VerifiedReferrerOverlay({
             ]}
           >
             <LinearGradient
-              colors={['#00c853', '#69f0ae']}
+              colors={[colors.success, colors.successLight]}
               style={styles.checkGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
               <View style={styles.checkIconContainer}>
-                <Ionicons name="shield-checkmark" size={48} color="#FFFFFF" />
+                <Ionicons name="shield-checkmark" size={48} color={colors.white} />
               </View>
             </LinearGradient>
           </Animated.View>
@@ -374,15 +375,15 @@ export default function VerifiedReferrerOverlay({
             
             {/* Company Name */}
             <View style={styles.companyBadge}>
-              <MaterialCommunityIcons name="office-building" size={20} color="#00c853" />
+              <MaterialCommunityIcons name="office-building" size={20} color={colors.success} />
               <Text style={styles.companyText}>{companyName || 'Your Company'}</Text>
-              <Ionicons name="checkmark-circle" size={18} color="#00c853" />
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
             </View>
 
             {/* Access Info */}
             <View style={styles.accessCard}>
               <View style={styles.accessIconContainer}>
-                <Ionicons name="people" size={24} color="#FFFFFF" />
+                <Ionicons name="people" size={24} color={colors.white} />
               </View>
               <View style={styles.accessTextContainer}>
                 <Text style={styles.accessTitle}>"Refer" Tab Unlocked</Text>
@@ -410,7 +411,7 @@ export default function VerifiedReferrerOverlay({
                   <MaterialCommunityIcons 
                     name={benefit.icon} 
                     size={24} 
-                    color={benefit.highlight ? '#FFD700' : '#00c853'} 
+                    color={benefit.highlight ? colors.gold : colors.success} 
                   />
                 </View>
                 <View style={styles.benefitTextContainer}>
@@ -428,7 +429,7 @@ export default function VerifiedReferrerOverlay({
             {/* Tips Section */}
             <View style={styles.tipsCard}>
               <View style={styles.tipsHeader}>
-                <Ionicons name="bulb" size={22} color="#FFC107" />
+                <Ionicons name="bulb" size={22} color={colors.gold} />
                 <Text style={styles.tipsTitle}>Pro Tips for Referrers</Text>
               </View>
               <View style={styles.tipItem}>
@@ -465,13 +466,13 @@ export default function VerifiedReferrerOverlay({
               }}
             >
               <LinearGradient
-                colors={['#00c853', '#00e676']}
+                colors={[colors.success, colors.successLight]}
                 style={styles.ctaGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
                 <Text style={styles.ctaText}>Start Referring & Earning!</Text>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                <Ionicons name="arrow-forward" size={20} color={colors.white} />
               </LinearGradient>
             </TouchableOpacity>
           </Animated.View>
@@ -517,7 +518,7 @@ const createStyles = (colors, isDarkMode) =>
       borderRadius: 50,
       overflow: 'hidden',
       marginBottom: 24,
-      shadowColor: '#00c853',
+      shadowColor: colors.success,
       shadowOffset: { width: 0, height: 0 },
       shadowOpacity: 0.5,
       shadowRadius: 20,
@@ -540,7 +541,7 @@ const createStyles = (colors, isDarkMode) =>
     title: {
       fontSize: 26,
       fontWeight: 'bold',
-      color: '#FFFFFF',
+      color: colors.white,
       textAlign: 'center',
       marginBottom: 16,
     },
@@ -557,7 +558,7 @@ const createStyles = (colors, isDarkMode) =>
     companyText: {
       fontSize: 16,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: colors.white,
     },
     accessCard: {
       flexDirection: 'row',
@@ -585,7 +586,7 @@ const createStyles = (colors, isDarkMode) =>
     accessTitle: {
       fontSize: 17,
       fontWeight: '700',
-      color: '#00e676',
+      color: colors.successLight,
       marginBottom: 4,
     },
     accessSubtitle: {
@@ -596,7 +597,7 @@ const createStyles = (colors, isDarkMode) =>
     sectionTitle: {
       fontSize: 18,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: colors.white,
       marginBottom: 16,
       alignSelf: 'flex-start',
     },
@@ -632,11 +633,11 @@ const createStyles = (colors, isDarkMode) =>
     benefitTitle: {
       fontSize: 15,
       fontWeight: '600',
-      color: '#FFFFFF',
+      color: colors.white,
       marginBottom: 3,
     },
     benefitTitleHighlight: {
-      color: '#FFD700',
+      color: colors.gold,
     },
     benefitDescription: {
       fontSize: 13,
@@ -662,7 +663,7 @@ const createStyles = (colors, isDarkMode) =>
     tipsTitle: {
       fontSize: 16,
       fontWeight: '700',
-      color: '#FFC107',
+      color: colors.gold,
     },
     tipItem: {
       flexDirection: 'row',
@@ -710,7 +711,7 @@ const createStyles = (colors, isDarkMode) =>
       width: '100%',
       borderRadius: 14,
       overflow: 'hidden',
-      shadowColor: '#00c853',
+      shadowColor: colors.success,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 8,
@@ -726,6 +727,6 @@ const createStyles = (colors, isDarkMode) =>
     ctaText: {
       fontSize: 17,
       fontWeight: '700',
-      color: '#FFFFFF',
+      color: colors.white,
     },
   });

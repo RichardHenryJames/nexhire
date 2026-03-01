@@ -571,8 +571,8 @@ const [dashboardData, setDashboardData] = useState(() => {
                   onPress={() => navigation.navigate('ActionCenter')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.quickActionIcon, { backgroundColor: '#EF4444' + '20' }]}>
-                    <Ionicons name="flash" size={24} color="#EF4444" />
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.error + '20' }]}>
+                    <Ionicons name="flash" size={24} color={colors.error} />
                   </View>
                   <View style={styles.quickActionContent}>
                     <Text style={styles.quickActionTitle}>Action Center</Text>
@@ -657,8 +657,8 @@ const [dashboardData, setDashboardData] = useState(() => {
                   onPress={() => navigation.navigate('ResumeAnalyzer', { userId: user?.UserID })}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.quickActionIcon, { backgroundColor: '#9333EA' + '20' }]}>
-                    <Ionicons name="document-text" size={24} color="#9333EA" />
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.accentDark + '20' }]}>
+                    <Ionicons name="document-text" size={24} color={colors.accentDark} />
                   </View>
                   <View style={styles.quickActionContent}>
                     <Text style={styles.quickActionTitle}>Resume Analyzer</Text>
@@ -689,10 +689,10 @@ const [dashboardData, setDashboardData] = useState(() => {
               >
                 <View style={styles.premiumCardGradient}>
                   <View style={styles.premiumCardHeader}>
-                    <View style={[styles.premiumIcon, { backgroundColor: '#FEB800' + '20' }]}>
-                      <Ionicons name="people" size={28} color="#FEB800" />
+                    <View style={[styles.premiumIcon, { backgroundColor: colors.gold + '20' }]}>
+                      <Ionicons name="people" size={28} color={colors.gold} />
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color="#FEB800" />
+                    <Ionicons name="chevron-forward" size={24} color={colors.gold} />
                   </View>
                   <Text style={styles.premiumActionTitle}>Get Referrals</Text>
                   <Text style={styles.premiumActionDescription}>
@@ -1258,7 +1258,7 @@ sectionLoaderText: {
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#FEB800',
+    shadowColor: colors.gold,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -1275,7 +1275,7 @@ sectionLoaderText: {
     backgroundColor: colors.surface,
     padding: 20,
     borderWidth: 2,
-    borderColor: '#FEB800' + '30',
+    borderColor: colors.gold + '30',
     borderRadius: 16,
   },
   premiumCardHeader: {

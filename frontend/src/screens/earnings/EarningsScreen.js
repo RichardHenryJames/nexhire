@@ -193,55 +193,55 @@ export default function EarningsScreen({ navigation }) {
       verification: { 
         icon: '✅', 
         title: 'Verifications', 
-        color: '#10B981',
+        color: colors.success,
         description: 'Bonus points when job seekers confirm referrals'
       },
       quick_response_bonus: { 
         icon: '⚡', 
         title: 'Quick Response Bonus', 
-        color: '#F59E0B',
+        color: colors.warning,
         description: 'Extra points for responding within 24 hours'
       },
       monthly_bonus: { 
         icon: '🎁', 
         title: 'Monthly Bonus', 
-        color: '#8B5CF6',
+        color: colors.accent,
         description: 'Special monthly activity bonus'
       },
       streak_bonus: { 
         icon: '🔥', 
         title: 'Streak Bonus', 
-        color: '#EF4444',
+        color: colors.error,
         description: 'Consecutive referral streak bonus'
       },
       general: { 
         icon: '🎯', 
         title: 'General Points', 
-        color: '#6B7280',
+        color: colors.gray500,
         description: 'Other referral activities'
       },
       milestone_5: { 
         icon: '⭐', 
         title: '5th Referral Milestone', 
-        color: '#3B82F6',
+        color: colors.primary,
         description: 'Bonus for reaching 5 verified referrals'
       },
       milestone_10: { 
         icon: '🔥', 
         title: '10th Referral Milestone', 
-        color: '#F59E0B',
+        color: colors.warning,
         description: 'Bonus for reaching 10 verified referrals'
       },
       milestone_15: { 
         icon: '🏆', 
         title: '15th Referral Milestone', 
-        color: '#EF4444',
+        color: colors.error,
         description: 'Bonus for reaching 15 verified referrals'
       },
       milestone_20: { 
         icon: '💎', 
         title: '20th Referral Milestone', 
-        color: '#10B981',
+        color: colors.success,
         description: 'Bonus for reaching 20 verified referrals'
       }
     };
@@ -318,13 +318,13 @@ export default function EarningsScreen({ navigation }) {
           {(() => {
             const verified = referralStats.verifiedReferrals || 0;
             const milestones = [
-              { count: 5, bonus: 100, color: '#3B82F6', emoji: '⭐', hidden: false },
-              { count: 10, color: '#F59E0B', emoji: '🔥', hidden: true },
-              { count: 15, color: '#EF4444', emoji: '🏆', hidden: true },
-              { count: 20, color: '#10B981', emoji: '💎', hidden: true },
+              { count: 5, bonus: 100, color: colors.primary, emoji: '⭐', hidden: false },
+              { count: 10, color: colors.warning, emoji: '🔥', hidden: true },
+              { count: 15, color: colors.error, emoji: '🏆', hidden: true },
+              { count: 20, color: colors.success, emoji: '💎', hidden: true },
             ];
             const maxCount = 25;
-            const mysteryMarker = { count: 25, color: '#8B5CF6', mystery: true };
+            const mysteryMarker = { count: 25, color: colors.accent, mystery: true };
             const progress = Math.min(verified / maxCount, 1);
             const currentMonth = new Date().toLocaleString('default', { month: 'short' });
 
@@ -332,8 +332,8 @@ export default function EarningsScreen({ navigation }) {
               <View style={styles.milestoneSection}>
                 <Text style={styles.milestoneSectionTitle}>🎯 Monthly Milestones ({currentMonth})</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 6 }}>
-                  <View style={{ backgroundColor: '#10B981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>EXTRA</Text>
+                  <View style={{ backgroundColor: colors.success, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ color: colors.white, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>EXTRA</Text>
                   </View>
                   <Text style={styles.milestoneSubheading}>rewards on top of your per-referral earnings</Text>
                 </View>
@@ -418,14 +418,14 @@ export default function EarningsScreen({ navigation }) {
                       <View style={[
                         styles.milestoneCard,
                         styles.milestoneCardMystery,
-                        reached25 && { borderColor: '#8B5CF6', backgroundColor: '#8B5CF615' },
-                        isNext25 && { borderColor: '#8B5CF6', borderStyle: 'dashed' }
+                        reached25 && { borderColor: colors.accent, backgroundColor: colors.accentBg },
+                        isNext25 && { borderColor: colors.accent, borderStyle: 'dashed' }
                       ]}>
                         <Text style={styles.milestoneCardEmoji}>🎁</Text>
-                        {reached25 && <Text style={[styles.milestoneCardStatus, { color: '#8B5CF6' }]}>✓ Unlocked!</Text>}
-                        {!reached25 && <Text style={[styles.milestoneCardBonus, { color: '#8B5CF6' }]}>₹XXX</Text>}
-                        {isNext25 && <Text style={[styles.milestoneCardStatus, { color: '#8B5CF6' }]}>Keep going!</Text>}
-                        {!reached25 && !isNext25 && <Text style={[styles.milestoneCardStatus, { color: '#8B5CF6' }]}>Surprise!</Text>}
+                        {reached25 && <Text style={[styles.milestoneCardStatus, { color: colors.accent }]}>✓ Unlocked!</Text>}
+                        {!reached25 && <Text style={[styles.milestoneCardBonus, { color: colors.accent }]}>₹XXX</Text>}
+                        {isNext25 && <Text style={[styles.milestoneCardStatus, { color: colors.accent }]}>Keep going!</Text>}
+                        {!reached25 && !isNext25 && <Text style={[styles.milestoneCardStatus, { color: colors.accent }]}>Surprise!</Text>}
                       </View>
                     );
                   })()}
@@ -622,19 +622,19 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   milestoneSubheading: { fontSize: 13, color: colors.textSecondary },
   milestoneBarContainer: { marginBottom: 12 },
   milestoneBarTrack: { height: 8, backgroundColor: colors.border, borderRadius: 4, position: 'relative', overflow: 'visible' },
-  milestoneBarFill: { height: '100%', backgroundColor: '#3B82F6', borderRadius: 4, position: 'absolute', left: 0, top: 0 },
+  milestoneBarFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 4, position: 'absolute', left: 0, top: 0 },
   milestoneMarker: { position: 'absolute', top: -8, transform: [{ translateX: -12 }], alignItems: 'center' },
   milestoneMarkerDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  milestoneMarkerEmoji: { fontSize: 10, fontWeight: 'bold', color: '#fff' },
+  milestoneMarkerEmoji: { fontSize: 10, fontWeight: 'bold', color: colors.white },
   milestoneYouAreHere: { position: 'absolute', top: -4, transform: [{ translateX: -8 }] },
-  milestoneYouDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#3B82F6', borderWidth: 3, borderColor: '#fff', shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4 },
+  milestoneYouDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, borderWidth: 3, borderColor: colors.white, shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4 },
   milestoneLabelsRow: { position: 'relative', height: 20, marginTop: 4 },
   milestoneCountLabel: { position: 'absolute', fontSize: 10, color: colors.textSecondary, transform: [{ translateX: -5 }] },
   milestoneCurrentText: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginBottom: 12 },
   milestoneCardsScroll: { marginHorizontal: -4 },
   milestoneCardsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 4 },
   milestoneCard: { width: 90, minWidth: 90, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 10, alignItems: 'center', backgroundColor: colors.surface || colors.background },
-  milestoneCardMystery: { borderColor: '#8B5CF6', borderWidth: 1.5, background: 'linear-gradient(135deg, #8B5CF615, #EC489915)' },
+  milestoneCardMystery: { borderColor: colors.accent, borderWidth: 1.5, background: 'linear-gradient(135deg, #8B5CF615, #EC489915)' },
   milestoneCardEmoji: { fontSize: 20, marginBottom: 4 },
   milestoneCardCount: { fontSize: 11, color: colors.textSecondary, fontWeight: '600' },
   milestoneCardBonus: { fontSize: 16, fontWeight: 'bold', color: colors.text, marginTop: 2 },
@@ -753,7 +753,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.primary,
   },
   entryPointsNegative: {
-    color: '#EF4444', // Red color for negative/spent points
+    color: colors.error, // Red color for negative/spent points
   },
   emptyState: {
     alignItems: 'center',
@@ -781,10 +781,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 4,
   },
   convertButton: {
-    backgroundColor: '#7EB900',
+    backgroundColor: colors.success,
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#7EB900',
+    shadowColor: colors.success,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -807,7 +807,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   convertButtonText: {
     fontSize: typography.sizes?.lg || 18,
     fontWeight: typography.weights?.bold || 'bold',
-    color: '#fff',
+    color: colors.white,
     marginBottom: 2,
   },
   convertButtonSubtext: {
@@ -846,7 +846,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   redirectButtonText: {
     fontSize: typography.sizes?.lg || 18,
     fontWeight: typography.weights?.bold || 'bold',
-    color: '#fff',
+    color: colors.white,
     marginBottom: 2,
   },
   redirectButtonSubtext: {
@@ -867,7 +867,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -933,7 +933,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   conversionAmount: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#7EB900',
+    color: colors.success,
   },
   conversionModalButtons: {
     flexDirection: 'row',
@@ -958,7 +958,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   conversionConfirmButton: {
     flex: 1,
-    backgroundColor: '#7EB900',
+    backgroundColor: colors.success,
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -970,7 +970,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   conversionConfirmText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: colors.white,
   },
   
   // Withdraw Feature Styles
@@ -1295,7 +1295,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.text,
   },
   paymentMethodTabTextActive: {
-    color: '#fff',
+    color: colors.white,
   },
   // FAQ Section
   faqSection: {

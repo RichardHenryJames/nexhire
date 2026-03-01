@@ -8,7 +8,7 @@
  *  - centerContent: ReactNode (custom center content, overrides title — e.g. search bar)
  *  - rightContent: ReactNode (custom right content, overrides default messages button)
  *  - subtitle: ReactNode (below title, e.g. "Mark all read" link)
- *  - gradient: string[] (gradient colors, e.g. ['#2563EB','#1D4ED8']. If null, uses solid surface bg)
+ *  - gradient: string[] (gradient colors, e.g. [colors.primaryDark,colors.primaryDark]. If null, uses solid surface bg)
  *  - showMessages: boolean (show messages button on right, default true)
  *  - showWallet: boolean (show wallet balance badge before messages)
  *  - walletBalance: number|null
@@ -88,11 +88,11 @@ export default function TabHeader({
   const useWhiteTheme = isGradient && !isDark;
 
   // Colors adapt: white on gradient (light mode), theme colors on solid/dark
-  const iconColor = useWhiteTheme ? '#FFFFFF' : colors.primary;
-  const textColor = useWhiteTheme ? '#FFFFFF' : colors.text;
+  const iconColor = useWhiteTheme ? colors.white : colors.primary;
+  const textColor = useWhiteTheme ? colors.white : colors.text;
   const profileBorderColor = useWhiteTheme ? 'rgba(255,255,255,0.5)' : colors.primary;
   const profilePlaceholderBg = useWhiteTheme ? 'rgba(255,255,255,0.2)' : colors.primary;
-  const personIconColor = useWhiteTheme ? '#fff' : '#fff';
+  const personIconColor = useWhiteTheme ? colors.white : colors.white;
   const btnBg = useWhiteTheme ? 'rgba(255,255,255,0.15)' : colors.primary + '15';
   const badgeBorderColor = useWhiteTheme ? gradient[0] : colors.surface;
 
@@ -136,7 +136,7 @@ export default function TabHeader({
               activeOpacity={0.7}
               style={styles.walletBadge}
             >
-              <Ionicons name="wallet-outline" size={16} color="#10B981" />
+              <Ionicons name="wallet-outline" size={16} color={colors.success} />
               <Text style={styles.walletText}>₹{walletBalance}</Text>
             </TouchableOpacity>
           )}
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   walletBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10B981' + '15',
+    backgroundColor: '#10B98115',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 20,

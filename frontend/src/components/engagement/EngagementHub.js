@@ -256,7 +256,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
       return {
         id: 'photo',
         icon: 'camera',
-        color: '#8B5CF6',
+        color: colors.accent,
         title: 'Add a profile photo',
         subtitle: 'Profiles with photos get 5x more referral responses',
         action: () => navigation.navigate('Profile'),
@@ -269,7 +269,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
       return {
         id: 'complete_profile',
         icon: 'person-add',
-        color: '#F59E0B',
+        color: colors.warning,
         title: `Your profile is only ${percent}% complete`,
         subtitle: `Add your ${missing[0]?.toLowerCase()} to stand out to referrers`,
         action: () => navigation.navigate('Settings'),
@@ -282,7 +282,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
       return {
         id: 'first_apply',
         icon: 'rocket',
-        color: '#10B981',
+        color: colors.success,
         title: "You haven't applied anywhere yet",
         subtitle: 'Take the leap — browse jobs and send your first application',
         action: () => navigation.navigate('Jobs'),
@@ -295,7 +295,7 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
       return {
         id: 'saved_not_applied',
         icon: 'bookmark',
-        color: '#3B82F6',
+        color: colors.primary,
         title: `You saved ${savedJobs} jobs but haven't applied`,
         subtitle: "Ready to take the leap? Your saved jobs are waiting",
         action: () => navigation.navigate('SavedJobs'),
@@ -385,11 +385,11 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
 
       {/* ─── 2. ACTIVITY PULSE (daily-seeded social proof) ──── */}
       <View style={[styles.pulseBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <View style={[styles.pulseDot, { backgroundColor: '#10B981' }]} />
+        <View style={[styles.pulseDot, { backgroundColor: colors.success }]} />
         <Text style={[styles.pulseText, { color: colors.gray600 }]}>
-          <Text style={{ fontWeight: '700', color: '#10B981' }}>{fakePulse.active}</Text> active now{'  '}·{'  '}
+          <Text style={{ fontWeight: '700', color: colors.success }}>{fakePulse.active}</Text> active now{'  '}·{'  '}
           <Text style={{ fontWeight: '700', color: colors.primary }}>{fakePulse.referrals}</Text> referrals today{'  '}·{'  '}
-          <Text style={{ fontWeight: '700', color: '#F59E0B' }}>{fakePulse.resumesAnalyzed}</Text> resumes analyzed today
+          <Text style={{ fontWeight: '700', color: colors.warning }}>{fakePulse.resumesAnalyzed}</Text> resumes analyzed today
         </Text>
       </View>
 
@@ -405,8 +405,8 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
               {/* Circular progress indicator */}
               <View style={[styles.progressCircle, { borderColor: colors.border }]}>
                 <View style={[styles.progressCircleInner, {
-                  borderColor: profileComplete.percent < 30 ? '#EF4444'
-                    : profileComplete.percent < 60 ? '#F59E0B' : '#10B981',
+                  borderColor: profileComplete.percent < 30 ? colors.error
+                    : profileComplete.percent < 60 ? colors.warning : colors.success,
                   borderTopColor: 'transparent',
                   transform: [{ rotate: `${(profileComplete.percent / 100) * 360}deg` }],
                 }]} />
@@ -436,8 +436,8 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
           <View style={[styles.profileProgressBar, { backgroundColor: colors.background }]}>
             <View style={[styles.profileProgressFill, {
               width: `${profileComplete.percent}%`,
-              backgroundColor: profileComplete.percent < 30 ? '#EF4444'
-                : profileComplete.percent < 60 ? '#F59E0B' : '#10B981',
+              backgroundColor: profileComplete.percent < 30 ? colors.error
+                : profileComplete.percent < 60 ? colors.warning : colors.success,
             }]} />
           </View>
           {/* Missing fields hint — show top 3 missing items */}
@@ -472,10 +472,10 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={[styles.checklistBadge, {
-                backgroundColor: allDone ? '#10B981' : colors.primary + '20',
+                backgroundColor: allDone ? colors.success : colors.primary + '20',
               }]}>
                 <Text style={[styles.checklistBadgeText, {
-                  color: allDone ? '#fff' : colors.primary,
+                  color: allDone ? colors.white : colors.primary,
                 }]}>
                   {completedCount}/{totalTasks}
                 </Text>
@@ -507,10 +507,10 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
           >
             <View style={[
               styles.checkbox,
-              { borderColor: task.done ? '#10B981' : colors.gray400 },
-              task.done && { backgroundColor: '#10B981' },
+              { borderColor: task.done ? colors.success : colors.gray400 },
+              task.done && { backgroundColor: colors.success },
             ]}>
-              {task.done && <Ionicons name="checkmark" size={12} color="#fff" />}
+              {task.done && <Ionicons name="checkmark" size={12} color={colors.white} />}
             </View>
             <Ionicons
               name={task.icon}
@@ -730,7 +730,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border || '#e5e7eb',
+    borderBottomColor: colors.border,
   },
   checklistItemDone: {
     opacity: 0.6,
@@ -794,7 +794,7 @@ const createStyles = (colors) => StyleSheet.create({
     borderRadius: 8,
   },
   nudgeButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 11,
     fontWeight: '700',
   },

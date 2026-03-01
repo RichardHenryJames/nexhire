@@ -295,7 +295,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 8,
   },
   browseButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },

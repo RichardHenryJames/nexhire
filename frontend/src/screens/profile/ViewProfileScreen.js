@@ -511,8 +511,8 @@ export default function ViewProfileScreen() {
                   style={styles.linkCard}
                   onPress={() => openLink(profile.LinkedInProfile)}
                 >
-                  <View style={[styles.linkIconWrapper, { backgroundColor: '#0077B5' + '15' }]}>
-                    <Ionicons name="logo-linkedin" size={22} color="#0077B5" />
+                  <View style={[styles.linkIconWrapper, { backgroundColor: colors.primaryDark + '15' }]}>
+                    <Ionicons name="logo-linkedin" size={22} color={colors.primaryDark} />
                   </View>
                   <View style={styles.linkContent}>
                     <Text style={styles.linkTitle}>LinkedIn</Text>
