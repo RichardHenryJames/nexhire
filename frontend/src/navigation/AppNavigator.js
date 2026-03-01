@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Platform } from "react-native";
+import { Platform, Animated } from "react-native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
@@ -112,6 +112,34 @@ import MarketPulseScreen from "../screens/services/MarketPulseScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Animated tab icon with bounce on focus
+const AnimatedTabIcon = ({ name, size, color, focused }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (focused) {
+      scaleAnim.setValue(0.5);
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        tension: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [focused]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Ionicons name={name} size={size} color={color} />
+    </Animated.View>
+  );
+};
 
 // Deep Linking Configuration with unique paths
 const linking = {
@@ -474,7 +502,7 @@ function MainTabNavigator() {
             iconName = focused ? "stats-chart" : "stats-chart-outline";
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          return <AnimatedTabIcon name={iconName} size={size} color={color} focused={focused} />;
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.gray500,

@@ -1741,21 +1741,37 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       <View style={{ flex: 1 }}>
         {/* Floating Action Button - Expandable */}
         <View style={styles.fabContainerTop}>
-          {/* Child FAB 3: Referral Requests */}
+          {/* Main FAB Toggle - at top */}
+          <TouchableOpacity
+            style={[styles.fab, styles.fabMain]}
+            onPress={toggleFab}
+            activeOpacity={0.8}
+          >
+            <Animated.View style={{ transform: [{ rotate: fabAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] }) }] }}>
+              <Ionicons name="add" size={24} color={colors.white} />
+            </Animated.View>
+            {!fabOpen && (savedCount + appliedCount + myReferralRequestsCount) > 0 && (
+              <View style={styles.fabBadge}>
+                <Text style={styles.fabBadgeText}>{savedCount + appliedCount + myReferralRequestsCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Child FAB 1: Saved Jobs */}
           <Animated.View style={{
             opacity: fabAnim,
-            transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: fabAnim }],
+            transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }, { scale: fabAnim }],
           }}>
             <TouchableOpacity
-              style={[styles.fab, styles.fabReferralRequests]}
-              onPress={() => { navigation.navigate('MyReferralRequests'); toggleFab(); }}
+              style={[styles.fab, styles.fabSaved]}
+              onPress={() => { navigation.navigate('SavedJobs'); toggleFab(); }}
               activeOpacity={0.8}
               pointerEvents={fabOpen ? 'auto' : 'none'}
             >
-              <Ionicons name="people" size={20} color={colors.white} />
-              {myReferralRequestsCount > 0 && (
+              <Ionicons name="bookmark" size={20} color={colors.white} />
+              {savedCount > 0 && (
                 <View style={styles.fabBadge}>
-                  <Text style={styles.fabBadgeText}>{myReferralRequestsCount}</Text>
+                  <Text style={styles.fabBadgeText}>{savedCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -1781,41 +1797,25 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             </TouchableOpacity>
           </Animated.View>
 
-          {/* Child FAB 1: Saved Jobs */}
+          {/* Child FAB 3: Referral Requests */}
           <Animated.View style={{
             opacity: fabAnim,
-            transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }, { scale: fabAnim }],
+            transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: fabAnim }],
           }}>
             <TouchableOpacity
-              style={[styles.fab, styles.fabSaved]}
-              onPress={() => { navigation.navigate('SavedJobs'); toggleFab(); }}
+              style={[styles.fab, styles.fabReferralRequests]}
+              onPress={() => { navigation.navigate('MyReferralRequests'); toggleFab(); }}
               activeOpacity={0.8}
               pointerEvents={fabOpen ? 'auto' : 'none'}
             >
-              <Ionicons name="bookmark" size={20} color={colors.white} />
-              {savedCount > 0 && (
+              <Ionicons name="people" size={20} color={colors.white} />
+              {myReferralRequestsCount > 0 && (
                 <View style={styles.fabBadge}>
-                  <Text style={styles.fabBadgeText}>{savedCount}</Text>
+                  <Text style={styles.fabBadgeText}>{myReferralRequestsCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
           </Animated.View>
-
-          {/* Main FAB Toggle */}
-          <TouchableOpacity
-            style={[styles.fab, styles.fabMain]}
-            onPress={toggleFab}
-            activeOpacity={0.8}
-          >
-            <Animated.View style={{ transform: [{ rotate: fabAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] }) }] }}>
-              <Ionicons name="add" size={24} color={colors.white} />
-            </Animated.View>
-            {!fabOpen && (savedCount + appliedCount + myReferralRequestsCount) > 0 && (
-              <View style={styles.fabBadge}>
-                <Text style={styles.fabBadgeText}>{savedCount + appliedCount + myReferralRequestsCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
         </View>
 
         {/* Job List */}
