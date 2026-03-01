@@ -615,6 +615,7 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     borderColor: colors.borderSubtle,
     borderRadius: 14,
     backgroundColor: colors.inputBackground,
+    minHeight: 50,
   },
   inputError: {
     borderColor: colors.danger,
