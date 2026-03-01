@@ -1792,14 +1792,14 @@ app.http("admin-dashboard-users", {
 app.http("admin-delete-user", {
   methods: ["DELETE", "OPTIONS"],
   authLevel: "anonymous",
-  route: "admin/users/{userId}",
+  route: "users/admin/{userId}",
   handler: withErrorHandling(adminDeleteUser),
 });
 
 app.http("admin-make-referrer", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
-  route: "admin/users/{userId}/make-referrer",
+  route: "users/admin/{userId}/make-referrer",
   handler: withErrorHandling(adminMakeReferrer),
 });
 

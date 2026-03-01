@@ -3256,7 +3256,7 @@ if (!resumeId) {
    * Delete a user (Admin only)
    */
   async adminDeleteUser(userId) {
-    return this.apiCall(`/admin/users/${userId}`, {
+    return this.apiCall(`/users/admin/${userId}`, {
       method: 'DELETE',
     });
   }
@@ -3265,7 +3265,7 @@ if (!resumeId) {
    * Make a user a verified referrer (Admin only)
    */
   async adminMakeReferrer(userId) {
-    return this.apiCall(`/admin/users/${userId}/make-referrer`, {
+    return this.apiCall(`/users/admin/${userId}/make-referrer`, {
       method: 'POST',
     });
   }
