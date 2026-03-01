@@ -10,6 +10,7 @@ import {
   Image,
   Linking,
   Platform,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -45,6 +46,10 @@ export default function ReferralTrackingScreen() {
   const [referrerConversation, setReferrerConversation] = useState(null); // Conversation with referrer if exists
   const [referrerUserIds, setReferrerUserIds] = useState([]); // All referrers who interacted with this request
   const [messageExpanded, setMessageExpanded] = useState(false);
+  const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  const canWithdraw = ['Pending', 'NotifiedToReferrers', 'Viewed'].includes(currentStatus);
 
   // Handle messaging the referrer
   // If there are unread messages, go to Chat screen directly
@@ -85,6 +90,27 @@ export default function ReferralTrackingScreen() {
           { name: 'MyReferralRequests' },
         ],
       });
+    }
+  };
+
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    try {
+      const res = await refopenAPI.cancelReferralRequest(requestId);
+      if (res.success) {
+        setCurrentStatus('Cancelled');
+        setRequest(prev => prev ? { ...prev, Status: 'Cancelled' } : prev);
+        showToast('Request withdrawn. Hold amount released to wallet.', 'success');
+        setShowWithdrawConfirm(false);
+        loadHistory(); // Refresh timeline
+      } else {
+        showToast('Failed to withdraw. Please try again.', 'error');
+      }
+    } catch (e) {
+      showToast('Failed to withdraw. Please try again.', 'error');
+    } finally {
+      setWithdrawing(false);
+      setShowWithdrawConfirm(false);
     }
   };
 
@@ -473,6 +499,29 @@ export default function ReferralTrackingScreen() {
   return (
     <View style={styles.container}>
       <SubScreenHeader title="Referral Tracking" directBack="MyReferralRequests" />
+
+      {/* Action buttons bar below header */}
+      {canWithdraw && (
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.withdrawActionBtn}
+            onPress={() => setShowWithdrawConfirm(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close-circle-outline" size={18} color={colors.white} />
+            <Text style={styles.actionBtnText}>Withdraw</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.convertOpenBtn}
+            onPress={() => showToast('Convert to Open coming soon', 'info')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="globe-outline" size={18} color={colors.white} />
+            <Text style={styles.actionBtnText}>Convert to Open</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.innerContainer}>
         <ScrollView
           style={styles.content}
@@ -496,6 +545,39 @@ export default function ReferralTrackingScreen() {
           </View>
         </ScrollView>
       </View>
+
+      {/* Withdraw Confirmation Modal */}
+      <Modal visible={showWithdrawConfirm} transparent animationType="fade" onRequestClose={() => setShowWithdrawConfirm(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowWithdrawConfirm(false)}>
+          <View style={styles.modalCard}>
+            <Ionicons name="warning-outline" size={36} color={colors.warning} style={{ marginBottom: 12 }} />
+            <Text style={styles.modalTitle}>Withdraw Request?</Text>
+            <Text style={styles.modalDesc}>
+              Are you sure you want to withdraw this referral request
+              {request?.JobTitle ? ` for "${request.JobTitle}"` : ''}? The held amount will be released back to your wallet.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowWithdrawConfirm(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalWithdrawBtn}
+                onPress={handleWithdraw}
+                disabled={withdrawing}
+              >
+                {withdrawing ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.modalWithdrawText}>Withdraw</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -805,5 +887,102 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.gray600,
     lineHeight: 20,
+  },
+  // Action buttons bar below header
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  withdrawActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  convertOpenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  actionBtnText: {
+    color: colors.white,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  // Withdraw confirmation modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    maxWidth: 360,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: 8,
+  },
+  modalDesc: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalCancelText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+  },
+  modalWithdrawBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    backgroundColor: colors.error,
+  },
+  modalWithdrawText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+    color: '#FFFFFF',
   },
 });

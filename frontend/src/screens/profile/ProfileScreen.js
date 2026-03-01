@@ -12,6 +12,7 @@ import {
   Image,
   Switch,
   Platform,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -123,6 +124,7 @@ export default function ProfileScreen({ navigation, route }) {
     preferredLocations: '',
     linkedInProfile: '',
     githubProfile: '',
+    portfolioURL: '',
     resumes: [],
     workExperiences: [],
     additionalDocuments: '',
@@ -210,6 +212,7 @@ export default function ProfileScreen({ navigation, route }) {
             ...prev,
             linkedInProfile: data.LinkedInProfile || data.linkedInProfile || prev.linkedInProfile,
             githubProfile: data.GithubProfile || data.githubProfile || prev.githubProfile,
+            portfolioURL: data.PortfolioURL || data.portfolioURL || prev.portfolioURL,
             currentLocation: data.CurrentLocation || data.currentLocation || prev.currentLocation,
             headline: data.Headline || data.headline || prev.headline,
             summary: data.Summary || data.summary || prev.summary,
@@ -645,6 +648,92 @@ export default function ProfileScreen({ navigation, route }) {
                 <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                 <Text style={styles.emptySectionCtaText}>Add your skills to stand out</Text>
               </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Links Section - LinkedIn, GitHub, Portfolio */}
+        {!loadingSections && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="link-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>Links</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} style={styles.editIconButton}>
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            {(jobSeekerProfile.linkedInProfile || jobSeekerProfile.githubProfile || jobSeekerProfile.portfolioURL) ? (
+              <View style={{ gap: 8 }}>
+                {jobSeekerProfile.linkedInProfile ? (
+                  <TouchableOpacity
+                    style={styles.linkRow}
+                    onPress={() => Linking.openURL(jobSeekerProfile.linkedInProfile)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.linkIconBg, { backgroundColor: colors.primaryDark + '15' }]}> 
+                      <Ionicons name="logo-linkedin" size={18} color={colors.primaryDark} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.linkRowTitle}>LinkedIn</Text>
+                      <Text style={styles.linkRowUrl} numberOfLines={1}>{jobSeekerProfile.linkedInProfile}</Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                    <Ionicons name="logo-linkedin" size={18} color={colors.primary} />
+                    <Text style={styles.emptySectionCtaText}>Add your LinkedIn profile</Text>
+                  </TouchableOpacity>
+                )}
+                {jobSeekerProfile.githubProfile ? (
+                  <TouchableOpacity
+                    style={styles.linkRow}
+                    onPress={() => Linking.openURL(jobSeekerProfile.githubProfile)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.linkIconBg, { backgroundColor: colors.text + '10' }]}> 
+                      <Ionicons name="logo-github" size={18} color={colors.text} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.linkRowTitle}>GitHub</Text>
+                      <Text style={styles.linkRowUrl} numberOfLines={1}>{jobSeekerProfile.githubProfile}</Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                    <Ionicons name="logo-github" size={18} color={colors.primary} />
+                    <Text style={styles.emptySectionCtaText}>Add your GitHub profile</Text>
+                  </TouchableOpacity>
+                )}
+                {jobSeekerProfile.portfolioURL && (
+                  <TouchableOpacity
+                    style={styles.linkRow}
+                    onPress={() => Linking.openURL(jobSeekerProfile.portfolioURL)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.linkIconBg, { backgroundColor: colors.primary + '15' }]}> 
+                      <Ionicons name="globe-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.linkRowTitle}>Portfolio</Text>
+                      <Text style={styles.linkRowUrl} numberOfLines={1}>{jobSeekerProfile.portfolioURL}</Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                  <Ionicons name="logo-linkedin" size={18} color={colors.primary} />
+                  <Text style={styles.emptySectionCtaText}>Add your LinkedIn profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                  <Ionicons name="logo-github" size={18} color={colors.primary} />
+                  <Text style={styles.emptySectionCtaText}>Add your GitHub profile</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         )}
@@ -1557,6 +1646,34 @@ const createStyles = (colors, responsive = {}) => {
     color: colors.primary,
     fontWeight: '500',
     flex: 1,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  linkIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkRowTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  linkRowUrl: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 1,
   },
   // Work Experience View Mode
   workExperienceList: {

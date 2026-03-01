@@ -21,24 +21,24 @@ export const authDarkColors = {
   accentGlow: 'rgba(139, 92, 246, 0.12)',
   accentGlowSubtle: 'rgba(139, 92, 246, 0.04)',
 
-  /* ── Surfaces ───────────────────────────────────── */
-  background: '#09090B',
-  backgroundMid: '#0E0E10',        // subtle gradient mid-stop
-  surface: '#18181B',
-  surfaceElevated: '#27272A',
-  card: '#18181B',
+  /* ── Surfaces (VS Code-inspired soft dark) ─────── */
+  background: '#1E1E1E',
+  backgroundMid: '#222222',        // subtle gradient mid-stop
+  surface: '#252526',
+  surfaceElevated: '#2D2D2D',
+  card: '#252526',
 
   /* ── Glass / blur helpers ───────────────────────── */
-  glass: 'rgba(24, 24, 27, 0.7)',
-  glassBorder: 'rgba(161, 161, 170, 0.12)',
+  glass: 'rgba(37, 37, 38, 0.7)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
 
   /* ── Text ───────────────────────────────────────── */
-  text: '#FAFAFA',
-  textPrimary: '#FAFAFA',
-  textSecondary: '#A1A1AA',
-  textMuted: '#71717A',
-  textLight: '#71717A',
-  textInverse: '#09090B',
+  text: '#E0E0E0',
+  textPrimary: '#E0E0E0',
+  textSecondary: '#9D9D9D',
+  textMuted: '#6E6E6E',
+  textLight: '#6E6E6E',
+  textInverse: '#1E1E1E',
   textBright: 'rgba(255, 255, 255, 0.9)',
   textDimmed: 'rgba(255, 255, 255, 0.6)',
   textShadow: 'rgba(0, 0, 0, 0.2)',
@@ -76,27 +76,27 @@ export const authDarkColors = {
   gold: '#FFD700',
   goldGlow: 'rgba(255, 215, 0, 0.15)',
 
-  /* ── Neutral — zinc scale ─────────────────────────── */
+  /* ── Neutral — soft dark scale ───────────────────── */
   white: '#FFFFFF',
   black: '#000000',
-  gray50: '#18181B',
-  gray100: '#27272A',
-  gray200: '#3F3F46',
-  gray300: '#52525B',
-  gray400: '#71717A',
-  gray500: '#A1A1AA',
-  gray600: '#D4D4D8',
-  gray700: '#E4E4E7',
-  gray800: '#F4F4F5',
-  gray900: '#FAFAFA',
+  gray50: '#252526',
+  gray100: '#2D2D2D',
+  gray200: '#3C3C3C',
+  gray300: '#4E4E4E',
+  gray400: '#6E6E6E',
+  gray500: '#9D9D9D',
+  gray600: '#BBBBBB',
+  gray700: '#D4D4D4',
+  gray800: '#E8E8E8',
+  gray900: '#F5F5F5',
 
   /* ── Borders ────────────────────────────────────── */
-  border: 'rgba(161, 161, 170, 0.12)',
-  borderLight: 'rgba(161, 161, 170, 0.2)',
-  borderSubtle: 'rgba(161, 161, 170, 0.15)',
-  borderThin: 'rgba(161, 161, 170, 0.1)',
-  borderFaint: 'rgba(161, 161, 170, 0.08)',
-  borderMedium: 'rgba(161, 161, 170, 0.3)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderLight: 'rgba(255, 255, 255, 0.14)',
+  borderSubtle: 'rgba(255, 255, 255, 0.1)',
+  borderThin: 'rgba(255, 255, 255, 0.06)',
+  borderFaint: 'rgba(255, 255, 255, 0.04)',
+  borderMedium: 'rgba(255, 255, 255, 0.2)',
   borderFocus: 'rgba(59, 130, 246, 0.5)',
 
   /* ── Overlays ───────────────────────────────────── */
@@ -105,13 +105,13 @@ export const authDarkColors = {
   overlayMedium: 'rgba(255, 255, 255, 0.2)',
 
   /* ── Surface overlays (dark) ────────────────────── */
-  surfaceOverlay: 'rgba(24, 24, 27, 0.4)',
-  surfaceOverlayDark: 'rgba(24, 24, 27, 0.8)',
-  backgroundOverlay: 'rgba(9, 9, 11, 0.8)',
+  surfaceOverlay: 'rgba(37, 37, 38, 0.4)',
+  surfaceOverlayDark: 'rgba(37, 37, 38, 0.8)',
+  backgroundOverlay: 'rgba(30, 30, 30, 0.8)',
 
   /* ── Inputs ─────────────────────────────────────── */
-  inputBackground: 'rgba(24, 24, 27, 0.6)',
-  inputBackgroundFocus: 'rgba(24, 24, 27, 0.9)',
+  inputBackground: '#3C3C3C',
+  inputBackgroundFocus: '#454545',
   inputBackgroundLight: 'rgba(255, 255, 255, 0.08)',
   placeholder: 'rgba(255, 255, 255, 0.5)',
 
@@ -122,7 +122,7 @@ export const authDarkColors = {
   primaryGlowStrong: 'rgba(59, 130, 246, 0.2)',
 
   /* ── Gradient presets (arrays for LinearGradient) ── */
-  gradientBackground: ['#09090B', '#0E0E10', '#09090B'],
+  gradientBackground: ['#1E1E1E', '#222222', '#1E1E1E'],
 };
 
 export default authDarkColors;

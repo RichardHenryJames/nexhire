@@ -42,38 +42,38 @@ const ASK_REFERRAL_URL = 'https://www.refopen.com/ask-referral';
 // THEME — Always dark for consistent branding
 // ============================================
 const getColors = (colors, isDark) => ({
-  // Backgrounds — true dark with depth
-  bg: '#030712',
-  bgAlt: '#0F172A',
-  bgCard: 'rgba(15, 23, 42, 0.85)',
-  bgGlass: 'rgba(15, 23, 42, 0.6)',
+  // Backgrounds — VS Code-inspired soft dark
+  bg: '#1A1A1A',
+  bgAlt: '#1E1E1E',
+  bgCard: 'rgba(37, 37, 38, 0.85)',
+  bgGlass: 'rgba(37, 37, 38, 0.6)',
   
-  // Brand Colors — vivid and saturated
-  primary: '#818CF8',
-  primaryBright: '#A5B4FC',
-  accent: '#22D3EE',
-  accentBright: '#67E8F9',
-  emerald: '#34D399',
-  amber: '#FBBF24',
-  rose: '#FB7185',
-  violet: '#C4B5FD',
+  // Brand Colors — vivid and saturated (RefOpen brand)
+  primary: colors.primary,
+  primaryBright: colors.primaryLight,
+  accent: colors.cyan,
+  accentBright: colors.cyanLight,
+  emerald: colors.successLight,
+  amber: colors.warningLight,
+  rose: colors.roseLight,
+  violet: colors.accentLight,
   
   // Gradients — rich and vibrant
-  gradHero: ['#030712', '#0F172A', '#1E1B4B', '#312E81'],
-  gradPrimary: ['#6366F1', '#818CF8'],
-  gradAccent: ['#06B6D4', '#22D3EE'],
-  gradEmerald: ['#059669', '#10B981'],
-  gradAmber: ['#D97706', '#F59E0B'],
-  gradRose: ['#E11D48', '#FB7185'],
-  gradViolet: ['#7C3AED', '#A78BFA'],
+  gradHero: ['#1A1A1A', '#1E1E1E', '#252526', '#2D2D2D'],
+  gradPrimary: [colors.indigo, colors.primaryLight],
+  gradAccent: [colors.cyan, colors.cyanLight],
+  gradEmerald: [colors.successDark, colors.success],
+  gradAmber: [colors.warningDark, colors.warning],
+  gradRose: [colors.rose, colors.roseLight],
+  gradViolet: [colors.accentDark, colors.accentLight],
   
   // Text — high contrast on dark bg
-  text: '#F8FAFC',
-  textSub: '#CBD5E1',
-  textMuted: '#64748B',
+  text: '#E0E0E0',
+  textSub: '#9D9D9D',
+  textMuted: '#6E6E6E',
   
   // Borders & Effects
-  border: 'rgba(148, 163, 184, 0.12)',
+  border: 'rgba(255, 255, 255, 0.08)',
   borderGlow: 'rgba(99, 102, 241, 0.35)',
   glow: 'rgba(99, 102, 241, 0.4)',
   glowAccent: 'rgba(34, 211, 238, 0.4)',

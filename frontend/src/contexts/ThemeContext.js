@@ -113,19 +113,19 @@ const darkTheme = {
   accentLight: '#A78BFA',
   accentDark: '#7C3AED',
 
-  // ── Surfaces ─────────────────────────────────────
-  surface: '#18181B',
-  surfaceElevated: '#27272A',
-  background: '#09090B',
-  card: '#18181B',
+  // ── Surfaces (VS Code-inspired soft dark) ───────
+  surface: '#252526',
+  surfaceElevated: '#2D2D2D',
+  background: '#1E1E1E',
+  card: '#252526',
 
   // ── Text ─────────────────────────────────────────
-  text: '#FAFAFA',
-  textPrimary: '#FAFAFA',
-  textSecondary: '#A1A1AA',
-  textMuted: '#71717A',
-  textLight: '#71717A',
-  textInverse: '#09090B',
+  text: '#E0E0E0',
+  textPrimary: '#E0E0E0',
+  textSecondary: '#9D9D9D',
+  textMuted: '#6E6E6E',
+  textLight: '#6E6E6E',
+  textInverse: '#1E1E1E',
 
   // ── Status — success ─────────────────────────────
   success: '#10B981',
@@ -165,27 +165,27 @@ const darkTheme = {
   roseLight: '#FB7185',
   pink: '#EC4899',
 
-  // ── Neutral — zinc scale ─────────────────────────
+  // ── Neutral — soft dark scale ─────────────────────
   white: '#FFFFFF',
   black: '#000000',
-  gray50: '#18181B',
-  gray100: '#27272A',
-  gray200: '#3F3F46',
-  gray300: '#52525B',
-  gray400: '#71717A',
-  gray500: '#A1A1AA',
-  gray600: '#D4D4D8',
-  gray700: '#E4E4E7',
-  gray800: '#F4F4F5',
-  gray900: '#FAFAFA',
+  gray50: '#252526',
+  gray100: '#2D2D2D',
+  gray200: '#3C3C3C',
+  gray300: '#4E4E4E',
+  gray400: '#6E6E6E',
+  gray500: '#9D9D9D',
+  gray600: '#BBBBBB',
+  gray700: '#D4D4D4',
+  gray800: '#E8E8E8',
+  gray900: '#F5F5F5',
 
   // ── Borders ──────────────────────────────────────
-  border: 'rgba(161, 161, 170, 0.12)',
-  borderLight: 'rgba(161, 161, 170, 0.2)',
-  borderSubtle: 'rgba(161, 161, 170, 0.08)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderLight: 'rgba(255, 255, 255, 0.14)',
+  borderSubtle: 'rgba(255, 255, 255, 0.05)',
 
   // ── Inputs ───────────────────────────────────────
-  inputBackground: 'rgba(24, 24, 27, 0.6)',
+  inputBackground: '#3C3C3C',
 
   // ── Shadow ───────────────────────────────────────
   shadow: '#000000',
