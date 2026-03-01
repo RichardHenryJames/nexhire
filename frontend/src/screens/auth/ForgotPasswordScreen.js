@@ -157,7 +157,6 @@ export default function ForgotPasswordScreen({ navigation }) {
               {/* Form */}
               <View style={styles.form}>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email Address</Text>
                   <View style={[styles.inputContainer, error && styles.inputError]}>
                     <Ionicons
                       name="mail-outline"
@@ -172,7 +171,7 @@ export default function ForgotPasswordScreen({ navigation }) {
                         setEmail(text);
                         if (error) setError('');
                       }}
-                      placeholder="Enter your email"
+                      placeholder="Email address"
                       placeholderTextColor="rgba(255, 255, 255, 0.5)"
                       keyboardType="email-address"
                       autoCapitalize="none"

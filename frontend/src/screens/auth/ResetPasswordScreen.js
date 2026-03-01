@@ -231,7 +231,6 @@ export default function ResetPasswordScreen({ navigation, route }) {
               <View style={styles.form}>
                 {/* New Password */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>New Password</Text>
                   <View style={[styles.inputContainer, errors.password && styles.inputError]}>
                     <Ionicons
                       name="lock-closed-outline"
@@ -246,7 +245,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
                         setPassword(text);
                         if (errors.password) setErrors((prev) => ({ ...prev, password: null }));
                       }}
-                      placeholder="Enter new password"
+                      placeholder="New password"
                       placeholderTextColor="rgba(255, 255, 255, 0.5)"
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
@@ -270,7 +269,6 @@ export default function ResetPasswordScreen({ navigation, route }) {
 
                 {/* Confirm Password */}
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Confirm Password</Text>
                   <View style={[styles.inputContainer, errors.confirmPassword && styles.inputError]}>
                     <Ionicons
                       name="lock-closed-outline"
@@ -285,7 +283,7 @@ export default function ResetPasswordScreen({ navigation, route }) {
                         setConfirmPassword(text);
                         if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: null }));
                       }}
-                      placeholder="Confirm new password"
+                      placeholder="Confirm password"
                       placeholderTextColor="rgba(255, 255, 255, 0.5)"
                       secureTextEntry={!showConfirmPassword}
                       autoCapitalize="none"

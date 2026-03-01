@@ -672,10 +672,10 @@ export default function ReferralTrackingScreen() {
                 activeOpacity={0.8}
               >
                 {withdrawing ? (
-                  <ActivityIndicator size="small" color={colors.dangerDark} />
+                  <ActivityIndicator size="small" color={colors.white} />
                 ) : (
                   <>
-                    <Ionicons name="close-circle" size={16} color={colors.dangerDark} style={{ marginRight: 6 }} />
+                    <Ionicons name="close-circle" size={16} color={colors.white} style={{ marginRight: 6 }} />
                     <Text style={styles.cancelReqBtnText}>Withdraw</Text>
                   </>
                 )}
@@ -1174,10 +1174,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontWeight: typography.weights.semibold,
   },
   cancelReqBtn: {
-    backgroundColor: colors.dangerLight,
+    backgroundColor: colors.error,
   },
   cancelReqBtnText: {
-    color: colors.danger,
+    color: colors.white,
     fontWeight: typography.weights.semibold,
   },
 });
