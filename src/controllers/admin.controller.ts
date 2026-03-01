@@ -610,3 +610,190 @@ export const getAdminDashboardResumeAnalyzer = withAuth(async (
     return { status: 500, jsonBody: { success: false, error: 'Failed to load resume analyzer data' } };
   }
 });
+
+/**
+ * DELETE /api/admin/users/:userId - Delete a user and all their data
+ * Same logic as scripts/delete-users.js but as an API endpoint
+ */
+export const adminDeleteUser = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const userId = req.params.userId;
+    if (!userId) {
+      return { status: 400, jsonBody: { success: false, error: 'userId is required' } };
+    }
+
+    // Prevent admin from deleting themselves
+    if (userId === user.userId) {
+      return { status: 400, jsonBody: { success: false, error: 'Cannot delete your own account' } };
+    }
+
+    const { dbService } = await import('../services/database.service');
+
+    // Verify user exists
+    const userResult = await dbService.executeQuery(
+      `SELECT UserID, FirstName, LastName, Email, UserType FROM Users WHERE UserID = @param0`,
+      [userId]
+    );
+
+    if (userResult.recordset.length === 0) {
+      return { status: 404, jsonBody: { success: false, error: 'User not found' } };
+    }
+
+    const targetUser = userResult.recordset[0];
+
+    // Don't allow deleting other admins
+    if (targetUser.UserType === 'Admin') {
+      return { status: 403, jsonBody: { success: false, error: 'Cannot delete admin accounts' } };
+    }
+
+    context.log(`Admin ${user.userId} deleting user: ${targetUser.Email} (${targetUser.FirstName} ${targetUser.LastName})`);
+
+    // Delete in FK-safe order (same as delete-users.js script)
+    const deleteStatements = [
+      `DELETE FROM UserConsentLog WHERE UserID = @param0`,
+      `DELETE FROM UserActivityLogs WHERE UserID = @param0`,
+      `DELETE FROM UserProfileViews WHERE ViewerUserID = @param0 OR ViewedUserID = @param0`,
+      `DELETE FROM UserSessions WHERE UserID = @param0`,
+      `DELETE FROM InAppNotifications WHERE UserID = @param0`,
+      `DELETE FROM NotificationPreferences WHERE UserID = @param0`,
+      `DELETE FROM PushTokens WHERE UserID = @param0`,
+      `DELETE FROM SupportMessages WHERE SenderID = @param0`,
+      `DELETE FROM SupportTickets WHERE UserID = @param0`,
+      `DELETE FROM NotificationQueue WHERE UserID = @param0`,
+      `DELETE FROM EmailLogs WHERE UserID = @param0`,
+      `DELETE FROM EmailVerificationOTPs WHERE UserID = @param0`,
+      `DELETE FROM WalletTransactions WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
+      `DELETE FROM WalletHolds WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
+      `DELETE FROM WalletRechargeOrders WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
+      `DELETE FROM WalletWithdrawals WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
+      `DELETE FROM Wallets WHERE UserID = @param0`,
+      `DELETE FROM ManualPaymentSubmissions WHERE UserID = @param0`,
+      `DELETE FROM PaymentOrders WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM PaymentTransactions WHERE UserID = @param0`,
+      `DELETE FROM ReferralProofs WHERE ReferrerID = @param0`,
+      `DELETE FROM ReferralProofs WHERE RequestID IN (SELECT RequestID FROM ReferralRequests WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
+      `DELETE FROM ReferralRequestStatusHistory WHERE RequestID IN (SELECT RequestID FROM ReferralRequests WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
+      `DELETE FROM ReferralRewards WHERE ReferrerID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ReferralRequests WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `UPDATE ReferralRequests SET AssignedReferrerID = NULL, Status = 'Pending', ReferredAt = NULL WHERE AssignedReferrerID = @param0`,
+      `DELETE FROM ReferrerStats WHERE ReferrerID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM SocialShareClaims WHERE UserID = @param0`,
+      `DELETE FROM ApplicantProfileViews WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ApplicantReferralSubscriptions WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ApplicantSalaries WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM WorkExperiences WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ResumeMetadata WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ApplicationAttachments WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
+      `DELETE FROM ApplicationTracking WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
+      `DELETE FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM SavedJobs WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ApplicantResumes WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM Applicants WHERE UserID = @param0`,
+      `UPDATE Jobs SET PostedByUserID = NULL WHERE PostedByUserID = @param0`,
+      `DELETE FROM Employers WHERE UserID = @param0`,
+      `UPDATE Organizations SET CreatedBy = NULL, UpdatedBy = NULL WHERE CreatedBy = @param0`,
+      `DELETE FROM Messages WHERE ConversationID IN (SELECT ConversationID FROM Conversations WHERE User1ID = @param0 OR User2ID = @param0)`,
+      `DELETE FROM Conversations WHERE User1ID = @param0 OR User2ID = @param0`,
+      `DELETE FROM BlockedUsers WHERE BlockerUserID = @param0`,
+      `DELETE FROM Users WHERE UserID = @param0`,
+    ];
+
+    let deletedTables = 0;
+    for (const stmt of deleteStatements) {
+      try {
+        await dbService.executeQuery(stmt, [userId]);
+        deletedTables++;
+      } catch (e: any) {
+        // Skip tables that don't exist or have no matching rows
+        context.warn(`Delete step failed (non-fatal): ${e.message?.substring(0, 100)}`);
+      }
+    }
+
+    context.log(`✅ Deleted user ${targetUser.Email} — ${deletedTables}/${deleteStatements.length} steps completed`);
+
+    return {
+      status: 200,
+      jsonBody: {
+        success: true,
+        message: `User ${targetUser.FirstName} ${targetUser.LastName} (${targetUser.Email}) deleted successfully`,
+        data: { deletedUser: { email: targetUser.Email, name: `${targetUser.FirstName} ${targetUser.LastName}` } }
+      }
+    };
+  } catch (error: any) {
+    console.error('Error in adminDeleteUser:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to delete user' } };
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/make-referrer - Make a user a verified referrer
+ */
+export const adminMakeReferrer = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const userId = req.params.userId;
+    if (!userId) {
+      return { status: 400, jsonBody: { success: false, error: 'userId is required' } };
+    }
+
+    const { dbService } = await import('../services/database.service');
+    const { isBlockedMarketplace } = await import('../data/blocked-marketplaces');
+
+    // Verify user exists
+    const userResult = await dbService.executeQuery(
+      `SELECT u.UserID, u.FirstName, u.LastName, u.Email, u.IsVerifiedReferrer,
+              a.CurrentCompanyName
+       FROM Users u
+       LEFT JOIN Applicants a ON u.UserID = a.UserID
+       WHERE u.UserID = @param0`,
+      [userId]
+    );
+
+    if (userResult.recordset.length === 0) {
+      return { status: 404, jsonBody: { success: false, error: 'User not found' } };
+    }
+
+    const targetUser = userResult.recordset[0];
+
+    if (targetUser.IsVerifiedReferrer) {
+      return { status: 400, jsonBody: { success: false, error: 'User is already a verified referrer' } };
+    }
+
+    // Check if company is a blocked marketplace
+    if (isBlockedMarketplace(targetUser.CurrentCompanyName)) {
+      return { status: 400, jsonBody: { success: false, error: `${targetUser.CurrentCompanyName} is a blocked marketplace company. Cannot make referrer.` } };
+    }
+
+    await dbService.executeQuery(
+      `UPDATE Users SET IsVerifiedReferrer = 1, IsVerifiedUser = 1, UpdatedAt = GETUTCDATE() WHERE UserID = @param0`,
+      [userId]
+    );
+
+    context.log(`✅ Admin ${user.userId} made ${targetUser.Email} a verified referrer`);
+
+    return {
+      status: 200,
+      jsonBody: {
+        success: true,
+        message: `${targetUser.FirstName} ${targetUser.LastName} is now a verified referrer`,
+        data: { userId, isVerifiedReferrer: true }
+      }
+    };
+  } catch (error: any) {
+    console.error('Error in adminMakeReferrer:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to make user a referrer' } };
+  }
+});

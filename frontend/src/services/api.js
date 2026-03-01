@@ -3249,6 +3249,26 @@ if (!resumeId) {
       body: JSON.stringify({ token }),
     });
   }
+
+  // ── Admin User Management ──────────────────────────
+
+  /**
+   * Delete a user (Admin only)
+   */
+  async adminDeleteUser(userId) {
+    return this.apiCall(`/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Make a user a verified referrer (Admin only)
+   */
+  async adminMakeReferrer(userId) {
+    return this.apiCall(`/admin/users/${userId}/make-referrer`, {
+      method: 'POST',
+    });
+  }
 }
 
 export default new RefOpenAPI();

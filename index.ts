@@ -181,7 +181,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -1787,6 +1787,20 @@ app.http("admin-dashboard-users", {
   authLevel: "anonymous",
   route: "management/dashboard/users",
   handler: withErrorHandling(getAdminDashboardUsers),
+});
+
+app.http("admin-delete-user", {
+  methods: ["DELETE", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "admin/users/{userId}",
+  handler: withErrorHandling(adminDeleteUser),
+});
+
+app.http("admin-make-referrer", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "admin/users/{userId}/make-referrer",
+  handler: withErrorHandling(adminMakeReferrer),
 });
 
 app.http("admin-dashboard-referrals", {

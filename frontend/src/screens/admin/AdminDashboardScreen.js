@@ -1082,6 +1082,59 @@ export default function AdminDashboardScreen() {
                 </Text>
               </View>
             </View>
+            {/* Admin Action Buttons */}
+            <View style={{ flexDirection: 'row', marginTop: 8, gap: 8 }}>
+              {!userData.IsVerifiedReferrer && userData.UserType !== 'Admin' && (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 4 }}
+                  onPress={async (e) => {
+                    e.stopPropagation?.();
+                    const confirmed = Platform.OS === 'web' ? window.confirm(`Make ${userData.FirstName} ${userData.LastName} a verified referrer?`) : true;
+                    if (!confirmed) return;
+                    try {
+                      const res = await refopenAPI.adminMakeReferrer(userData.UserID);
+                      if (res.success) {
+                        showToast(res.message, 'success');
+                        loadUsers(usersPagination.page, usersFilters);
+                      } else {
+                        showToast(res.error || 'Failed', 'error');
+                      }
+                    } catch (err) {
+                      showToast(err?.data?.message || err?.message || 'Failed', 'error');
+                    }
+                  }}
+                >
+                  <Ionicons name="shield-checkmark" size={12} color={colors.white} />
+                  <Text style={{ fontSize: 11, color: colors.white, fontWeight: '600' }}>Make Referrer</Text>
+                </TouchableOpacity>
+              )}
+              {userData.UserType !== 'Admin' && (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.error, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 4 }}
+                  onPress={async (e) => {
+                    e.stopPropagation?.();
+                    const confirmed = Platform.OS === 'web'
+                      ? window.confirm(`DELETE ${userData.FirstName} ${userData.LastName} (${userData.Email})? This cannot be undone.`)
+                      : true;
+                    if (!confirmed) return;
+                    try {
+                      const res = await refopenAPI.adminDeleteUser(userData.UserID);
+                      if (res.success) {
+                        showToast(res.message, 'success');
+                        loadUsers(usersPagination.page, usersFilters);
+                      } else {
+                        showToast(res.error || 'Failed', 'error');
+                      }
+                    } catch (err) {
+                      showToast(err?.data?.message || err?.message || 'Failed', 'error');
+                    }
+                  }}
+                >
+                  <Ionicons name="trash" size={12} color={colors.white} />
+                  <Text style={{ fontSize: 11, color: colors.white, fontWeight: '600' }}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
           <View style={styles.userRightSection}>
             <Text style={styles.userDate}>
