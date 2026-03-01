@@ -1,6 +1,7 @@
 import { dbService } from './database.service';
 import { EmailService } from './emailService';
 import { encrypt, decrypt, maskEmail } from '../utils/encryption';
+import { isBlockedMarketplace } from '../data/blocked-marketplaces';
 
 /**
  * Company Email Verification Service
@@ -99,6 +100,15 @@ export const sendCompanyEmailOTP = async (request: SendOTPRequest): Promise<Veri
         success: false,
         message: 'Can only verify company email for current employment',
         error: 'NOT_CURRENT_JOB'
+      };
+    }
+
+    // 1b. Block marketplace/job portal companies from becoming verified referrers
+    if (isBlockedMarketplace(workExp.CompanyName)) {
+      return {
+        success: false,
+        message: `${workExp.CompanyName} is a job marketplace/portal, not a direct employer. Referrer verification is only available for employees of companies that directly hire.`,
+        error: 'BLOCKED_MARKETPLACE'
       };
     }
 
@@ -355,7 +365,7 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
 
     // 6. Get the OrganizationID and check if user already has a verified entry for this org
     const workExpResult = await dbService.executeQuery(`
-      SELECT we.OrganizationID, a.UserID, a.ApplicantID
+      SELECT we.OrganizationID, we.CompanyName, a.UserID, a.ApplicantID
       FROM WorkExperiences we
       INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
       WHERE we.WorkExperienceID = @param0
@@ -363,6 +373,16 @@ export const verifyCompanyEmailOTP = async (request: VerifyOTPRequest): Promise<
 
     const organizationId = workExpResult.recordset[0]?.OrganizationID;
     const applicantId = workExpResult.recordset[0]?.ApplicantID;
+    const companyName = workExpResult.recordset[0]?.CompanyName;
+
+    // 6b. Block marketplace/job portal companies (safety net — also checked at OTP send)
+    if (isBlockedMarketplace(companyName)) {
+      return {
+        success: false,
+        message: `${companyName} is a job marketplace/portal. Referrer verification is only available for employees of companies that directly hire.`,
+        error: 'BLOCKED_MARKETPLACE'
+      };
+    }
 
     // Check if user already has a verified entry for this organization (to avoid double counting)
     let userAlreadyVerifiedForOrg = false;

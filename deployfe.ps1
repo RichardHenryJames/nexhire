@@ -256,6 +256,7 @@ if (Test-Path $indexPath) {
     # NOTE: Google AdSense script is loaded dynamically by AdCard component
     # to avoid "ads on screens without publisher content" violation
     $seoTags = @"
+    <link rel="preload" as="image" href="/refopen-logo.png" />
     <meta name="google-site-verification" content="d2gTyIhcv5i6OYtnNqXg3zOY5nKXykW8_3-QZ4XtD8g" />
     <meta name="description" content="RefOpen - India's leading job & referral platform. Find jobs, get referred to Google, Amazon, Microsoft & 500+ top companies. Hire talent & earn rewards. Apply, Hire, Refer & Earn!" />
     <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement, hire talent, earn rewards, referral bonus" />

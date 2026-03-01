@@ -37,7 +37,7 @@ export default function ConfirmationModal({
               <Ionicons
                 name={icon}
                 size={48}
-                color={confirmStyle === 'danger' ? colors.danger || '#FF3B30' : colors.primary}
+                color={confirmStyle === 'danger' ? colors.danger : colors.primary}
               />
             </View>
           )}
@@ -87,7 +87,7 @@ const createStyles = (colors) => StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
@@ -126,7 +126,7 @@ const createStyles = (colors) => StyleSheet.create({
     backgroundColor: colors.gray200,
   },
   dangerButton: {
-    backgroundColor: colors.danger || '#FF3B30',
+    backgroundColor: colors.danger,
   },
   primaryButton: {
     backgroundColor: colors.primary,

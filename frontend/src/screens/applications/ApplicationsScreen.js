@@ -427,7 +427,7 @@ export default function ApplicationsScreen({ navigation }) {
       title: 'Withdraw Application',
       message: `Are you sure you want to withdraw your application for ${application.JobTitle || 'this job'}? This action cannot be undone.`,
       icon: 'close-circle',
-      iconColor: '#EF4444',
+      iconColor: colors.error,
       confirmText: 'Withdraw',
       confirmStyle: 'destructive',
       onConfirm: () => withdrawApplication(application),
@@ -613,7 +613,7 @@ export default function ApplicationsScreen({ navigation }) {
                         }
                       }}
                     >
-                      <Ionicons name="globe-outline" size={14} color="#0066cc" />
+                      <Ionicons name="globe-outline" size={14} color={colors.primaryDark} />
                     </TouchableOpacity>
                   )}
                   
@@ -630,7 +630,7 @@ export default function ApplicationsScreen({ navigation }) {
                         }
                       }}
                     >
-                      <Ionicons name="logo-linkedin" size={14} color="#0077b5" />
+                      <Ionicons name="logo-linkedin" size={14} color={colors.primaryDark} />
                     </TouchableOpacity>
                   )}
                 </View>
@@ -709,7 +709,7 @@ export default function ApplicationsScreen({ navigation }) {
             const isReferred = referredJobIds.has(application.JobID);
             return isReferred ? (
               <View style={styles.referredPill}>
-                <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
               </View>
             ) : (
               <TouchableOpacity 

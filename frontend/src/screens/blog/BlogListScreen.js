@@ -276,7 +276,7 @@ export default function BlogListScreen() {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <View style={styles.backButtonCircle}>
-              <Ionicons name="arrow-back" size={18} color={isDark ? colors.text : '#FFFFFF'} />
+              <Ionicons name="arrow-back" size={18} color={isDark ? colors.text : colors.white} />
             </View>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Career Blog</Text>
@@ -358,7 +358,7 @@ const createStyles = (colors, responsive, isDark) => StyleSheet.create({
     flex: 1,
     fontSize: responsive.isLargeScreen ? 24 : 20,
     fontWeight: typography.weights.bold,
-    color: isDark ? colors.text : '#FFFFFF',
+    color: isDark ? colors.text : colors.white,
     textAlign: 'center',
   },
   headerSubtitle: {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, ActivityIndicator, Modal, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, ActivityIndicator, Modal, StyleSheet, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -506,6 +506,15 @@ export default function JobsScreen({ navigation, route }) {
   
   // My Referral Requests count for FAB badge
   const [myReferralRequestsCount, setMyReferralRequestsCount] = useState(0);
+
+  // FAB expand/collapse animation
+  const [fabOpen, setFabOpen] = useState(false);
+  const fabAnim = useRef(new Animated.Value(0)).current;
+  const toggleFab = useCallback(() => {
+    const toValue = fabOpen ? 0 : 1;
+    Animated.spring(fabAnim, { toValue, useNativeDriver: true, friction: 6, tension: 80 }).start();
+    setFabOpen(prev => !prev);
+  }, [fabOpen, fabAnim]);
 
   // 🔧 REQUIREMENT 1: Show success message and handle applied job removal
   useEffect(() => {
@@ -1175,7 +1184,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     if (loading && data.length === 0) {
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
        <Text style={[styles.loadingText, { marginTop: 12 }]}>Loading jobs...</Text>
         </View>
    );
@@ -1184,7 +1193,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     if (smartPaginating && data.length === 0) {
       return (
       <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0066cc" />
+          <ActivityIndicator size="large" color={colors.primaryDark} />
           <Text style={[styles.loadingText, { marginTop: 12 }]}>Finding more opportunities...</Text>
         </View>
       );
@@ -1205,7 +1214,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
           {hasMoreToLoad && (
             <TouchableOpacity
-              style={[styles.clearAllButton, { marginTop: 16, backgroundColor: '#0066cc' }]}
+              style={[styles.clearAllButton, { marginTop: 16, backgroundColor: colors.primaryDark }]}
               onPress={() => {
                 setSmartPaginating(true);
                 loadMoreJobs();
@@ -1600,8 +1609,9 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
           }}
           centerContent={
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color="#666" style={{ marginRight: 8 }} />
+            <View style={{ flex: 1 }}>
+              <View style={styles.searchContainer}>
+                <Ionicons name="search" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search jobs..."
@@ -1614,18 +1624,19 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                   }
                 }}
                 onSubmitEditing={handleSearchSubmit}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textMuted}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-                  <Ionicons name="close-circle" size={20} color="#666" />
+                  <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               )}
+            </View>
             </View>
           }
           rightContent={
             <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
-              <Ionicons name="options-outline" size={24} color="#0066cc" />
+              <Ionicons name="options-outline" size={22} color={colors.primary} />
             </TouchableOpacity>
           }
           showMessages={false}
@@ -1648,7 +1659,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Ionicons
                       name={'bulb-outline'}
                       size={14}
-                      color={'#666'}
+                      color={colors.textSecondary}
                     />
                   </TouchableOpacity>
                 </View>
@@ -1661,7 +1672,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
                       {quickJobTypeLabel}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1673,7 +1684,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
                       {quickWorkplaceLabel}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1685,7 +1696,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
                       {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1697,7 +1708,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
                       {quickCompanyLabel}
                     </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? '#0066cc' : '#666'} />
+                    <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
@@ -1711,7 +1722,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                       triggerReload();
                     }}
                   >
-                    <Ionicons name="people" size={14} color={filters.postedByType === 2 ? '#0066cc' : '#666'} style={{ marginRight: 4 }} />
+                    <Ionicons name="people" size={14} color={filters.postedByType === 2 ? colors.primaryDark : colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={[styles.quickFilterText, filters.postedByType === 2 && styles.quickFilterActiveText]}>
                       Referrer Jobs
                     </Text>
@@ -1730,46 +1741,83 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
       {/* Job List Container with FAB */}
       <View style={{ flex: 1 }}>
-        {/* Floating Action Buttons - Top Right of Job List */}
+        {/* Floating Action Button - Expandable */}
         <View style={styles.fabContainerTop}>
+          {/* Main FAB Toggle - at top */}
           <TouchableOpacity
-            style={[styles.fab, styles.fabSaved]}
-            onPress={() => navigation.navigate('SavedJobs')}
+            style={[styles.fab, styles.fabMain]}
+            onPress={toggleFab}
             activeOpacity={0.8}
           >
-            <Ionicons name="bookmark" size={20} color="#FFFFFF" />
-            {savedCount > 0 && (
+            <Animated.View style={{ transform: [{ rotate: fabAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] }) }] }}>
+              <Ionicons name="add" size={24} color={colors.white} />
+            </Animated.View>
+            {!fabOpen && (savedCount + appliedCount + myReferralRequestsCount) > 0 && (
               <View style={styles.fabBadge}>
-                <Text style={styles.fabBadgeText}>{savedCount}</Text>
+                <Text style={styles.fabBadgeText}>{savedCount + appliedCount + myReferralRequestsCount}</Text>
               </View>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.fab, styles.fabApplications]}
-            onPress={() => navigation.navigate('Applications')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="briefcase" size={20} color="#FFFFFF" />
-            {appliedCount > 0 && (
-              <View style={styles.fabBadge}>
-                <Text style={styles.fabBadgeText}>{appliedCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {/* Child FAB 1: Saved Jobs */}
+          <Animated.View style={{
+            opacity: fabAnim,
+            transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }, { scale: fabAnim }],
+          }}>
+            <TouchableOpacity
+              style={[styles.fab, styles.fabSaved]}
+              onPress={() => { navigation.navigate('SavedJobs'); toggleFab(); }}
+              activeOpacity={0.8}
+              pointerEvents={fabOpen ? 'auto' : 'none'}
+            >
+              <Ionicons name="bookmark" size={20} color={colors.white} />
+              {savedCount > 0 && (
+                <View style={styles.fabBadge}>
+                  <Text style={styles.fabBadgeText}>{savedCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
 
-          <TouchableOpacity
-            style={[styles.fab, styles.fabReferralRequests]}
-            onPress={() => navigation.navigate('MyReferralRequests')}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="people" size={20} color="#FFFFFF" />
-            {myReferralRequestsCount > 0 && (
-              <View style={styles.fabBadge}>
-                <Text style={styles.fabBadgeText}>{myReferralRequestsCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+          {/* Child FAB 2: Applications */}
+          <Animated.View style={{
+            opacity: fabAnim,
+            transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-15, 0] }) }, { scale: fabAnim }],
+          }}>
+            <TouchableOpacity
+              style={[styles.fab, styles.fabApplications]}
+              onPress={() => { navigation.navigate('Applications'); toggleFab(); }}
+              activeOpacity={0.8}
+              pointerEvents={fabOpen ? 'auto' : 'none'}
+            >
+              <Ionicons name="briefcase" size={20} color={colors.white} />
+              {appliedCount > 0 && (
+                <View style={styles.fabBadge}>
+                  <Text style={styles.fabBadgeText}>{appliedCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Child FAB 3: Referral Requests */}
+          <Animated.View style={{
+            opacity: fabAnim,
+            transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: fabAnim }],
+          }}>
+            <TouchableOpacity
+              style={[styles.fab, styles.fabReferralRequests]}
+              onPress={() => { navigation.navigate('MyReferralRequests'); toggleFab(); }}
+              activeOpacity={0.8}
+              pointerEvents={fabOpen ? 'auto' : 'none'}
+            >
+              <Ionicons name="people" size={20} color={colors.white} />
+              {myReferralRequestsCount > 0 && (
+                <View style={styles.fabBadge}>
+                  <Text style={styles.fabBadgeText}>{myReferralRequestsCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
         </View>
 
         {/* Job List */}

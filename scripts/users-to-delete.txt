@@ -1,1 +1,1 @@
-jekeh78742@hutudns.com
+# Add emails to delete, one per line

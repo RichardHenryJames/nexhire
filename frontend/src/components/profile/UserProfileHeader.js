@@ -168,11 +168,11 @@ export default function UserProfileHeader({
   // FIXED PROGRESS RING (Guaranteed 12 o'clock start)
   const CircularProgress = ({ percentage, size = 100 }) => {
     // Color based on completion percentage
-    let progressColor = '#EF4444'; // Red for < 15%
+    let progressColor = colors.error; // Red for < 15%
     if (percentage >= 75) {
-      progressColor = '#10B981'; // Green for 75%+
+      progressColor = colors.success; // Green for 75%+
     } else if (percentage >= 15) {
-      progressColor = '#F59E0B'; // Yellow for 15-74%
+      progressColor = colors.warning; // Yellow for 15-74%
     }
 
     const strokeWidth = 3;
@@ -190,7 +190,7 @@ export default function UserProfileHeader({
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke="#E5E7EB"
+              stroke={colors.border}
               strokeWidth={strokeWidth}
               fill="transparent"
             />
@@ -224,7 +224,7 @@ export default function UserProfileHeader({
             height: size,
             borderRadius: size / 2,
             borderWidth: strokeWidth,
-            borderColor: '#E5E7EB',
+            borderColor: colors.border,
           }
         ]} />
         
@@ -493,9 +493,9 @@ export default function UserProfileHeader({
   const getStatusBadge = () => {
     if (userType === 'JobSeeker') {
       if (jobSeekerProfile?.isOpenToWork) {
-        return { text: 'Open to Work', color: '#10B981', icon: 'checkmark-circle' };
+        return { text: 'Open to Work', color: colors.success, icon: 'checkmark-circle' };
       }
-      return { text: 'Not Looking', color: '#6B7280', icon: 'pause-circle' };
+      return { text: 'Not Looking', color: colors.gray500, icon: 'pause-circle' };
     } else {
       return { text: 'Recruiter', color: colors.primary, icon: 'business' };
     }
@@ -677,7 +677,7 @@ export default function UserProfileHeader({
                       height: 22,
                       borderRadius: 11,
                       borderWidth: 1.5,
-                      borderColor: '#10B981',
+                      borderColor: colors.success,
                     }}
                   />
                 ) : (
@@ -685,13 +685,13 @@ export default function UserProfileHeader({
                     width: 22,
                     height: 22,
                     borderRadius: 11,
-                    backgroundColor: '#10B98120',
+                    backgroundColor: colors.successBg,
                     borderWidth: 1.5,
-                    borderColor: '#10B981',
+                    borderColor: colors.success,
                     justifyContent: 'center',
                     alignItems: 'center',
                   }}>
-                    <Ionicons name="business" size={12} color="#10B981" />
+                    <Ionicons name="business" size={12} color={colors.success} />
                   </View>
                 )}
               </TouchableOpacity>
@@ -729,7 +729,7 @@ export default function UserProfileHeader({
           {/* Location */}
           {userType === 'JobSeeker' && jobSeekerProfile?.currentLocation && (
             <View style={styles.locationRow}>
-              <MaterialIcons name="location-on" size={16} color="#6B7280" />
+              <MaterialIcons name="location-on" size={16} color={colors.gray500} />
               <Text style={styles.locationText}>{jobSeekerProfile.currentLocation}</Text>
             </View>
           )}

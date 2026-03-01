@@ -122,7 +122,7 @@ export default function PaymentScreen({ route, navigation }) {
         });
       },
       prefill: { name: customerData.customerName, email: customerData.customerEmail },
-      theme: { color: '#3B82F6' },
+      theme: { color: colors.primary },
       modal: { ondismiss: () => handlePaymentCancellation() }
     };
 
@@ -169,7 +169,7 @@ export default function PaymentScreen({ route, navigation }) {
           name: customerData.customerName || '',
           email: customerData.customerEmail || '',
         },
-        theme: { color: '#3B82F6' },
+        theme: { color: colors.primary },
       };
 
       const response = await RazorpayCheckout.open(options);

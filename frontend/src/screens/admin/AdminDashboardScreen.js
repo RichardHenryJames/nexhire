@@ -601,9 +601,9 @@ export default function AdminDashboardScreen() {
         contentContainerStyle={styles.statsRow}
       >
         {renderStatCard('Total Users', userStats.TotalUsers, 'people', colors.primary)}
-        {renderStatCard('Today', userStats.UsersToday, 'person-add', '#10B981', 'New signups')}
-        {renderStatCard('This Week', userStats.UsersThisWeek, 'calendar', '#8B5CF6')}
-        {renderStatCard('This Month', userStats.UsersThisMonth, 'trending-up', '#F59E0B')}
+        {renderStatCard('Today', userStats.UsersToday, 'person-add', colors.success, 'New signups')}
+        {renderStatCard('This Week', userStats.UsersThisWeek, 'calendar', colors.accent)}
+        {renderStatCard('This Month', userStats.UsersThisMonth, 'trending-up', colors.warning)}
       </ScrollView>
 
       {/* User Breakdown */}
@@ -612,9 +612,9 @@ export default function AdminDashboardScreen() {
       </View>
       <View style={styles.gridRow}>
         {renderStatCard('Job Seekers', userStats.TotalJobSeekers, 'briefcase', colors.primary)}
-        {renderStatCard('Employers', userStats.TotalEmployers, 'business', '#10B981')}
-        {renderStatCard('Active Users', userStats.ActiveUsers, 'checkmark-circle', '#8B5CF6')}
-        {renderStatCard('Verified Referrers', userStats.VerifiedReferrers, 'shield-checkmark', '#F59E0B')}
+        {renderStatCard('Employers', userStats.TotalEmployers, 'business', colors.success)}
+        {renderStatCard('Active Users', userStats.ActiveUsers, 'checkmark-circle', colors.accent)}
+        {renderStatCard('Verified Referrers', userStats.VerifiedReferrers, 'shield-checkmark', colors.warning)}
       </View>
 
       {/* Referral Stats */}
@@ -628,9 +628,9 @@ export default function AdminDashboardScreen() {
         contentContainerStyle={styles.statsRow}
       >
         {renderStatCard('Total Requests', referralStats.TotalRequests, 'share-social', colors.primary)}
-        {renderStatCard('Today', referralStats.RequestsToday, 'today', '#10B981')}
-        {renderStatCard('Pending', referralStats.PendingRequests, 'hourglass', '#F59E0B')}
-        {renderStatCard('Completed', referralStats.CompletedRequests, 'checkmark-done', '#8B5CF6')}
+        {renderStatCard('Today', referralStats.RequestsToday, 'today', colors.success)}
+        {renderStatCard('Pending', referralStats.PendingRequests, 'hourglass', colors.warning)}
+        {renderStatCard('Completed', referralStats.CompletedRequests, 'checkmark-done', colors.accent)}
       </ScrollView>
 
       {/* Job Stats */}
@@ -639,9 +639,9 @@ export default function AdminDashboardScreen() {
       </View>
       <View style={styles.gridRow}>
         {renderStatCard('Total Jobs', jobStats.TotalJobs, 'documents', colors.primary)}
-        {renderStatCard('Active Jobs', jobStats.ActiveJobs, 'checkmark-circle', '#10B981')}
-        {renderStatCard('External Jobs', jobStats.ExternalJobs, 'link', '#8B5CF6')}
-        {renderStatCard('Today', jobStats.JobsToday, 'add-circle', '#F59E0B')}
+        {renderStatCard('Active Jobs', jobStats.ActiveJobs, 'checkmark-circle', colors.success)}
+        {renderStatCard('External Jobs', jobStats.ExternalJobs, 'link', colors.accent)}
+        {renderStatCard('Today', jobStats.JobsToday, 'add-circle', colors.warning)}
       </View>
 
       {/* Application & Message Stats */}
@@ -650,9 +650,9 @@ export default function AdminDashboardScreen() {
       </View>
       <View style={styles.gridRow}>
         {renderStatCard('Applications', applicationStats.TotalApplications, 'document-text', colors.primary)}
-        {renderStatCard('Today', applicationStats.ApplicationsToday, 'today', '#10B981')}
-        {renderStatCard('Conversations', messageStats.TotalConversations, 'chatbubbles', '#8B5CF6')}
-        {renderStatCard('Messages', messageStats.TotalMessages, 'mail', '#F59E0B')}
+        {renderStatCard('Today', applicationStats.ApplicationsToday, 'today', colors.success)}
+        {renderStatCard('Conversations', messageStats.TotalConversations, 'chatbubbles', colors.accent)}
+        {renderStatCard('Messages', messageStats.TotalMessages, 'mail', colors.warning)}
       </View>
 
       {/* Wallet Stats */}
@@ -736,7 +736,7 @@ export default function AdminDashboardScreen() {
           borderColor: isActive ? colors.primary : colors.border,
           paddingHorizontal: 14,
           paddingVertical: 10,
-          shadowColor: colors.shadow || '#000',
+          shadowColor: colors.shadow,
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.1,
           shadowRadius: 2,
@@ -1029,9 +1029,9 @@ export default function AdminDashboardScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={[styles.userName, { flexShrink: 1 }]} numberOfLines={1}>{userData.FirstName} {userData.LastName}</Text>
               {userData.IsVerifiedReferrer && (
-                <View style={[styles.badge, { backgroundColor: '#8B5CF620', flexShrink: 0 }]}>
-                  <Ionicons name="checkmark-circle" size={12} color="#8B5CF6" style={{ marginRight: 2 }} />
-                  <Text style={[styles.badgeText, { color: '#8B5CF6' }]}>Verified</Text>
+                <View style={[styles.badge, { backgroundColor: colors.accentBg, flexShrink: 0 }]}>
+                  <Ionicons name="checkmark-circle" size={12} color={colors.accent} style={{ marginRight: 2 }} />
+                  <Text style={[styles.badgeText, { color: colors.accent }]}>Verified</Text>
                 </View>
               )}
             </View>
@@ -1040,18 +1040,18 @@ export default function AdminDashboardScreen() {
               <Text style={[styles.userEmail, { marginTop: 2 }]}>📱 {userData.Phone}</Text>
             )}
             <View style={styles.userMeta}>
-              <View style={[styles.badge, { backgroundColor: userData.UserType === 'JobSeeker' ? colors.primary + '20' : '#10B98120' }]}>
-                <Text style={[styles.badgeText, { color: userData.UserType === 'JobSeeker' ? colors.primary : '#10B981' }]}>
+              <View style={[styles.badge, { backgroundColor: userData.UserType === 'JobSeeker' ? colors.primary + '20' : colors.successBg }]}>
+                <Text style={[styles.badgeText, { color: userData.UserType === 'JobSeeker' ? colors.primary : colors.success }]}>
                   {userData.UserType}
                 </Text>
               </View>
               {userData.IsActive ? (
-                <View style={[styles.badge, { backgroundColor: '#10B98120' }]}>
-                  <Text style={[styles.badgeText, { color: '#10B981' }]}>Active</Text>
+                <View style={[styles.badge, { backgroundColor: colors.successBg }]}>
+                  <Text style={[styles.badgeText, { color: colors.success }]}>Active</Text>
                 </View>
               ) : (
-                <View style={[styles.badge, { backgroundColor: '#EF444420' }]}>
-                  <Text style={[styles.badgeText, { color: '#EF4444' }]}>Inactive</Text>
+                <View style={[styles.badge, { backgroundColor: colors.errorBg }]}>
+                  <Text style={[styles.badgeText, { color: colors.error }]}>Inactive</Text>
                 </View>
               )}
             </View>
@@ -1144,10 +1144,10 @@ export default function AdminDashboardScreen() {
         <Text style={styles.sectionTitle}>Referral Status</Text>
       </View>
       <View style={styles.gridRow}>
-        {renderStatCard('Pending', referralStats.PendingRequests, 'hourglass', '#F59E0B')}
+        {renderStatCard('Pending', referralStats.PendingRequests, 'hourglass', colors.warning)}
         {renderStatCard('Claimed', referralStats.ClaimedRequests, 'hand-left', colors.primary)}
-        {renderStatCard('Completed', referralStats.CompletedRequests, 'checkmark-done', '#10B981')}
-        {renderStatCard('Cancelled', referralStats.CancelledRequests, 'close-circle', '#EF4444')}
+        {renderStatCard('Completed', referralStats.CompletedRequests, 'checkmark-done', colors.success)}
+        {renderStatCard('Cancelled', referralStats.CancelledRequests, 'close-circle', colors.error)}
       </View>
 
       <View style={styles.sectionHeader}>
@@ -1190,7 +1190,7 @@ export default function AdminDashboardScreen() {
           {ref.ReferrerName && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
               <Ionicons name="arrow-forward" size={12} color={colors.textSecondary} />
-              <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '500' }}>Referrer: {ref.ReferrerName}</Text>
+              <Text style={{ fontSize: 11, color: colors.success, fontWeight: '500' }}>Referrer: {ref.ReferrerName}</Text>
               {ref.ReferrerEmail && <Text style={{ fontSize: 10, color: colors.textSecondary }}>({ref.ReferrerEmail})</Text>}
             </View>
           )}
@@ -1211,22 +1211,22 @@ export default function AdminDashboardScreen() {
             {/* Internal Job Link */}
             {ref.JobID && !ref.ExtJobID && (
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}
                 onPress={() => navigation.navigate('JobDetails', { jobId: ref.JobID })}
               >
-                <Ionicons name="briefcase-outline" size={12} color="#10B981" />
-                <Text style={{ fontSize: 10, fontWeight: '600', color: '#10B981' }}>View Job</Text>
+                <Ionicons name="briefcase-outline" size={12} color={colors.success} />
+                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.success }}>View Job</Text>
               </TouchableOpacity>
             )}
 
             {/* External Job Link */}
             {ref.ExtJobID && ref.JobURL && (
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#10B98110', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.successBg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}
                 onPress={() => { if (Platform.OS === 'web') window.open(ref.JobURL, '_blank'); else Linking.openURL(ref.JobURL); }}
               >
-                <Ionicons name="link-outline" size={12} color="#10B981" />
-                <Text style={{ fontSize: 10, fontWeight: '600', color: '#10B981' }}>Job Link</Text>
+                <Ionicons name="link-outline" size={12} color={colors.success} />
+                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.success }}>Job Link</Text>
               </TouchableOpacity>
             )}
 
@@ -1271,18 +1271,18 @@ export default function AdminDashboardScreen() {
                     return (
                       <View key={i} style={{ 
                         flexDirection: 'row', alignItems: 'center', gap: 4, 
-                        backgroundColor: isAssigned ? '#10B98115' : colors.surface, 
+                        backgroundColor: isAssigned ? colors.successBg : colors.surface, 
                         paddingHorizontal: 6, paddingVertical: 3, borderRadius: 8,
-                        borderWidth: isAssigned ? 1 : 0.5, borderColor: isAssigned ? '#10B981' : colors.border 
+                        borderWidth: isAssigned ? 1 : 0.5, borderColor: isAssigned ? colors.success : colors.border 
                       }}>
-                        {isOnline && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#10B981' }} />}
+                        {isOnline && <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: colors.success }} />}
                         {er.ProfilePictureURL ? (
                           <Image source={{ uri: er.ProfilePictureURL }} style={{ width: 16, height: 16, borderRadius: 8 }} />
                         ) : null}
-                        <Text style={{ fontSize: 9, color: isAssigned ? '#10B981' : colors.text, fontWeight: isAssigned ? '700' : '500' }} numberOfLines={1}>
+                        <Text style={{ fontSize: 9, color: isAssigned ? colors.success : colors.text, fontWeight: isAssigned ? '700' : '500' }} numberOfLines={1}>
                           {er.ReferrerName}
                         </Text>
-                        {isAssigned && <Ionicons name="checkmark-circle" size={10} color="#10B981" />}
+                        {isAssigned && <Ionicons name="checkmark-circle" size={10} color={colors.success} />}
                       </View>
                     );
                   })}
@@ -1335,8 +1335,8 @@ export default function AdminDashboardScreen() {
               <Text style={{ fontSize: 11, color: colors.textSecondary }}>{company.TotalReferrals} referrals</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="checkmark-done" size={12} color="#10B981" />
-              <Text style={{ fontSize: 11, color: '#10B981' }}>{company.CompletedReferrals} completed</Text>
+              <Ionicons name="checkmark-done" size={12} color={colors.success} />
+              <Text style={{ fontSize: 11, color: colors.success }}>{company.CompletedReferrals} completed</Text>
             </View>
           </View>
 
@@ -1367,12 +1367,12 @@ export default function AdminDashboardScreen() {
         <View key={tx.TransactionID || index} style={styles.transactionCard}>
           <View style={[
             styles.txIcon,
-            { backgroundColor: tx.TransactionType === 'Credit' ? '#10B98120' : '#EF444420' }
+            { backgroundColor: tx.TransactionType === 'Credit' ? colors.successBg : colors.errorBg }
           ]}>
             <Ionicons 
               name={tx.TransactionType === 'Credit' ? 'arrow-down' : 'arrow-up'} 
               size={20} 
-              color={tx.TransactionType === 'Credit' ? '#10B981' : '#EF4444'} 
+              color={tx.TransactionType === 'Credit' ? colors.success : colors.error} 
             />
           </View>
           <View style={styles.txInfo}>
@@ -1384,7 +1384,7 @@ export default function AdminDashboardScreen() {
           </View>
           <Text style={[
             styles.txAmount,
-            { color: tx.TransactionType === 'Credit' ? '#10B981' : '#EF4444' }
+            { color: tx.TransactionType === 'Credit' ? colors.success : colors.error }
           ]}>
             {tx.TransactionType === 'Credit' ? '+' : '-'}₹{tx.Amount}
           </Text>
@@ -1397,12 +1397,12 @@ export default function AdminDashboardScreen() {
   const getEmailStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case 'sent': return colors.primary;
-      case 'delivered': return '#10B981';
-      case 'opened': return '#8B5CF6';
-      case 'clicked': return '#F59E0B';
-      case 'bounced': return '#EF4444';
-      case 'failed': return '#EF4444';
-      default: return '#6B7280';
+      case 'delivered': return colors.success;
+      case 'opened': return colors.accent;
+      case 'clicked': return colors.warning;
+      case 'bounced': return colors.error;
+      case 'failed': return colors.error;
+      default: return colors.gray500;
     }
   };
 
@@ -1517,7 +1517,7 @@ export default function AdminDashboardScreen() {
               <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textSecondary, width: 24 }}>#{index + 1}</Text>
               <Text style={[styles.userName, { flex: 1, fontSize: 14 }]}>{SERVICE_LABELS[item.serviceName] || item.serviceName}</Text>
               <View style={{ flex: 2, height: 20, backgroundColor: colors.border + '60', borderRadius: 10, overflow: 'hidden', marginHorizontal: 12 }}>
-                <View style={{ width: `${(item.count / maxCount) * 100}%`, height: '100%', backgroundColor: '#F59E0B', borderRadius: 10 }} />
+                <View style={{ width: `${(item.count / maxCount) * 100}%`, height: '100%', backgroundColor: colors.warning, borderRadius: 10 }} />
               </View>
               <Text style={[styles.userEmail, { width: 40, textAlign: 'right', fontWeight: '700', fontSize: 15, color: colors.text }]}>{item.count}</Text>
             </View>
@@ -1546,7 +1546,7 @@ export default function AdminDashboardScreen() {
         {user.ProfilePictureURL ? (
           <Image source={{ uri: user.ProfilePictureURL }} style={styles.userAvatarImage} />
         ) : (
-          <View style={[styles.userAvatar, { backgroundColor: '#10B981' }]}>
+          <View style={[styles.userAvatar, { backgroundColor: colors.success }]}>
             <Text style={styles.userAvatarText}>{user.FirstName?.charAt(0)?.toUpperCase() || '?'}</Text>
           </View>
         )}
@@ -1554,9 +1554,9 @@ export default function AdminDashboardScreen() {
           <Text style={styles.userName}>{user.FirstName} {user.LastName}</Text>
           <Text style={styles.userEmail}>{user.Email}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-            <View style={[styles.badge, { backgroundColor: '#10B98120' }]}>
-              <Ionicons name="navigate-outline" size={12} color="#10B981" />
-              <Text style={[styles.badgeText, { color: '#10B981', marginLeft: 4 }]}>{user.CurrentScreen || 'Unknown'}</Text>
+            <View style={[styles.badge, { backgroundColor: colors.successBg }]}>
+              <Ionicons name="navigate-outline" size={12} color={colors.success} />
+              <Text style={[styles.badgeText, { color: colors.success, marginLeft: 4 }]}>{user.CurrentScreen || 'Unknown'}</Text>
             </View>
             <Text style={[styles.userEmail, { marginLeft: 8 }]}>
               {user.Platform || 'web'}
@@ -1564,7 +1564,7 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981' }} />
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.success }} />
           <Text style={[styles.userEmail, { marginTop: 4 }]}>
             {user.LastActivityAt ? new Date(user.LastActivityAt).toLocaleTimeString() : 'Now'}
           </Text>
@@ -1582,7 +1582,7 @@ export default function AdminDashboardScreen() {
         {user.ProfilePictureURL ? (
           <Image source={{ uri: user.ProfilePictureURL }} style={styles.userAvatarImage} />
         ) : (
-          <View style={[styles.userAvatar, { backgroundColor: '#8B5CF6' }]}>
+          <View style={[styles.userAvatar, { backgroundColor: colors.accent }]}>
             <Text style={styles.userAvatarText}>{user.FirstName?.charAt(0)?.toUpperCase() || '?'}</Text>
           </View>
         )}
@@ -1649,9 +1649,9 @@ export default function AdminDashboardScreen() {
     const deviceColor = (type) => {
       switch (type?.toLowerCase()) {
         case 'mobile': return colors.primary;
-        case 'tablet': return '#8B5CF6';
-        case 'desktop': return '#10B981';
-        default: return '#6B7280';
+        case 'tablet': return colors.accent;
+        case 'desktop': return colors.success;
+        default: return colors.gray500;
       }
     };
     const browserIcon = (name) => {
@@ -1665,11 +1665,11 @@ export default function AdminDashboardScreen() {
     };
     const browserColor = (name) => {
       switch (name?.toLowerCase()) {
-        case 'chrome': return '#4285F4';
-        case 'safari': return '#007AFF';
-        case 'firefox': return '#FF7139';
-        case 'edge': return '#0078D7';
-        default: return '#6B7280';
+        case 'chrome': return colors.primary;
+        case 'safari': return colors.primary;
+        case 'firefox': return colors.orange;
+        case 'edge': return colors.primaryDark;
+        default: return colors.gray500;
       }
     };
 
@@ -1703,7 +1703,7 @@ export default function AdminDashboardScreen() {
             <Text style={{
               fontSize: 13,
               fontWeight: activityDays === d ? '700' : '500',
-              color: activityDays === d ? '#fff' : colors.textSecondary,
+              color: activityDays === d ? colors.white : colors.textSecondary,
             }}>{d}d</Text>
           </TouchableOpacity>
         ))}
@@ -1722,30 +1722,30 @@ export default function AdminDashboardScreen() {
           <Text style={styles.sectionSubtitle}>Real-time user engagement tracking</Text>
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-          <View style={[styles.statCard, { flex: 1, minWidth: 140, backgroundColor: '#10B98120' }]}>
-            <View style={[styles.statIcon, { backgroundColor: '#10B981' }]}>
-              <Ionicons name="radio-outline" size={20} color="#fff" />
+          <View style={[styles.statCard, { flex: 1, minWidth: 140, backgroundColor: colors.successBg }]}>
+            <View style={[styles.statIcon, { backgroundColor: colors.success }]}>
+              <Ionicons name="radio-outline" size={20} color={colors.white} />
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{summary?.currentlyActive || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Active Now</Text>
           </View>
           <View style={[styles.statCard, { flex: 1, minWidth: 140, backgroundColor: colors.primary + '20' }]}>
             <View style={[styles.statIcon, { backgroundColor: colors.primary }]}>
-              <Ionicons name="eye-outline" size={20} color="#fff" />
+              <Ionicons name="eye-outline" size={20} color={colors.white} />
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{summary?.totalScreenViews?.toLocaleString() || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Screen Views ({activityDays}d)</Text>
           </View>
-          <View style={[styles.statCard, { flex: 1, minWidth: 140, backgroundColor: '#8B5CF620' }]}>
-            <View style={[styles.statIcon, { backgroundColor: '#8B5CF6' }]}>
-              <Ionicons name="people-outline" size={20} color="#fff" />
+          <View style={[styles.statCard, { flex: 1, minWidth: 140, backgroundColor: colors.accentBg }]}>
+            <View style={[styles.statIcon, { backgroundColor: colors.accent }]}>
+              <Ionicons name="people-outline" size={20} color={colors.white} />
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{summary?.totalUniqueUsers || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Unique Users ({activityDays}d)</Text>
           </View>
-          <View style={[styles.statCard, { flex: 1, minWidth: 140, backgroundColor: '#F59E0B20' }]}>
-            <View style={[styles.statIcon, { backgroundColor: '#F59E0B' }]}>
-              <Ionicons name="star-outline" size={20} color="#fff" />
+          <View style={[styles.statCard, { flex: 1, minWidth: 140, backgroundColor: colors.warningBg }]}>
+            <View style={[styles.statIcon, { backgroundColor: colors.warning }]}>
+              <Ionicons name="star-outline" size={20} color={colors.white} />
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{summary?.topScreen || 'N/A'}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Top Screen</Text>
@@ -1768,11 +1768,11 @@ export default function AdminDashboardScreen() {
               <Text style={[styles.userEmail, { fontSize: 11 }]}>Users</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#8B5CF6' }} />
+              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.accent }} />
               <Text style={[styles.userEmail, { fontSize: 11 }]}>Sessions</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#10B981' }} />
+              <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: colors.success }} />
               <Text style={[styles.userEmail, { fontSize: 11 }]}>Views</Text>
             </View>
           </View>
@@ -1793,14 +1793,14 @@ export default function AdminDashboardScreen() {
                 {/* Sessions bar */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                   <View style={{ flex: 1, height: 14, backgroundColor: colors.border + '40', borderRadius: 4, overflow: 'hidden' }}>
-                    <View style={{ width: `${((day.TotalSessions || 0) / maxVal) * 100}%`, height: '100%', backgroundColor: '#8B5CF6', borderRadius: 4 }} />
+                    <View style={{ width: `${((day.TotalSessions || 0) / maxVal) * 100}%`, height: '100%', backgroundColor: colors.accent, borderRadius: 4 }} />
                   </View>
                   <Text style={[styles.userEmail, { width: 40, textAlign: 'right', fontSize: 11, fontWeight: '600' }]}>{day.TotalSessions || 0}</Text>
                 </View>
                 {/* Views bar */}
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ flex: 1, height: 14, backgroundColor: colors.border + '40', borderRadius: 4, overflow: 'hidden' }}>
-                    <View style={{ width: `${((day.TotalScreenViews || 0) / maxVal) * 100}%`, height: '100%', backgroundColor: '#10B981', borderRadius: 4 }} />
+                    <View style={{ width: `${((day.TotalScreenViews || 0) / maxVal) * 100}%`, height: '100%', backgroundColor: colors.success, borderRadius: 4 }} />
                   </View>
                   <Text style={[styles.userEmail, { width: 40, textAlign: 'right', fontSize: 11, fontWeight: '600' }]}>{day.TotalScreenViews || 0}</Text>
                 </View>
@@ -1837,7 +1837,7 @@ export default function AdminDashboardScreen() {
                     <View style={{
                       width: '100%',
                       height: `${Math.max(barH, 2)}%`,
-                      backgroundColor: isPeak ? '#EF4444' : h.ActivityCount > maxHourlyCount * 0.4 ? '#F59E0B' : colors.primary,
+                      backgroundColor: isPeak ? colors.error : h.ActivityCount > maxHourlyCount * 0.4 ? colors.warning : colors.primary,
                       borderRadius: 2,
                       minHeight: 2,
                     }} />
@@ -1858,11 +1858,11 @@ export default function AdminDashboardScreen() {
             {/* Legend */}
             <View style={{ flexDirection: 'row', gap: 12, marginTop: 10, justifyContent: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#EF4444' }} />
+                <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: colors.error }} />
                 <Text style={{ fontSize: 10, color: colors.textSecondary }}>Peak (70%+)</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#F59E0B' }} />
+                <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: colors.warning }} />
                 <Text style={{ fontSize: 10, color: colors.textSecondary }}>Medium</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -1987,7 +1987,7 @@ export default function AdminDashboardScreen() {
                 {screen.BounceRate != null && (
                   <>
                     <Text style={[styles.userEmail, { color: colors.textSecondary }]}>•</Text>
-                    <Text style={[styles.userEmail, { color: screen.BounceRate > 60 ? '#EF4444' : '#10B981' }]}>
+                    <Text style={[styles.userEmail, { color: screen.BounceRate > 60 ? colors.error : colors.success }]}>
                       {Math.round(screen.BounceRate)}% bounce
                     </Text>
                   </>
@@ -2015,8 +2015,8 @@ export default function AdminDashboardScreen() {
               <Text style={styles.userName}>{point.ScreenName}</Text>
               <Text style={styles.userEmail}>{point.UniqueExits} users exited here</Text>
             </View>
-            <View style={[styles.badge, { backgroundColor: point.ExitRate > 50 ? '#EF444420' : '#F59E0B20' }]}>
-              <Text style={[styles.badgeText, { color: point.ExitRate > 50 ? '#EF4444' : '#F59E0B' }]}>
+            <View style={[styles.badge, { backgroundColor: point.ExitRate > 50 ? colors.errorBg : colors.warningBg }]}>
+              <Text style={[styles.badgeText, { color: point.ExitRate > 50 ? colors.error : colors.warning }]}>
                 {Math.round(point.ExitRate || 0)}% exit rate
               </Text>
             </View>
@@ -2125,13 +2125,13 @@ export default function AdminDashboardScreen() {
       {(resumeAnalyzerData || []).map((item, index) => (
         <View key={item.ResumeMetadataID || index} style={styles.resumeAnalyzerCard}>
           <View style={styles.resumeAnalyzerHeader}>
-            <View style={[styles.emailStatusBadge, { backgroundColor: item.AIModel?.includes('gemini') ? '#4285F420' : '#10A37F20' }]}>
+            <View style={[styles.emailStatusBadge, { backgroundColor: item.AIModel?.includes('gemini') ? colors.primaryBg : colors.successBg }]}>
               <Ionicons 
                 name={item.AIModel?.includes('gemini') ? 'sparkles' : 'hardware-chip'} 
                 size={14} 
-                color={item.AIModel?.includes('gemini') ? '#4285F4' : '#10A37F'} 
+                color={item.AIModel?.includes('gemini') ? colors.primary : colors.success} 
               />
-              <Text style={[styles.emailStatusText, { color: item.AIModel?.includes('gemini') ? '#4285F4' : '#10A37F' }]}>
+              <Text style={[styles.emailStatusText, { color: item.AIModel?.includes('gemini') ? colors.primary : colors.success }]}>
                 {item.AIModel || 'N/A'}
               </Text>
             </View>
@@ -2257,10 +2257,10 @@ export default function AdminDashboardScreen() {
 
     const getPlatformColor = (platform) => {
       switch (platform) {
-        case 'LinkedIn': return '#0A66C2';
+        case 'LinkedIn': return colors.primaryDark;
         case 'Twitter': return colors.text; // X uses theme text color
-        case 'Instagram': return '#E4405F';
-        case 'Facebook': return '#1877F2';
+        case 'Instagram': return colors.rose;
+        case 'Facebook': return colors.primary;
         default: return colors.primary;
       }
     };
@@ -2282,15 +2282,15 @@ export default function AdminDashboardScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: '#F59E0B20' }]}>
+          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: colors.warningBg }]}>
             <Text style={[styles.statValue, { color: colors.text, fontSize: isMobileView ? 20 : 24 }]}>{stats.pending || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary, fontSize: isMobileView ? 11 : 12 }]}>Pending</Text>
           </View>
-          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: '#10B98120' }]}>
+          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: colors.successBg }]}>
             <Text style={[styles.statValue, { color: colors.text, fontSize: isMobileView ? 20 : 24 }]}>{stats.approved || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary, fontSize: isMobileView ? 11 : 12 }]}>Approved</Text>
           </View>
-          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: '#EF444420' }]}>
+          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: colors.errorBg }]}>
             <Text style={[styles.statValue, { color: colors.text, fontSize: isMobileView ? 20 : 24 }]}>{stats.rejected || 0}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary, fontSize: isMobileView ? 11 : 12 }]}>Rejected</Text>
           </View>
@@ -2334,8 +2334,8 @@ export default function AdminDashboardScreen() {
 
                 {/* Row 2: Status Badge */}
                 <View style={{
-                  backgroundColor: claim.Status === 'Pending' ? '#F59E0B20' : 
-                                   claim.Status === 'Approved' ? '#10B98120' : '#EF444420',
+                  backgroundColor: claim.Status === 'Pending' ? colors.warningBg : 
+                                   claim.Status === 'Approved' ? colors.successBg : colors.errorBg,
                   paddingHorizontal: 12,
                   paddingVertical: 6,
                   borderRadius: 6,
@@ -2343,8 +2343,8 @@ export default function AdminDashboardScreen() {
                   marginBottom: 12
                 }}>
                   <Text style={{ 
-                    color: claim.Status === 'Pending' ? '#F59E0B' : 
-                           claim.Status === 'Approved' ? '#10B981' : '#EF4444',
+                    color: claim.Status === 'Pending' ? colors.warning : 
+                           claim.Status === 'Approved' ? colors.success : colors.error,
                     fontSize: 13,
                     fontWeight: '600'
                   }}>{claim.Status}</Text>
@@ -2353,12 +2353,12 @@ export default function AdminDashboardScreen() {
                 {/* Row 3: Rejection Reason (only if rejected) */}
                 {claim.Status === 'Rejected' && claim.RejectionReason && (
                   <View style={{ 
-                    backgroundColor: '#EF444410', 
+                    backgroundColor: colors.errorBg, 
                     padding: 12, 
                     borderRadius: 8,
                     marginBottom: 12
                   }}>
-                    <Text style={{ color: '#EF4444', fontSize: 13 }}>
+                    <Text style={{ color: colors.error, fontSize: 13 }}>
                       <Text style={{ fontWeight: '600' }}>Reason: </Text>
                       {claim.RejectionReason}
                     </Text>
@@ -2405,7 +2405,7 @@ export default function AdminDashboardScreen() {
                     <TouchableOpacity 
                       style={{ 
                         flex: 1, 
-                        backgroundColor: '#10B981', 
+                        backgroundColor: colors.success, 
                         paddingVertical: 12,
                         borderRadius: 8,
                         flexDirection: 'row',
@@ -2414,13 +2414,13 @@ export default function AdminDashboardScreen() {
                       }}
                       onPress={() => handleApprove(claim.ClaimID)}
                     >
-                      <Ionicons name="checkmark" size={18} color="#fff" />
-                      <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Approve</Text>
+                      <Ionicons name="checkmark" size={18} color={colors.white} />
+                      <Text style={{ color: colors.white, fontWeight: '600', marginLeft: 6 }}>Approve</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={{ 
                         flex: 1, 
-                        backgroundColor: '#EF4444', 
+                        backgroundColor: colors.error, 
                         paddingVertical: 12,
                         borderRadius: 8,
                         flexDirection: 'row',
@@ -2429,8 +2429,8 @@ export default function AdminDashboardScreen() {
                       }}
                       onPress={() => handleReject(claim)}
                     >
-                      <Ionicons name="close" size={18} color="#fff" />
-                      <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Reject</Text>
+                      <Ionicons name="close" size={18} color={colors.white} />
+                      <Text style={{ color: colors.white, fontWeight: '600', marginLeft: 6 }}>Reject</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -2483,9 +2483,9 @@ export default function AdminDashboardScreen() {
 
     const getMethodColor = (method) => {
       switch (method) {
-        case 'Aadhaar': return '#F59E0B';
-        case 'CollegeEmail': return '#8B5CF6';
-        case 'CompanyEmail': return '#3B82F6';
+        case 'Aadhaar': return colors.warning;
+        case 'CollegeEmail': return colors.accent;
+        case 'CompanyEmail': return colors.primary;
         default: return colors.primary;
       }
     };
@@ -2498,7 +2498,7 @@ export default function AdminDashboardScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: '#F59E0B20' }]}>
+          <View style={[styles.statCard, { flex: 1, minWidth: 80, backgroundColor: colors.warningBg }]}>
             <Text style={[styles.statValue, { color: colors.text, fontSize: isMobileView ? 20 : 24 }]}>{verifications.length}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary, fontSize: isMobileView ? 11 : 12 }]}>Pending</Text>
           </View>
@@ -2556,8 +2556,8 @@ export default function AdminDashboardScreen() {
 
                 {/* College name for college email */}
                 {v.CollegeName && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: '#8B5CF610', padding: 8, borderRadius: 8 }}>
-                    <Ionicons name="school" size={16} color="#8B5CF6" style={{ marginRight: 8 }} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, backgroundColor: colors.accentBg, padding: 8, borderRadius: 8 }}>
+                    <Ionicons name="school" size={16} color={colors.accent} style={{ marginRight: 8 }} />
                     <Text style={{ fontSize: 13, color: colors.text, fontWeight: '500' }}>{v.CollegeName}</Text>
                   </View>
                 )}
@@ -2614,7 +2614,7 @@ export default function AdminDashboardScreen() {
                   <TouchableOpacity
                     style={{
                       flex: 1,
-                      backgroundColor: '#10B981',
+                      backgroundColor: colors.success,
                       paddingVertical: 12,
                       borderRadius: 8,
                       flexDirection: 'row',
@@ -2623,13 +2623,13 @@ export default function AdminDashboardScreen() {
                     }}
                     onPress={() => handleApproveVerification(v.VerificationID)}
                   >
-                    <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Approve</Text>
+                    <Ionicons name="checkmark-circle" size={18} color={colors.white} />
+                    <Text style={{ color: colors.white, fontWeight: '600', marginLeft: 6 }}>Approve</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={{
                       flex: 1,
-                      backgroundColor: '#EF4444',
+                      backgroundColor: colors.error,
                       paddingVertical: 12,
                       borderRadius: 8,
                       flexDirection: 'row',
@@ -2638,8 +2638,8 @@ export default function AdminDashboardScreen() {
                     }}
                     onPress={() => handleRejectVerification(v)}
                   >
-                    <Ionicons name="close-circle" size={18} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6 }}>Reject</Text>
+                    <Ionicons name="close-circle" size={18} color={colors.white} />
+                    <Text style={{ color: colors.white, fontWeight: '600', marginLeft: 6 }}>Reject</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -2651,19 +2651,19 @@ export default function AdminDashboardScreen() {
   };
 
   const getScoreColor = (score) => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#22C55E';
-    if (score >= 40) return '#F59E0B';
-    return '#EF4444';
+    if (score >= 80) return colors.success;
+    if (score >= 60) return colors.success;
+    if (score >= 40) return colors.warning;
+    return colors.error;
   };
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
-      case 'pending': return '#F59E0B';
+      case 'pending': return colors.warning;
       case 'claimed': return colors.primary;
-      case 'completed': return '#10B981';
-      case 'cancelled': return '#EF4444';
-      default: return '#6B7280';
+      case 'completed': return colors.success;
+      case 'cancelled': return colors.error;
+      default: return colors.gray500;
     }
   };
 
@@ -2760,7 +2760,7 @@ const createStyles = (colors, responsive = {}) => {
       borderRadius: 8,
     },
     backButtonText: {
-      color: '#FFF',
+      color: colors.white,
       fontWeight: '600',
     },
     tabsContainer: {
@@ -2883,7 +2883,7 @@ const createStyles = (colors, responsive = {}) => {
       flex: isDesktop ? 1 : 0,
       maxWidth: isDesktop ? 280 : cardWidth,
       borderLeftWidth: 4,
-      shadowColor: '#000',
+      shadowColor: colors.black,
       shadowOffset: { width: 0, height: 1 },
       shadowOpacity: 0.1,
       shadowRadius: 3,
@@ -2941,7 +2941,7 @@ const createStyles = (colors, responsive = {}) => {
     walletAmount: {
       fontSize: isDesktop ? 28 : 24,
       fontWeight: 'bold',
-      color: '#10B981',
+      color: colors.success,
     },
     walletCount: {
       fontSize: isDesktop ? 22 : 20,
@@ -3161,13 +3161,13 @@ const createStyles = (colors, responsive = {}) => {
       gap: 6,
     },
     approveButton: {
-      backgroundColor: '#10B981',
+      backgroundColor: colors.success,
     },
     rejectButton: {
-      backgroundColor: '#EF4444',
+      backgroundColor: colors.error,
     },
     actionButtonText: {
-      color: '#fff',
+      color: colors.white,
       fontWeight: '600',
       fontSize: 14,
     },
@@ -3261,10 +3261,10 @@ const createStyles = (colors, responsive = {}) => {
       fontSize: 14,
     },
     modalRejectButton: {
-      backgroundColor: '#EF4444',
+      backgroundColor: colors.error,
     },
     modalRejectText: {
-      color: '#fff',
+      color: colors.white,
       fontWeight: '600',
       fontSize: 14,
     },

@@ -138,7 +138,7 @@ export default function WalletScreen({ navigation, route }) {
   const renderTransaction = ({ item }) => {
     const isCredit = item.TransactionType === 'Credit';
     const icon = isCredit ? 'arrow-down-circle' : 'arrow-up-circle';
-    const iconColor = isCredit ? '#10B981' : '#EF4444';
+    const iconColor = isCredit ? colors.success : colors.error;
 
     return (
       <View style={styles.transactionItem}>
@@ -174,7 +174,7 @@ export default function WalletScreen({ navigation, route }) {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading wallet...</Text>
       </View>
     );
@@ -227,7 +227,7 @@ export default function WalletScreen({ navigation, route }) {
             style={styles.addMoneyButton}
             onPress={() => navigation.navigate('WalletRecharge')}
           >
-            <Ionicons name="add-circle" size={24} color="#FFF" />
+            <Ionicons name="add-circle" size={24} color={colors.white} />
             <Text style={styles.addMoneyText}>Add Money</Text>
           </TouchableOpacity>
 
@@ -235,7 +235,7 @@ export default function WalletScreen({ navigation, route }) {
             style={styles.withdrawMoneyButton}
             onPress={() => setShowWithdrawModal(true)}
           >
-            <Ionicons name="arrow-up-circle" size={24} color="#FFF" />
+            <Ionicons name="arrow-up-circle" size={24} color={colors.white} />
             <Text style={styles.withdrawMoneyText}>Withdraw</Text>
           </TouchableOpacity>
 
@@ -243,7 +243,7 @@ export default function WalletScreen({ navigation, route }) {
             style={styles.historyButton}
             onPress={() => navigation.navigate('WalletTransactions')}
           >
-            <Ionicons name="receipt-outline" size={24} color="#007AFF" />
+            <Ionicons name="receipt-outline" size={24} color={colors.primary} />
             <Text style={styles.historyText}>Transactions</Text>
           </TouchableOpacity>
         </View>
@@ -252,7 +252,7 @@ export default function WalletScreen({ navigation, route }) {
       {/* Get Free Credits Banner */}
       <TouchableOpacity 
         style={{
-          backgroundColor: '#6366F1',
+          backgroundColor: colors.indigo,
           borderRadius: 12,
           paddingHorizontal: 16,
           paddingVertical: 10,
@@ -263,11 +263,11 @@ export default function WalletScreen({ navigation, route }) {
         }}
         onPress={() => navigation.navigate('ShareEarn')}
       >
-        <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#FFF' }}>
+        <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: colors.white }}>
           💰 Get Free Credits!
         </Text>
         <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 }}>
-          <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 12 }}>Earn Now</Text>
+          <Text style={{ color: colors.white, fontWeight: '600', fontSize: 12 }}>Earn Now</Text>
         </View>
       </TouchableOpacity>
 
@@ -280,7 +280,7 @@ export default function WalletScreen({ navigation, route }) {
             style={styles.miniAddButton}
             onPress={() => navigation.navigate('WalletRecharge')}
           >
-            <Ionicons name="add-circle-outline" size={20} color="#007AFF" />
+            <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -294,7 +294,7 @@ export default function WalletScreen({ navigation, route }) {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Ionicons name="wallet-outline" size={64} color="#CCC" />
+              <Ionicons name="wallet-outline" size={64} color={colors.gray300} />
               <Text style={styles.emptyText}>No transactions yet</Text>
               <Text style={styles.emptySubtext}>
                 Add money to your wallet to get started
@@ -303,7 +303,7 @@ export default function WalletScreen({ navigation, route }) {
                 style={styles.emptyAddButton}
                 onPress={() => navigation.navigate('WalletRecharge')}
               >
-                <Ionicons name="add-circle" size={20} color="#FFF" />
+                <Ionicons name="add-circle" size={20} color={colors.white} />
                 <Text style={styles.emptyAddButtonText}>Add Money Now</Text>
               </TouchableOpacity>
             </View>
@@ -317,7 +317,7 @@ export default function WalletScreen({ navigation, route }) {
             onPress={() => navigation.navigate('WalletTransactions')}
           >
             <Text style={styles.viewAllText}>View All Transactions</Text>
-            <Ionicons name="chevron-forward" size={20} color="#007AFF" />
+            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -345,8 +345,8 @@ export default function WalletScreen({ navigation, route }) {
                   }}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                 >
-                  <Ionicons name="time-outline" size={20} color="#007AFF" />
-                  <Text style={{ color: '#007AFF', fontSize: 14 }}>History</Text>
+                  <Ionicons name="time-outline" size={20} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14 }}>History</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setShowWithdrawModal(false)}>
                   <Ionicons name="close" size={24} color={colors.text} />
@@ -382,14 +382,14 @@ export default function WalletScreen({ navigation, route }) {
                   style={[styles.paymentMethodBtn, paymentMethod === 'upi' && styles.paymentMethodBtnActive]}
                   onPress={() => setPaymentMethod('upi')}
                 >
-                  <Ionicons name="card-outline" size={18} color={paymentMethod === 'upi' ? '#FFF' : colors.text} />
+                  <Ionicons name="card-outline" size={18} color={paymentMethod === 'upi' ? colors.white : colors.text} />
                   <Text style={[styles.paymentMethodText, paymentMethod === 'upi' && styles.paymentMethodTextActive]}>UPI</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.paymentMethodBtn, paymentMethod === 'bank' && styles.paymentMethodBtnActive]}
                   onPress={() => setPaymentMethod('bank')}
                 >
-                  <Ionicons name="business-outline" size={18} color={paymentMethod === 'bank' ? '#FFF' : colors.text} />
+                  <Ionicons name="business-outline" size={18} color={paymentMethod === 'bank' ? colors.white : colors.text} />
                   <Text style={[styles.paymentMethodText, paymentMethod === 'bank' && styles.paymentMethodTextActive]}>Bank</Text>
                 </TouchableOpacity>
               </View>
@@ -492,7 +492,7 @@ export default function WalletScreen({ navigation, route }) {
                 onPress={() => setShowWithdrawConfirm(true)}
               >
                 {withdrawing ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={colors.white} />
                 ) : (
                   <Text style={styles.submitButtonText}>Submit Request</Text>
                 )}
@@ -512,7 +512,7 @@ export default function WalletScreen({ navigation, route }) {
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmBox}>
             <View style={styles.confirmIconContainer}>
-              <Ionicons name="warning" size={48} color="#f59e0b" />
+              <Ionicons name="warning" size={48} color={colors.warning} />
             </View>
             
             <Text style={styles.confirmTitle}>Confirm Withdrawal</Text>
@@ -588,7 +588,7 @@ export default function WalletScreen({ navigation, route }) {
                 }}
               >
                 {withdrawing ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={colors.white} />
                 ) : (
                   <Text style={styles.confirmProceedText}>Yes, Withdraw</Text>
                 )}
@@ -626,12 +626,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
   },
   balanceCard: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     padding: responsive.isDesktop ? 24 : 16,
     margin: 16,
     borderRadius: 16,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -653,7 +653,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   balanceAmount: {
     fontSize: responsive.isDesktop ? 42 : 36,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: colors.white,
     marginBottom: 2,
   },
   balanceCurrency: {
@@ -675,7 +675,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 8,
   },
   addMoneyText: {
-    color: '#FFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -684,13 +684,13 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     padding: 12,
     borderRadius: 8,
     gap: 6,
   },
   withdrawMoneyText: {
-    color: '#FFF',
+    color: colors.white,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -786,7 +786,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   viewAllText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#007AFF',
+    color: colors.primary,
     marginRight: 4,
   },
 
@@ -805,7 +805,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   emptyAddButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -813,7 +813,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 8,
   },
   emptyAddButtonText: {
-    color: '#FFF',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -837,7 +837,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontWeight: '500',
   },
   availableAmount: {
-    color: '#10B981',
+    color: colors.success,
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -847,7 +847,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontWeight: '500',
   },
   holdAmount: {
-    color: '#F59E0B',
+    color: colors.warning,
     fontSize: 13,
     fontWeight: 'bold',
   },
@@ -895,7 +895,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   modalBalance: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#10B981',
+    color: colors.success,
   },
   modalInput: {
     backgroundColor: colors.background,
@@ -923,8 +923,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 8,
   },
   paymentMethodBtnActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: colors.success,
+    borderColor: colors.success,
   },
   paymentMethodText: {
     fontSize: 14,
@@ -932,7 +932,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.text,
   },
   paymentMethodTextActive: {
-    color: '#FFF',
+    color: colors.white,
   },
   feeBreakdown: {
     marginTop: 20,
@@ -967,7 +967,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   feeValueBold: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#10B981',
+    color: colors.success,
   },
   errorText: {
     color: colors.error,
@@ -997,7 +997,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 10,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     alignItems: 'center',
   },
   submitButtonDisabled: {
@@ -1006,7 +1006,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   submitButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFF',
+    color: colors.white,
   },
   // Confirmation Modal Styles
   confirmOverlay: {
@@ -1023,7 +1023,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 20,
@@ -1033,7 +1033,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#fef3c7',
+    backgroundColor: colors.warningBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -1053,7 +1053,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   confirmAmount: {
     fontWeight: 'bold',
-    color: '#10B981',
+    color: colors.success,
     fontSize: 18,
   },
   confirmDetails: {
@@ -1112,12 +1112,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     alignItems: 'center',
   },
   confirmProceedText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFF',
+    color: colors.white,
   },
 });

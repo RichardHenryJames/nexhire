@@ -74,6 +74,7 @@ const FIELD_ROUTING = {
     // Social profiles
     'linkedInProfile',
     'githubProfile',
+    'portfolioURL',
     
     // Documents - REMOVED: primaryResumeURL (handled separately via resume API)
     'additionalDocuments',

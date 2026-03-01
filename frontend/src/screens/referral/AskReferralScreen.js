@@ -759,7 +759,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
 
               {/* Open to any company checkbox - highlighted */}
               <TouchableOpacity
-                style={[styles.checkboxRow, { backgroundColor: openToAnyCompany ? '#10B98110' : colors.primary + '08', borderWidth: 1, borderColor: openToAnyCompany ? '#10B981' : colors.primary + '30', borderRadius: 10, padding: 12, marginTop: 8 }]}
+                style={[styles.checkboxRow, { backgroundColor: openToAnyCompany ? colors.successBg : colors.primary + '08', borderWidth: 1, borderColor: openToAnyCompany ? colors.success : colors.primary + '30', borderRadius: 10, padding: 12, marginTop: 8 }]}
                 onPress={() => {
                   setOpenToAnyCompany(prev => !prev);
                   if (!openToAnyCompany) {
@@ -772,7 +772,7 @@ const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
                 activeOpacity={0.7}
               >
                 <View style={[styles.checkbox, openToAnyCompany && styles.checkboxChecked]}>
-                  {openToAnyCompany && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  {openToAnyCompany && <Ionicons name="checkmark" size={14} color={colors.white} />}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.checkboxLabel, { fontWeight: '600' }]}>I'm flexible on company, just match me with the right role</Text>
@@ -1211,11 +1211,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderRadius: 8,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 10,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 40,
   },
   searchIconStyle: {
     marginRight: 8,
@@ -1237,7 +1237,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     maxHeight: 300,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -1335,7 +1335,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: colors.primary + '20',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 3,
@@ -1490,7 +1490,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 10,
     backgroundColor: colors.surface,
     overflow: 'hidden',
   },
@@ -1541,8 +1541,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: typography.sizes.md,
     color: colors.text,
@@ -1554,8 +1554,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   textArea: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: typography.sizes.md,
     color: colors.text,
@@ -1789,11 +1789,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     margin: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 22,
     backgroundColor: colors.surface,
   },
   searchInput: {

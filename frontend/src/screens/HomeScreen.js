@@ -571,8 +571,8 @@ const [dashboardData, setDashboardData] = useState(() => {
                   onPress={() => navigation.navigate('ActionCenter')}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.quickActionIcon, { backgroundColor: '#EF4444' + '20' }]}>
-                    <Ionicons name="flash" size={24} color="#EF4444" />
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.error + '20' }]}>
+                    <Ionicons name="flash" size={24} color={colors.error} />
                   </View>
                   <View style={styles.quickActionContent}>
                     <Text style={styles.quickActionTitle}>Action Center</Text>
@@ -657,8 +657,8 @@ const [dashboardData, setDashboardData] = useState(() => {
                   onPress={() => navigation.navigate('ResumeAnalyzer', { userId: user?.UserID })}
                   activeOpacity={0.8}
                 >
-                  <View style={[styles.quickActionIcon, { backgroundColor: '#9333EA' + '20' }]}>
-                    <Ionicons name="document-text" size={24} color="#9333EA" />
+                  <View style={[styles.quickActionIcon, { backgroundColor: colors.accentDark + '20' }]}>
+                    <Ionicons name="document-text" size={24} color={colors.accentDark} />
                   </View>
                   <View style={styles.quickActionContent}>
                     <Text style={styles.quickActionTitle}>Resume Analyzer</Text>
@@ -689,10 +689,10 @@ const [dashboardData, setDashboardData] = useState(() => {
               >
                 <View style={styles.premiumCardGradient}>
                   <View style={styles.premiumCardHeader}>
-                    <View style={[styles.premiumIcon, { backgroundColor: '#FEB800' + '20' }]}>
-                      <Ionicons name="people" size={28} color="#FEB800" />
+                    <View style={[styles.premiumIcon, { backgroundColor: colors.gold + '20' }]}>
+                      <Ionicons name="people" size={28} color={colors.gold} />
                     </View>
-                    <Ionicons name="chevron-forward" size={24} color="#FEB800" />
+                    <Ionicons name="chevron-forward" size={24} color={colors.gold} />
                   </View>
                   <Text style={styles.premiumActionTitle}>Get Referrals</Text>
                   <Text style={styles.premiumActionDescription}>
@@ -1013,11 +1013,11 @@ sectionLoaderText: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderRadius: 8,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 10,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 40,
   },
   searchIcon: {
     marginRight: 8,
@@ -1132,7 +1132,8 @@ sectionLoaderText: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: 16,
+    marginBottom: 14,
+    letterSpacing: -0.3,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1258,7 +1259,7 @@ sectionLoaderText: {
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#FEB800',
+    shadowColor: colors.gold,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -1275,7 +1276,7 @@ sectionLoaderText: {
     backgroundColor: colors.surface,
     padding: 20,
     borderWidth: 2,
-    borderColor: '#FEB800' + '30',
+    borderColor: colors.gold + '30',
     borderRadius: 16,
   },
   premiumCardHeader: {
@@ -1584,17 +1585,19 @@ sectionLoaderText: {
   jobCard: {
     backgroundColor: colors.surface,
     padding: isMobile ? 16 : 20,
-    borderRadius: 12,
+    borderRadius: 14,
     marginRight: 12,
     width: isMobile ? 280 : 320,
+    borderWidth: 1,
+    borderColor: colors.border,
     shadowColor: colors.black,
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
   jobHeader: {
     marginBottom: 8,

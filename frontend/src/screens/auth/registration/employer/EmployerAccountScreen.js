@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
   TextInput, 
   TouchableOpacity, 
   StyleSheet, 
-  KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
   Image,
@@ -21,6 +20,7 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { frontendConfig } from '../../../../config/appConfig';
 import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 export default function EmployerAccountScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -330,13 +330,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.innerContainer}>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingVertical: 8 }}>
-          <Ionicons name="arrow-back" size={22} color={colors.primary} />
-        </TouchableOpacity>
-
+    <RegistrationWrapper currentStep={4} totalSteps={4} stepLabel="Create your account" onBack={() => navigation.goBack()}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24 }}>
         {/* Show Google user info if applicable */}
         {isGoogleUser && googleUser && (
           <View style={styles.googleUserInfo}>
@@ -433,7 +428,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
                   disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || otpLoading}
                 >
                   {otpLoading ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={colors.white} />
                   ) : (
                     <Text style={styles.verifyEmailButtonText}>Verify</Text>
                   )}
@@ -468,7 +463,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
                     disabled={otpCode.length !== 4 || otpLoading}
                   >
                     {otpLoading ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={colors.white} />
                     ) : (
                       <Text style={styles.verifyEmailButtonText}>Verify</Text>
                     )}
@@ -654,30 +649,13 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <Ionicons name="checkmark" size={18} color={colors.white} />
         </TouchableOpacity>
       </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
-  scroll: { 
-    flex: 1 
-  },
-  row: { 
-    flexDirection: 'row' 
-  },
+  scroll: { flex: 1 },
+  row: { flexDirection: 'row' },
   // Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
@@ -685,12 +663,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 20,
     marginTop: 16,
     padding: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.success,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.success,
+    backgroundColor: colors.successGlowSubtle,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.successBorder,
   },
   googleUserAvatar: {
     width: 48,
@@ -702,64 +678,66 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   googleUserWelcome: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   googleUserName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 2,
   },
   googleUserEmail: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    fontSize: 13,
+    color: colors.textMuted,
   },
-  title: { 
-    fontSize: typography.sizes.xl, 
-    fontWeight: typography.weights.bold, 
-    color: colors.text, 
-    marginTop: 8 
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+    marginBottom: 8,
   },
-  subtitle: { 
-    color: colors.gray600, 
-    marginTop: 6, 
-    marginBottom: 16 
+  subtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  field: { 
-    marginTop: 12 
-  },
-  label: { 
-    color: colors.gray600, 
-    marginBottom: 6,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+  field: { marginTop: 16 },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   required: {
-    color: colors.danger,
-    fontWeight: typography.weights.bold,
+    color: colors.error,
+    fontWeight: '700',
   },
   prefilledLabel: {
     color: colors.success,
-    fontWeight: typography.weights.normal,
-    fontSize: typography.sizes.xs,
+    fontWeight: '400',
+    fontSize: 11,
   },
-  input: { 
-    backgroundColor: colors.surface, 
-    borderWidth: 1, 
-    borderColor: colors.border, 
-    borderRadius: 8, 
-    padding: 12, 
+  input: {
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
     color: colors.text,
-    fontSize: typography.sizes.md,
+    fontSize: 15,
   },
   inputPrefilled: {
-    backgroundColor: colors.success + '08',
-    borderColor: colors.success,
+    backgroundColor: colors.successGlowSubtle,
+    borderColor: colors.successBorderStrong,
     borderWidth: 1.5,
   },
-  // 🎁 NEW: Referral code styles
+  // Referral code styles
   referralCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -772,20 +750,20 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   referralCodeInput: {
     flex: 1,
-    paddingLeft: 40, // Make room for the icon
-    fontWeight: typography.weights.bold,
+    paddingLeft: 40,
+    fontWeight: '700',
     letterSpacing: 1,
   },
   referralCodeHint: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    backgroundColor: colors.success + '10',
+    backgroundColor: colors.successGlowSubtle,
     padding: 8,
-    borderRadius: 6,
+    borderRadius: 8,
   },
   referralCodeHintText: {
-    fontSize: typography.sizes.xs,
+    fontSize: 11,
     color: colors.success,
     marginLeft: 6,
     flex: 1,
@@ -804,7 +782,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   emailVerifyContainer: {
     marginTop: -4,
@@ -813,16 +791,16 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   emailVerifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    backgroundColor: colors.successGlow,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   emailVerifiedText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 13,
     color: colors.success,
-    fontWeight: typography.weights.semiBold,
+    fontWeight: '600',
     marginLeft: 6,
   },
   verifyEmailButton: {
@@ -832,27 +810,27 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
     alignSelf: 'flex-start',
   },
   verifyEmailButtonDisabled: {
     opacity: 0.5,
   },
   verifyEmailButtonText: {
-    color: '#fff',
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semiBold,
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: '600',
   },
   otpSection: {
-    backgroundColor: colors.surface + '80',
-    borderRadius: 12,
+    backgroundColor: colors.inputBackground,
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.primary + '30',
+    borderColor: colors.primaryGlowStrong,
   },
   otpLabel: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray300,
+    fontSize: 13,
+    color: colors.textSecondary,
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -866,14 +844,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     maxWidth: 160,
     minWidth: 130,
-    backgroundColor: colors.background,
-    borderRadius: 8,
+    backgroundColor: colors.backgroundOverlay,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.primary + '40',
+    borderColor: colors.borderFocus,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 20,
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
     letterSpacing: 6,
     color: colors.text,
     textAlign: 'center',
@@ -882,24 +860,24 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   resendText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 13,
     color: colors.primary,
     textAlign: 'center',
   },
   summaryContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
+    backgroundColor: colors.inputBackground,
+    borderRadius: 16,
     padding: 16,
-    marginTop: 16,
+    marginTop: 20,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderThin,
   },
   summaryTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 14,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 12,
   },
@@ -910,32 +888,37 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 8,
   },
   summaryText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: colors.textSecondary,
     flex: 1,
   },
-  primaryBtn: { 
-    marginTop: 24, 
-    backgroundColor: colors.primary, 
-    borderRadius: 10, 
-    paddingVertical: 14, 
-    alignItems: 'center', 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    gap: 8 
+  primaryBtn: {
+    marginTop: 28,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  primaryBtnText: { 
-    color: colors.white, 
-    fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.md,
+  primaryBtnText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 16,
   },
   // DatePicker styles
   datePicker: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -946,29 +929,29 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'flex-start',
   },
   dateText: {
-    fontSize: typography.sizes.md,
+    fontSize: 15,
     color: colors.text,
   },
   placeholderText: {
-    color: colors.gray500,
-    fontSize: typography.sizes.md,
+    color: colors.textMuted,
+    fontSize: 15,
   },
   // Welcome Bonus Banner styles
   welcomeBonusBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.4)',
-    borderRadius: 12,
+    backgroundColor: colors.successGlowSubtle,
+    borderWidth: 1.5,
+    borderColor: colors.successBorder,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 20,
   },
   welcomeBonusIconContainer: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderRadius: 14,
+    backgroundColor: colors.goldGlow,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -977,24 +960,24 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   welcomeBonusTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: '#22C55E',
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.success,
     marginBottom: 4,
   },
   welcomeBonusText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 13,
     color: colors.text,
     lineHeight: 20,
   },
   welcomeBonusAmount: {
-    fontWeight: typography.weights.bold,
-    color: '#FFD700',
-    fontSize: typography.sizes.md,
+    fontWeight: '700',
+    color: colors.gold,
+    fontSize: 15,
   },
   welcomeBonusSubtext: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray400,
+    fontSize: 11,
+    color: colors.textMuted,
     marginTop: 2,
   },
   // Terms & Conditions consent styles
@@ -1010,9 +993,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   consentCheckbox: {
     width: 22,
     height: 22,
-    borderRadius: 4,
+    borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.gray400,
+    borderColor: colors.textMuted,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 1,
@@ -1023,22 +1006,22 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderColor: colors.primary,
   },
   consentCheckboxError: {
-    borderColor: colors.danger || '#EF4444',
+    borderColor: colors.error,
   },
   consentText: {
     flex: 1,
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   consentLink: {
     color: colors.primary,
-    fontWeight: typography.weights.semibold || '600',
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
   consentErrorText: {
-    fontSize: typography.sizes.xs,
-    color: colors.danger || '#EF4444',
+    fontSize: 11,
+    color: colors.error,
     marginTop: 6,
     marginLeft: 32,
   },

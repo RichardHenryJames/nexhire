@@ -33,28 +33,28 @@ const ICON_MAP = {
   eye: 'eye',
 };
 
-const TYPE_COLORS = {
-  message_received: brandColors.primary,
-  referral_request_new: '#8B5CF6',
-  referral_claimed: '#10B981',
-  referral_submitted: '#8B5CF6',
-  referral_verified: '#10B981',
-  referral_rejected: '#EF4444',
-  referral_cancelled: '#EF4444',
-  referral_expired: '#F59E0B',
-  referral_verify_reminder: '#F59E0B',
-  social_share_approved: '#10B981',
-  social_share_rejected: '#EF4444',
-  withdrawal_approved: '#10B981',
-  withdrawal_rejected: '#EF4444',
-  wallet_credited: '#10B981',
-  wallet_debited: '#F59E0B',
-  manual_payment_approved: '#10B981',
-  manual_payment_rejected: '#EF4444',
-  support_reply: brandColors.primary,
-  profile_viewed: '#8B5CF6',
-  welcome: brandColors.primary,
-};
+const getTypeColors = (colors) => ({
+  message_received: colors.primary,
+  referral_request_new: colors.accent,
+  referral_claimed: colors.success,
+  referral_submitted: colors.accent,
+  referral_verified: colors.success,
+  referral_rejected: colors.error,
+  referral_cancelled: colors.error,
+  referral_expired: colors.warning,
+  referral_verify_reminder: colors.warning,
+  social_share_approved: colors.success,
+  social_share_rejected: colors.error,
+  withdrawal_approved: colors.success,
+  withdrawal_rejected: colors.error,
+  wallet_credited: colors.success,
+  wallet_debited: colors.warning,
+  manual_payment_approved: colors.success,
+  manual_payment_rejected: colors.error,
+  support_reply: colors.primary,
+  profile_viewed: colors.accent,
+  welcome: colors.primary,
+});
 
 function timeAgo(dateStr) {
   const now = new Date();
@@ -187,6 +187,7 @@ export default function NotificationBell() {
 
   const renderNotification = (item) => {
     const iconName = ICON_MAP[item.Icon] || 'notifications';
+    const TYPE_COLORS = getTypeColors(colors);
     const typeColor = TYPE_COLORS[item.NotificationType] || colors.primary;
 
     return (
@@ -250,15 +251,15 @@ export default function NotificationBell() {
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  backgroundColor: '#10B981',
+                  backgroundColor: colors.success,
                   paddingHorizontal: 10,
                   paddingVertical: 4,
                   borderRadius: 5,
                   gap: 4,
                 }}
               >
-                <Ionicons name="checkmark-circle-outline" size={12} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Verify Now</Text>
+                <Ionicons name="checkmark-circle-outline" size={12} color={colors.white} />
+                <Text style={{ color: colors.white, fontSize: 11, fontWeight: '700' }}>Verify Now</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -286,7 +287,7 @@ export default function NotificationBell() {
       borderRadius: 12,
       maxHeight: 500,
       width: Platform.OS === 'web' ? 380 : Dimensions.get('window').width - 32,
-      shadowColor: '#000',
+      shadowColor: colors.black,
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.3,
       shadowRadius: 12,
@@ -366,14 +367,14 @@ export default function NotificationBell() {
         <Ionicons 
           name={unreadCount > 0 ? 'notifications' : 'notifications-outline'} 
           size={24} 
-          color={unreadCount > 0 ? '#F59E0B' : colors.primary} 
+          color={unreadCount > 0 ? colors.warning : colors.primary} 
         />
         {unreadCount > 0 && (
           <View style={{
             position: 'absolute',
             top: 2,
             right: 0,
-            backgroundColor: '#EF4444',
+            backgroundColor: colors.error,
             borderRadius: 10,
             minWidth: 18,
             height: 18,
@@ -382,7 +383,7 @@ export default function NotificationBell() {
             paddingHorizontal: 4,
           }}>
             <Text style={{
-              color: '#fff',
+              color: colors.white,
               fontSize: 10,
               fontWeight: '700',
             }}>

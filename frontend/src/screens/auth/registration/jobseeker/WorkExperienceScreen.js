@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+﻿import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 // Debounce like college picker
 const useDebounce = (value, delay = 300) => {
@@ -362,7 +363,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const OrgPickerButton = () => {
     return (
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Company <Text style={{ color: '#EF4444' }}>*</Text></Text>
+        <Text style={styles.inputLabel}>Company <Text style={{ color: colors.error }}>*</Text></Text>
         <TouchableOpacity style={styles.selectionButton} onPress={openOrgModal}>
           {formData.currentCompany ? (
             <View style={styles.companySelectorContent}>
@@ -391,11 +392,12 @@ export default function WorkExperienceScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <RegistrationWrapper
+      currentStep={2}
+      totalSteps={4}
+      stepLabel="Work experience"
+      onBack={() => navigation.goBack()}
     >
-      <View style={styles.innerContainer}>
       <ScrollView 
         style={styles.scrollContainer} 
         showsVerticalScrollIndicator={false}
@@ -403,13 +405,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
-            </TouchableOpacity>
-            
             <Text style={styles.title}>Tell us about your work experience</Text>
             <Text style={styles.subtitle}>
               This helps us understand your professional background and match you with relevant opportunities
@@ -677,72 +672,57 @@ export default function WorkExperienceScreen({ navigation, route }) {
           setShowWorkArrangementModal(false);
         }}
       />
-      </View>
-    </KeyboardAvoidingView>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
   scrollContainer: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingTop: 20,
+    padding: 24,
+    paddingTop: 8,
   },
   header: {
-    marginBottom: 32,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    padding: 8,
-    marginBottom: 16,
+    marginBottom: 28,
   },
   title: {
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
+    fontSize: 26,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
+    fontSize: 15,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   form: {
-    gap: 16,
+    gap: 18,
     marginBottom: 32,
   },
   inputContainer: {
     gap: 8,
   },
   inputLabel: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.gray600,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   required: {
-    color: colors.danger,
+    color: colors.dangerLight,
   },
   textInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
-    fontSize: typography.sizes.md,
+    fontSize: 15,
     color: colors.text,
   },
   multilineInput: {
@@ -750,33 +730,33 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     textAlignVertical: 'top',
   },
   selectionButton: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   selectionValue: {
-    fontSize: typography.sizes.md,
+    fontSize: 15,
     color: colors.text,
     flex: 1,
   },
   selectionPlaceholder: {
-    color: colors.gray400,
+    color: colors.textMuted,
   },
   toggleContainer: {
     flexDirection: 'row',
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     overflow: 'hidden',
   },
   toggleOption: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     padding: 12,
     alignItems: 'center',
   },
@@ -784,9 +764,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.primary,
   },
   toggleText: {
-    fontSize: typography.sizes.sm,
-    color: colors.text,
-    fontWeight: typography.weights.medium,
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   toggleTextSelected: {
     color: colors.white,
@@ -797,13 +777,23 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  continueButtonDisabled: {
+    backgroundColor: colors.surfaceElevated,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   continueButtonText: {
     color: colors.white,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    fontWeight: '700',
   },
   // Modal styles
   modalContainer: {
@@ -839,14 +829,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    padding: 24,
+    paddingTop: Platform.OS === 'ios' ? 60 : 24,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   modalTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
   },
   modalItem: {
@@ -858,17 +848,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   modalItemSelected: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
   },
   modalItemText: {
-    fontSize: typography.sizes.md,
+    fontSize: 15,
     color: colors.text,
   },
   modalItemTextSelected: {
     color: colors.primary,
-    fontWeight: typography.weights.medium,
+    fontWeight: '600',
   },
   // Company selector styles with logo support
   companySelectorContent: {
@@ -888,7 +878,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     height: 24,
     borderRadius: 4,
     marginRight: 8,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.inputBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -906,7 +896,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     height: 40,
     borderRadius: 8,
     marginRight: 12,
-    backgroundColor: colors.gray100,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.border,
     justifyContent: 'center',
@@ -920,18 +910,18 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceOverlayDark,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     marginTop: 4,
     maxHeight: 250,
     zIndex: 9999,
     elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
   },
   dropdownScroll: {
     maxHeight: 250,
@@ -955,7 +945,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   dropdownEmptyText: {
     fontSize: 14,
-    color: colors.gray400,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
 });

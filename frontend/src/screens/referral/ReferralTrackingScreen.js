@@ -10,6 +10,8 @@ import {
   Image,
   Linking,
   Platform,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -21,6 +23,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import { usePricing } from '../../contexts/PricingContext';
+import { getReferralCostForJob } from '../../utils/pricingUtils';
 
 /**
  * ReferralTrackingScreen - Shows detailed tracking/history of a referral request
@@ -45,6 +49,12 @@ export default function ReferralTrackingScreen() {
   const [referrerConversation, setReferrerConversation] = useState(null); // Conversation with referrer if exists
   const [referrerUserIds, setReferrerUserIds] = useState([]); // All referrers who interacted with this request
   const [messageExpanded, setMessageExpanded] = useState(false);
+  const { pricing } = usePricing();
+  const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [feeTableExpanded, setFeeTableExpanded] = useState(false);
+
+  const canWithdraw = ['Pending', 'NotifiedToReferrers', 'Viewed'].includes(currentStatus);
 
   // Handle messaging the referrer
   // If there are unread messages, go to Chat screen directly
@@ -85,6 +95,27 @@ export default function ReferralTrackingScreen() {
           { name: 'MyReferralRequests' },
         ],
       });
+    }
+  };
+
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    try {
+      const res = await refopenAPI.cancelReferralRequest(requestId);
+      if (res.success) {
+        setCurrentStatus('Cancelled');
+        setRequest(prev => prev ? { ...prev, Status: 'Cancelled' } : prev);
+        showToast('Request withdrawn. Hold amount released to wallet.', 'success');
+        setShowWithdrawConfirm(false);
+        loadHistory(); // Refresh timeline
+      } else {
+        showToast('Failed to withdraw. Please try again.', 'error');
+      }
+    } catch (e) {
+      showToast('Failed to withdraw. Please try again.', 'error');
+    } finally {
+      setWithdrawing(false);
+      setShowWithdrawConfirm(false);
     }
   };
 
@@ -223,13 +254,13 @@ export default function ReferralTrackingScreen() {
         description: 'A referrer has viewed your request',
       },
       'Claimed': {
-        color: '#F59E0B',
+        color: colors.warning,
         icon: 'hand-left-outline',
         label: 'Claimed by Referrer',
         description: 'A referrer is working on your referral',
       },
       'ProofUploaded': {
-        color: '#8B5CF6',
+        color: colors.accent,
         icon: 'document-attach-outline',
         label: 'Proof Submitted',
         description: 'Referrer has submitted proof of referral',
@@ -241,7 +272,7 @@ export default function ReferralTrackingScreen() {
         description: 'Your referral has been completed',
       },
       'Verified': {
-        color: '#FFD700',
+        color: colors.gold,
         icon: 'trophy',
         label: 'Verified',
         description: 'You have verified the referral',
@@ -296,7 +327,7 @@ export default function ReferralTrackingScreen() {
               {request.OpenToAnyCompany ? 'Any Company' : (request.CompanyName || 'Company')}
             </Text>
             {request.OpenToAnyCompany && request.MinSalary ? (
-              <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '500', marginTop: 2 }}>
+              <Text style={{ color: colors.success, fontSize: 12, fontWeight: '500', marginTop: 2 }}>
                 {request.SalaryCurrency === 'USD' ? '$' : '₹'}{request.MinSalary?.toLocaleString()}{request.SalaryPeriod === 'Annual' ? '/yr' : '/mo'} min
               </Text>
             ) : null}
@@ -363,7 +394,7 @@ export default function ReferralTrackingScreen() {
             disabled={messagingReferrer}
           >
             <View style={styles.messageBtnContent}>
-              <Ionicons name="chatbubble-outline" size={18} color="#fff" />
+              <Ionicons name="chatbubble-outline" size={18} color={colors.white} />
               <Text style={styles.messageReferrerTextTop}>
                 {(referrerConversation.TotalUnreadFromReferrers || referrerConversation.UnreadCount) > 0 
                   ? 'Message Referrer' 
@@ -473,6 +504,29 @@ export default function ReferralTrackingScreen() {
   return (
     <View style={styles.container}>
       <SubScreenHeader title="Referral Tracking" directBack="MyReferralRequests" />
+
+      {/* Action buttons bar below header */}
+      {canWithdraw && (
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.withdrawActionBtn}
+            onPress={() => setShowWithdrawConfirm(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close-circle-outline" size={18} color={colors.white} />
+            <Text style={styles.actionBtnText}>Withdraw</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.convertOpenBtn}
+            onPress={() => showToast('Convert to Open coming soon', 'info')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="globe-outline" size={18} color={colors.white} />
+            <Text style={styles.actionBtnText}>Convert to Open</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <View style={styles.innerContainer}>
         <ScrollView
           style={styles.content}
@@ -496,6 +550,140 @@ export default function ReferralTrackingScreen() {
           </View>
         </ScrollView>
       </View>
+
+      {/* Withdraw Confirmation Modal — same as MyReferralRequestsScreen */}
+      <Modal
+        visible={showWithdrawConfirm}
+        transparent
+        onRequestClose={() => setShowWithdrawConfirm(false)}
+      >
+        <Pressable style={styles.confirmOverlay} onPress={() => setShowWithdrawConfirm(false)}>
+          <Pressable style={styles.confirmBox} onPress={() => {}}>
+            <View style={styles.confirmHeader}>
+              <View style={styles.confirmIconContainer}>
+                <Ionicons name="warning" size={24} color={colors.warning} />
+              </View>
+              <Text style={styles.confirmTitle}>Withdraw Referral Request</Text>
+            </View>
+
+            <Text style={styles.confirmMessage}>
+              Are you sure you want to withdraw your referral request for{' '}
+              <Text style={styles.jobTitleInModal}>
+                {request?.JobTitle || 'this job'}
+              </Text>
+              ?
+            </Text>
+
+            {(() => {
+              const hoursElapsed = request?.RequestedAt
+                ? (Date.now() - new Date(request.RequestedAt).getTime()) / (1000 * 60 * 60)
+                : 999;
+              const currentTier = hoursElapsed < 1 ? 0 : hoursElapsed <= 24 ? 1 : 2;
+              const heldAmount = request?.OpenToAnyCompany ? pricing.openToAnyReferralCost : getReferralCostForJob(request || {}, pricing);
+              const tiers = [
+                { label: 'Within 1 hour', fee: '₹0 (Free)', color: colors.success },
+                { label: '1 – 24 hours', fee: '₹10', color: colors.warning },
+                { label: 'After 24 hours', fee: '₹20', color: colors.error },
+              ];
+              return (
+                <View style={styles.feeTableContainer}>
+                  <Text style={styles.feeTableNote}>
+                    {currentTier === 0
+                      ? '✅ You are within the free cancellation window. Full amount will be released.'
+                      : `A ${tiers[currentTier].fee} fee will be deducted. Remaining ₹${heldAmount - (currentTier === 1 ? 10 : 20)} released to wallet.`
+                    }
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.feeTableToggle}
+                    onPress={() => setFeeTableExpanded(!feeTableExpanded)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="pricetag-outline" size={13} color={colors.gray500} />
+                    <Text style={styles.feeTableToggleText}>Cancellation Fee Schedule</Text>
+                    <Ionicons
+                      name={feeTableExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.gray500}
+                    />
+                  </TouchableOpacity>
+                  {feeTableExpanded && (
+                    <View style={styles.feeTable}>
+                      <View style={styles.feeTableHeaderRow}>
+                        <Text style={[styles.feeTableHeaderCell, { flex: 1 }]}>Time Since Request</Text>
+                        <Text style={[styles.feeTableHeaderCell, { flex: 1, textAlign: 'right' }]}>Fee</Text>
+                      </View>
+                      {tiers.map((tier, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.feeTableRow,
+                            currentTier === idx && styles.feeTableRowActive,
+                            idx === tiers.length - 1 && { borderBottomWidth: 0 },
+                          ]}
+                        >
+                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            {currentTier === idx && (
+                              <Ionicons name="arrow-forward-circle" size={14} color={tier.color} />
+                            )}
+                            <Text style={[
+                              styles.feeTableCell,
+                              currentTier === idx && { fontWeight: '700', color: colors.textPrimary },
+                            ]}>{tier.label}</Text>
+                          </View>
+                          <Text style={[
+                            styles.feeTableCell,
+                            { flex: 1, textAlign: 'right', color: tier.color, fontWeight: '600' },
+                            currentTier === idx && { fontWeight: '700' },
+                          ]}>{tier.fee}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                  <View style={styles.feeAutoRefundTip}>
+                    <Ionicons name="information-circle" size={14} color={colors.primary} />
+                    <Text style={styles.feeAutoRefundText}>
+                      Your ₹{heldAmount} is fully refundable if no referral is made within 2 weeks.
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+            <Text style={[styles.confirmMessage, { marginBottom: 16, marginTop: 4, fontSize: 11 }]}>
+              This action cannot be undone.
+            </Text>
+
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={[styles.confirmBtn, styles.keepBtn]}
+                onPress={() => setShowWithdrawConfirm(false)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 6 }} />
+                <Text style={styles.keepBtnText}>Keep</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmBtn, styles.cancelReqBtn]}
+                onPress={() => {
+                  setShowWithdrawConfirm(false);
+                  handleWithdraw();
+                }}
+                disabled={withdrawing}
+                activeOpacity={0.8}
+              >
+                {withdrawing ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <>
+                    <Ionicons name="close-circle" size={16} color={colors.white} style={{ marginRight: 6 }} />
+                    <Text style={styles.cancelReqBtnText}>Withdraw</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -739,10 +927,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   messageReferrerTextTop: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
-    color: '#fff',
+    color: colors.white,
   },
   unreadBadge: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
     borderRadius: 12,
     minWidth: 24,
     height: 24,
@@ -754,7 +942,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   unreadBadgeText: {
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
-    color: '#fff',
+    color: colors.white,
   },
   timelineMessage: {
     fontSize: typography.sizes.sm,
@@ -805,5 +993,191 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes.sm,
     color: colors.gray600,
     lineHeight: 20,
+  },
+  // Action buttons bar below header
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  withdrawActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.error,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  convertOpenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  actionBtnText: {
+    color: colors.white,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  // Withdraw confirmation modal — matches MyReferralRequestsScreen
+  confirmOverlay: {
+    ...Platform.select({
+      web: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 },
+      default: { flex: 1 },
+    }),
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  confirmBox: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  confirmHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  confirmIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.warningLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+    flex: 1,
+  },
+  confirmMessage: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray700,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  jobTitleInModal: {
+    fontWeight: typography.weights.bold,
+    color: colors.textPrimary,
+  },
+  feeTableContainer: {
+    marginBottom: 12,
+  },
+  feeTableToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    marginTop: 4,
+  },
+  feeTableToggleText: {
+    flex: 1,
+    fontSize: typography.sizes.xs,
+    fontWeight: typography.weights.semibold,
+    color: colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  feeTable: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  feeTableHeaderRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: colors.surfaceHover || colors.gray100,
+  },
+  feeTableHeaderCell: {
+    fontSize: 11,
+    fontWeight: typography.weights.semibold,
+    color: colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  feeTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    alignItems: 'center',
+  },
+  feeTableRowActive: {
+    backgroundColor: (colors.primaryLight) + '40',
+  },
+  feeTableCell: {
+    fontSize: typography.sizes.sm,
+    color: colors.gray700,
+  },
+  feeTableNote: {
+    fontSize: typography.sizes.xs,
+    color: colors.gray500,
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  feeAutoRefundTip: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: (colors.primaryLight) + '30',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: (colors.primary) + '20',
+  },
+  feeAutoRefundText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.gray600 || colors.gray500,
+    lineHeight: 16,
+  },
+  confirmActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  confirmBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  keepBtn: {
+    backgroundColor: colors.gray100,
+  },
+  keepBtnText: {
+    color: colors.textPrimary,
+    fontWeight: typography.weights.semibold,
+  },
+  cancelReqBtn: {
+    backgroundColor: colors.error,
+  },
+  cancelReqBtnText: {
+    color: colors.white,
+    fontWeight: typography.weights.semibold,
   },
 });

@@ -207,7 +207,7 @@ export default function WithdrawModal({
                 {withdrawableData.withdrawalFee > 0 && (
                   <Text style={styles.feeNote}>₹{withdrawableData.withdrawalFee} processing fee per withdrawal</Text>
                 )}
-                <Text style={{ color: colors.textSecondary || '#9CA3AF', fontSize: 11, marginTop: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
                   Only referral earnings are withdrawable
                 </Text>
               </View>
@@ -273,7 +273,7 @@ export default function WithdrawModal({
                         <Ionicons
                           name="phone-portrait"
                           size={18}
-                          color={paymentMethod === 'upi' ? '#fff' : colors.text}
+                          color={paymentMethod === 'upi' ? colors.white : colors.text}
                         />
                         <Text
                           style={[
@@ -291,7 +291,7 @@ export default function WithdrawModal({
                         <Ionicons
                           name="business"
                           size={18}
-                          color={paymentMethod === 'bank' ? '#fff' : colors.text}
+                          color={paymentMethod === 'bank' ? colors.white : colors.text}
                         />
                         <Text
                           style={[
@@ -367,10 +367,10 @@ export default function WithdrawModal({
                     disabled={!isValidAmount || withdrawing}
                   >
                     {withdrawing ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={colors.white} />
                     ) : (
                       <>
-                        <Ionicons name="arrow-up-circle" size={20} color="#fff" />
+                        <Ionicons name="arrow-up-circle" size={20} color={colors.white} />
                         <Text style={styles.submitBtnText}>
                           Withdraw ₹{finalAmount || 0}
                         </Text>
@@ -489,7 +489,7 @@ const createStyles = (colors) =>
       borderRadius: 6,
     },
     maxBtnText: {
-      color: '#fff',
+      color: colors.white,
       fontSize: typography.sizes.xs,
       fontWeight: typography.weights.bold,
     },
@@ -554,7 +554,7 @@ const createStyles = (colors) =>
       fontWeight: typography.weights.medium,
     },
     methodTabTextActive: {
-      color: '#fff',
+      color: colors.white,
     },
     submitBtn: {
       flexDirection: 'row',
@@ -571,7 +571,7 @@ const createStyles = (colors) =>
       backgroundColor: colors.border,
     },
     submitBtnText: {
-      color: '#fff',
+      color: colors.white,
       fontSize: typography.sizes.md,
       fontWeight: typography.weights.bold,
     },

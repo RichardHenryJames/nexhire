@@ -31,14 +31,14 @@ import TabHeader from '../components/TabHeader';
 const { width: screenWidth } = Dimensions.get('window');
 
 // ── Service Definitions ─────────────────────────────────────
-const SERVICES = [
+const getServices = (colors) => [
   {
     id: 'resume-analyzer',
     title: 'Resume Analyzer',
     subtitle: 'AI-powered resume scoring',
     description: 'Get instant feedback on your resume with ATS compatibility score, missing keywords, and actionable improvement tips.',
     icon: 'document-text',
-    gradient: ['#2563EB', '#3B82F6'],
+    gradient: [colors.primaryDark, colors.primary],
     ready: true,
     screen: 'ResumeAnalyzer',
   },
@@ -48,7 +48,7 @@ const SERVICES = [
     subtitle: 'Build your resume in minutes',
     description: 'AI creates a polished, job-ready resume from your work experience — tailored to any role with ATS-optimized formatting.',
     icon: 'create',
-    gradient: ['#7C3AED', '#A78BFA'],
+    gradient: [colors.accentDark, colors.accentLight],
     ready: false,
     screen: 'ATSBeatSheet',
   },
@@ -58,7 +58,7 @@ const SERVICES = [
     subtitle: 'Practice with real questions',
     description: 'Get role-specific interview questions, model answers, and tips based on your target company — so you walk in prepared.',
     icon: 'mic',
-    gradient: ['#059669', '#34D399'],
+    gradient: [colors.successDark, colors.successLight],
     ready: false,
     screen: 'InterviewDecoded',
   },
@@ -68,7 +68,7 @@ const SERVICES = [
     subtitle: 'Stand out to recruiters',
     description: 'Paste your LinkedIn URL — AI audits your headline, summary, and skills, then generates an optimized profile in one click.',
     icon: 'logo-linkedin',
-    gradient: ['#0A66C2', '#378FE9'],
+    gradient: [colors.primaryDark, colors.primary],
     ready: false,
     screen: 'LinkedInOptimizer',
   },
@@ -78,7 +78,7 @@ const SERVICES = [
     subtitle: 'Real salaries from insiders',
     description: 'See what people at your target company actually earn — crowdsourced from verified employees. Contribute yours to unlock.',
     icon: 'eye',
-    gradient: ['#DC2626', '#F87171'],
+    gradient: [colors.dangerDark, colors.dangerLight],
     ready: false,
     screen: 'SalarySpy',
   },
@@ -88,7 +88,7 @@ const SERVICES = [
     subtitle: 'Negotiate like a pro',
     description: 'Upload your offer letter — AI tells you exactly what to negotiate, how much to push, and gives you ready-to-send email templates.',
     icon: 'cash',
-    gradient: ['#0891B2', '#22D3EE'],
+    gradient: [colors.cyan, colors.cyanLight],
     ready: false,
     screen: 'OfferCoach',
   },
@@ -98,7 +98,7 @@ const SERVICES = [
     subtitle: 'Real-time hiring trends',
     description: 'Live dashboard of who\'s hiring, trending roles, salary movements, and layoff alerts — updated daily.',
     icon: 'pulse',
-    gradient: ['#15803D', '#4ADE80'],
+    gradient: [colors.successDark, colors.successLight],
     ready: false,
     screen: 'MarketPulse',
   },
@@ -108,7 +108,7 @@ const SERVICES = [
     subtitle: 'Insider feedback on your profile',
     description: 'Submit your profile anonymously — verified referrers from your target company rate it and tell you if they\'d refer you.',
     icon: 'people',
-    gradient: ['#6D28D9', '#C084FC'],
+    gradient: [colors.accentDark, colors.accentLight],
     ready: false,
     screen: 'BlindReview',
   },
@@ -118,7 +118,7 @@ const SERVICES = [
     subtitle: 'Map your 3-year trajectory',
     description: 'AI maps your career path — shows possible next roles, expected salary jumps, and the skills you need to get there.',
     icon: 'map',
-    gradient: ['#BE185D', '#F472B6'],
+    gradient: [colors.dangerDark, colors.roseLight],
     ready: false,
     screen: 'CareerSimulator',
   },
@@ -174,7 +174,7 @@ function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested 
             end={{ x: 1, y: 1 }}
             style={styles.iconCircle}
           >
-            <Ionicons name={service.icon} size={22} color="#FFFFFF" />
+            <Ionicons name={service.icon} size={22} color={colors.white} />
           </LinearGradient>
 
           {!isReady && isInterested ? (
@@ -275,7 +275,7 @@ export default function ServicesScreen({ navigation }) {
           styles.cardsContainer,
           isDesktop && styles.cardsContainerDesktop,
         ]}>
-          {SERVICES.map((service, index) => (
+          {getServices(colors).map((service, index) => (
             <ServiceCard
               key={service.id}
               service={service}
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     padding: 16,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: '#000000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.06,
         shadowRadius: 8,

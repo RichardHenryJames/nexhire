@@ -52,22 +52,22 @@ const BonusPercentBadge = ({ percent }) => {
 
   return (
     <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: '#10B98140', minWidth: 72 }}>
+      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: colors.successBorder, minWidth: 72 }}>
         {/* Background */}
-        <View style={{ backgroundColor: '#10B98110', paddingHorizontal: 10, paddingVertical: 6 }}>
+        <View style={{ backgroundColor: colors.successBg, paddingHorizontal: 10, paddingVertical: 6 }}>
           {/* Animated fill */}
           <Animated.View style={{
             position: 'absolute', top: 0, left: 0, bottom: 0,
-            width: fillWidth, backgroundColor: '#10B98130', borderRadius: 8,
+            width: fillWidth, backgroundColor: colors.successBorder, borderRadius: 8,
           }} />
           {/* Shimmer */}
           <Animated.View style={{
             position: 'absolute', top: 0, bottom: 0, width: '20%',
             left: shimmerLeft,
-            backgroundColor: '#10B98118', borderRadius: 8,
+            backgroundColor: colors.successBg, borderRadius: 8,
           }} />
           {/* Text */}
-          <Text style={{ color: '#10B981', fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
+          <Text style={{ color: colors.success, fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
             {percent}% extra
           </Text>
         </View>
@@ -243,7 +243,7 @@ export default function WalletRechargeScreen({ navigation, route }) {
           email: '',
           contact: '',
         },
-        theme: { color: '#007AFF' },
+        theme: { color: colors.primary },
       };
 
       const response = await RazorpayCheckout.open(options);
@@ -312,7 +312,7 @@ export default function WalletRechargeScreen({ navigation, route }) {
         contact: '',
       },
       theme: {
-        color: '#007AFF',
+        color: colors.primary,
       },
       modal: {
         ondismiss: function () {
@@ -380,7 +380,7 @@ export default function WalletRechargeScreen({ navigation, route }) {
         <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.contentContainer}>
           {/* Header */}
           <View style={styles.header}>
-        <Ionicons name="wallet" size={48} color="#007AFF" />
+        <Ionicons name="wallet" size={48} color={colors.primary} />
         <Text style={styles.headerTitle}>Recharge Wallet</Text>
         <Text style={styles.headerSubtitle}>Add money to your wallet</Text>
       </View>
@@ -408,8 +408,8 @@ export default function WalletRechargeScreen({ navigation, route }) {
                 >
                   <View style={{ flexDirection: 'row', justifyContent: pack.Badge ? 'space-between' : 'flex-end', alignItems: 'center', marginBottom: 3, minHeight: 18 }}>
                     {pack.Badge ? (
-                      <View style={{ backgroundColor: pack.Badge === 'Most Popular' ? '#F59E0B' : pack.Badge === 'Best Value' ? '#10B981' : colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                        <Text style={{ color: '#fff', fontSize: 8, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 }}>{pack.Badge}</Text>
+                      <View style={{ backgroundColor: pack.Badge === 'Most Popular' ? colors.warning : pack.Badge === 'Best Value' ? colors.success : colors.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ color: colors.white, fontSize: 8, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 }}>{pack.Badge}</Text>
                       </View>
                     ) : null}
                     {isSelected && <Ionicons name="checkmark-circle" size={18} color={colors.primary} />}
@@ -419,7 +419,7 @@ export default function WalletRechargeScreen({ navigation, route }) {
                     <Text style={{ fontSize: 13, fontWeight: '700', color: colors.primary }}>Get ₹{pack.GetAmount}</Text>
                   </View>
                   {pack.BonusPercent > 0 && (
-                    <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 11, marginTop: 1 }}>+{Math.round(pack.BonusPercent)}% bonus</Text>
+                    <Text style={{ color: colors.success, fontWeight: '700', fontSize: 11, marginTop: 1 }}>+{Math.round(pack.BonusPercent)}% bonus</Text>
                   )}
                   {pack.ReferralsWorth > 0 && (
                     <Text style={{ color: colors.textSecondary, fontSize: 10, marginTop: 2 }}>≈ {pack.ReferralsWorth} referrals</Text>
@@ -468,24 +468,24 @@ export default function WalletRechargeScreen({ navigation, route }) {
               {promoResult?.valid ? (
                 <TouchableOpacity
                   onPress={handleRemovePromo}
-                  style={{ backgroundColor: '#EF4444' + '15', borderRadius: 8, paddingHorizontal: 12, justifyContent: 'center' }}
+                  style={{ backgroundColor: colors.error + '15', borderRadius: 8, paddingHorizontal: 12, justifyContent: 'center' }}
                 >
-                  <Ionicons name="close" size={18} color="#EF4444" />
+                  <Ionicons name="close" size={18} color={colors.error} />
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
                   onPress={() => handleValidatePromo()}
                   disabled={validatingPromo || !promoCode.trim()}
-                  style={{ backgroundColor: promoCode.trim() ? colors.primary : (colors.gray400 || '#6B7280'), borderRadius: 8, paddingHorizontal: 14, justifyContent: 'center' }}
+                  style={{ backgroundColor: promoCode.trim() ? colors.primary : (colors.gray400), borderRadius: 8, paddingHorizontal: 14, justifyContent: 'center' }}
                 >
-                  {validatingPromo ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 13 }}>Apply</Text>}
+                  {validatingPromo ? <ActivityIndicator size="small" color={colors.white} /> : <Text style={{ color: colors.white, fontWeight: '600', fontSize: 13 }}>Apply</Text>}
                 </TouchableOpacity>
               )}
             </View>
             {promoResult && (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                <Ionicons name={promoResult.valid ? 'checkmark-circle' : 'alert-circle'} size={14} color={promoResult.valid ? '#10B981' : '#EF4444'} />
-                <Text style={{ color: promoResult.valid ? '#10B981' : '#EF4444', fontSize: 12, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
+                <Ionicons name={promoResult.valid ? 'checkmark-circle' : 'alert-circle'} size={14} color={promoResult.valid ? colors.success : colors.error} />
+                <Text style={{ color: promoResult.valid ? colors.success : colors.error, fontSize: 12, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
               </View>
             )}
           </View>
@@ -507,9 +507,9 @@ export default function WalletRechargeScreen({ navigation, route }) {
               <View style={{ height: 1, backgroundColor: colors.border + '40', marginVertical: 6 }} />
               <Text style={{ color: colors.textSecondary, fontSize: 12 }}>You will get</Text>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 1 }}>
-                <Text style={{ color: '#10B981', fontSize: 20, fontWeight: '800' }}>₹{getTotalCredit()}</Text>
+                <Text style={{ color: colors.success, fontSize: 20, fontWeight: '800' }}>₹{getTotalCredit()}</Text>
                 {(getPackBonus() + getPromoBonus()) > 0 && (
-                  <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '600', marginLeft: 6 }}>
+                  <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600', marginLeft: 6 }}>
                     (+₹{getPackBonus() + getPromoBonus()} bonus)
                   </Text>
                 )}
@@ -587,7 +587,7 @@ export default function WalletRechargeScreen({ navigation, route }) {
 
       {/* Information */}
       <View style={styles.infoBox}>
-        <Ionicons name="information-circle" size={20} color="#007AFF" />
+        <Ionicons name="information-circle" size={20} color={colors.primary} />
         <Text style={styles.infoText}>
           Maximum recharge: ₹1,00,000{'\n'}
           Instant credit after payment
@@ -604,10 +604,10 @@ export default function WalletRechargeScreen({ navigation, route }) {
         disabled={!amount || parseInt(amount) <= 0 || loading}
       >
         {loading ? (
-          <ActivityIndicator color="#FFF" />
+          <ActivityIndicator color={colors.white} />
         ) : (
           <>
-            <Ionicons name="card" size={24} color="#FFF" />
+            <Ionicons name="card" size={24} color={colors.white} />
             <Text style={styles.rechargeButtonText}>
               Proceed to Pay ₹{amount || '0'}
               {(getPackBonus() + getPromoBonus()) > 0 ? ` (Get ₹${getTotalCredit()})` : ''}
@@ -621,15 +621,15 @@ export default function WalletRechargeScreen({ navigation, route }) {
             <Text style={styles.paymentMethodsTitle}>Accepted Payment Methods</Text>
             <View style={styles.paymentMethodsIcons}>
               <View style={styles.paymentMethodItem}>
-                <Ionicons name="card" size={32} color="#666" />
+                <Ionicons name="card" size={32} color={colors.textSecondary} />
                 <Text style={styles.paymentMethodText}>Cards</Text>
               </View>
               <View style={styles.paymentMethodItem}>
-                <Ionicons name="phone-portrait" size={32} color="#666" />
+                <Ionicons name="phone-portrait" size={32} color={colors.textSecondary} />
                 <Text style={styles.paymentMethodText}>UPI</Text>
               </View>
               <View style={styles.paymentMethodItem}>
-                <Ionicons name="business" size={32} color="#666" />
+                <Ionicons name="business" size={32} color={colors.textSecondary} />
                 <Text style={styles.paymentMethodText}>Netbanking</Text>
               </View>
             </View>
@@ -768,7 +768,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.text,
   },
   quickAmountTextSelected: {
-    color: '#FFF',
+    color: colors.white,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -794,7 +794,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   errorText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: colors.error,
     marginTop: 8,
   },
   infoBox: {
@@ -824,12 +824,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 24,
   },
   rechargeButtonDisabled: {
-    backgroundColor: colors.gray400 || '#6B7280',
+    backgroundColor: colors.gray400,
   },
   rechargeButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: colors.white,
   },
   paymentMethods: {
     backgroundColor: colors.surface,

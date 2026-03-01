@@ -72,10 +72,10 @@ export default function PaymentSuccessScreen({ route, navigation }) {
         {/* Success Animation Circle */}
         <View style={styles.successCircleOuter}>
           <LinearGradient
-            colors={['#10B981', '#059669']}
+            colors={[colors.success, colors.successDark]}
             style={styles.successCircle}
           >
-            <Ionicons name="checkmark" size={responsive.isLargeScreen ? 80 : 60} color="#fff" />
+            <Ionicons name="checkmark" size={responsive.isLargeScreen ? 80 : 60} color={colors.white} />
           </LinearGradient>
         </View>
 
@@ -130,10 +130,10 @@ export default function PaymentSuccessScreen({ route, navigation }) {
         {/* Go to Wallet Button */}
         <TouchableOpacity onPress={handleGoToWallet} style={styles.button} activeOpacity={0.8}>
           <LinearGradient
-            colors={[colors.primary, colors.primaryDark || '#4F46E5']}
+            colors={[colors.primary, colors.primaryDark]}
             style={styles.buttonGradient}
           >
-            <Ionicons name="wallet-outline" size={22} color="#fff" style={{ marginRight: 8 }} />
+            <Ionicons name="wallet-outline" size={22} color={colors.white} style={{ marginRight: 8 }} />
             <Text style={styles.buttonText}>Go to Wallet</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -185,7 +185,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
         boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)',
       },
       default: {
-        shadowColor: '#10B981',
+        shadowColor: colors.success,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -297,7 +297,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   buttonText: {
     fontSize: 17,
     fontWeight: typography.weights.semibold,
-    color: '#fff',
+    color: colors.white,
   },
   secondaryButton: {
     paddingVertical: 12,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 // Add debounce hook for smooth search
 const useDebounce = (value, delay) => {
@@ -581,30 +582,24 @@ export default function EducationDetailsScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <RegistrationWrapper
+      currentStep={experienceType === 'Student' ? 2 : 3}
+      totalSteps={4}
+      stepLabel="Education details"
+      onBack={() => navigation.goBack()}
     >
-      <View style={styles.innerContainer}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color={colors.primary} />
-            </TouchableOpacity>
-
-            <Text style={styles.title}>Tell us about your education</Text>
+            <Text style={styles.title}>Your education</Text>
             <Text style={styles.subtitle}>
-              Search from thousands of universities worldwide using our real-time database
+              Search from thousands of universities worldwide
             </Text>
           </View>
 
           <View style={styles.form}>
             <SelectionButton
-              label="Country/Region"
+              label="Country / Region"
               value={getSelectedCountryDisplay()}
               placeholder="Select country"
               onPress={() => openModal('country')}
@@ -612,7 +607,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             />
 
             <SelectionButton
-              label="College/University"
+              label="College / University"
               value={getCollegeDisplayText()}
               placeholder="Search and select your institution"
               onPress={() => openModal('college')}
@@ -657,7 +652,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
               />
             )}
 
-            {/* Enhanced: Graduation Year and GPA fields for BOTH Students and Experienced */}
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>
                 Graduation Year <Text style={styles.required}>*</Text>
@@ -665,7 +659,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
               <TextInput
                 style={styles.textInput}
                 placeholder={experienceType === 'Student' ? "e.g., 2025 (expected)" : "e.g., 2022"}
-                placeholderTextColor={colors.gray400}
+                placeholderTextColor={colors.textMuted}
                 value={formData.graduationYear}
                 onChangeText={(text) => setFormData({ ...formData, graduationYear: text })}
                 keyboardType="numeric"
@@ -674,13 +668,11 @@ export default function EducationDetailsScreen({ navigation, route }) {
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>
-                GPA/Grade
-              </Text>
+              <Text style={styles.inputLabel}>GPA / Grade</Text>
               <TextInput
                 style={styles.textInput}
                 placeholder="e.g., 3.8/4.0, 85%, First Class"
-                placeholderTextColor={colors.gray400}
+                placeholderTextColor={colors.textMuted}
                 value={formData.gpa}
                 onChangeText={(text) => setFormData({ ...formData, gpa: text })}
               />
@@ -694,7 +686,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
                 <TextInput
                   style={styles.textInput}
                   placeholder="Enter your college/school name"
-                  placeholderTextColor={colors.gray400}
+                  placeholderTextColor={colors.textMuted}
                   value={formData.customCollege}
                   onChangeText={(text) => setFormData({ ...formData, customCollege: text })}
                 />
@@ -706,9 +698,10 @@ export default function EducationDetailsScreen({ navigation, route }) {
             style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}
             onPress={handleContinue}
             disabled={!isContinueEnabled}
+            activeOpacity={0.85}
           >
             <Text style={styles.continueButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={20} color={colors.white} />
+            <Ionicons name="arrow-forward" size={18} color={isContinueEnabled ? colors.white : colors.textMuted} />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -835,77 +828,62 @@ export default function EducationDetailsScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
-      </View>
-    </KeyboardAvoidingView>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
   scrollContainer: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    paddingTop: 20,
+    padding: 24,
+    paddingTop: 8,
   },
   header: {
-    marginBottom: 32,
-  },
-  backButton: {
-    alignSelf: 'flex-start',
-    padding: 8,
-    marginBottom: 16,
+    marginBottom: 28,
   },
   title: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text,
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: typography.sizes.base,
-    color: colors.gray600,
+    fontSize: 15,
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   form: {
-    gap: 20,
-    marginBottom: 32,
+    gap: 16,
+    marginBottom: 28,
   },
   selectionButton: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
+    backgroundColor: colors.inputBackground,
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
   selectionButtonDisabled: {
-    backgroundColor: colors.gray100,
-    borderColor: colors.gray200,
+    backgroundColor: colors.surfaceOverlay,
+    borderColor: colors.borderFaint,
   },
   selectionLabel: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.gray600,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   selectionLabelDisabled: {
-    color: colors.gray400,
+    color: colors.gray200,
   },
   requiredAsterisk: {
-    color: colors.danger,
-    fontWeight: typography.weights.bold,
+    color: colors.error,
+    fontWeight: '700',
   },
   selectionValueContainer: {
     flexDirection: 'row',
@@ -913,54 +891,65 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     justifyContent: 'space-between',
   },
   selectionValue: {
-    fontSize: typography.sizes.base,
-    color: colors.textPrimary,
+    fontSize: 15,
+    color: colors.text,
     flex: 1,
   },
   selectionValueDisabled: {
-    color: colors.gray400,
+    color: colors.gray200,
   },
   selectionPlaceholder: {
-    color: colors.gray400,
+    color: colors.textMuted,
   },
   inputContainer: {
     gap: 8,
   },
   inputLabel: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.gray600,
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   required: {
-    color: colors.danger,
+    color: colors.error,
   },
   textInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 16,
-    fontSize: typography.sizes.base,
-    color: colors.textPrimary,
+    fontSize: 15,
+    color: colors.text,
   },
   continueButton: {
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 14,
     gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueButtonDisabled: {
-    backgroundColor: colors.gray300,
+    backgroundColor: colors.surfaceElevated,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   continueButtonText: {
     color: colors.white,
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  // Modal styles
+  // Modal styles — kept functional, modernized colors
   modalContainer: {
     flex: 1,
     backgroundColor: colors.background,
@@ -997,21 +986,21 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderThin,
   },
   modalTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
-    color: colors.textPrimary,
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
     flex: 1,
     textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    margin: 20,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
+    margin: 16,
+    backgroundColor: colors.inputBackground,
+    borderRadius: 12,
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1019,8 +1008,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   searchInput: {
     flex: 1,
     padding: 12,
-    fontSize: typography.sizes.base,
-    color: colors.textPrimary,
+    fontSize: 15,
+    color: colors.text,
     marginLeft: 8,
   },
   clearButton: {
@@ -1033,8 +1022,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 40,
   },
   loadingText: {
-    fontSize: typography.sizes.base,
-    color: colors.gray600,
+    fontSize: 14,
+    color: colors.textSecondary,
     marginTop: 16,
     textAlign: 'center',
   },
@@ -1045,8 +1034,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 40,
   },
   errorText: {
-    fontSize: typography.sizes.base,
-    color: colors.danger,
+    fontSize: 14,
+    color: colors.error,
     textAlign: 'center',
     marginTop: 16,
     marginBottom: 20,
@@ -1055,48 +1044,49 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   retryButtonText: {
     color: colors.white,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+    fontSize: 14,
+    fontWeight: '600',
   },
   modalItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    minHeight: 80,
+    borderBottomColor: colors.borderFaint,
+    minHeight: 72,
   },
   modalItemContent: {
     flex: 1,
   },
   modalItemText: {
-    fontSize: typography.sizes.base,
-    fontWeight: typography.weights.medium,
-    color: colors.textPrimary,
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.text,
+    marginBottom: 3,
   },
   modalItemType: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    fontSize: 13,
+    color: colors.textMuted,
     marginBottom: 2,
   },
   modalItemLocation: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   modalItemWebsite: {
-    fontSize: typography.sizes.sm,
+    fontSize: 13,
     color: colors.primary,
     marginBottom: 2,
   },
   modalItemRegion: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    fontSize: 13,
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   emptyContainer: {
@@ -1106,45 +1096,41 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    fontSize: typography.sizes.base,
-    color: colors.gray600,
+    fontSize: 15,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 16,
   },
   emptySubtext: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    fontSize: 13,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: 8,
   },
   categoryHeader: {
-    backgroundColor: colors.primary + '10',
+    backgroundColor: colors.primaryGlow,
     paddingVertical: 8,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderFaint,
   },
   categoryHeaderText: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
+    fontSize: 11,
+    fontWeight: '700',
     color: colors.primary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   fieldHelpContainer: {
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.surfaceOverlay,
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderFaint,
   },
   fieldHelpText: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: colors.textSecondary,
     textAlign: 'center',
-  },
-  requiredAsterisk: {
-    color: colors.danger,
-    fontWeight: typography.weights.bold,
   },
 });

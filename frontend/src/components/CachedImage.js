@@ -18,6 +18,7 @@
 
 import React from 'react';
 import { Platform, Image as RNImage } from 'react-native';
+import { darkTheme } from '../contexts/ThemeContext';
 
 // expo-image for native (disk+memory cache), RN Image for web (browser caches natively)
 let ExpoImage;
@@ -25,8 +26,8 @@ if (Platform.OS !== 'web') {
   try { ExpoImage = require('expo-image').Image; } catch (e) { ExpoImage = null; }
 }
 
-// Default placeholder color while loading
-const PLACEHOLDER_COLOR = '#E5E7EB';
+// Default placeholder color while loading (uses theme token)
+const PLACEHOLDER_COLOR = darkTheme.surfaceElevated;
 
 const CachedImage = React.memo(({
   source,

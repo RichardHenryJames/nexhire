@@ -26,7 +26,7 @@ import { usePricing } from '../../contexts/PricingContext';
 import useResponsive from '../../hooks/useResponsive';
 
 // ─── Animated "Limited Time" badge ───────────────────────────────
-const LimitedTimeBadge = () => {
+const LimitedTimeBadge = ({ colors }) => {
   const drainAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
@@ -56,17 +56,17 @@ const LimitedTimeBadge = () => {
   }, []);
 
   const drainWidth = drainAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
-  const borderOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: ['#EF444450', '#EF4444CC'] });
+  const borderOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [colors.errorBg, colors.error] });
 
   return (
     <Animated.View style={{ transform: [{ scale: pulseAnim }], marginLeft: 8 }}>
       <Animated.View style={{ overflow: 'hidden', borderRadius: 10, borderWidth: 1.5, borderColor: borderOpacity }}>
-        <View style={{ backgroundColor: '#EF444410', paddingHorizontal: 9, paddingVertical: 3.5 }}>
+        <View style={{ backgroundColor: colors.errorBg, paddingHorizontal: 9, paddingVertical: 3.5 }}>
           <Animated.View style={{
             position: 'absolute', top: 0, right: 0, bottom: 0,
-            width: drainWidth, backgroundColor: '#EF444435', borderRadius: 10,
+            width: drainWidth, backgroundColor: colors.errorBg, borderRadius: 10,
           }} />
-          <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 9, textAlign: 'center', letterSpacing: 0.5, textTransform: 'uppercase' }}>
+          <Text style={{ color: colors.error, fontWeight: '800', fontSize: 9, textAlign: 'center', letterSpacing: 0.5, textTransform: 'uppercase' }}>
             ⏳ Limited Time
           </Text>
         </View>
@@ -76,7 +76,7 @@ const LimitedTimeBadge = () => {
 };
 
 // ─── Animated bonus percent badge ────────────────────────────────
-const BonusPercentBadge = ({ percent }) => {
+const BonusPercentBadge = ({ percent, colors }) => {
   const fillAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -95,13 +95,13 @@ const BonusPercentBadge = ({ percent }) => {
 
   return (
     <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: '#10B98140', minWidth: 72 }}>
-        <View style={{ backgroundColor: '#10B98110', paddingHorizontal: 10, paddingVertical: 6 }}>
+      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: colors.successBorder, minWidth: 72 }}>
+        <View style={{ backgroundColor: colors.successBg, paddingHorizontal: 10, paddingVertical: 6 }}>
           <Animated.View style={{
             position: 'absolute', top: 0, left: 0, bottom: 0,
-            width: fillWidth, backgroundColor: '#10B98130', borderRadius: 8,
+            width: fillWidth, backgroundColor: colors.successBorder, borderRadius: 8,
           }} />
-          <Text style={{ color: '#10B981', fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
+          <Text style={{ color: colors.success, fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
             {percent}% extra
           </Text>
         </View>
@@ -120,23 +120,24 @@ const buildUpiUrl = (appScheme, amount) => {
   return amt > 0 ? `${base}&am=${amt.toFixed(2)}` : base;
 };
 
-const UPI_APPS = [
-  { id: 'phonepe', name: 'PhonePe', scheme: 'phonepe', color: '#5F259F',
+const getUpiApps = (colors) => [
+  { id: 'phonepe', name: 'PhonePe', scheme: 'phonepe', color: colors.accentDark,
     pkg: 'com.phonepe.app',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=phonepe.com' },
-  { id: 'gpay', name: 'Google Pay', scheme: 'tez', color: '#4285F4',
+  { id: 'gpay', name: 'Google Pay', scheme: 'tez', color: colors.primary,
     pkg: 'com.google.android.apps.nbu.paisa.user',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=pay.google.com' },
-  { id: 'paytm', name: 'Paytm', scheme: 'paytmmp', color: '#00BAF2',
+  { id: 'paytm', name: 'Paytm', scheme: 'paytmmp', color: colors.info,
     pkg: 'net.one97.paytm',
     logo: 'https://www.google.com/s2/favicons?sz=64&domain=paytm.com' },
-  { id: 'generic', name: 'Any UPI App', scheme: 'upi', color: '#2D7D46',
+  { id: 'generic', name: 'Any UPI App', scheme: 'upi', color: colors.successDark,
     pkg: null,
     logo: null },
 ];
 
 // ─── Animated "View coupons" link ────────────────────────────────
 const ShimmerCouponLink = ({ onPress, fontSize = 12 }) => {
+  const { colors } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -151,7 +152,7 @@ const ShimmerCouponLink = ({ onPress, fontSize = 12 }) => {
 
   const color = animValue.interpolate({
     inputRange: [0, 0.25, 0.5, 0.75, 1],
-    outputRange: ['#F59E0B', '#EF4444', '#8B5CF6', '#3B82F6', '#F59E0B'],
+    outputRange: [colors.warning, colors.error, colors.accent, colors.primary, colors.warning],
   });
 
   return (
@@ -343,7 +344,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
           <View style={{ marginBottom: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 4, marginBottom: 4 }}>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>⚡ Booster Packs</Text>
-              <LimitedTimeBadge />
+              <LimitedTimeBadge colors={colors} />
             </View>
             <Text style={{ fontSize: 11, color: colors.gray500, paddingHorizontal: 4, marginBottom: 8 }}>Pay less, get more</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingHorizontal: 2, paddingVertical: 2 }}>
@@ -365,8 +366,8 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                   >
                     <View style={{ flexDirection: 'row', justifyContent: pack.Badge ? 'space-between' : 'flex-end', alignItems: 'center', marginBottom: 2, minHeight: 14 }}>
                       {pack.Badge ? (
-                        <View style={{ backgroundColor: pack.Badge === 'Most Popular' ? '#F59E0B' : pack.Badge === 'Best Value' ? '#10B981' : colors.primary, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
-                          <Text style={{ color: '#fff', fontSize: 6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.2 }}>{pack.Badge}</Text>
+                        <View style={{ backgroundColor: pack.Badge === 'Most Popular' ? colors.warning : pack.Badge === 'Best Value' ? colors.success : colors.primary, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 }}>
+                          <Text style={{ color: colors.white, fontSize: 6, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.2 }}>{pack.Badge}</Text>
                         </View>
                       ) : null}
                       {isSelected && <Ionicons name="checkmark-circle" size={14} color={colors.primary} />}
@@ -374,7 +375,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                     <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>₹{pack.PayAmount}</Text>
                     <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginTop: 1 }}>Get ₹{pack.GetAmount}</Text>
                     {pack.BonusPercent > 0 && (
-                      <Text style={{ color: '#10B981', fontWeight: '700', fontSize: 10, marginTop: 1 }}>+{Math.round(pack.BonusPercent)}%</Text>
+                      <Text style={{ color: colors.success, fontWeight: '700', fontSize: 10, marginTop: 1 }}>+{Math.round(pack.BonusPercent)}%</Text>
                     )}
                     {pack.ReferralsWorth > 0 && (
                       <Text style={{ color: colors.gray500, fontSize: 8, marginTop: 1 }}>≈ {pack.ReferralsWorth} referrals</Text>
@@ -460,8 +461,8 @@ const ManualRechargeScreen = ({ navigation, route }) => {
               </View>
               {promoResult && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                  <Ionicons name={promoResult.valid ? 'checkmark-circle' : 'alert-circle'} size={12} color={promoResult.valid ? '#10B981' : colors.error} />
-                  <Text style={{ color: promoResult.valid ? '#10B981' : colors.error, fontSize: 11, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
+                  <Ionicons name={promoResult.valid ? 'checkmark-circle' : 'alert-circle'} size={12} color={promoResult.valid ? colors.success : colors.error} />
+                  <Text style={{ color: promoResult.valid ? colors.success : colors.error, fontSize: 11, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
                 </View>
               )}
               <View style={{ alignSelf: 'center', marginTop: 6 }}>
@@ -474,9 +475,9 @@ const ManualRechargeScreen = ({ navigation, route }) => {
         {/* ═══ 4. CREDIT SUMMARY ═══ */}
         {payAmt > 0 && (
           <View style={[styles.section, {
-            backgroundColor: totalBonus > 0 ? '#10B98108' : colors.surface,
+            backgroundColor: totalBonus > 0 ? colors.successBg : colors.surface,
             borderWidth: totalBonus > 0 ? 1 : 0,
-            borderColor: '#10B98125',
+            borderColor: colors.successBorder,
             paddingVertical: 10,
             paddingHorizontal: 12,
             marginBottom: 14,
@@ -488,13 +489,13 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                 <View style={{ height: 1, backgroundColor: colors.border + '40', marginVertical: 6 }} />
                 <Text style={{ color: colors.gray500, fontSize: 11 }}>You will get</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 1 }}>
-                  <Text style={{ color: '#10B981', fontSize: 20, fontWeight: '800' }}>₹{getTotalCredit()}</Text>
+                  <Text style={{ color: colors.success, fontSize: 20, fontWeight: '800' }}>₹{getTotalCredit()}</Text>
                   {totalBonus > 0 && (
-                    <Text style={{ color: '#10B981', fontSize: 11, fontWeight: '600', marginLeft: 5 }}>(+₹{totalBonus} bonus)</Text>
+                    <Text style={{ color: colors.success, fontSize: 11, fontWeight: '600', marginLeft: 5 }}>(+₹{totalBonus} bonus)</Text>
                   )}
                 </View>
               </View>
-              {bonusPct > 0 && <BonusPercentBadge percent={bonusPct} />}
+              {bonusPct > 0 && <BonusPercentBadge percent={bonusPct} colors={colors} />}
             </View>
           </View>
         )}
@@ -520,14 +521,14 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                   activeOpacity={0.8}
                   onPress={() => setShowQrFullscreen(true)}
                   style={{
-                    backgroundColor: '#FFFFFF',
+                    backgroundColor: colors.white,
                     padding: 6,
                     borderRadius: 12,
                     borderWidth: 2,
-                    borderColor: '#3B82F6',
+                    borderColor: colors.primary,
                     alignItems: 'center',
                     alignSelf: 'flex-start',
-                    shadowColor: '#3B82F6',
+                    shadowColor: colors.primary,
                     shadowOffset: { width: 0, height: 2 },
                     shadowOpacity: 0.15,
                     shadowRadius: 8,
@@ -540,8 +541,8 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                     resizeMode="contain"
                   />
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                    <Ionicons name="scan-outline" size={10} color="#3B82F6" style={{ marginRight: 3 }} />
-                    <Text style={{ fontSize: 8, color: '#3B82F6', fontWeight: '700' }}>Tap to enlarge</Text>
+                    <Ionicons name="scan-outline" size={10} color={colors.primary} style={{ marginRight: 3 }} />
+                    <Text style={{ fontSize: 8, color: colors.primary, fontWeight: '700' }}>Tap to enlarge</Text>
                   </View>
                   {/* Copy UPI ID — inside QR card, below "Tap to enlarge" */}
                   <TouchableOpacity
@@ -567,7 +568,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
 
                 {/* RIGHT — UPI App deep links */}
                 <View style={{ flex: 1, gap: 6 }}>
-                  {UPI_APPS.map((app) => (
+                  {getUpiApps(colors).map((app) => (
                     <TouchableOpacity
                       key={app.id}
                       activeOpacity={0.7}
@@ -608,13 +609,13 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                 onPress={() => setShowQrFullscreen(true)}
                 style={{
                   alignSelf: 'center',
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: colors.white,
                   padding: 16,
                   borderRadius: 16,
                   borderWidth: 2,
-                  borderColor: '#3B82F6',
+                  borderColor: colors.primary,
                   alignItems: 'center',
-                  shadowColor: '#3B82F6',
+                  shadowColor: colors.primary,
                   shadowOffset: { width: 0, height: 4 },
                   shadowOpacity: 0.15,
                   shadowRadius: 12,
@@ -627,11 +628,11 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                   resizeMode="contain"
                 />
                 {payAmt > 0 && (
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#3B82F6', marginTop: 8 }}>₹{payAmt}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.primary, marginTop: 8 }}>₹{payAmt}</Text>
                 )}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                  <Ionicons name="scan-outline" size={12} color="#3B82F6" style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 10, color: '#3B82F6', fontWeight: '600' }}>Click to enlarge</Text>
+                  <Ionicons name="scan-outline" size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                  <Text style={{ fontSize: 10, color: colors.primary, fontWeight: '600' }}>Click to enlarge</Text>
                 </View>
               </TouchableOpacity>
               {/* Copy UPI ID button below desktop QR */}
@@ -732,19 +733,19 @@ const ManualRechargeScreen = ({ navigation, route }) => {
         >
           <Pressable style={styles.qrModalContent} onPress={() => {}}>
             <View style={styles.qrModalCard}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: '#1E293B', marginBottom: 4, textAlign: 'center' }}>Scan to Pay</Text>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.surface, marginBottom: 4, textAlign: 'center' }}>Scan to Pay</Text>
               {payAmt > 0 && (
-                <Text style={{ fontSize: 14, color: '#6366F1', fontWeight: '600', marginBottom: 12, textAlign: 'center' }}>₹{payAmt}</Text>
+                <Text style={{ fontSize: 14, color: colors.indigo, fontWeight: '600', marginBottom: 12, textAlign: 'center' }}>₹{payAmt}</Text>
               )}
               <Image
                 source={require('../../../assets/payment-qr.png')}
                 style={{ width: 260, height: 260 }}
                 resizeMode="contain"
               />
-              <Text style={{ fontSize: 10, color: '#64748B', marginTop: 12, textAlign: 'center' }}>
+              <Text style={{ fontSize: 10, color: colors.gray300, marginTop: 12, textAlign: 'center' }}>
                 Scan with any UPI app to pay
               </Text>
-              <Text style={{ fontSize: 9, color: '#94A3B8', fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
+              <Text style={{ fontSize: 9, color: colors.gray400, fontStyle: 'italic', marginTop: 4, textAlign: 'center' }}>
                 Powered by Rocana
               </Text>
             </View>
@@ -780,8 +781,8 @@ const createStyles = (colors) => StyleSheet.create({
   qrModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center' },
   qrModalContent: { alignItems: 'center' },
   qrModalCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20,
+    backgroundColor: colors.white, borderRadius: 20, padding: 24, alignItems: 'center',
+    shadowColor: colors.black, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 20,
   },
   qrModalClose: { marginTop: 20 },
 });

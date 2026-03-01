@@ -26,7 +26,7 @@ const AlertContext = createContext(null);
  *     title: 'Delete Message',
  *     message: 'Are you sure?',
  *     icon: 'trash-outline',
- *     iconColor: '#EF4444',
+ *     iconColor: colors.error,
  *     confirmText: 'Delete',
  *     confirmStyle: 'destructive',
  *     onConfirm: () => deleteMessage(),
@@ -106,7 +106,7 @@ export function AlertProvider({ children }) {
   // Icon defaults based on context
   const getIconDefaults = () => {
     if (icon) return { name: icon, color: iconColor || colors.primary };
-    if (buttons.some(b => b.style === 'destructive')) return { name: 'alert-circle', color: '#EF4444' };
+    if (buttons.some(b => b.style === 'destructive')) return { name: 'alert-circle', color: colors.error };
     return { name: 'information-circle', color: colors.primary };
   };
 
@@ -157,11 +157,11 @@ export function AlertProvider({ children }) {
                 let bgColor = colors.gray100;
                 let textColor = colors.text;
                 if (isDestructive) {
-                  bgColor = '#EF444415';
-                  textColor = '#EF4444';
+                  bgColor = colors.errorBg;
+                  textColor = colors.error;
                 } else if (isPrimary || (!isCancel && buttons.length <= 2 && idx > 0)) {
                   bgColor = colors.primary;
-                  textColor = '#FFFFFF';
+                  textColor = colors.white;
                 } else if (isCancel) {
                   bgColor = 'transparent';
                   textColor = colors.gray500;
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 24,

@@ -13,11 +13,11 @@ export const createStyles = (colors, responsive = {}) => {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.background,
-    borderRadius: 8,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 10,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 40,
   },
   searchIcon: {
     marginRight: 8,
@@ -33,17 +33,24 @@ export const createStyles = (colors, responsive = {}) => {
     padding: 4,
   },
   filterButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
   },
   
   // Quick Filters Styles
   quickFiltersContainer: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: 8,
+    borderBottomWidth: 0,
+    paddingVertical: 10,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
   },
   quickFiltersScroll: {
     paddingHorizontal: 16,
@@ -317,6 +324,12 @@ export const createStyles = (colors, responsive = {}) => {
   fabReferralRequests: {
     backgroundColor: colors.primary,
   },
+  fabMain: {
+    backgroundColor: colors.primary,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
   fabBadge: {
     position: 'absolute',
     top: -4,
@@ -338,21 +351,3 @@ export const createStyles = (colors, responsive = {}) => {
   },
 });
 };
-
-// For backward compatibility
-export const styles = createStyles({
-  primary: '#3B82F6',
-  primaryLight: '#60A5FA',
-  surface: '#FFFFFF',
-  background: '#F9FAFB',
-  text: '#1F2937',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  border: '#E5E7EB',
-  gray50: '#F9FAFB',
-  gray100: '#F3F4F6',
-  white: '#FFFFFF',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  shadow: '#000000',
-});

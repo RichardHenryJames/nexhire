@@ -116,7 +116,7 @@ default:
         }}
      >
           <View style={[styles.checkbox, active && styles.checkboxActive]}>
-  {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+  {active && <Ionicons name="checkmark" size={16} color={colors.primaryDark} />}
                   </View>
        <Text style={styles.optionLabel}>{wt.Type}</Text>
         </TouchableOpacity>
@@ -134,7 +134,7 @@ default:
   placeholder="Search department..."
      value={filters.department || ''}
       onChangeText={(t) => onFiltersChange({ ...filters, department: t })}
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={colors.gray400}
             />
         </View>
         );
@@ -148,7 +148,7 @@ default:
          placeholder="City, State or Country"
               value={filters.location || ''}
          onChangeText={(t) => onFiltersChange({ ...filters, location: t })}
- placeholderTextColor="#9ca3af"
+ placeholderTextColor={colors.gray400}
   />
      </View>
         );
@@ -164,7 +164,7 @@ default:
             <Text style={styles.rightTitle}>Company</Text>
             {loadingCompanies ? (
               <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color="#0066cc" />
+                <ActivityIndicator size="large" color={colors.primaryDark} />
                 <Text style={styles.loaderText}>Loading companies...</Text>
               </View>
             ) : (
@@ -175,15 +175,15 @@ default:
                 placeholder="Search companies..."
                 value={companySearchQuery}
                 onChangeText={setCompanySearchQuery}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.gray400}
               />
               {companySearchQuery.length > 0 ? (
                 <TouchableOpacity onPress={() => setCompanySearchQuery('')} style={styles.searchIconContainer}>
-                  <Ionicons name="close-circle" size={20} color="#9ca3af" />
+                  <Ionicons name="close-circle" size={20} color={colors.gray400} />
                 </TouchableOpacity>
               ) : (
                 <View style={styles.searchIconContainer}>
-                  <Ionicons name="search" size={20} color="#9ca3af" />
+                  <Ionicons name="search" size={20} color={colors.gray400} />
                 </View>
               )}
             </View>
@@ -207,7 +207,7 @@ default:
                       }}
                     >
                       <View style={[styles.checkbox, active && styles.checkboxActive]}>
-                        {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+                        {active && <Ionicons name="checkmark" size={16} color={colors.primaryDark} />}
                       </View>
                       {org.logoURL ? (
                         <Image 
@@ -217,7 +217,7 @@ default:
                         />
                       ) : (
                         <View style={styles.companyLogoPlaceholder}>
-                          <Ionicons name="business" size={16} color="#9ca3af" />
+                          <Ionicons name="business" size={16} color={colors.gray400} />
                         </View>
                       )}
                       <Text style={styles.optionLabel} numberOfLines={1}>{org.name}</Text>
@@ -234,7 +234,7 @@ default:
                   <Text style={styles.loadMoreText}>
                     Load More ({filteredCompanies.length - displayLimit} more companies)
                   </Text>
-                  <Ionicons name="chevron-down" size={16} color="#0066cc" />
+                  <Ionicons name="chevron-down" size={16} color={colors.primaryDark} />
                 </TouchableOpacity>
               )}
             </ScrollView>
@@ -256,7 +256,7 @@ default:
       value={filters.experienceMin?.toString() || ''}
       onChangeText={(t) => onFiltersChange({ ...filters, experienceMin: t ? parseInt(t) : '' })}
       keyboardType="numeric"
-      placeholderTextColor="#9ca3af"
+      placeholderTextColor={colors.gray400}
        />
       </View>
          <Text style={styles.rangeSeparator}>-</Text>
@@ -268,7 +268,7 @@ default:
    value={filters.experienceMax?.toString() || ''}
          onChangeText={(t) => onFiltersChange({ ...filters, experienceMax: t ? parseInt(t) : '' })}
             keyboardType="numeric"
-        placeholderTextColor="#9ca3af"
+        placeholderTextColor={colors.gray400}
                 />
   </View>
             </View>
@@ -288,7 +288,7 @@ placeholder="0"
         value={filters.salaryMin?.toString() || ''}
    onChangeText={(t) => onFiltersChange({ ...filters, salaryMin: t ? parseInt(t) : '' })}
        keyboardType="numeric"
-     placeholderTextColor="#9ca3af"
+     placeholderTextColor={colors.gray400}
   />
      </View>
   <Text style={styles.rangeSeparator}>-</Text>
@@ -300,7 +300,7 @@ placeholder="0"
         value={filters.salaryMax?.toString() || ''}
           onChangeText={(t) => onFiltersChange({ ...filters, salaryMax: t ? parseInt(t) : '' })}
      keyboardType="numeric"
-      placeholderTextColor="#9ca3af"
+      placeholderTextColor={colors.gray400}
        />
     </View>
         </View>
@@ -344,7 +344,7 @@ const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobType
        }}
           >
    <View style={[styles.checkbox, active && styles.checkboxActive]}>
-            {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+            {active && <Ionicons name="checkmark" size={16} color={colors.primaryDark} />}
        </View>
        <Text style={styles.optionLabel}>{jt.Type}</Text>
       </TouchableOpacity>
@@ -372,7 +372,7 @@ const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobType
       onPress={() => onFiltersChange({ ...filters, postedWithinDays: active ? null : item.value })}
          >
           <View style={[styles.checkbox, active && styles.checkboxActive]}>
-     {active && <Ionicons name="checkmark" size={16} color="#0066cc" />}
+     {active && <Ionicons name="checkmark" size={16} color={colors.primaryDark} />}
       </View>
  <Text style={styles.optionLabel}>{item.label}</Text>
            </TouchableOpacity>
@@ -584,11 +584,11 @@ const createStyles = (colors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.gray50,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: 16,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
   },
   searchIconContainer: {
     padding: 4,

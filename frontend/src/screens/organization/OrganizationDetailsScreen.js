@@ -218,16 +218,16 @@ export default function OrganizationDetailsScreen({ route, navigation }) {
                 {organization.tier && isAdmin && (
                   <View style={[
                     styles.badge,
-                    { backgroundColor: organization.tier === 'Elite' ? '#8B5CF615' : organization.tier === 'Premium' ? '#F59E0B15' : colors.gray200 }
+                    { backgroundColor: organization.tier === 'Elite' ? colors.accentBg : organization.tier === 'Premium' ? colors.warningBg : colors.gray200 }
                   ]}>
                     <Ionicons
                       name={organization.tier === 'Elite' ? 'trophy' : organization.tier === 'Premium' ? 'star' : 'business'}
                       size={12}
-                      color={organization.tier === 'Elite' ? '#8B5CF6' : organization.tier === 'Premium' ? '#F59E0B' : colors.gray500}
+                      color={organization.tier === 'Elite' ? colors.accent : organization.tier === 'Premium' ? colors.warning : colors.gray500}
                     />
                     <Text style={[
                       styles.badgeText,
-                      { color: organization.tier === 'Elite' ? '#8B5CF6' : organization.tier === 'Premium' ? '#F59E0B' : colors.gray500 }
+                      { color: organization.tier === 'Elite' ? colors.accent : organization.tier === 'Premium' ? colors.warning : colors.gray500 }
                     ]}>
                       {organization.tier}
                     </Text>
@@ -541,14 +541,14 @@ const createStyles = (colors, responsive = {}) => {
       fontWeight: '600',
     },
     fortune500Badge: {
-      backgroundColor: '#FFD70020',
+      backgroundColor: colors.warningBg,
       borderWidth: 1,
-      borderColor: '#FFD700',
+      borderColor: colors.gold,
     },
     fortune500Text: {
       fontSize: 12,
       fontWeight: '700',
-      color: '#B8860B',
+      color: colors.gold,
     },
     quickLinksRow: {
       flexDirection: 'row',
@@ -651,7 +651,7 @@ const createStyles = (colors, responsive = {}) => {
       borderRadius: 12,
       marginRight: 12,
       width: 260,
-      shadowColor: '#000',
+      shadowColor: colors.black,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.08,
       shadowRadius: 4,

@@ -347,6 +347,7 @@ export class ApplicantService {
                 // Social Profiles
                 'linkedInProfile': 'LinkedInProfile',
                 'githubProfile': 'GithubProfile',
+                'portfolioURL': 'PortfolioURL',
                 
                 // Documents - REMOVED: primaryResumeURL (handled via ApplicantResumes table, not Applicants column)
                 'additionalDocuments': 'AdditionalDocuments',

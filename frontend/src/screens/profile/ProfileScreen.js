@@ -12,6 +12,7 @@ import {
   Image,
   Switch,
   Platform,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -123,6 +124,7 @@ export default function ProfileScreen({ navigation, route }) {
     preferredLocations: '',
     linkedInProfile: '',
     githubProfile: '',
+    portfolioURL: '',
     resumes: [],
     workExperiences: [],
     additionalDocuments: '',
@@ -210,6 +212,7 @@ export default function ProfileScreen({ navigation, route }) {
             ...prev,
             linkedInProfile: data.LinkedInProfile || data.linkedInProfile || prev.linkedInProfile,
             githubProfile: data.GithubProfile || data.githubProfile || prev.githubProfile,
+            portfolioURL: data.PortfolioURL || data.portfolioURL || prev.portfolioURL,
             currentLocation: data.CurrentLocation || data.currentLocation || prev.currentLocation,
             headline: data.Headline || data.headline || prev.headline,
             summary: data.Summary || data.summary || prev.summary,
@@ -377,7 +380,7 @@ export default function ProfileScreen({ navigation, route }) {
             activeOpacity={0.7}
             style={styles.headerIconButton}
           >
-            <Ionicons name="settings-outline" size={24} color={colors.text || '#000'} />
+            <Ionicons name="settings-outline" size={24} color={colors.text} />
           </TouchableOpacity>
         }
       />
@@ -449,8 +452,8 @@ export default function ProfileScreen({ navigation, route }) {
                     onPress={() => navigation.navigate('Earnings')}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.actionButtonIcon, { backgroundColor: '#FFF4E6' }]}>
-                      <Ionicons name="gift" size={20} color="#FF9500" />
+                    <View style={[styles.actionButtonIcon, { backgroundColor: colors.orangeBg }]}>
+                      <Ionicons name="gift" size={20} color={colors.orange} />
                     </View>
                     <View style={styles.actionButtonContent}>
                       <Text style={styles.actionButtonLabel}>Earnings</Text>
@@ -464,8 +467,8 @@ export default function ProfileScreen({ navigation, route }) {
                   onPress={() => navigation.navigate('ShareEarn')}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.actionButtonIcon, { backgroundColor: '#E8F5E9' }]}>
-                    <Ionicons name="share-social" size={20} color="#4CAF50" />
+                  <View style={[styles.actionButtonIcon, { backgroundColor: colors.successBg }]}>
+                    <Ionicons name="share-social" size={20} color={colors.success} />
                   </View>
                   <View style={styles.actionButtonContent}>
                     <Text style={styles.actionButtonLabel}>Share</Text>
@@ -560,8 +563,8 @@ export default function ProfileScreen({ navigation, route }) {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={styles.workExpCompany}>{exp.CompanyName || exp.OrganizationName}</Text>
                         {isExpVerified && (
-                          <View style={{ backgroundColor: '#ECFDF5', padding: 4, borderRadius: 10 }}>
-                            <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+                          <View style={{ backgroundColor: colors.successBg, padding: 4, borderRadius: 10 }}>
+                            <Ionicons name="shield-checkmark" size={12} color={colors.success} />
                           </View>
                         )}
                       </View>
@@ -645,6 +648,92 @@ export default function ProfileScreen({ navigation, route }) {
                 <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                 <Text style={styles.emptySectionCtaText}>Add your skills to stand out</Text>
               </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Links Section - LinkedIn, GitHub, Portfolio */}
+        {!loadingSections && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="link-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>Links</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} style={styles.editIconButton}>
+                <Ionicons name="create-outline" size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+            {(jobSeekerProfile.linkedInProfile || jobSeekerProfile.githubProfile || jobSeekerProfile.portfolioURL) ? (
+              <View style={{ gap: 8 }}>
+                {jobSeekerProfile.linkedInProfile ? (
+                  <TouchableOpacity
+                    style={styles.linkRow}
+                    onPress={() => Linking.openURL(jobSeekerProfile.linkedInProfile)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.linkIconBg, { backgroundColor: colors.primaryDark + '15' }]}> 
+                      <Ionicons name="logo-linkedin" size={18} color={colors.primaryDark} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.linkRowTitle}>LinkedIn</Text>
+                      <Text style={styles.linkRowUrl} numberOfLines={1}>{jobSeekerProfile.linkedInProfile}</Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                    <Ionicons name="logo-linkedin" size={18} color={colors.primary} />
+                    <Text style={styles.emptySectionCtaText}>Add your LinkedIn profile</Text>
+                  </TouchableOpacity>
+                )}
+                {jobSeekerProfile.githubProfile ? (
+                  <TouchableOpacity
+                    style={styles.linkRow}
+                    onPress={() => Linking.openURL(jobSeekerProfile.githubProfile)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.linkIconBg, { backgroundColor: colors.text + '10' }]}> 
+                      <Ionicons name="logo-github" size={18} color={colors.text} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.linkRowTitle}>GitHub</Text>
+                      <Text style={styles.linkRowUrl} numberOfLines={1}>{jobSeekerProfile.githubProfile}</Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                    <Ionicons name="logo-github" size={18} color={colors.primary} />
+                    <Text style={styles.emptySectionCtaText}>Add your GitHub profile</Text>
+                  </TouchableOpacity>
+                )}
+                {jobSeekerProfile.portfolioURL && (
+                  <TouchableOpacity
+                    style={styles.linkRow}
+                    onPress={() => Linking.openURL(jobSeekerProfile.portfolioURL)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.linkIconBg, { backgroundColor: colors.primary + '15' }]}> 
+                      <Ionicons name="globe-outline" size={18} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.linkRowTitle}>Portfolio</Text>
+                      <Text style={styles.linkRowUrl} numberOfLines={1}>{jobSeekerProfile.portfolioURL}</Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={{ gap: 8 }}>
+                <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                  <Ionicons name="logo-linkedin" size={18} color={colors.primary} />
+                  <Text style={styles.emptySectionCtaText}>Add your LinkedIn profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('Settings', { openModal: 'professional' })} activeOpacity={0.7}>
+                  <Ionicons name="logo-github" size={18} color={colors.primary} />
+                  <Text style={styles.emptySectionCtaText}>Add your GitHub profile</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         )}
@@ -800,13 +889,13 @@ const createStyles = (colors, responsive = {}) => {
   return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -825,9 +914,9 @@ const createStyles = (colors, responsive = {}) => {
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: colors.surface || '#FFFFFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#E5E5EA',
+    borderBottomColor: colors.border,
     zIndex: 10,
   },
   headerProfilePic: {
@@ -873,7 +962,7 @@ const createStyles = (colors, responsive = {}) => {
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text || '#000',
+    color: colors.text,
   },
   walletHeaderButton: {
     flexDirection: 'row',
@@ -920,13 +1009,13 @@ const createStyles = (colors, responsive = {}) => {
   sectionCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     paddingVertical: 16,
     paddingHorizontal: 16,
     marginHorizontal: 16,
     marginBottom: 8,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
@@ -947,36 +1036,36 @@ const createStyles = (colors, responsive = {}) => {
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginBottom: 2,
   },
   sectionSummary: {
     fontSize: 13,
-    color: colors.textSecondary || '#8E8E93',
+    color: colors.textSecondary,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     paddingVertical: 14,
     marginHorizontal: 16,
     marginTop: 32,
     marginBottom: 40,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.error || '#FF3B30',
+    borderColor: colors.error,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.error || '#FF3B30',
+    color: colors.error,
     marginLeft: 8,
   },
   // Modal Styles
   modalContainer: {
     flex: 1,
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
     alignItems: responsive.isDesktop ? 'center' : 'stretch',
   },
   modalInnerContainer: {
@@ -991,14 +1080,14 @@ const createStyles = (colors, responsive = {}) => {
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingTop: 16,
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border || '#E5E5EA',
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
   },
   modalContent: {
     flex: 1,
@@ -1007,20 +1096,20 @@ const createStyles = (colors, responsive = {}) => {
   sectionHeader: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginTop: 24,
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   componentWrapper: {
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   subsectionCard: {
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1039,16 +1128,16 @@ const createStyles = (colors, responsive = {}) => {
   subsectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
   },
   subsectionHint: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: colors.textMuted,
     fontStyle: 'italic',
   },
   subsectionSummary: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginTop: 8,
   },
   summaryRow: {
@@ -1059,50 +1148,50 @@ const createStyles = (colors, responsive = {}) => {
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#8E8E93',
+    color: colors.textMuted,
     flex: 1,
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '500',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     flex: 1,
     textAlign: 'right',
   },
   summaryHint: {
     fontSize: 11,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 12,
     fontStyle: 'italic',
   },
   fieldGroup: {
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
   },
   fieldLabel: {
     fontSize: 13,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginBottom: 6,
   },
   fieldValue: {
     fontSize: 16,
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     fontWeight: '500',
   },
   fieldHint: {
     fontSize: 12,
-    color: '#8E8E93',
+    color: colors.textMuted,
     marginTop: 4,
     fontStyle: 'italic',
   },
   fieldInput: {
     fontSize: 16,
-    color: colors.text || '#1C1C1E',
-    backgroundColor: colors.inputBackground || '#F5F5F7',
+    color: colors.text,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E5EA',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginTop: 4,
@@ -1111,7 +1200,7 @@ const createStyles = (colors, responsive = {}) => {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -1123,14 +1212,14 @@ const createStyles = (colors, responsive = {}) => {
   },
   toggleLabel: {
     fontSize: 16,
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginLeft: 12,
   },
   toggle: {
     paddingVertical: 4,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: colors.border || '#E5E5EA',
+    backgroundColor: colors.border,
   },
   toggleActive: {
     backgroundColor: colors.primary + '20',
@@ -1138,7 +1227,7 @@ const createStyles = (colors, responsive = {}) => {
   toggleText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
   },
   // Education dropdown styles
   educationOptionsScroll: {
@@ -1154,9 +1243,9 @@ const createStyles = (colors, responsive = {}) => {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: colors.inputBackground || '#F5F5F7',
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E5EA',
+    borderColor: colors.border,
     marginRight: 8,
   },
   educationOptionActive: {
@@ -1165,7 +1254,7 @@ const createStyles = (colors, responsive = {}) => {
   },
   educationOptionText: {
     fontSize: 14,
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     fontWeight: '500',
   },
   educationOptionTextActive: {
@@ -1185,10 +1274,10 @@ const createStyles = (colors, responsive = {}) => {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     padding: 12,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -1198,7 +1287,7 @@ const createStyles = (colors, responsive = {}) => {
     flex: 1,
     flexDirection: 'column',
     alignItems: 'center',
-    backgroundColor: colors.gray100 || colors.background || '#F5F5F7',
+    backgroundColor: colors.gray100 || colors.background,
     paddingVertical: 14,
     paddingHorizontal: 8,
     borderRadius: 12,
@@ -1206,10 +1295,10 @@ const createStyles = (colors, responsive = {}) => {
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -1230,7 +1319,7 @@ const createStyles = (colors, responsive = {}) => {
   actionButtonLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginBottom: 2,
   },
   actionButtonAmount: {
@@ -1240,7 +1329,7 @@ const createStyles = (colors, responsive = {}) => {
   },
   actionButtonSubtext: {
     fontSize: 13,
-    color: '#FF9500',
+    color: colors.orange,
     fontWeight: '500',
   },
   // Invite & Earn Modal Styles
@@ -1253,10 +1342,10 @@ const createStyles = (colors, responsive = {}) => {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FFF4E6',
+    backgroundColor: colors.orangeBg,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FF9500',
+    shadowColor: colors.orange,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -1265,24 +1354,24 @@ const createStyles = (colors, responsive = {}) => {
   inviteHeading: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 4,
   },
   inviteSubheading: {
     fontSize: 14,
-    color: colors.gray600 || '#666',
+    color: colors.gray600,
     textAlign: 'center',
     marginBottom: 16,
     lineHeight: 20,
     paddingHorizontal: 16,
   },
   referralCodeCard: {
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -1290,13 +1379,13 @@ const createStyles = (colors, responsive = {}) => {
   },
   referralCodeLabel: {
     fontSize: 13,
-    color: colors.gray600 || '#666',
+    color: colors.gray600,
     marginBottom: 8,
     textAlign: 'center',
     fontWeight: '500',
   },
   referralCodeBox: {
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
     borderRadius: 10,
     padding: 14,
     marginBottom: 12,
@@ -1324,7 +1413,7 @@ const createStyles = (colors, responsive = {}) => {
   copyCodeButtonText: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#FFF',
+    color: colors.white,
   },
   howItWorksSection: {
     marginBottom: 20,
@@ -1332,7 +1421,7 @@ const createStyles = (colors, responsive = {}) => {
   howItWorksTitle: {
     fontSize: 17,
     fontWeight: 'bold',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginBottom: 12,
   },
   howItWorksStep: {
@@ -1361,12 +1450,12 @@ const createStyles = (colors, responsive = {}) => {
   stepTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginBottom: 2,
   },
   stepDescription: {
     fontSize: 12,
-    color: colors.gray600 || '#666',
+    color: colors.gray600,
     lineHeight: 16,
   },
   benefitsSection: {
@@ -1376,11 +1465,11 @@ const createStyles = (colors, responsive = {}) => {
   },
   benefitCard: {
     flex: 1,
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 14,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 6,
@@ -1388,7 +1477,7 @@ const createStyles = (colors, responsive = {}) => {
   },
   benefitTitle: {
     fontSize: 12,
-    color: colors.gray600 || '#666',
+    color: colors.gray600,
     marginTop: 8,
     marginBottom: 4,
     fontWeight: '500',
@@ -1396,12 +1485,12 @@ const createStyles = (colors, responsive = {}) => {
   benefitAmount: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.success || '#34C759',
+    color: colors.success,
     marginBottom: 2,
   },
   benefitDescription: {
     fontSize: 11,
-    color: colors.gray600 || '#666',
+    color: colors.gray600,
     textAlign: 'center',
   },
   shareLinkSection: {
@@ -1410,15 +1499,15 @@ const createStyles = (colors, responsive = {}) => {
   shareLinkTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginBottom: 8,
   },
   shareLinkBox: {
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
     borderRadius: 10,
     padding: 12,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E5EA',
+    borderColor: colors.border,
   },
   shareLinkText: {
     fontSize: 12,
@@ -1430,12 +1519,12 @@ const createStyles = (colors, responsive = {}) => {
     marginBottom: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border || '#E5E5EA',
+    borderTopColor: colors.border,
   },
   socialPlatformCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1.5,
@@ -1452,15 +1541,15 @@ const createStyles = (colors, responsive = {}) => {
   socialPlatformName: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
   },
   socialPlatformDesc: {
     fontSize: 12,
-    color: colors.textSecondary || '#8E8E93',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   socialRewardBadge: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1469,12 +1558,12 @@ const createStyles = (colors, responsive = {}) => {
   socialRewardText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#FFF',
+    color: colors.white,
   },
   socialNoteBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
     padding: 12,
     borderRadius: 8,
     gap: 8,
@@ -1482,7 +1571,7 @@ const createStyles = (colors, responsive = {}) => {
   socialNoteText: {
     flex: 1,
     fontSize: 12,
-    color: colors.textSecondary || '#8E8E93',
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   // Dropdown Styles
@@ -1490,26 +1579,26 @@ const createStyles = (colors, responsive = {}) => {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F5F5F7',
+    backgroundColor: colors.gray50,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 12,
     marginTop: 4,
   },
   dropdownButtonText: {
     fontSize: 16,
-    color: '#1C1C1E',
+    color: colors.text,
     flex: 1,
   },
   placeholderText: {
-    color: '#8E8E93',
+    color: colors.textMuted,
   },
   optionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.surface || '#FFF',
+    backgroundColor: colors.surface,
     padding: 16,
     borderRadius: 8,
     marginBottom: 8,
@@ -1519,7 +1608,7 @@ const createStyles = (colors, responsive = {}) => {
   },
   optionText: {
     fontSize: 16,
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
   },
   optionTextSelected: {
     color: colors.primary,
@@ -1546,10 +1635,10 @@ const createStyles = (colors, responsive = {}) => {
     gap: 10,
     paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: colors.primaryLight ? colors.primaryLight + '15' : '#F0F4FF',
+    backgroundColor: colors.primaryLight ? colors.primaryLight + '15' : colors.primaryBg,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: colors.primaryLight || '#E0E7FF',
+    borderColor: colors.primaryLight,
     borderStyle: 'dashed',
   },
   emptySectionCtaText: {
@@ -1557,6 +1646,34 @@ const createStyles = (colors, responsive = {}) => {
     color: colors.primary,
     fontWeight: '500',
     flex: 1,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  linkIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  linkRowTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  linkRowUrl: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 1,
   },
   // Work Experience View Mode
   workExperienceList: {
@@ -1589,12 +1706,12 @@ const createStyles = (colors, responsive = {}) => {
   workExpTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     flex: 1,
   },
   workExpCompany: {
     fontSize: 14,
-    color: colors.gray600 || colors.textSecondary || '#666',
+    color: colors.gray600 || colors.textSecondary,
     marginBottom: 4,
   },
   workExpMeta: {
@@ -1609,10 +1726,10 @@ const createStyles = (colors, responsive = {}) => {
   },
   workExpMetaText: {
     fontSize: 12,
-    color: colors.gray500 || '#999',
+    color: colors.gray500,
   },
   currentBadge: {
-    backgroundColor: colors.success + '20' || '#E8F5E9',
+    backgroundColor: colors.successBg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -1620,7 +1737,7 @@ const createStyles = (colors, responsive = {}) => {
   currentBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: colors.success || '#34C759',
+    color: colors.success,
     textTransform: 'uppercase',
   },
   // Education View Mode
@@ -1643,17 +1760,17 @@ const createStyles = (colors, responsive = {}) => {
   educationDegree: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginBottom: 2,
   },
   educationField: {
     fontSize: 14,
-    color: colors.gray600 || colors.textSecondary || '#666',
+    color: colors.gray600 || colors.textSecondary,
     marginBottom: 2,
   },
   educationInstitution: {
     fontSize: 13,
-    color: colors.gray500 || '#999',
+    color: colors.gray500,
   },
   // Skills View Mode
   skillsContainer: {
@@ -1732,12 +1849,12 @@ const createStyles = (colors, responsive = {}) => {
   settingsButtonTitle: {
     fontSize: 17,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginBottom: 2,
   },
   settingsButtonSubtitle: {
     fontSize: 13,
-    color: colors.textSecondary || '#8E8E93',
+    color: colors.textSecondary,
   },
   // Skeleton loader styles
   skeletonIcon: {
@@ -1758,13 +1875,13 @@ const createStyles = (colors, responsive = {}) => {
     padding: 20,
   },
   confirmModalCard: {
-    backgroundColor: colors.surface || '#FFFFFF',
+    backgroundColor: colors.surface,
     borderRadius: 20,
     padding: 28,
     alignItems: 'center',
     width: '100%',
     maxWidth: 340,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -1773,14 +1890,14 @@ const createStyles = (colors, responsive = {}) => {
   confirmModalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
     marginTop: 16,
     marginBottom: 8,
     textAlign: 'center',
   },
   confirmModalMessage: {
     fontSize: 15,
-    color: colors.textSecondary || '#8E8E93',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
@@ -1798,22 +1915,22 @@ const createStyles = (colors, responsive = {}) => {
     justifyContent: 'center',
   },
   confirmModalButtonSecondary: {
-    backgroundColor: colors.background || '#F5F5F7',
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: colors.border || '#E5E5EA',
+    borderColor: colors.border,
   },
   confirmModalButtonSecondaryText: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text || '#1C1C1E',
+    color: colors.text,
   },
   confirmModalButtonPrimary: {
-    backgroundColor: colors.primary || '#6366F1',
+    backgroundColor: colors.primary,
   },
   confirmModalButtonPrimaryText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: colors.white,
   },
 });
 };

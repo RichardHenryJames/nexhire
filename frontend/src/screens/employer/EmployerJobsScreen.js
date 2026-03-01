@@ -314,18 +314,18 @@ export default function EmployerJobsScreen({ navigation, route }) {
       {/* Search + Filter Bar */}
       <View style={jobStyles.searchHeader}>
         <View style={jobStyles.searchContainer}>
-          <Ionicons name="search" size={20} color="#666" style={{ marginRight:8 }} />
+          <Ionicons name="search" size={20} color={colors.textSecondary} style={{ marginRight:8 }} />
           <TextInput
             style={jobStyles.searchInput}
             placeholder="Search my jobs"
             value={search}
             onChangeText={setSearch}
             onSubmitEditing={onSearchSubmit}
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textMuted}
           />
           {search.length>0 && (
             <TouchableOpacity onPress={()=>{ setSearch(''); load(1); }} style={jobStyles.clearButton}>
-              <Ionicons name="close-circle" size={20} color="#666" />
+              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -352,7 +352,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
             <Ionicons 
               name={activeTab === 'draft' ? 'document-text-outline' : 'briefcase-outline'} 
               size={80} 
-              color="#d1d5db" 
+              color={colors.borderLight} 
               style={{ marginBottom: 20 }}
             />
             <Text style={jobStyles.emptyTitle}>
@@ -369,7 +369,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
                 style={localStyles.createJobButton}
                 onPress={() => navigation.navigate('CreateJob')}
               >
-                <Ionicons name="add-circle" size={20} color="#fff" />
+                <Ionicons name="add-circle" size={20} color={colors.white} />
                 <Text style={localStyles.createJobButtonText}>Create New Job</Text>
               </TouchableOpacity>
             )}
@@ -378,7 +378,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
                 style={localStyles.viewDraftsButton}
                 onPress={() => setActiveTab('draft')}
               >
-                <Ionicons name="document-text" size={20} color="#0066cc" />
+                <Ionicons name="document-text" size={20} color={colors.primaryDark} />
                 <Text style={localStyles.viewDraftsButtonText}>View Draft Jobs</Text>
               </TouchableOpacity>
             )}
@@ -441,14 +441,14 @@ const createLocalStyles = (colors, responsive = {}) => {
   actionBtn:{
     flexDirection:'row',
     alignItems:'center',
-    backgroundColor:'#0066cc',
+    backgroundColor:colors.primaryDark,
     paddingHorizontal:14,
     paddingVertical:10,
     borderRadius:8,
     gap:6
   },
   actionText:{
-    color:'#fff',
+    color:colors.white,
     fontSize:14,
     fontWeight:'600'
   },
@@ -457,13 +457,13 @@ const createLocalStyles = (colors, responsive = {}) => {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0066cc',
+    backgroundColor: colors.primaryDark,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
   },
   createJobButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,

@@ -69,7 +69,7 @@ const parseMessageContent = (content, isMine, colors) => {
         <Text
           key={`link-${match.index}`}
           style={{
-            color: isMine ? '#E0E7FF' : colors.primary,
+            color: isMine ? colors.indigoBg : colors.primary,
             textDecorationLine: 'underline',
           }}
           onPress={() => Linking.openURL(match[8])}
@@ -97,7 +97,7 @@ const parseMessageContent = (content, isMine, colors) => {
           <Text
             key={index}
             style={{
-              color: isMine ? '#E0E7FF' : colors.primary,
+              color: isMine ? colors.indigoBg : colors.primary,
               textDecorationLine: 'underline',
             }}
             onPress={() => Linking.openURL(part)}
@@ -155,7 +155,7 @@ const parseMessageContentWeb = (content, isMine, colors) => {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            color: isMine ? '#E0E7FF' : colors.primary,
+            color: isMine ? colors.indigoBg : colors.primary,
             textDecoration: 'underline',
           }}
           onClick={(e) => e.stopPropagation()}
@@ -186,7 +186,7 @@ const parseMessageContentWeb = (content, isMine, colors) => {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              color: isMine ? '#E0E7FF' : colors.primary,
+              color: isMine ? colors.indigoBg : colors.primary,
               textDecoration: 'underline',
               wordBreak: 'break-all',
             }}

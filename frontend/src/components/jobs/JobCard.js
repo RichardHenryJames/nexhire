@@ -161,12 +161,12 @@ const JobCard = ({
           {!hideReferral && !isOwnPostedJob && (
             isReferralRequesting ? (
               <View style={styles.requestingPill} accessibilityRole="text">
-                <Ionicons name="time-outline" size={14} color="#f59e0b" />
+                <Ionicons name="time-outline" size={14} color={colors.warning} />
                 <Text style={styles.requestingText}>Requesting</Text>
               </View>
             ) : isReferred ? (
               <View style={styles.referredPill} accessibilityRole="text">
-                <Ionicons name="checkmark-circle" size={16} color="#10b981" />
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
               </View>
             ) : onAskReferral ? (
               <TouchableOpacity 
@@ -174,7 +174,7 @@ const JobCard = ({
                 onPress={onAskReferral} 
                 accessibilityLabel="Ask for referral"
               >
-                <Ionicons name="people-outline" size={14} color="#ff6600" />
+                <Ionicons name="people-outline" size={14} color={colors.orange} />
                 <Text style={styles.referralText}>Ask Referral</Text>
               </TouchableOpacity>
             ) : null
@@ -183,7 +183,7 @@ const JobCard = ({
           {/* ✅ NEW: Delete button for draft jobs */}
           {showDelete && onDelete && (
             <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} accessibilityLabel="Delete job">
-              <Ionicons name="trash-outline" size={14} color="#fff" />
+              <Ionicons name="trash-outline" size={14} color={colors.white} />
               <Text style={styles.deleteText}>Delete</Text>
             </TouchableOpacity>
           )}
@@ -191,7 +191,7 @@ const JobCard = ({
           {/* ✅ NEW: Publish button for employers (draft jobs only) */}
           {showPublish && onPublish && (
             <TouchableOpacity style={styles.publishBtn} onPress={onPublish} accessibilityLabel="Publish job">
-              <Ionicons name="cloud-upload-outline" size={14} color="#fff" />
+              <Ionicons name="cloud-upload-outline" size={14} color={colors.white} />
               <Text style={styles.publishText}>Publish</Text>
             </TouchableOpacity>
           )}
@@ -199,14 +199,14 @@ const JobCard = ({
           {/* ✅ Social sharing buttons for published jobs */}
           {showShare && (
             <View style={styles.shareContainer}>
-              <TouchableOpacity style={[styles.socialIconBtn, { borderColor: '#0077B5' + '40' }]} onPress={onShareLinkedIn} accessibilityLabel="Share on LinkedIn">
-                <Ionicons name="logo-linkedin" size={14} color="#0077B5" />
+              <TouchableOpacity style={[styles.socialIconBtn, { borderColor: colors.primaryDark + '40' }]} onPress={onShareLinkedIn} accessibilityLabel="Share on LinkedIn">
+                <Ionicons name="logo-linkedin" size={14} color={colors.primaryDark} />
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.socialIconBtn, { borderColor: '#25D366' + '40' }]} onPress={onShareWhatsApp} accessibilityLabel="Share on WhatsApp">
-                <Ionicons name="logo-whatsapp" size={14} color="#25D366" />
+              <TouchableOpacity style={[styles.socialIconBtn, { borderColor: colors.success + '40' }]} onPress={onShareWhatsApp} accessibilityLabel="Share on WhatsApp">
+                <Ionicons name="logo-whatsapp" size={14} color={colors.success} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.shareBtn} onPress={onShare} accessibilityLabel="Share job">
-                <Ionicons name="share-social-outline" size={12} color="#fff" />
+                <Ionicons name="share-social-outline" size={12} color={colors.white} />
                 <Text style={styles.shareText}>Share</Text>
               </TouchableOpacity>
             </View>
@@ -215,7 +215,7 @@ const JobCard = ({
           {/* Apply button - only show if not hidden and NOT a referrer-posted job */}
           {!hideApply && !isReferrerPosted && onApply && (
             <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-              <Ionicons name="paper-plane-outline" size={14} color="#fff" />
+              <Ionicons name="paper-plane-outline" size={14} color={colors.white} />
               <Text style={styles.applyText}>Apply</Text>
             </TouchableOpacity>
           )}
@@ -370,7 +370,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderRadius: 6,
-    backgroundColor: colors.error || '#dc2626',
+    backgroundColor: colors.error,
   },
   deleteText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: 11 },
   publishBtn: {
@@ -403,7 +403,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 6,
-    backgroundColor: '#10b981',
+    backgroundColor: colors.success,
   },
   shareText: { color: colors.white, marginLeft: 3, fontWeight: '700', fontSize: 10 },
   applyBtn: {

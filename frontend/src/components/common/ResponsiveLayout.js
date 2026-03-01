@@ -237,9 +237,9 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   sidebar: {
-    backgroundColor: '#ffffff',
+    backgroundColor: '#FFFFFF',
     borderRightWidth: 1,
-    borderRightColor: '#e5e7eb',
+    borderRightColor: '#E5E7EB',
     height: '100%',
   },
 });

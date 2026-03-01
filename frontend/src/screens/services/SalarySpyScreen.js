@@ -50,7 +50,7 @@ export default function SalarySpyScreen({ navigation }) {
 
       <View style={styles.content}>
         <LinearGradient
-          colors={['#DC2626', '#F87171']}
+          colors={[colors.dangerDark, colors.dangerLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.lockCircle}
@@ -77,10 +77,10 @@ export default function SalarySpyScreen({ navigation }) {
               activeOpacity={0.8}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.white} />
               ) : (
                 <>
-                  <Ionicons name="hand-right" size={18} color="#fff" />
+                  <Ionicons name="hand-right" size={18} color={colors.white} />
                   <Text style={styles.interestBtnText}>I'm Interested</Text>
                 </>
               )}
@@ -113,5 +113,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 32, paddingVertical: 14, borderRadius: 25, marginTop: 24,
   },
-  interestBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  interestBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 });

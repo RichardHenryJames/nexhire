@@ -265,7 +265,7 @@ export default function ProfileSlider({ visible, onClose }) {
           width: '100%',
           maxWidth: 320,
         }}>
-          <Ionicons name="log-out-outline" size={48} color="#FF3B30" />
+          <Ionicons name="log-out-outline" size={48} color={colors.error} />
           <Text style={{
             fontSize: 20,
             fontWeight: '600',
@@ -308,11 +308,11 @@ export default function ProfileSlider({ visible, onClose }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 minHeight: 44,
-                backgroundColor: '#FF3B30',
+                backgroundColor: colors.error,
               }}
               onPress={handleLogoutConfirm}
             >
-              <Text style={{ color: '#FFF', fontWeight: '600' }}>Logout</Text>
+              <Text style={{ color: colors.white, fontWeight: '600' }}>Logout</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -367,7 +367,7 @@ export default function ProfileSlider({ visible, onClose }) {
           width: SLIDER_WIDTH,
           backgroundColor: colors.background,
           transform: [{ translateX: slideAnim }],
-          shadowColor: '#000',
+          shadowColor: colors.black,
           shadowOffset: { width: 4, height: 0 },
           shadowOpacity: 0.3,
           shadowRadius: 12,
@@ -429,7 +429,7 @@ export default function ProfileSlider({ visible, onClose }) {
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}>
-                  <Ionicons name="person" size={30} color="#fff" />
+                  <Ionicons name="person" size={30} color={colors.white} />
                 </View>
               )}
             </TouchableOpacity>
@@ -470,7 +470,7 @@ export default function ProfileSlider({ visible, onClose }) {
                         height: 22,
                         borderRadius: 11,
                         borderWidth: 1.5,
-                        borderColor: '#10B981',
+                        borderColor: colors.success,
                       }}
                     />
                   ) : (
@@ -478,13 +478,13 @@ export default function ProfileSlider({ visible, onClose }) {
                       width: 22,
                       height: 22,
                       borderRadius: 11,
-                      backgroundColor: '#10B98120',
+                      backgroundColor: colors.successBg,
                       borderWidth: 1.5,
-                      borderColor: '#10B981',
+                      borderColor: colors.success,
                       justifyContent: 'center',
                       alignItems: 'center',
                     }}>
-                      <Ionicons name="business" size={12} color="#10B981" />
+                      <Ionicons name="business" size={12} color={colors.success} />
                     </View>
                   )}
                 </TouchableOpacity>
@@ -601,7 +601,7 @@ export default function ProfileSlider({ visible, onClose }) {
                   {item.highlight && (
                     <Animated.View style={{ opacity: newBadgePulse }}>
                       <LinearGradient
-                        colors={['#6366F1', colors.primary, '#EC4899']}
+                        colors={[colors.indigo, colors.primary, colors.pink]}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={{
@@ -610,7 +610,7 @@ export default function ProfileSlider({ visible, onClose }) {
                           borderRadius: 8,
                         }}
                       >
-                        <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>NEW</Text>
+                        <Text style={{ color: colors.white, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>NEW</Text>
                       </LinearGradient>
                     </Animated.View>
                   )}
@@ -624,8 +624,8 @@ export default function ProfileSlider({ visible, onClose }) {
                     </Text>
                   )}
                   {item.badge > 0 && (
-                    <View style={{ backgroundColor: '#EF4444', borderRadius: 9, minWidth: 20, height: 20, paddingHorizontal: 5, justifyContent: 'center', alignItems: 'center' }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{item.badge > 99 ? '99+' : item.badge}</Text>
+                    <View style={{ backgroundColor: colors.error, borderRadius: 9, minWidth: 20, height: 20, paddingHorizontal: 5, justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={{ color: colors.white, fontSize: 10, fontWeight: '800' }}>{item.badge > 99 ? '99+' : item.badge}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -665,8 +665,8 @@ export default function ProfileSlider({ visible, onClose }) {
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
-              trackColor={{ false: colors.gray300 || '#ccc', true: colors.primary + '60' }}
-              thumbColor={isDark ? colors.primary : '#f4f3f4'}
+              trackColor={{ false: colors.gray300, true: colors.primary + '60' }}
+              thumbColor={isDark ? colors.primary : colors.gray100}
             />
           </View>
 
@@ -684,9 +684,9 @@ export default function ProfileSlider({ visible, onClose }) {
             }}
             activeOpacity={0.7}
           >
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Ionicons name="log-out-outline" size={20} color={colors.error} />
             <Text style={{
-              color: '#EF4444',
+              color: colors.error,
               fontSize: 14,
               fontWeight: '600',
               marginLeft: 14,

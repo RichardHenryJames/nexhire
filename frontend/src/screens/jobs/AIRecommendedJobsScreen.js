@@ -283,7 +283,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     <View style={{ flex: 1 }}>
       {/* AI Premium Header - Modern indigo/violet gradient matching new design system */}
       <LinearGradient
-        colors={['#030712', '#0F172A', '#1E1B4B']}
+        colors={[colors.text, colors.background, colors.accentBg]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerFixed}
@@ -432,7 +432,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
 container: {
   flex: 1,
-  backgroundColor: '#030712',
+  backgroundColor: colors.text,
   ...(Platform.OS === 'web' && responsive.isDesktop ? {
     alignItems: 'center',
   } : {}),

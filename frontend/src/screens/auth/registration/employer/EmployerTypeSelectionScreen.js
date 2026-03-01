@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   Modal,
@@ -20,6 +19,7 @@ import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 // Debounce (EXACT same implementation as job seeker WorkExperienceScreen)
 const useDebounce = (value, delay = 300) => {
@@ -176,12 +176,20 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       activeOpacity={0.85}
     >
       <View style={styles.cardHeader}>
-        <Ionicons name={icon} size={40} color={selectedType === type ? colors.primary : colors.gray500} />
-        <View style={styles.cardTitleContainer}>
-          <Text style={[styles.cardTitle, selectedType === type && styles.cardTitleSelected]}>{title}</Text>
+        <View style={styles.cardIconBadge}>
+          <Ionicons name={icon} size={24} color={selectedType === type ? colors.primary : colors.textSecondary} />
+        </View>
+        <View style={styles.cardBody}>
+          <View style={styles.cardTitleRow}>
+            <Text style={[styles.cardTitle, selectedType === type && styles.cardTitleSelected]}>{title}</Text>
+            {selectedType === type && (
+              <View style={styles.cardCheckBadge}>
+                <Ionicons name="checkmark" size={12} color={colors.white} />
+              </View>
+            )}
+          </View>
           <Text style={styles.cardSubtitle}>{subtitle}</Text>
         </View>
-        {selectedType === type && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
       </View>
       <Text style={styles.cardDescription}>{description}</Text>
 
@@ -226,27 +234,20 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
   );
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.innerContainer}>
+    <RegistrationWrapper currentStep={1} totalSteps={4} stepLabel="Organization type" onBack={() => navigation.goBack()}>
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <View style={styles.topBar}>
-              <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Login')}>
-                <Ionicons name="arrow-back" size={24} color={colors.primary} />
+            {/* Skip pill button - appears when selection made */}
+            {selectedType && (
+              <TouchableOpacity
+                style={styles.skipPillButton}
+                onPress={handleContinue}
+              >
+                <Text style={styles.skipPillButtonText}>Skip</Text>
+                <Ionicons name="arrow-forward" size={14} color={colors.primary} />
               </TouchableOpacity>
-              
-              {/* Skip pill button - appears when selection made */}
-              {selectedType && (
-                <TouchableOpacity
-                  style={styles.skipPillButton}
-                  onPress={handleContinue}
-                >
-                  <Text style={styles.skipPillButtonText}>Skip</Text>
-                  <Ionicons name="arrow-forward" size={14} color={colors.primary} />
-                </TouchableOpacity>
-              )}
-            </View>
+            )}
 
             <Text style={styles.title}>What type of organization are you with?</Text>
             <Text style={styles.subtitle}>This helps us set up your hiring profile correctly</Text>
@@ -395,48 +396,147 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
-      </View>
-    </KeyboardAvoidingView>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
   scrollContainer: { flex: 1 },
-  content: { padding: 20, paddingTop: 20 },
-  header: { marginBottom: 32 },
-  backButton: { padding: 8 },
-  title: { fontSize: typography.sizes.xl, fontWeight: typography.weights.bold, color: colors.text, marginBottom: 8 },
-  subtitle: { fontSize: typography.sizes.md, color: colors.gray600, lineHeight: 22 },
-  cardsContainer: { gap: 16, marginBottom: 32 },
-  card: { backgroundColor: colors.surface, borderRadius: 16, padding: 20, borderWidth: 2, borderColor: colors.border },
-  cardSelected: { borderColor: colors.primary, backgroundColor: colors.primary + '08' },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  cardTitleContainer: { flex: 1, marginLeft: 16 },
-  cardTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text, marginBottom: 2 },
-  cardTitleSelected: { color: colors.primary },
-  cardSubtitle: { fontSize: typography.sizes.sm, color: colors.gray500, fontWeight: typography.weights.medium },
-  cardDescription: { fontSize: typography.sizes.md, color: colors.gray600, lineHeight: 20, marginBottom: 8 },
-  companySelector: { backgroundColor: colors.background, borderRadius: 8, padding: 12, marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.primary },
-  companySelectorLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, paddingRight: 10 },
+  content: { padding: 24, paddingTop: 8 },
+  header: { marginBottom: 28 },
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 22,
+  },
+  cardsContainer: { gap: 14, marginBottom: 28 },
+  card: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: colors.borderThin,
+  },
+  cardSelected: {
+    borderColor: colors.borderFocus,
+    backgroundColor: colors.primaryGlow,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardIconBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: colors.borderFaint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardBody: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
+  cardCheckBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  cardTitleSelected: {
+    color: colors.primary,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+  cardDescription: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  companySelector: {
+    backgroundColor: colors.inputBackground,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: colors.borderFocus,
+  },
+  companySelectorLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    paddingRight: 10,
+  },
   selectedCompanyLogo: { width: 22, height: 22, borderRadius: 6 },
-  selectedCompanyLogoPlaceholder: { width: 22, height: 22, borderRadius: 6, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center' },
-  companySelectorLabel: { fontSize: typography.sizes.sm, color: colors.primary, fontWeight: typography.weights.medium, flexShrink: 1 },
-  continueButton: { backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 12, gap: 8 },
-  continueButtonDisabled: { backgroundColor: colors.gray300 },
-  continueButtonText: { color: colors.white, fontSize: typography.sizes.md, fontWeight: typography.weights.bold },
-  continueButtonTextDisabled: { color: colors.gray400 },
+  selectedCompanyLogoPlaceholder: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: colors.borderSubtle,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  companySelectorLabel: {
+    fontSize: 13,
+    color: colors.primary,
+    fontWeight: '600',
+    flexShrink: 1,
+  },
+  continueButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 14,
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  continueButtonDisabled: {
+    backgroundColor: colors.surfaceElevated,
+    shadowOpacity: 0,
+  },
+  continueButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  continueButtonTextDisabled: {
+    color: colors.textMuted,
+  },
   switchFlowButton: {
     marginTop: 16,
     flexDirection: 'row',
@@ -449,40 +549,113 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   switchFlowButtonText: {
-    fontSize: typography.sizes.md,
-    color: colors.primary,
-    fontWeight: typography.weights.bold,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    fontSize: 15,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   skipPillButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-end',
     gap: 4,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 16,
-    backgroundColor: colors.primary + '15',
+    backgroundColor: colors.primaryGlow,
   },
   skipPillButtonText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 13,
     color: colors.primary,
-    fontWeight: typography.weights.medium,
+    fontWeight: '600',
   },
-  modalContainer: { flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' && responsive.isDesktop ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background, zIndex: 9999 } : {}) },
-  modalInnerContainer: { flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' && responsive.isDesktop ? { flex: 'none', width: '100%', maxWidth: 600, height: '80vh', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' } : {}) },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  modalTitle: { fontSize: typography.sizes.lg, fontWeight: typography.weights.bold, color: colors.text },
-  textInput: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 16, fontSize: typography.sizes.md, color: colors.text },
-  modalItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  modalItemText: { fontSize: typography.sizes.md, color: colors.text },
-  companyLogo: { width: 40, height: 40, borderRadius: 8, marginRight: 12 },
-  companyLogoPlaceholder: { width: 40, height: 40, borderRadius: 8, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      position: 'fixed',
+      top: 0, left: 0, right: 0, bottom: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.background,
+      zIndex: 9999,
+    } : {}),
+  },
+  modalInnerContainer: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' && responsive.isDesktop ? {
+      flex: 'none',
+      width: '100%',
+      maxWidth: 600,
+      height: '80vh',
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    } : {}),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderThin,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  textInput: {
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    color: colors.text,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderFaint,
+  },
+  modalItemText: {
+    fontSize: 15,
+    color: colors.text,
+  },
+  companyLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    marginRight: 12,
+  },
+  companyLogoPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.borderThin,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   companyInfo: { flex: 1 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, marginTop: 40 },
-  emptyText: { fontSize: typography.sizes.md, color: colors.gray600, textAlign: 'center', marginTop: 16 },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    marginTop: 40,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 16,
+  },
 });

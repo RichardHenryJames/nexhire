@@ -61,13 +61,13 @@ export default function WithdrawalRequestsScreen({ navigation }) {
   const getStatusInfo = (status) => {
     switch (status) {
       case 'Pending':
-        return { color: '#F59E0B', icon: 'time-outline', bgColor: '#F59E0B22' };
+        return { color: colors.warning, icon: 'time-outline', bgColor: colors.warningBg };
       case 'Processing':
         return { color: colors.primary, icon: 'sync-outline', bgColor: colors.primary + '22' };
       case 'Completed':
-        return { color: '#10B981', icon: 'checkmark-circle', bgColor: '#10B98122' };
+        return { color: colors.success, icon: 'checkmark-circle', bgColor: colors.successBg };
       case 'Rejected':
-        return { color: '#EF4444', icon: 'close-circle', bgColor: '#EF444422' };
+        return { color: colors.error, icon: 'close-circle', bgColor: colors.errorBg };
       default:
         return { color: colors.textSecondary, icon: 'help-circle-outline', bgColor: colors.border };
     }
@@ -282,7 +282,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   rejectionRow: {
-    backgroundColor: '#EF444411',
+    backgroundColor: colors.errorBg,
     padding: 8,
     borderRadius: 8,
     marginTop: 4,

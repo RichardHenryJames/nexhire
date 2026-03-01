@@ -2010,7 +2010,7 @@ export default function BlogArticleScreen() {
           style={styles.backNav} 
           onPress={() => navigation.navigate('Blog')}
         >
-          <Ionicons name="arrow-back" size={20} color="#fff" />
+          <Ionicons name="arrow-back" size={20} color={colors.white} />
           <Text style={styles.backNavText}>All Articles</Text>
         </TouchableOpacity>
       </View>
@@ -2105,7 +2105,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   backNavText: {
     marginLeft: 6,
     fontSize: typography.sizes.sm,
-    color: '#fff',
+    color: colors.white,
     fontWeight: typography.weights.medium,
   },
   heroImage: {
@@ -2187,7 +2187,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
   ctaTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.bold,
-    color: '#FFFFFF',
+    color: colors.white,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -2199,7 +2199,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     lineHeight: 22,
   },
   ctaButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.white,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -2260,7 +2260,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     borderRadius: 8,
   },
   backButtonText: {
-    color: '#FFFFFF',
+    color: colors.white,
     fontWeight: typography.weights.semibold,
   },
 });

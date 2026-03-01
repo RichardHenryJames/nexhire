@@ -417,18 +417,18 @@ export default function GetVerifiedScreen({ navigation }) {
   // ─── Step 0: Intro ────────────────
   const renderIntro = () => (
     <ScrollView style={styles.stepContainer} contentContainerStyle={styles.stepContent} showsVerticalScrollIndicator={false}>
-      <LinearGradient colors={['#2563EB', '#7C3AED']} style={styles.heroBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <Ionicons name="shield-checkmark" size={56} color="#fff" />
+      <LinearGradient colors={[colors.primaryDark, colors.accentDark]} style={styles.heroBanner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <Ionicons name="shield-checkmark" size={56} color={colors.white} />
         <Text style={styles.heroTitle}>Get Verified</Text>
         <Text style={styles.heroSubtitle}>Earn the blue tick badge and stand out to recruiters & referrers</Text>
       </LinearGradient>
 
       <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Why Get Verified?</Text>
       {[
-        { icon: 'checkmark-circle', color: '#10B981', title: 'Trusted Profile', desc: 'Blue tick shows you are who you say you are' },
-        { icon: 'eye', color: '#3B82F6', title: 'More Visibility', desc: 'Verified profiles get 3x more views from recruiters' },
-        { icon: 'people', color: '#8B5CF6', title: 'Priority Referrals', desc: 'Referrers prefer verified candidates' },
-        { icon: 'shield-checkmark', color: '#F59E0B', title: 'Permanent Badge', desc: 'Once verified, your blue tick never expires' },
+        { icon: 'checkmark-circle', color: colors.success, title: 'Trusted Profile', desc: 'Blue tick shows you are who you say you are' },
+        { icon: 'eye', color: colors.primary, title: 'More Visibility', desc: 'Verified profiles get 3x more views from recruiters' },
+        { icon: 'people', color: colors.accent, title: 'Priority Referrals', desc: 'Referrers prefer verified candidates' },
+        { icon: 'shield-checkmark', color: colors.warning, title: 'Permanent Badge', desc: 'Once verified, your blue tick never expires' },
       ].map((item, i) => (
         <View key={i} style={styles.advantageCard}>
           <View style={[styles.advantageIcon, { backgroundColor: item.color + '15' }]}>
@@ -442,25 +442,25 @@ export default function GetVerifiedScreen({ navigation }) {
       ))}
 
       {hasPendingAadhaar && (
-        <View style={[styles.warningBanner, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]}>
-          <Ionicons name="time-outline" size={20} color="#D97706" />
-          <Text style={[styles.warningText, { color: '#92400E' }]}>Your Aadhaar verification is pending admin review.</Text>
+        <View style={[styles.warningBanner, { backgroundColor: colors.warningBg, borderColor: colors.warning }]}>
+          <Ionicons name="time-outline" size={20} color={colors.warningDark} />
+          <Text style={[styles.warningText, { color: colors.warningDark }]}>Your Aadhaar verification is pending admin review.</Text>
         </View>
       )}
 
       {hasRejectedAadhaar && (
-        <View style={[styles.warningBanner, { backgroundColor: '#FEE2E2', borderColor: '#EF4444' }]}>
-          <Ionicons name="close-circle-outline" size={20} color="#DC2626" />
+        <View style={[styles.warningBanner, { backgroundColor: colors.errorBg, borderColor: colors.error }]}>
+          <Ionicons name="close-circle-outline" size={20} color={colors.dangerDark} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.warningText, { color: '#991B1B' }]}>Aadhaar verification was rejected.</Text>
-            {hasRejectedAadhaar.RejectionReason && <Text style={[styles.warningText, { color: '#B91C1C', fontSize: 12, marginTop: 2 }]}>Reason: {hasRejectedAadhaar.RejectionReason}</Text>}
+            <Text style={[styles.warningText, { color: colors.dangerDark }]}>Aadhaar verification was rejected.</Text>
+            {hasRejectedAadhaar.RejectionReason && <Text style={[styles.warningText, { color: colors.dangerDark, fontSize: 12, marginTop: 2 }]}>Reason: {hasRejectedAadhaar.RejectionReason}</Text>}
           </View>
         </View>
       )}
 
       <TouchableOpacity style={styles.primaryButton} onPress={() => animateToStep(STEPS.METHOD)}>
         <Text style={styles.primaryButtonText}>Get Started</Text>
-        <Ionicons name="arrow-forward" size={18} color="#fff" />
+        <Ionicons name="arrow-forward" size={18} color={colors.white} />
       </TouchableOpacity>
     </ScrollView>
   );
@@ -473,8 +473,8 @@ export default function GetVerifiedScreen({ navigation }) {
 
       {/* Method 1: Company Email */}
       <TouchableOpacity style={[styles.methodCard, method === METHODS.COMPANY_EMAIL && styles.methodCardSelected]} onPress={() => setMethod(METHODS.COMPANY_EMAIL)}>
-        <View style={[styles.methodIcon, { backgroundColor: '#3B82F615' }]}>
-          <Ionicons name="business" size={24} color="#3B82F6" />
+        <View style={[styles.methodIcon, { backgroundColor: colors.primaryBg }]}>
+          <Ionicons name="business" size={24} color={colors.primary} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.methodTitle}>Company Email</Text>
@@ -486,8 +486,8 @@ export default function GetVerifiedScreen({ navigation }) {
 
       {/* Method 2: College Email */}
       <TouchableOpacity style={[styles.methodCard, method === METHODS.COLLEGE_EMAIL && styles.methodCardSelected]} onPress={() => setMethod(METHODS.COLLEGE_EMAIL)}>
-        <View style={[styles.methodIcon, { backgroundColor: '#8B5CF615' }]}>
-          <Ionicons name="school" size={24} color="#8B5CF6" />
+        <View style={[styles.methodIcon, { backgroundColor: colors.accentBg }]}>
+          <Ionicons name="school" size={24} color={colors.accent} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.methodTitle}>College Email</Text>
@@ -499,24 +499,24 @@ export default function GetVerifiedScreen({ navigation }) {
 
       {/* Method 3: Aadhaar */}
       <TouchableOpacity style={[styles.methodCard, method === METHODS.AADHAAR && styles.methodCardSelected, hasPendingAadhaar && { opacity: 0.5 }]} onPress={() => { if (!hasPendingAadhaar) setMethod(METHODS.AADHAAR); }} disabled={hasPendingAadhaar}>
-        <View style={[styles.methodIcon, { backgroundColor: '#F59E0B15' }]}>
-          <MaterialCommunityIcons name="card-account-details" size={24} color="#F59E0B" />
+        <View style={[styles.methodIcon, { backgroundColor: colors.warningBg }]}>
+          <MaterialCommunityIcons name="card-account-details" size={24} color={colors.warning} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.methodTitle}>Aadhaar Card</Text>
           {hasPendingAadhaar ? (
-            <Text style={[styles.methodDesc, { color: '#D97706' }]}>⏳ Your Aadhaar is pending admin review. Try another method for instant verification.</Text>
+            <Text style={[styles.methodDesc, { color: colors.warningDark }]}>⏳ Your Aadhaar is pending admin review. Try another method for instant verification.</Text>
           ) : (
             <Text style={styles.methodDesc}>Upload Aadhaar card photo + selfie for manual verification</Text>
           )}
-          <View style={[styles.badge, { backgroundColor: hasPendingAadhaar ? '#FEF3C7' : '#FEF3C7' }]}><Text style={[styles.badgeText, { color: '#92400E' }]}>{hasPendingAadhaar ? 'Pending Review ⏳' : '24-48 hrs ⏱️'}</Text></View>
+          <View style={[styles.badge, { backgroundColor: hasPendingAadhaar ? colors.warningBg : colors.warningBg }]}><Text style={[styles.badgeText, { color: colors.warningDark }]}>{hasPendingAadhaar ? 'Pending Review ⏳' : '24-48 hrs ⏱️'}</Text></View>
         </View>
         <Ionicons name={method === METHODS.AADHAAR ? 'radio-button-on' : 'radio-button-off'} size={22} color={hasPendingAadhaar ? colors.gray400 : (method === METHODS.AADHAAR ? colors.primary : colors.textSecondary)} />
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.primaryButton, !method && { opacity: 0.5 }]} onPress={() => { if (method) animateToStep(STEPS.VERIFY); }} disabled={!method}>
         <Text style={styles.primaryButtonText}>Continue</Text>
-        <Ionicons name="arrow-forward" size={18} color="#fff" />
+        <Ionicons name="arrow-forward" size={18} color={colors.white} />
       </TouchableOpacity>
     </ScrollView>
   );
@@ -545,7 +545,7 @@ export default function GetVerifiedScreen({ navigation }) {
             <Text style={styles.inputLabel}>Start Date</Text>
             <DatePicker value={startDate} onChange={setStartDate} placeholder="Select start date" maximumDate={new Date()} colors={colors} />
             <TouchableOpacity style={styles.primaryButton} onPress={handleWorkNext} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <><Text style={styles.primaryButtonText}>Next</Text><Ionicons name="arrow-forward" size={18} color="#fff" /></>}
+              {loading ? <ActivityIndicator color={colors.white} /> : <><Text style={styles.primaryButtonText}>Next</Text><Ionicons name="arrow-forward" size={18} color={colors.white} /></>}
             </TouchableOpacity>
           </>
         ) : !otpSent ? (
@@ -569,7 +569,7 @@ export default function GetVerifiedScreen({ navigation }) {
               )}
             </View>
             <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp} disabled={sendingOtp}>
-              {sendingOtp ? <ActivityIndicator color="#fff" /> : <><Ionicons name="mail" size={18} color="#fff" /><Text style={styles.primaryButtonText}> Send OTP</Text></>}
+              {sendingOtp ? <ActivityIndicator color={colors.white} /> : <><Ionicons name="mail" size={18} color={colors.white} /><Text style={styles.primaryButtonText}> Send OTP</Text></>}
             </TouchableOpacity>
           </>
         ) : renderOtpInput()
@@ -606,7 +606,7 @@ export default function GetVerifiedScreen({ navigation }) {
             <Text style={styles.inputLabel}>College Email</Text>
             <TextInput style={styles.input} value={collegeEmail} onChangeText={setCollegeEmail} placeholder="you@college.edu.in" placeholderTextColor={colors.textSecondary} keyboardType="email-address" autoCapitalize="none" />
             <TouchableOpacity style={styles.primaryButton} onPress={handleSendOtp} disabled={sendingOtp}>
-              {sendingOtp ? <ActivityIndicator color="#fff" /> : <><Ionicons name="mail" size={18} color="#fff" /><Text style={styles.primaryButtonText}> Send OTP</Text></>}
+              {sendingOtp ? <ActivityIndicator color={colors.white} /> : <><Ionicons name="mail" size={18} color={colors.white} /><Text style={styles.primaryButtonText}> Send OTP</Text></>}
             </TouchableOpacity>
           </>
         ) : renderOtpInput()}
@@ -636,7 +636,7 @@ export default function GetVerifiedScreen({ navigation }) {
       </View>
       {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
       <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtp} disabled={verifying}>
-        {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Verify</Text>}
+        {verifying ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>Verify</Text>}
       </TouchableOpacity>
       <TouchableOpacity style={styles.resendBtn} onPress={() => { setOtp(['', '', '', '']); setOtpSent(false); setOtpError(''); }} disabled={resendTimer > 0}>
         <Text style={[styles.resendText, resendTimer > 0 && { color: colors.textSecondary }]}>
@@ -680,13 +680,13 @@ export default function GetVerifiedScreen({ navigation }) {
         )}
       </TouchableOpacity>
 
-      <View style={[styles.warningBanner, { backgroundColor: '#EFF6FF', borderColor: '#3B82F6', marginTop: 20 }]}>
-        <Ionicons name="lock-closed" size={16} color="#2563EB" />
-        <Text style={[styles.warningText, { color: '#1E40AF' }]}>Your documents are encrypted and stored securely. They will only be used for verification.</Text>
+      <View style={[styles.warningBanner, { backgroundColor: colors.primaryBg, borderColor: colors.primary, marginTop: 20 }]}>
+        <Ionicons name="lock-closed" size={16} color={colors.primaryDark} />
+        <Text style={[styles.warningText, { color: colors.primaryDark }]}>Your documents are encrypted and stored securely. They will only be used for verification.</Text>
       </View>
 
       <TouchableOpacity style={[styles.primaryButton, (!aadhaarPhoto || !selfiePhoto) && { opacity: 0.5 }]} onPress={handleSubmitAadhaar} disabled={!aadhaarPhoto || !selfiePhoto || uploading}>
-        {uploading ? <ActivityIndicator color="#fff" /> : <><Ionicons name="cloud-upload" size={18} color="#fff" /><Text style={styles.primaryButtonText}> Submit for Review</Text></>}
+        {uploading ? <ActivityIndicator color={colors.white} /> : <><Ionicons name="cloud-upload" size={18} color={colors.white} /><Text style={styles.primaryButtonText}> Submit for Review</Text></>}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -694,8 +694,8 @@ export default function GetVerifiedScreen({ navigation }) {
   // ─── Step 3: Success ──
   const renderSuccess = () => (
     <View style={[styles.stepContainer, { justifyContent: 'center', alignItems: 'center', paddingTop: 60 }]}>
-      <LinearGradient colors={successType === 'immediate' ? ['#10B981', '#059669'] : ['#F59E0B', '#D97706']} style={styles.successCircle}>
-        <Ionicons name={successType === 'immediate' ? 'checkmark-circle' : 'time'} size={64} color="#fff" />
+      <LinearGradient colors={successType === 'immediate' ? [colors.success, colors.successDark] : [colors.warning, colors.warningDark]} style={styles.successCircle}>
+        <Ionicons name={successType === 'immediate' ? 'checkmark-circle' : 'time'} size={64} color={colors.white} />
       </LinearGradient>
       <Text style={[styles.heroTitle, { color: colors.text, marginTop: 24 }]}>
         {successType === 'immediate' ? 'You\'re Verified! 🎉' : 'Submitted for Review'}
@@ -777,7 +777,7 @@ function makeStyles(colors, isDark, responsive) {
     stepContainer: { flex: 1 },
     stepContent: { padding: 20, maxWidth: maxW, width: '100%', alignSelf: 'center' },
     heroBanner: { borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 8 },
-    heroTitle: { fontSize: 26, fontWeight: '800', color: '#fff', marginTop: 12 },
+    heroTitle: { fontSize: 26, fontWeight: '800', color: colors.white, marginTop: 12 },
     heroSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: 6, lineHeight: 20 },
     sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
     sectionSubtitle: { fontSize: 13, color: colors.textSecondary, lineHeight: 18 },
@@ -790,10 +790,10 @@ function makeStyles(colors, isDark, responsive) {
     methodIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
     methodTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
     methodDesc: { fontSize: 12, color: colors.textSecondary, marginTop: 2, lineHeight: 16 },
-    badge: { backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', marginTop: 6 },
-    badgeText: { fontSize: 11, fontWeight: '600', color: '#059669' },
+    badge: { backgroundColor: colors.successBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', marginTop: 6 },
+    badgeText: { fontSize: 11, fontWeight: '600', color: colors.successDark },
     primaryButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, marginTop: 20, gap: 6 },
-    primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+    primaryButtonText: { fontSize: 15, fontWeight: '700', color: colors.white },
     inputLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6, marginTop: 14 },
     input: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: colors.text },
     dropdown: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 10, marginTop: -4, marginBottom: 8, maxHeight: 180 },
@@ -809,8 +809,8 @@ function makeStyles(colors, isDark, responsive) {
     workPreviewSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
     otpRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 8 },
     otpBox: { width: 52, height: 56, borderWidth: 2, borderColor: colors.border, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: '700', color: colors.text, backgroundColor: colors.surface },
-    otpBoxError: { borderColor: '#EF4444' },
-    errorText: { color: '#EF4444', fontSize: 13, textAlign: 'center', marginTop: 8 },
+    otpBoxError: { borderColor: colors.error },
+    errorText: { color: colors.error, fontSize: 13, textAlign: 'center', marginTop: 8 },
     resendBtn: { alignItems: 'center', marginTop: 16 },
     resendText: { fontSize: 14, fontWeight: '600', color: colors.primary },
     uploadBox: { backgroundColor: colors.surface, borderWidth: 2, borderColor: colors.border, borderStyle: 'dashed', borderRadius: 14, height: 160, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
@@ -826,9 +826,9 @@ function makeStyles(colors, isDark, responsive) {
     stepDotActive: { backgroundColor: colors.primary },
     stepLabel: { fontSize: 10, color: colors.textSecondary },
     stepLabelActive: { color: colors.primary, fontWeight: '600' },
-    bottomBar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: isDark ? '#333' : '#E5E7EB', paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 30 : 16, ...(isDesktop ? { maxWidth: 560, alignSelf: 'center', width: '100%' } : {}) },
+    bottomBar: { backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: isDark ? colors.gray700 : colors.border, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Platform.OS === 'ios' ? 30 : 16, ...(isDesktop ? { maxWidth: 560, alignSelf: 'center', width: '100%' } : {}) },
     bottomActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    backButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, backgroundColor: isDark ? '#333' : '#F3F4F6', gap: 4 },
+    backButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, backgroundColor: isDark ? colors.gray700 : colors.gray100, gap: 4 },
     backButtonText: { fontSize: 14, fontWeight: '600', color: colors.text },
   });
 }

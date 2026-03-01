@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   StyleSheet, 
-  KeyboardAvoidingView, 
   Platform, 
   ScrollView, 
   Image,
@@ -21,6 +20,7 @@ import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import { showToast } from '../../../../components/Toast';
+import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -140,13 +140,8 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.innerContainer}>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 20 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingVertical: 8 }}>
-          <Ionicons name="arrow-back" size={22} color={colors.primary} />
-        </TouchableOpacity>
-
+    <RegistrationWrapper currentStep={3} totalSteps={4} stepLabel="Your role" onBack={() => navigation.goBack()}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24 }}>
         {/* Show Google user info if applicable */}
         {isGoogleUser && googleUser && (
           <View style={styles.googleUserInfo}>
@@ -373,27 +368,12 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
           />
         </View>
       </Modal>
-      </View>
-    </KeyboardAvoidingView>
+    </RegistrationWrapper>
   );
 }
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
-    } : {}),
-  },
-  innerContainer: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    flex: 1,
-  },
-  scroll: { 
-    flex: 1 
-  },
+  scroll: { flex: 1 },
   // Google user info styles
   googleUserInfo: {
     flexDirection: 'row',
@@ -401,12 +381,10 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginBottom: 20,
     marginTop: 16,
     padding: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.success,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.success,
+    backgroundColor: colors.successGlowSubtle,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.successBorder,
   },
   googleUserAvatar: {
     width: 48,
@@ -418,55 +396,57 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   googleUserWelcome: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
+    fontSize: 13,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   googleUserName: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
     marginBottom: 2,
   },
   googleUserEmail: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
+    fontSize: 13,
+    color: colors.textMuted,
   },
-  title: { 
-    fontSize: typography.sizes.xl, 
-    fontWeight: typography.weights.bold, 
-    color: colors.text, 
-    marginTop: 8 
+  title: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+    marginBottom: 8,
   },
-  subtitle: { 
-    color: colors.gray600, 
-    marginTop: 6, 
-    marginBottom: 16,
+  subtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  field: { 
-    marginTop: 12 
-  },
-  label: { 
-    color: colors.gray600, 
-    marginBottom: 6,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
+  field: { marginTop: 16 },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
   },
   required: {
-    color: colors.danger,
-    fontWeight: typography.weights.bold,
+    color: colors.error,
+    fontWeight: '700',
   },
-  input: { 
-    backgroundColor: colors.surface, 
-    borderWidth: 1, 
-    borderColor: colors.border, 
-    borderRadius: 12, 
-    padding: 14, 
+  input: {
+    backgroundColor: colors.inputBackground,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 14,
     color: colors.text,
-    fontSize: typography.sizes.md,
+    fontSize: 15,
   },
   selectInput: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.inputBackground,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,
@@ -478,18 +458,18 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   selectInputText: {
     flex: 1,
-    fontSize: typography.sizes.md,
+    fontSize: 15,
     color: colors.text,
   },
   selectInputPlaceholder: {
-    color: colors.gray400,
+    color: colors.textMuted,
   },
   inputError: {
-    borderColor: colors.danger,
+    borderColor: colors.error,
   },
   errorText: {
-    color: colors.danger,
-    fontSize: typography.sizes.sm,
+    color: colors.error,
+    fontSize: 13,
     marginTop: 4,
   },
   modalContainer: {
@@ -504,12 +484,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingBottom: 12,
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderThin,
     backgroundColor: colors.background,
   },
   modalTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.bold,
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
   },
   modalSearchRow: {
@@ -526,23 +506,23 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderFaint,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   modalItemSelected: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primaryGlow,
     borderLeftWidth: 3,
     borderLeftColor: colors.primary,
   },
   modalItemText: {
-    fontSize: typography.sizes.md,
+    fontSize: 15,
     color: colors.text,
   },
   modalItemTextSelected: {
     color: colors.primary,
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
   },
   emptyContainer: {
     flex: 1,
@@ -552,24 +532,29 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 40,
   },
   emptyText: {
-    fontSize: typography.sizes.md,
-    color: colors.gray600,
+    fontSize: 15,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 16,
   },
-  primaryBtn: { 
-    marginTop: 24, 
-    backgroundColor: colors.primary, 
-    borderRadius: 10, 
-    paddingVertical: 14, 
-    alignItems: 'center', 
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    gap: 8 
+  primaryBtn: {
+    marginTop: 28,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  primaryBtnText: { 
-    color: colors.white, 
-    fontWeight: typography.weights.bold,
-    fontSize: typography.sizes.md,
+  primaryBtnText: {
+    color: colors.white,
+    fontWeight: '700',
+    fontSize: 16,
   },
 });

@@ -65,7 +65,7 @@ const PromoCard = ({ promo, colors, onApply }) => {
           </TouchableOpacity>
         </View>
         <View style={{
-          backgroundColor: exhausted ? colors.gray200 : '#10B98115',
+          backgroundColor: exhausted ? colors.gray200 : colors.successBg,
           paddingHorizontal: 8,
           paddingVertical: 3,
           borderRadius: 10,
@@ -73,7 +73,7 @@ const PromoCard = ({ promo, colors, onApply }) => {
           <Text style={{
             fontSize: 12,
             fontWeight: '700',
-            color: exhausted ? colors.gray500 : '#10B981',
+            color: exhausted ? colors.gray500 : colors.success,
           }}>{bonusLabel}</Text>
         </View>
       </View>
@@ -88,8 +88,8 @@ const PromoCard = ({ promo, colors, onApply }) => {
       {/* Recommendation reason */}
       {promo.recommended && promo.recommendReason ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 4 }}>
-          <Text style={{ fontSize: 11, color: '#F59E0B' }}>✨</Text>
-          <Text style={{ fontSize: 11, color: '#F59E0B', fontWeight: '600', fontStyle: 'italic' }}>
+          <Text style={{ fontSize: 11, color: colors.warning }}>✨</Text>
+          <Text style={{ fontSize: 11, color: colors.warning, fontWeight: '600', fontStyle: 'italic' }}>
             {promo.recommendReason}
           </Text>
         </View>
@@ -132,8 +132,8 @@ const PromoCard = ({ promo, colors, onApply }) => {
             gap: 5,
           }}
         >
-          <Ionicons name="flash-outline" size={14} color="#fff" />
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#fff' }}>Use This Code</Text>
+          <Ionicons name="flash-outline" size={14} color={colors.white} />
+          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.white }}>Use This Code</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -227,7 +227,7 @@ const PromoCodesScreen = ({ navigation }) => {
           {recommended.length > 0 && (
             <View style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <Ionicons name="star" size={16} color="#F59E0B" />
+                <Ionicons name="star" size={16} color={colors.warning} />
                 <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>Recommended for You</Text>
               </View>
               {recommended.map((promo) => (

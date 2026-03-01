@@ -1279,7 +1279,7 @@ const { jobId, fromReferralRequest } = route.params || {};
               <Ionicons 
                 name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
                 size={hasReferred ? 24 : 20} 
-                color={hasReferred ? "#10b981" : referralRequesting ? colors.warning : colors.warning} 
+                color={hasReferred ? colors.success : referralRequesting ? colors.warning : colors.warning} 
               />
               {!hasReferred && (
                 <Text style={[
@@ -1711,7 +1711,7 @@ const createStyles = (colors, responsive = {}) => {
   },
   referralButtonReferred: {
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderColor: '#10b981',
+    borderColor: colors.success,
     paddingHorizontal: 12,
     minWidth: 44,
   },

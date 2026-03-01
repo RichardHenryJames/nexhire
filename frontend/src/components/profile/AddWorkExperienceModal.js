@@ -888,7 +888,7 @@ export default function AddWorkExperienceModal({
 
               {hideCurrentToggle && (
                 <View style={styles.infoContainer}>
-                  <Ionicons name="information-circle" size={16} color={colors.warning || '#F59E0B'} />
+                  <Ionicons name="information-circle" size={16} color={colors.warning} />
                   <Text style={styles.infoText}>Cannot mark as current - you have a newer current position</Text>
                 </View>
               )}
@@ -1097,7 +1097,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'center',
   },
   errorInput: {
-    borderColor: colors.danger || '#FF3B30',
+    borderColor: colors.danger,
   },
   companyInput: {
     flex: 1,
@@ -1110,7 +1110,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     textAlignVertical: 'top',
   },
   validationText: {
-    color: colors.danger || '#FF3B30',
+    color: colors.danger,
     fontSize: typography.sizes?.xs || 12,
     marginTop: 4,
   },
@@ -1119,15 +1119,15 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: colors.surface || '#fff',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border || '#e0e0e0',
+    borderColor: colors.border,
     borderRadius: 8,
     marginTop: 4,
     maxHeight: 250,
     zIndex: 9999,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -1283,7 +1283,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   infoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: (colors.warning || '#F59E0B') + '15',
+    backgroundColor: (colors.warning) + '15',
     padding: 10,
     borderRadius: 8,
     marginVertical: 8,
@@ -1292,7 +1292,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: typography.sizes?.sm || 14,
-    color: colors.warning || '#F59E0B',
+    color: colors.warning,
   },
   modalFooterActions: {
     flexDirection: 'row',
@@ -1337,7 +1337,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     marginTop: 16,
     marginBottom: 16,
     padding: 16,
-    backgroundColor: colors.gray50 || '#F9FAFB',
+    backgroundColor: colors.gray50,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1367,7 +1367,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   saveFirstContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: (colors.warning || '#F59E0B') + '15',
+    backgroundColor: (colors.warning) + '15',
     padding: 12,
     borderRadius: 10,
     borderWidth: 1,
@@ -1445,7 +1445,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingVertical: 12,
     fontSize: typography.sizes?.sm || 14,
     color: colors.gray500,
-    backgroundColor: colors.gray100 || '#F3F4F6',
+    backgroundColor: colors.gray100,
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
   },
@@ -1460,7 +1460,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.text,
   },
   emailInputValid: {
-    borderColor: '#10B981',
+    borderColor: colors.success,
     borderWidth: 2,
   },
   verifyButton: {
@@ -1490,7 +1490,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   otpLabel: {
     fontSize: typography.sizes?.sm || 14,
-    color: colors.gray700 || '#374151',
+    color: colors.gray700,
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -1525,7 +1525,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes?.sm || 14,
   },
   submitOtpButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 8,
@@ -1539,7 +1539,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: typography.sizes?.sm || 14,
   },
   verificationError: {
-    color: colors.danger || '#E53E3E',
+    color: colors.danger,
     fontSize: typography.sizes?.sm || 14,
     marginTop: 8,
     textAlign: 'center',

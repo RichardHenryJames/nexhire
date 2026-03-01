@@ -23,6 +23,7 @@ const PAYMENT_METHODS = ['QR / UPI', 'Bank Transfer'];
 
 // Animated percentage badge with fill effect
 const BonusPercentBadge = ({ percent }) => {
+  const { colors } = useTheme();
   const fillAnim = React.useRef(new Animated.Value(0)).current;
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
   const shimmerAnim = React.useRef(new Animated.Value(0)).current;
@@ -49,11 +50,11 @@ const BonusPercentBadge = ({ percent }) => {
 
   return (
     <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: '#10B98140', minWidth: 72 }}>
-        <View style={{ backgroundColor: '#10B98110', paddingHorizontal: 10, paddingVertical: 6 }}>
-          <Animated.View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: fillWidth, backgroundColor: '#10B98130', borderRadius: 8 }} />
-          <Animated.View style={{ position: 'absolute', top: 0, bottom: 0, width: '20%', left: shimmerLeft, backgroundColor: '#10B98118', borderRadius: 8 }} />
-          <Text style={{ color: '#10B981', fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
+      <View style={{ overflow: 'hidden', borderRadius: 8, borderWidth: 1, borderColor: colors.successBorder, minWidth: 72 }}>
+        <View style={{ backgroundColor: colors.successBg, paddingHorizontal: 10, paddingVertical: 6 }}>
+          <Animated.View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: fillWidth, backgroundColor: colors.successBorder, borderRadius: 8 }} />
+          <Animated.View style={{ position: 'absolute', top: 0, bottom: 0, width: '20%', left: shimmerLeft, backgroundColor: colors.successBg, borderRadius: 8 }} />
+          <Text style={{ color: colors.success, fontWeight: '800', fontSize: 13, textAlign: 'center', letterSpacing: 0.3 }}>
             {percent}% extra
           </Text>
         </View>
@@ -195,9 +196,9 @@ const SubmitPaymentScreen = ({ navigation }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Approved': return '#10B981';
-      case 'Rejected': return '#EF4444';
-      default: return '#F59E0B';
+      case 'Approved': return colors.success;
+      case 'Rejected': return colors.error;
+      default: return colors.warning;
     }
   };
 
@@ -305,12 +306,12 @@ const SubmitPaymentScreen = ({ navigation }) => {
                       }}
                     >
                       {pack.Badge && (
-                        <Text style={{ fontSize: 8, fontWeight: '700', color: pack.Badge === 'Most Popular' ? '#F59E0B' : pack.Badge === 'Best Value' ? '#10B981' : colors.primary, textTransform: 'uppercase', marginBottom: 2 }}>
+                        <Text style={{ fontSize: 8, fontWeight: '700', color: pack.Badge === 'Most Popular' ? colors.warning : pack.Badge === 'Best Value' ? colors.success : colors.primary, textTransform: 'uppercase', marginBottom: 2 }}>
                           {pack.Badge}
                         </Text>
                       )}
                       <Text style={{ fontSize: 15, fontWeight: '700', color: isSelected ? colors.primary : colors.text }}>₹{pack.PayAmount}</Text>
-                      <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '700', marginTop: 2 }}>Get ₹{pack.GetAmount}</Text>
+                      <Text style={{ fontSize: 11, color: colors.success, fontWeight: '700', marginTop: 2 }}>Get ₹{pack.GetAmount}</Text>
                       {isSelected && (
                         <Ionicons name="checkmark-circle" size={16} color={colors.primary} style={{ position: 'absolute', top: 4, right: 4 }} />
                       )}
@@ -357,15 +358,15 @@ const SubmitPaymentScreen = ({ navigation }) => {
           </View>
           {promoResult && (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <Ionicons name={promoResult.valid ? 'checkmark-circle' : 'alert-circle'} size={14} color={promoResult.valid ? '#10B981' : colors.error} />
-              <Text style={{ color: promoResult.valid ? '#10B981' : colors.error, fontSize: 12, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
+              <Ionicons name={promoResult.valid ? 'checkmark-circle' : 'alert-circle'} size={14} color={promoResult.valid ? colors.success : colors.error} />
+              <Text style={{ color: promoResult.valid ? colors.success : colors.error, fontSize: 12, marginLeft: 4, flex: 1 }}>{promoResult.message}</Text>
             </View>
           )}
         </View>
 
         {/* Credit Summary — shows when amount > 0 */}
         {getPayAmount() > 0 && (
-          <View style={[styles.section, { backgroundColor: totalBonus > 0 ? '#10B981' + '08' : colors.surface, borderWidth: totalBonus > 0 ? 1 : 0, borderColor: '#10B981' + '25' }]}>
+          <View style={[styles.section, { backgroundColor: totalBonus > 0 ? colors.success + '08' : colors.surface, borderWidth: totalBonus > 0 ? 1 : 0, borderColor: colors.success + '25' }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.gray500, fontSize: 11 }}>You paid</Text>
@@ -373,16 +374,16 @@ const SubmitPaymentScreen = ({ navigation }) => {
                 <View style={{ height: 1, backgroundColor: colors.border + '40', marginVertical: 6 }} />
                 <Text style={{ color: colors.gray500, fontSize: 11 }}>You will get</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 1 }}>
-                  <Text style={{ color: '#10B981', fontSize: 20, fontWeight: '800' }}>₹{getTotalCredit()}</Text>
+                  <Text style={{ color: colors.success, fontSize: 20, fontWeight: '800' }}>₹{getTotalCredit()}</Text>
                   {totalBonus > 0 && (
-                    <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '600', marginLeft: 6 }}>(+₹{totalBonus} bonus)</Text>
+                    <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600', marginLeft: 6 }}>(+₹{totalBonus} bonus)</Text>
                   )}
                 </View>
                 {selectedPack && (
                   <Text style={{ color: colors.primary, fontSize: 11, marginTop: 2 }}>📦 {selectedPack.Name} +₹{getPackBonus()}</Text>
                 )}
                 {promoResult?.valid && getPromoBonus() > 0 && (
-                  <Text style={{ color: '#10B981', fontSize: 11, marginTop: 1 }}>🏷️ {promoCode} +₹{getPromoBonus()}</Text>
+                  <Text style={{ color: colors.success, fontSize: 11, marginTop: 1 }}>🏷️ {promoCode} +₹{getPromoBonus()}</Text>
                 )}
               </View>
               {bonusPct > 0 && <BonusPercentBadge percent={bonusPct} />}
@@ -484,7 +485,7 @@ const SubmitPaymentScreen = ({ navigation }) => {
                   {sub.promoCode && (
                     <View style={styles.submissionRow}>
                       <Text style={styles.submissionLabel}>Promo:</Text>
-                      <Text style={[styles.submissionValue, { color: '#10b981' }]}>{sub.promoCode}</Text>
+                      <Text style={[styles.submissionValue, { color: colors.success }]}>{sub.promoCode}</Text>
                     </View>
                   )}
                   <View style={styles.submissionRow}>

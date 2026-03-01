@@ -3486,7 +3486,7 @@ app.timer("dailyReferrerNotificationEmail", {
 // ========================================================================
 
 app.timer("jobScraperTimer", {
-  schedule: "0 0 */6 * * *", // Every 6 hours
+  schedule: "0 0 */4 * * *", // Every 4 hours
   handler: async (myTimer: Timer, context: InvocationContext) => {
     // Skip scraping on dev/staging — only run on production
     const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
@@ -3732,7 +3732,7 @@ export {};
 * DELETE /jobs/scrape/cleanup - Clean up old scraped jobs (Admin)
 * GET    /jobs/scrape/health - Scraper service health check
 * GET    /jobs/scrape/ping - Simple ping test endpoint
-* TIMER  /jobScraperTimer - Automated scraping every 2 hours
+* TIMER  /jobScraperTimer - Automated scraping every 4 hours
 *
 * JOB ARCHIVAL SYSTEM (3 endpoints): NEW - Automated Job Archival
 * POST   /jobs/archive/trigger - Manually trigger archival (Admin)

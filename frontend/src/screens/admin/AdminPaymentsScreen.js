@@ -264,7 +264,7 @@ export default function AdminPaymentsScreen() {
     switch (status) {
       case 'Approved': return colors.success;
       case 'Rejected': return colors.error;
-      default: return '#F59E0B';
+      default: return colors.warning;
     }
   };
 
@@ -320,7 +320,7 @@ export default function AdminPaymentsScreen() {
         {payment.packName && (
           <View style={styles.paymentRow}>
             <Text style={styles.paymentLabel}>Pack:</Text>
-            <Text style={[styles.paymentValue, { color: '#6366f1', fontWeight: '600' }]}>
+            <Text style={[styles.paymentValue, { color: colors.indigo, fontWeight: '600' }]}>
               {payment.packName}{payment.packBonusAmount ? ` (+₹${payment.packBonusAmount})` : ''}
             </Text>
           </View>
@@ -328,13 +328,13 @@ export default function AdminPaymentsScreen() {
         {payment.promoCode && (
           <View style={styles.paymentRow}>
             <Text style={styles.paymentLabel}>Promo:</Text>
-            <Text style={[styles.paymentValue, { color: '#10b981', fontWeight: '600' }]}>{payment.promoCode}</Text>
+            <Text style={[styles.paymentValue, { color: colors.success, fontWeight: '600' }]}>{payment.promoCode}</Text>
           </View>
         )}
         {payment.bonusCredited > 0 && (
           <View style={styles.paymentRow}>
             <Text style={styles.paymentLabel}>Bonus Credited:</Text>
-            <Text style={[styles.paymentValue, { color: '#f59e0b', fontWeight: '700' }]}>₹{payment.bonusCredited}</Text>
+            <Text style={[styles.paymentValue, { color: colors.warning, fontWeight: '700' }]}>₹{payment.bonusCredited}</Text>
           </View>
         )}
         <View style={styles.paymentRow}>
@@ -375,10 +375,10 @@ export default function AdminPaymentsScreen() {
             disabled={processingPayment === payment.submissionId}
           >
             {processingPayment === payment.submissionId ? (
-              <ActivityIndicator size="small" color="#FFF" />
+              <ActivityIndicator size="small" color={colors.white} />
             ) : (
               <>
-                <Ionicons name="checkmark-circle" size={18} color="#FFF" />
+                <Ionicons name="checkmark-circle" size={18} color={colors.white} />
                 <Text style={styles.actionButtonText}>Approve</Text>
               </>
             )}
@@ -388,7 +388,7 @@ export default function AdminPaymentsScreen() {
             onPress={() => handleRejectPayment(payment.submissionId)}
             disabled={processingPayment === payment.submissionId}
           >
-            <Ionicons name="close-circle" size={18} color="#FFF" />
+            <Ionicons name="close-circle" size={18} color={colors.white} />
             <Text style={styles.actionButtonText}>Reject</Text>
           </TouchableOpacity>
         </View>
@@ -400,8 +400,8 @@ export default function AdminPaymentsScreen() {
     <View key={withdrawal.WithdrawalID} style={styles.paymentCard}>
       <View style={styles.paymentHeader}>
         <Text style={styles.paymentAmount}>₹{withdrawal.Amount}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: '#F59E0B20' }]}>
-          <Text style={[styles.statusText, { color: '#F59E0B' }]}>Pending</Text>
+        <View style={[styles.statusBadge, { backgroundColor: colors.warningBg }]}>
+          <Text style={[styles.statusText, { color: colors.warning }]}>Pending</Text>
         </View>
       </View>
 
@@ -452,10 +452,10 @@ export default function AdminPaymentsScreen() {
           disabled={processingWithdrawal === withdrawal.WithdrawalID}
         >
           {processingWithdrawal === withdrawal.WithdrawalID ? (
-            <ActivityIndicator size="small" color="#FFF" />
+            <ActivityIndicator size="small" color={colors.white} />
           ) : (
             <>
-              <Ionicons name="checkmark-circle" size={18} color="#FFF" />
+              <Ionicons name="checkmark-circle" size={18} color={colors.white} />
               <Text style={styles.actionButtonText}>Approve</Text>
             </>
           )}
@@ -465,7 +465,7 @@ export default function AdminPaymentsScreen() {
           onPress={() => handleRejectWithdrawal(withdrawal)}
           disabled={processingWithdrawal === withdrawal.WithdrawalID}
         >
-          <Ionicons name="close-circle" size={18} color="#FFF" />
+          <Ionicons name="close-circle" size={18} color={colors.white} />
           <Text style={styles.actionButtonText}>Reject</Text>
         </TouchableOpacity>
       </View>
@@ -513,10 +513,10 @@ export default function AdminPaymentsScreen() {
         {subTabs.map(st => (
           <TouchableOpacity
             key={st.key}
-            style={[styles.tab, { paddingVertical: 8 }, subTab === st.key && { borderBottomWidth: 2, borderBottomColor: subTab === st.key && st.key === 'pending' ? '#F59E0B' : '#10B981' }]}
+            style={[styles.tab, { paddingVertical: 8 }, subTab === st.key && { borderBottomWidth: 2, borderBottomColor: subTab === st.key && st.key === 'pending' ? colors.warning : colors.success }]}
             onPress={() => setSubTab(st.key)}
           >
-            <Text style={[styles.tabText, subTab === st.key && { color: subTab === st.key && st.key === 'pending' ? '#F59E0B' : '#10B981', fontWeight: '700' }]}>
+            <Text style={[styles.tabText, subTab === st.key && { color: subTab === st.key && st.key === 'pending' ? colors.warning : colors.success, fontWeight: '700' }]}>
               {st.label}
             </Text>
           </TouchableOpacity>
@@ -562,8 +562,8 @@ export default function AdminPaymentsScreen() {
                   <View key={w.WithdrawalID} style={styles.paymentCard}>
                     <View style={styles.paymentHeader}>
                       <Text style={styles.paymentAmount}>₹{w.Amount}</Text>
-                      <View style={[styles.statusBadge, { backgroundColor: (w.Status === 'Completed' ? '#10B981' : '#EF4444') + '20' }]}>
-                        <Text style={[styles.statusText, { color: w.Status === 'Completed' ? '#10B981' : '#EF4444' }]}>{w.Status}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: (w.Status === 'Completed' ? colors.success : colors.error) + '20' }]}>
+                        <Text style={[styles.statusText, { color: w.Status === 'Completed' ? colors.success : colors.error }]}>{w.Status}</Text>
                       </View>
                     </View>
                     <View style={styles.paymentDetails}>
@@ -571,7 +571,7 @@ export default function AdminPaymentsScreen() {
                       <View style={styles.paymentRow}><Text style={styles.paymentLabel}>Email:</Text><Text style={styles.paymentValue}>{w.Email || '-'}</Text></View>
                       {w.UpiId && <View style={styles.paymentRow}><Text style={styles.paymentLabel}>UPI:</Text><Text style={styles.paymentValue}>{w.UpiId}</Text></View>}
                       {w.PaymentReference && <View style={styles.paymentRow}><Text style={styles.paymentLabel}>Ref:</Text><Text style={styles.paymentValue}>{w.PaymentReference}</Text></View>}
-                      {w.RejectionReason && <View style={styles.paymentRow}><Text style={[styles.paymentLabel, {color:'#EF4444'}]}>Reason:</Text><Text style={[styles.paymentValue, {color:'#EF4444'}]}>{w.RejectionReason}</Text></View>}
+                      {w.RejectionReason && <View style={styles.paymentRow}><Text style={[styles.paymentLabel, {color:colors.error}]}>Reason:</Text><Text style={[styles.paymentValue, {color:colors.error}]}>{w.RejectionReason}</Text></View>}
                       <View style={styles.paymentRow}><Text style={styles.paymentLabel}>Date:</Text><Text style={styles.paymentValue}>{formatDateTime(w.ProcessedAt || w.RequestedAt)}</Text></View>
                     </View>
                   </View>
@@ -657,7 +657,7 @@ export default function AdminPaymentsScreen() {
                 style={[styles.modalButton, styles.modalRejectButton]}
                 onPress={confirmReject}
               >
-                <Ionicons name="close-circle" size={18} color="#FFF" />
+                <Ionicons name="close-circle" size={18} color={colors.white} />
                 <Text style={styles.modalRejectText}>Reject Payment</Text>
               </TouchableOpacity>
             </View>
@@ -749,7 +749,7 @@ export default function AdminPaymentsScreen() {
                 <Ionicons 
                   name={withdrawalAction === 'approve' ? 'checkmark-circle' : 'close-circle'} 
                   size={18} 
-                  color="#FFF" 
+                  color={colors.white} 
                 />
                 <Text style={styles.modalRejectText}>
                   {withdrawalAction === 'approve' ? 'Approve & Deduct Balance' : 'Reject Withdrawal'}
@@ -805,7 +805,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     borderRadius: 8,
   },
   backButtonText: {
-    color: '#FFF',
+    color: colors.white,
     fontWeight: '600',
   },
   tabsContainer: {
@@ -947,13 +947,13 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     gap: 6,
   },
   approveButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: colors.success,
   },
   rejectButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
   },
   actionButtonText: {
-    color: '#FFF',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -971,7 +971,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1022,7 +1022,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     borderColor: colors.border,
   },
   modalRejectButton: {
-    backgroundColor: '#EF4444',
+    backgroundColor: colors.error,
   },
   modalCancelText: {
     color: colors.text,
@@ -1030,7 +1030,7 @@ const createStyles = (colors, responsive) => StyleSheet.create({
     fontSize: 15,
   },
   modalRejectText: {
-    color: '#FFF',
+    color: colors.white,
     fontWeight: '600',
     fontSize: 15,
   },
