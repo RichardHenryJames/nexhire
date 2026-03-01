@@ -1609,8 +1609,9 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             if (loadMoreAbortRef.current) { try { loadMoreAbortRef.current.abort(); } catch {} }
           }}
           centerContent={
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color={colors.textSecondary} style={{ marginRight: 8 }} />
+            <View style={{ flex: 1 }}>
+              <View style={styles.searchContainer}>
+                <Ionicons name="search" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Search jobs..."
@@ -1631,10 +1632,11 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 </TouchableOpacity>
               )}
             </View>
+            </View>
           }
           rightContent={
             <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
-              <Ionicons name="options-outline" size={24} color={colors.primaryDark} />
+              <Ionicons name="options-outline" size={22} color={colors.primary} />
             </TouchableOpacity>
           }
           showMessages={false}

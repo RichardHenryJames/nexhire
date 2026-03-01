@@ -33,9 +33,12 @@ export const createStyles = (colors, responsive = {}) => {
     padding: 4,
   },
   filterButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: colors.gray100,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.primary + '15',
   },
   
   // Quick Filters Styles
