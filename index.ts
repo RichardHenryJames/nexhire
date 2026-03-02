@@ -820,6 +820,21 @@ app.http("reference-currencies", {
   handler: withErrorHandling(getCurrencies),
 });
 
+app.http("reference-job-locations", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "reference/job-locations",
+  handler: withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { JobService } = await import("./src/services/job.service");
+    const locations = await JobService.getJobLocations();
+    return {
+      status: 200,
+      jsonBody: { success: true, data: locations },
+      headers: corsHeaders,
+    };
+  }),
+});
+
 app.http("reference-organizations", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",

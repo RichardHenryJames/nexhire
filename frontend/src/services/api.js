@@ -827,6 +827,22 @@ class RefOpenAPI {
   }
 
   // Jobs APIs
+  // ── Job Locations (cached per session) ──────────────────
+  _jobLocationsCache = null;
+  async getJobLocations() {
+    if (this._jobLocationsCache) return this._jobLocationsCache;
+    try {
+      const res = await this.apiCall('/reference/job-locations');
+      if (res.success) {
+        this._jobLocationsCache = res.data;
+        return res.data;
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
   async getJobs(page = 1, pageSize = 20, filters = {}, fetchOptions = {}) {
     // Page-based only
     const userId = this.getUserIdFromToken();

@@ -1148,6 +1148,61 @@ export class JobService {
         return result.recordset || [];
     }
 
+    // ── Job Locations (cached) ──────────────────────────────────
+    private static _locationCache: { data: any[]; expiresAt: number } | null = null;
+    private static readonly LOCATION_CACHE_TTL = 4 * 60 * 60 * 1000; // 4 hours
+
+    /**
+     * Get distinct job locations with job counts.
+     * Cached in-memory for 4 hours (refreshed with scraper cycle).
+     */
+    static async getJobLocations(): Promise<any[]> {
+        // Return cache if valid
+        if (this._locationCache && Date.now() < this._locationCache.expiresAt) {
+            return this._locationCache.data;
+        }
+
+        const query = `
+            SELECT Location, COUNT(*) AS JobCount
+            FROM Jobs
+            WHERE Status = 'Published' AND Location IS NOT NULL AND Location != ''
+            GROUP BY Location
+            HAVING COUNT(*) >= 5
+            ORDER BY COUNT(*) DESC
+        `;
+        const result = await dbService.executeQuery(query);
+        const rows = result.recordset || [];
+
+        // Extract clean city names from "City, State" format
+        const cityMap = new Map<string, number>();
+        for (const row of rows) {
+            const loc = (row.Location || '').trim();
+            if (!loc) continue;
+
+            // Use the first part (city) as the label
+            const city = loc.split(',')[0].trim();
+            if (!city || city.length < 2) continue;
+
+            // Aggregate job counts for same city
+            cityMap.set(city, (cityMap.get(city) || 0) + row.JobCount);
+        }
+
+        // Convert to sorted array, top 100
+        const locations = Array.from(cityMap.entries())
+            .map(([city, count]) => ({ city, jobCount: count }))
+            .sort((a, b) => b.jobCount - a.jobCount)
+            .slice(0, 100);
+
+        // Cache it
+        this._locationCache = {
+            data: locations,
+            expiresAt: Date.now() + this.LOCATION_CACHE_TTL,
+        };
+
+        console.log(`📍 Job locations cached: ${locations.length} cities`);
+        return locations;
+    }
+
     /**
      * Search jobs with advanced filters and pagination
      * Supports personalization based on user preferences

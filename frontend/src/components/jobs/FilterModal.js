@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
+import refopenAPI from '../../services/api';
 
 const FilterModal = ({ 
   visible, 
@@ -23,7 +24,10 @@ const FilterModal = ({
   const [selectedCategory, setSelectedCategory] = useState('workMode');
   const [companySearchQuery, setCompanySearchQuery] = useState('');
   const [debouncedCompanyQuery, setDebouncedCompanyQuery] = useState('');
-  const [displayLimit, setDisplayLimit] = useState(100); // Show first 100 companies initially
+  const [displayLimit, setDisplayLimit] = useState(100);
+  const [locationSearch, setLocationSearch] = useState('');
+  const [jobLocations, setJobLocations] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
 
   // Auto-select category when modal opens with initialSection
   useEffect(() => {
@@ -31,6 +35,16 @@ const FilterModal = ({
       setSelectedCategory(initialSection);
     }
   }, [visible, initialSection]);
+
+  // Fetch job locations when modal opens (cached in API layer)
+  useEffect(() => {
+    if (visible && jobLocations.length === 0) {
+      setLoadingLocations(true);
+      refopenAPI.getJobLocations().then(locs => {
+        setJobLocations(locs || []);
+      }).finally(() => setLoadingLocations(false));
+    }
+  }, [visible]);
 
   // Debounce company search - 200ms delay
   useEffect(() => {
@@ -140,17 +154,66 @@ default:
         );
 
   case 'location':
+        const filteredLocations = locationSearch.trim()
+          ? jobLocations.filter(l => l.city.toLowerCase().includes(locationSearch.toLowerCase()))
+          : jobLocations;
         return (
-       <View style={styles.rightContent}>
+          <View style={styles.rightContent}>
             <Text style={styles.rightTitle}>Location</Text>
-            <TextInput
-  style={styles.searchInput}
-         placeholder="City, State or Country"
-              value={filters.location || ''}
-         onChangeText={(t) => onFiltersChange({ ...filters, location: t })}
- placeholderTextColor={colors.gray400}
-  />
-     </View>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={16} color={colors.gray400} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInputWithIcon}
+                placeholder="Search city..."
+                value={locationSearch}
+                onChangeText={setLocationSearch}
+                placeholderTextColor={colors.gray400}
+              />
+              {locationSearch ? (
+                <TouchableOpacity onPress={() => setLocationSearch('')}>
+                  <Ionicons name="close-circle" size={16} color={colors.gray400} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            {filters.location ? (
+              <TouchableOpacity
+                style={[styles.selectedLocationChip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                onPress={() => onFiltersChange({ ...filters, location: '' })}
+              >
+                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>{filters.location}</Text>
+                <Ionicons name="close" size={14} color={colors.primary} style={{ marginLeft: 6 }} />
+              </TouchableOpacity>
+            ) : null}
+            {loadingLocations ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 16 }} />
+            ) : (
+              <ScrollView style={{ flex: 1, marginTop: 8 }} showsVerticalScrollIndicator={false}>
+                {filteredLocations.map((loc, idx) => {
+                  const isSelected = filters.location === loc.city;
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      style={[styles.locationItem, isSelected && { backgroundColor: colors.primary + '15' }]}
+                      onPress={() => {
+                        onFiltersChange({ ...filters, location: isSelected ? '' : loc.city });
+                        setLocationSearch('');
+                      }}
+                    >
+                      <Ionicons name="location-outline" size={16} color={isSelected ? colors.primary : colors.gray500} style={{ marginRight: 10 }} />
+                      <Text style={[styles.locationText, isSelected && { color: colors.primary, fontWeight: '600' }]}>{loc.city}</Text>
+                      <Text style={styles.locationCount}>{loc.jobCount.toLocaleString()}</Text>
+                      {isSelected && <Ionicons name="checkmark" size={16} color={colors.primary} style={{ marginLeft: 4 }} />}
+                    </TouchableOpacity>
+                  );
+                })}
+                {filteredLocations.length === 0 && !loadingLocations && (
+                  <Text style={{ color: colors.gray500, textAlign: 'center', marginTop: 20, fontSize: 13 }}>
+                    No locations found
+                  </Text>
+                )}
+              </ScrollView>
+            )}
+          </View>
         );
 
       case 'company':
@@ -756,6 +819,34 @@ const createStyles = (colors) => StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: colors.textMuted,
+  },
+  selectedLocationChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  locationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text,
+  },
+  locationCount: {
+    fontSize: 12,
+    color: colors.gray500,
+    marginLeft: 8,
   },
 });
 
