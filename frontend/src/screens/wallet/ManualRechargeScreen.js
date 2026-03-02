@@ -406,11 +406,16 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                   setSelectedPack(null);
                 }
               }}
-              placeholder={`Min ₹${settings?.minAmount || 1}`}
+              placeholder={`Min ₹${settings?.minAmount || 49}`}
               placeholderTextColor={colors.gray400}
               keyboardType="numeric"
             />
           </View>
+          {amount && parseFloat(amount) > 0 && settings && parseFloat(amount) < settings.minAmount && (
+            <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
+              Minimum recharge amount is ₹{settings.minAmount}
+            </Text>
+          )}
         </View>
 
         {/* ═══ 3. PROMO CODE ═══ */}
@@ -694,7 +699,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
             { q: 'How does manual recharge work?', a: 'Select a booster pack or enter a custom amount. Pay via any UPI app or scan the QR code, then tap "Already Paid? Submit Details" to upload your payment proof. We\'ll verify and credit your wallet.' },
             { q: 'How long does it take to credit my wallet?', a: 'Manual payments are usually verified within 1 minute to 24 hours. You\'ll receive a notification once your wallet is credited.' },
             { q: 'Do I still get pack bonuses with manual payment?', a: 'Yes! Select a pack before paying, and the bonus will be applied when your payment is verified.' },
-            { q: 'Can I recharge a custom amount?', a: `Yes. Enter any custom amount — the minimum is ₹${settings?.minAmount || 1}.` },
+            { q: 'Can I recharge a custom amount?', a: `Yes. Enter any custom amount — the minimum is ₹${settings?.minAmount || 49}.` },
             { q: 'What can I spend wallet balance on?', a: `• Referral request — from ₹${pricing.referralRequestCost} (varies by company)\n• Open-to-any-company referral — ₹${pricing.openToAnyReferralCost}\n• AI Job Recommendations (${pricing.aiAccessDurationDays} days) — ₹${pricing.aiJobsCost}\n• Profile Views (${pricing.profileViewAccessDurationDays} days) — ₹${pricing.profileViewCost}` },
             { q: 'What happens when I request a referral?', a: `When you request a referral, the amount is placed on hold (not deducted). If a referrer picks up your request, the hold converts to a debit. If no one picks it up within 14 days, the full amount is automatically released back to your wallet.` },
             { q: 'Who is Rocana?', a: 'Rocana is our payment processing partner. All UPI transfers go through Rocana\'s verified accounts.' },
