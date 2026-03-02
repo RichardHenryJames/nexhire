@@ -692,8 +692,12 @@ export class JobService {
                 return row;
             });
 
-            // Sort: titleScore DESC > prefScore DESC > workplace order > recency
+            // Sort: tier (Elite>Premium>Standard) > titleScore DESC > prefScore DESC > workplace order > recency
+            const tierOrder: Record<string, number> = { 'Elite': 0, 'Premium': 1, 'Standard': 2 };
             scored.sort((a: any, b: any) => {
+                const ta = tierOrder[a.OrganizationTier] ?? 2;
+                const tb = tierOrder[b.OrganizationTier] ?? 2;
+                if (ta !== tb) return ta - tb;
                 if (b._titleScore !== a._titleScore) return b._titleScore - a._titleScore;
                 if (b._prefScore !== a._prefScore) return b._prefScore - a._prefScore;
                 const wa = wpOrder[a.WorkplaceTypeID] || 4;
@@ -714,11 +718,12 @@ export class JobService {
             // 1. Preference score (workplace=4pts, job type=2pts, location=2pts, company size=1pt)
             // 2. Workplace type as tiebreaker (Remote > Hybrid > Onsite)
             // 3. Recency (PublishedAt)
+            const tierOrderSql = `CASE WHEN o.Tier = 'Elite' THEN 0 WHEN o.Tier = 'Premium' THEN 1 ELSE 2 END`;
             const orderPrefix = skipPersonalization
-                ? `${workplaceOrderSql}, `
+                ? `${tierOrderSql}, ${workplaceOrderSql}, `
                 : (hasSearchText
-                    ? `${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
-                    : `${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
+                    ? `${tierOrderSql}, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
+                    : `${tierOrderSql}, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
 
             const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
             dataQuery += ` ORDER BY ${orderPrefix}${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
@@ -1235,6 +1240,10 @@ export class JobService {
                 });
 
                 scored.sort((a: any, b: any) => {
+                    const tierOrder: Record<string, number> = { 'Elite': 0, 'Premium': 1, 'Standard': 2 };
+                    const ta = tierOrder[a.OrganizationTier] ?? 2;
+                    const tb = tierOrder[b.OrganizationTier] ?? 2;
+                    if (ta !== tb) return ta - tb;
                     if (b._titleScore !== a._titleScore) return b._titleScore - a._titleScore;
                     if (b._prefScore !== a._prefScore) return b._prefScore - a._prefScore;
                     const wa = wpOrder[a.WorkplaceTypeID] || 4;
@@ -1249,11 +1258,12 @@ export class JobService {
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 fetched = scored.slice(offset, offset + pageSizeNum + 1);
             } else {
+                const tierOrderSql = `CASE WHEN o.Tier = 'Elite' THEN 0 WHEN o.Tier = 'Premium' THEN 1 ELSE 2 END`;
                 const orderPrefix = skipPersonalization
-                    ? ''
+                    ? `${tierOrderSql}, `
                     : (hasSearchText
-                        ? `${preferenceScoreSql} DESC, `
-                        : `${preferenceScoreSql} DESC, `);
+                        ? `${tierOrderSql}, ${preferenceScoreSql} DESC, `
+                        : `${tierOrderSql}, ${preferenceScoreSql} DESC, `);
 
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 dataQuery += ` ORDER BY ${orderPrefix}j.PublishedAt DESC, j.JobID DESC 
