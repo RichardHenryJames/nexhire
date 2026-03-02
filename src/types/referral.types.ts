@@ -31,6 +31,7 @@ export interface ReferralRequest {
     ResumeID: string;
     Status: 'Pending' | 'Completed' | 'Verified' | 'Unverified' | 'Refunded';
     RequestedAt: Date;
+    ExpiryTime?: Date;
     AssignedReferrerID?: string;
     ReferredAt?: Date;
     VerifiedByApplicant: boolean;

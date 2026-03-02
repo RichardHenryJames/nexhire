@@ -283,11 +283,22 @@ export class JobService {
             paramIndex += 2;
         }
 
-        // Location filter
+        // Location filter (supports comma-separated for multi-select)
         if (f.location) {
-            whereClause += ` AND (j.Location LIKE @param${paramIndex} OR j.City LIKE @param${paramIndex + 1} OR j.Country LIKE @param${paramIndex + 2})`;
-            queryParams.push(`%${f.location}%`, `%${f.location}%`, `%${f.location}%`);
-            paramIndex += 3;
+            const locations = f.location.split(',').map((l: string) => l.trim()).filter(Boolean);
+            if (locations.length === 1) {
+                whereClause += ` AND (j.Location LIKE @param${paramIndex} OR j.City LIKE @param${paramIndex + 1} OR j.Country LIKE @param${paramIndex + 2})`;
+                queryParams.push(`%${locations[0]}%`, `%${locations[0]}%`, `%${locations[0]}%`);
+                paramIndex += 3;
+            } else if (locations.length > 1) {
+                const orClauses = locations.map((loc: string, i: number) => {
+                    const base = paramIndex + (i * 3);
+                    queryParams.push(`%${loc}%`, `%${loc}%`, `%${loc}%`);
+                    return `(j.Location LIKE @param${base} OR j.City LIKE @param${base + 1} OR j.Country LIKE @param${base + 2})`;
+                });
+                whereClause += ` AND (${orClauses.join(' OR ')})`;
+                paramIndex += locations.length * 3;
+            }
         }
 
         // Department filter

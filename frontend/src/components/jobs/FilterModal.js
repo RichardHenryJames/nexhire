@@ -66,7 +66,7 @@ const isSectionActive = (section) => {
      case 'department':
        return !!filters.department;
   case 'location':
-   return !!filters.location;
+   return (filters.locations || []).length > 0;
      case 'company':
        return (filters.organizationIds || []).length > 0;
      case 'experience':
@@ -89,7 +89,7 @@ default:
     if ((filters.workplaceTypeIds || []).length > 0) count += filters.workplaceTypeIds.length;
     if ((filters.jobTypeIds || []).length > 0) count += filters.jobTypeIds.length;
     if ((filters.organizationIds || []).length > 0) count += filters.organizationIds.length;
-    if (filters.location) count++;
+    if ((filters.locations || []).length) count++;
     if (filters.department) count++;
     if (filters.experienceMin || filters.experienceMax) count++;
     if (filters.salaryMin || filters.salaryMax) count++;
@@ -154,6 +154,7 @@ default:
         );
 
   case 'location':
+        const selectedLocations = filters.locations || [];
         const filteredLocations = locationSearch.trim()
           ? jobLocations.filter(l => l.city.toLowerCase().includes(locationSearch.toLowerCase()))
           : jobLocations;
@@ -175,34 +176,40 @@ default:
                 </TouchableOpacity>
               ) : null}
             </View>
-            {filters.location ? (
-              <TouchableOpacity
-                style={[styles.selectedLocationChip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
-                onPress={() => onFiltersChange({ ...filters, location: '' })}
-              >
-                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>{filters.location}</Text>
-                <Ionicons name="close" size={14} color={colors.primary} style={{ marginLeft: 6 }} />
-              </TouchableOpacity>
-            ) : null}
+            {selectedLocations.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {selectedLocations.map((loc, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.selectedLocationChip, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
+                    onPress={() => onFiltersChange({ ...filters, locations: selectedLocations.filter(l => l !== loc) })}
+                  >
+                    <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12 }}>{loc}</Text>
+                    <Ionicons name="close" size={12} color={colors.primary} style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
             {loadingLocations ? (
               <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 16 }} />
             ) : (
               <ScrollView style={{ flex: 1, marginTop: 8 }} showsVerticalScrollIndicator={false}>
                 {filteredLocations.map((loc, idx) => {
-                  const isSelected = filters.location === loc.city;
+                  const isSelected = selectedLocations.includes(loc.city);
                   return (
                     <TouchableOpacity
                       key={idx}
                       style={[styles.locationItem, isSelected && { backgroundColor: colors.primary + '15' }]}
                       onPress={() => {
-                        onFiltersChange({ ...filters, location: isSelected ? '' : loc.city });
-                        setLocationSearch('');
+                        const newLocs = isSelected
+                          ? selectedLocations.filter(l => l !== loc.city)
+                          : [...selectedLocations, loc.city];
+                        onFiltersChange({ ...filters, locations: newLocs });
                       }}
                     >
-                      <Ionicons name="location-outline" size={16} color={isSelected ? colors.primary : colors.gray500} style={{ marginRight: 10 }} />
+                      <Ionicons name={isSelected ? 'checkbox' : 'square-outline'} size={18} color={isSelected ? colors.primary : colors.gray400} style={{ marginRight: 10 }} />
                       <Text style={[styles.locationText, isSelected && { color: colors.primary, fontWeight: '600' }]}>{loc.city}</Text>
                       <Text style={styles.locationCount}>{loc.jobCount.toLocaleString()}</Text>
-                      {isSelected && <Ionicons name="checkmark" size={16} color={colors.primary} style={{ marginLeft: 4 }} />}
                     </TouchableOpacity>
                   );
                 })}

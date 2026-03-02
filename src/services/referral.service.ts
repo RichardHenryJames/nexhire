@@ -374,7 +374,7 @@ export class ReferralService {
             const query = `
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
-                    rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
+                    rr.RequestedAt, rr.ExpiryTime, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
                     rr.OrganizationID, rr.ReferralMessage, rr.JobTitle, rr.JobURL,
                     rr.OpenToAnyCompany, rr.MinSalary, rr.SalaryCurrency, rr.SalaryPeriod,
                     rr.PreferredLocations,
@@ -459,7 +459,8 @@ export class ReferralService {
                 OpenToAnyCompany: !!rawData.OpenToAnyCompany,
                 MinSalary: rawData.MinSalary,
                 SalaryCurrency: rawData.SalaryCurrency,
-                SalaryPeriod: rawData.SalaryPeriod
+                SalaryPeriod: rawData.SalaryPeriod,
+                ExpiryTime: rawData.ExpiryTime
             };
         } catch (error) {
             console.error('Error getting referral request:', error);
@@ -1013,7 +1014,7 @@ export class ReferralService {
             const dataQuery = `
                 SELECT 
                     rr.RequestID, rr.JobID, rr.ExtJobID, rr.ApplicantID, rr.ResumeID, rr.Status,
-                    rr.RequestedAt, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
+                    rr.RequestedAt, rr.ExpiryTime, rr.AssignedReferrerID, rr.ReferredAt, rr.VerifiedByApplicant,
                     rr.JobURL, rr.ReferralMessage,
                     rr.OpenToAnyCompany, rr.MinSalary, rr.SalaryCurrency, rr.SalaryPeriod,
                     rr.PreferredLocations,
@@ -1969,6 +1970,7 @@ export class ReferralService {
                     rr.ApplicantID,
                     rr.Status,
                     rr.RequestedAt,
+                    rr.ExpiryTime,
                     rr.AssignedReferrerID as AssignedReferrerUserID,
                     rr.OrganizationID,
                     rr.JobID,
@@ -2002,6 +2004,7 @@ export class ReferralService {
                 ApplicantID: row.ApplicantID,
                 Status: row.Status,
                 RequestedAt: row.RequestedAt,
+                ExpiryTime: row.ExpiryTime,
                 AssignedReferrerUserID: row.AssignedReferrerUserID,
                 AssignedReferrerName: row.AssignedReferrerName,
                 OrganizationID: row.OrganizationID,

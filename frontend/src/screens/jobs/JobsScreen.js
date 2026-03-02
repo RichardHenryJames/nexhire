@@ -67,7 +67,7 @@ const mapTypesToIds = (names = [], ref = [], idKey = 'JobTypeID', nameKey = 'Typ
 
 // Constants
 const EMPTY_FILTERS = {
-  location: '',
+  locations: [],
   jobTypeIds: [],
   workplaceTypeIds: [],
   organizationIds: [],
@@ -450,6 +450,13 @@ export default function JobsScreen({ navigation, route }) {
   const [quickPostedWithin, setQuickPostedWithin] = useState('');
   const [expandedQuick, setExpandedQuick] = useState(null);
 
+  // Location quick filter label
+  const quickLocationLabel = useMemo(() => {
+    const locs = filters.locations || [];
+    if (!locs.length) return 'Location';
+    return locs.length === 1 ? locs[0] : `${locs[0]} +${locs.length - 1}`;
+  }, [filters.locations]);
+
   // Compute quick labels based on selections
   const quickJobTypeLabel = useMemo(() => {
     const ids = filters.jobTypeIds || [];
@@ -782,7 +789,7 @@ export default function JobsScreen({ navigation, route }) {
           setLoading(true);
         }
         const apiFilters = {};
-        if (filters.location) apiFilters.location = filters.location;
+        if (filters.locations?.length) apiFilters.location = filters.locations.join(',');
 if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
     if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
         if (filters.organizationIds?.length) apiFilters.organizationIds = filters.organizationIds.join(',');
@@ -911,7 +918,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       isLoadingMoreRef.current = true;
       setLoadingMore(true);
       const apiFilters = {};
-      if (filters.location) apiFilters.location = filters.location;
+      if (filters.locations?.length) apiFilters.location = filters.locations.join(',');
       if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(',');
       if (filters.workplaceTypeIds?.length) apiFilters.workplaceTypeIds = filters.workplaceTypeIds.join(',');
       if (filters.organizationIds?.length) apiFilters.organizationIds = filters.organizationIds.join(',');
@@ -1132,7 +1139,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (workplaceNames.length) parts.push(workplaceNames.join('/'));
 
       // Location filter
-      if (filters.location) parts.push(filters.location);
+      if (filters.locations?.length) parts.push(filters.locations.join(', '));
 
   // ✅ NEW: Department filter
       if (filters.department) parts.push(`Dept: ${filters.department}`);
@@ -1685,6 +1692,19 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                       {quickWorkplaceLabel}
                     </Text>
                     <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.quickFilterItem}>
+                  <TouchableOpacity
+                    style={[styles.quickFilterDropdown, (filters.locations || []).length > 0 && styles.quickFilterActive]}
+                    onPress={() => openFilters('location')}
+                  >
+                    <Ionicons name="location-outline" size={14} color={(filters.locations || []).length > 0 ? colors.primaryDark : colors.textSecondary} style={{ marginRight: 2 }} />
+                    <Text style={[styles.quickFilterText, (filters.locations || []).length > 0 && styles.quickFilterActiveText]}>
+                      {quickLocationLabel}
+                    </Text>
+                    <Ionicons name="chevron-down" size={14} color={(filters.locations || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
