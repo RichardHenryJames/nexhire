@@ -37,7 +37,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
         let query: string;
         
         if (isFortune500Only && !hasSearch) {
-            // FAST PATH: F500 only, no search - use IX_Organizations_IsFortune500 index
+            // FAST PATH: Elite/F500 only, no search - use tier-covering index
             query = `
                 SELECT 
                     OrganizationID as id,
@@ -46,7 +46,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     Industry as industry,
                     IsFortune500 as isFortune500,
                     ISNULL(Tier, 'Standard') as tier
-                FROM Organizations WITH (INDEX(IX_Organizations_IsFortune500))
+                FROM Organizations
                 WHERE IsActive = 1 AND IsFortune500 = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
                 ORDER BY Name ASC
             `;
@@ -69,7 +69,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
             if (isFortune500Only) {
                 query += ` AND IsFortune500 = 1`;
             }
-            query += ` ORDER BY IsFortune500 DESC, Name ASC`;
+            query += ` ORDER BY CASE WHEN Tier = 'Elite' THEN 0 WHEN Tier = 'Premium' THEN 1 ELSE 2 END, Name ASC`;
         } else {
             // DEFAULT PATH: All orgs, use IsActive covering index
             query = `
@@ -82,7 +82,7 @@ export const getOrganizations = async (req: any): Promise<any> => {
                     ISNULL(Tier, 'Standard') as tier
                 FROM Organizations
                 WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
-                ORDER BY IsFortune500 DESC, Name ASC
+                ORDER BY CASE WHEN Tier = 'Elite' THEN 0 WHEN Tier = 'Premium' THEN 1 ELSE 2 END, Name ASC
             `;
         }
         

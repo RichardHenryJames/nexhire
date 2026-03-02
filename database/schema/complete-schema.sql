@@ -1304,9 +1304,9 @@ BEGIN
     CREATE NONCLUSTERED INDEX IX_Organizations_Active_Lookup ON Organizations(Name, LogoURL, LinkedInProfile, Website, OrganizationID, IsActive) WHERE ([IsActive]=(1));
 END
 GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_F500_Covering')
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_Tier_Covering')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Organizations_F500_Covering ON Organizations(OrganizationID, Name, LogoURL, Industry, Website, LinkedInProfile, Description, Type, IsFortune500, IsActive) WHERE ([IsFortune500]=(1) AND [IsActive]=(1));
+    CREATE NONCLUSTERED INDEX IX_Organizations_Tier_Covering ON Organizations(OrganizationID) INCLUDE (Name, LogoURL, Industry, Tier, IsFortune500, Website, Description, VerifiedReferrersCount) WHERE ([IsActive]=(1));
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_GetOrgs_Covering')
@@ -1319,9 +1319,9 @@ BEGIN
     CREATE NONCLUSTERED INDEX IX_Organizations_IsActive_Optimized ON Organizations(Name, LogoURL, LinkedInProfile, Website, Description, IsActive, OrganizationID);
 END
 GO
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_IsFortune500')
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_Tier')
 BEGIN
-    CREATE NONCLUSTERED INDEX IX_Organizations_IsFortune500 ON Organizations(Name, OrganizationID, IsFortune500);
+    CREATE NONCLUSTERED INDEX IX_Organizations_Tier ON Organizations(Tier, OrganizationID) INCLUDE (Name, IsFortune500);
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Organizations_Lookup_Complete')
