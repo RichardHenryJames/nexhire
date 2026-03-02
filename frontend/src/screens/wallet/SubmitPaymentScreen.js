@@ -278,11 +278,16 @@ const SubmitPaymentScreen = ({ navigation }) => {
                   setSelectedPack(null);
                 }
               }}
-              placeholder={`Min ₹${settings?.minAmount || 100}`}
+              placeholder={`Min ₹${settings?.minAmount || 49}`}
               placeholderTextColor={colors.gray400}
               keyboardType="numeric"
             />
           </View>
+          {amount && parseFloat(amount) > 0 && settings && parseFloat(amount) < settings.minAmount && (
+            <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
+              Minimum recharge amount is ₹{settings.minAmount}
+            </Text>
+          )}
         </View>
 
         {/* Step 2: Pack Selection — horizontal chips */}
