@@ -4,7 +4,7 @@ const config = {
   server: 'refopen-sqlserver-ci.database.windows.net',
   database: 'refopen-sql-db',
   user: 'sqladmin',
-  password: '***REMOVED***',
+  password: 'SecureRef2026#Prod!Kv',
   options: { encrypt: true, trustServerCertificate: false }
 };
 

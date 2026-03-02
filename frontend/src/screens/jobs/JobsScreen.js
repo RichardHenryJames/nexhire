@@ -1700,7 +1700,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     style={[styles.quickFilterDropdown, (filters.locations || []).length > 0 && styles.quickFilterActive]}
                     onPress={() => openFilters('location')}
                   >
-                    <Ionicons name="location-outline" size={14} color={(filters.locations || []).length > 0 ? colors.primaryDark : colors.textSecondary} style={{ marginRight: 2 }} />
                     <Text style={[styles.quickFilterText, (filters.locations || []).length > 0 && styles.quickFilterActiveText]}>
                       {quickLocationLabel}
                     </Text>

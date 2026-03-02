@@ -17,7 +17,7 @@ Write-Host "Project Root: $projectRoot"
 $server = "refopen-sqlserver-ci.database.windows.net"
 $database = "refopen-sql-db"
 $user = "sqladmin"
-$password = "***REMOVED***"
+$password = "SecureRef2026#Prod!Kv"
 
 $connectionString = "Server=$server;Database=$database;User Id=$user;Password=$password;TrustServerCertificate=True"
 

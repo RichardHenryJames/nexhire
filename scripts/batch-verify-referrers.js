@@ -36,7 +36,7 @@ if (isProd) {
   if (env.DB_PASSWORD && env.DB_PASSWORD.startsWith('@Microsoft.KeyVault')) {
     // Use the known prod password (same as setup-referrer approach)
     console.log('⚠️  Prod password is a Key Vault reference. Using direct credentials.');
-    env.DB_PASSWORD = process.env.REFOPEN_PROD_DB_PASSWORD || '***REMOVED***';
+    env.DB_PASSWORD = process.env.REFOPEN_PROD_DB_PASSWORD || 'SecureRef2026#Prod!Kv';
   }
 } else {
   const settingsPath = path.join(__dirname, '..', 'local.settings.json');

@@ -8,7 +8,7 @@ const sql = require('mssql');
     server: 'refopen-sqlserver-dev.database.windows.net',
     database: 'refopen-sql-db-dev',
     user: 'sqladmin',
-    password: '***REMOVED***',
+    password: 'RefOpenDev@2024!Tle@yTK$',
     options: { encrypt: true, trustServerCertificate: false }
   });
   const c = await p.request().input('e', sql.NVarChar, 'parimalkumar261@gmail.com')
