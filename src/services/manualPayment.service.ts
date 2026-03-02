@@ -91,7 +91,7 @@ export const getPaymentSettings = async (): Promise<PaymentSettings> => {
       bankAccountNumber: '',
       bankIfsc: '',
       bankBranch: null,
-      minAmount: 100,
+      minAmount: 49,
       maxAmount: 50000,
       processingTime: '1 business day',
       supportUrl: 'https://www.refopen.com/support',
