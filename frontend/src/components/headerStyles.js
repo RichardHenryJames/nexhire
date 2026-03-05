@@ -1,0 +1,59 @@
+/**
+ * headerStyles — Shared style constants for TabHeader & SubScreenHeader
+ *
+ * Single source of truth for padding, sticky, zIndex, elevation, title font, etc.
+ * Both header components import from here to stay in sync.
+ */
+
+import { Platform, StatusBar } from 'react-native';
+
+// Android: use StatusBar.currentHeight (typically 24-48px) + small padding
+// iOS: safe-area top inset is roughly 44-59px depending on device
+// Web: no padding needed
+const getTopPadding = () => {
+  if (Platform.OS === 'ios') return 54;
+  if (Platform.OS === 'android') return (StatusBar.currentHeight || 24) + 12;
+  return 12; // web
+};
+
+export const HEADER_PADDING = {
+  paddingHorizontal: 12,
+  paddingTop: getTopPadding(),
+  paddingBottom: 12,
+};
+
+export const HEADER_ELEVATION = {
+  zIndex: 10000,
+  elevation: 10,
+  shadowColor: '#000000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.06,
+  shadowRadius: 4,
+};
+
+export const HEADER_STICKY = Platform.OS === 'web'
+  ? { position: 'sticky', top: 0 }
+  : {};
+
+export const HEADER_TITLE = {
+  fontSize: 18,
+  fontWeight: '700',
+};
+
+export const HEADER_BACK_BUTTON = {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+};
+
+/**
+ * Base container style — spread into each header's `container` StyleSheet entry.
+ */
+export const HEADER_CONTAINER_BASE = {
+  ...HEADER_PADDING,
+  ...HEADER_ELEVATION,
+  ...HEADER_STICKY,
+  gap: 8,
+};
