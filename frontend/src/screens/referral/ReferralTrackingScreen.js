@@ -85,22 +85,6 @@ export default function ReferralTrackingScreen() {
   //   }
   // };
 
-  // Handle back navigation - go to MyReferralRequests if context lost
-  const handleGoBack = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      // Context lost (hard refresh), navigate to my requests
-      navigation.reset({
-        index: 0,
-        routes: [
-          { name: 'MainTabs' },
-          { name: 'MyReferralRequests' },
-        ],
-      });
-    }
-  };
-
   const handleWithdraw = async () => {
     setWithdrawing(true);
     try {
@@ -727,7 +711,7 @@ export default function ReferralTrackingScreen() {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Referral Tracking" directBack="MyReferralRequests" />
+      <SubScreenHeader title="Referral Tracking" directBack="Home" />
 
       {/* Action buttons bar below header */}
       {canWithdraw && (

@@ -458,7 +458,7 @@ export default function MyReferralRequestsScreen() {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="My Referral Requests" fallbackTab="Home" />
+      <SubScreenHeader title="My Referral Requests" directBack="Home" />
       <View style={styles.innerContainer}>
         {/* Active / History Tabs */}
         {!loading && myRequests.length > 0 && (
