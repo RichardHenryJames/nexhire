@@ -577,11 +577,11 @@ export default function SettingsScreen({ navigation, route }) {
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Gender</Text>
             <View style={styles.chipContainer}>
-              {['Male', 'Female', 'Other'].map((g) => (
+              {['Male', 'Female', 'Other', 'Prefer not to say'].map((g) => (
                 <TouchableOpacity
                   key={g}
                   style={[styles.chip, profile.gender === g && styles.chipSelected]}
-                  onPress={() => setProfile(prev => ({ ...prev, gender: g }))}
+                  onPress={() => setProfile(prev => ({ ...prev, gender: prev.gender === g ? '' : g }))}
                 >
                   <Text style={[styles.chipText, profile.gender === g && styles.chipTextSelected]}>{g}</Text>
                 </TouchableOpacity>

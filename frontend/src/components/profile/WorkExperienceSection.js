@@ -10,7 +10,7 @@ import { useEditing } from './ProfileSection';
 import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
 import VerifiedReferrerOverlay from '../VerifiedReferrerOverlay';
-import { toDateString } from '../../utils/dateUtils';
+import { toDateString, parseLocalDate } from '../../utils/dateUtils';
 import AddWorkExperienceModal from './AddWorkExperienceModal';
 
 const useDebounce = (value, delay = 300) => {
@@ -110,8 +110,8 @@ const shouldHideCurrentToggle = (startDate, existingWorkExperiences, excludeWork
   
   if (!currentExp) return false;
   
-  const newStartDate = new Date(startDate);
-  const existingStartDate = new Date(currentExp.StartDate || currentExp.startDate);
+  const newStartDate = parseLocalDate(startDate);
+  const existingStartDate = parseLocalDate(currentExp.StartDate || currentExp.startDate);
   
   // Hide toggle if new start date is older than or equal to existing current
   return newStartDate <= existingStartDate;

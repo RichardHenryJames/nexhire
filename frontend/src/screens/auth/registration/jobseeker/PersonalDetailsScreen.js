@@ -433,7 +433,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         if (!dateRegex.test(formData.startDate)) {
    newErrors.startDate = 'Please use YYYY-MM-DD format';
         } else {
-          const startDate = new Date(formData.startDate);
+          const startDate = parseLocalDate(formData.startDate);
           const today = new Date();
      if (startDate > today) {
        newErrors.startDate = 'Start date cannot be in the future';
@@ -1014,7 +1014,7 @@ styles.selectionButton,
 
             {/* Gender Selection */}
             <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Gender (Optional)</Text>
+              <Text style={styles.inputLabel}>Gender</Text>
               <View style={styles.genderContainer}>
                 {genderOptions.map((option) => (
                   <TouchableOpacity
@@ -1023,7 +1023,7 @@ styles.selectionButton,
                       styles.genderButton,
                       formData.gender === option && styles.genderButtonActive
                     ]}
-                    onPress={() => setFormData({ ...formData, gender: option })}
+                    onPress={() => setFormData({ ...formData, gender: formData.gender === option ? '' : option })}
                   >
                     <Text style={[
                       styles.genderButtonText,

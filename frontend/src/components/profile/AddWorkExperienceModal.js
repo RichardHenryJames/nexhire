@@ -9,6 +9,7 @@ import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
 import VerifiedReferrerOverlay from '../VerifiedReferrerOverlay';
 import { showToast } from '../Toast';
+import { parseLocalDate } from '../../utils/dateUtils';
 
 // Helper hook for debouncing
 const useDebounce = (value, delay = 300) => {
@@ -96,8 +97,8 @@ const shouldHideCurrentToggle = (startDate, existingWorkExperiences, excludeWork
     return isCurrent && (!excludeWorkExperienceId || expId !== excludeWorkExperienceId);
   });
   if (!currentExp) return false;
-  const newStartDate = new Date(startDate);
-  const existingStartDate = new Date(currentExp.StartDate || currentExp.startDate);
+  const newStartDate = parseLocalDate(startDate);
+  const existingStartDate = parseLocalDate(currentExp.StartDate || currentExp.startDate);
   return newStartDate <= existingStartDate;
 };
 
@@ -469,7 +470,7 @@ export default function AddWorkExperienceModal({
     if (!form.jobTitle?.trim()) errors.jobTitle = 'Job title is required';
     if (!form.startDate) errors.startDate = 'Start date is required';
     if (endDateRequired && !form.endDate) errors.endDate = 'End date is required';
-    if (form.startDate && form.endDate && new Date(form.endDate) < new Date(form.startDate)) {
+    if (form.startDate && form.endDate && parseLocalDate(form.endDate) < parseLocalDate(form.startDate)) {
       errors.endDate = 'End date must be after start date';
     }
 
@@ -910,7 +911,7 @@ export default function AddWorkExperienceModal({
                   }}
                   placeholder="Select end date"
                   required={endDateRequired}
-                  minimumDate={form.startDate ? new Date(form.startDate) : undefined}
+                  minimumDate={form.startDate ? parseLocalDate(form.startDate) : undefined}
                   maximumDate={new Date()}
                   error={validationErrors.endDate}
                 />

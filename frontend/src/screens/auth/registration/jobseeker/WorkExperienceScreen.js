@@ -21,6 +21,7 @@ import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
+import { parseLocalDate } from '../../../../utils/dateUtils';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 // Debounce like college picker
@@ -523,7 +524,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                 onChange={(date) => updateField('endDate', date)}
                 placeholder="Select end date"
                 required
-                minimumDate={formData.startDate ? new Date(formData.startDate) : undefined} // End date must be after start date
+                minimumDate={formData.startDate ? parseLocalDate(formData.startDate) : undefined} // End date must be after start date
                 maximumDate={new Date()} // Can't end in the future
                 colors={colors}
               />

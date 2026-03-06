@@ -387,10 +387,11 @@ export default function CreateJobScreen({ navigation }) {
       <Text style={styles.fieldLabel}>{label}</Text>
       <View style={styles.pickerContainer}>
         {data.map(item => {
-          const selected = jobData[key] === item[labelProp] || jobData[key] === item.Normalized;
+          const val = item[labelProp] || item.Normalized;
+          const selected = jobData[key] === val;
           return (
-            <TouchableOpacity key={item[valueProp]} style={[styles.pickerButton, selected && styles.pickerButtonActive]} onPress={() => setJobData(prev => ({ ...prev, [key]: item[labelProp] || item.Normalized }))}>
-              <Text style={[styles.pickerButtonText, selected && styles.pickerButtonTextActive]}>{item[labelProp] || item.Normalized}</Text>
+            <TouchableOpacity key={item[valueProp]} style={[styles.pickerButton, selected && styles.pickerButtonActive]} onPress={() => setJobData(prev => ({ ...prev, [key]: prev[key] === val ? '' : val }))}>
+              <Text style={[styles.pickerButtonText, selected && styles.pickerButtonTextActive]}>{val}</Text>
             </TouchableOpacity>
           );
         })}
@@ -405,7 +406,7 @@ export default function CreateJobScreen({ navigation }) {
         {values.map(v => {
           const selected = jobData[key] === v;
           return (
-            <TouchableOpacity key={v} style={[styles.pickerButton, selected && styles.pickerButtonActive]} onPress={() => setJobData(prev => ({ ...prev, [key]: v }))}>
+            <TouchableOpacity key={v} style={[styles.pickerButton, selected && styles.pickerButtonActive]} onPress={() => setJobData(prev => ({ ...prev, [key]: prev[key] === v ? '' : v }))}>
               <Text style={[styles.pickerButtonText, selected && styles.pickerButtonTextActive]}>{v}</Text>
             </TouchableOpacity>
           );
@@ -454,7 +455,7 @@ export default function CreateJobScreen({ navigation }) {
                 {jobTypes.map(t => {
                   const selected = jobData.jobTypeID === t.JobTypeID;
                   return (
-                    <TouchableOpacity key={t.JobTypeID} style={[styles.pickerButton, selected && styles.pickerButtonActive]} onPress={() => setJobData(prev => ({ ...prev, jobTypeID: t.JobTypeID }))}>
+                    <TouchableOpacity key={t.JobTypeID} style={[styles.pickerButton, selected && styles.pickerButtonActive]} onPress={() => setJobData(prev => ({ ...prev, jobTypeID: prev.jobTypeID === t.JobTypeID ? '' : t.JobTypeID }))}>
                       <Text style={[styles.pickerButtonText, selected && styles.pickerButtonTextActive]}>{t.Type}</Text>
                     </TouchableOpacity>
                   );
@@ -497,7 +498,7 @@ export default function CreateJobScreen({ navigation }) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Compensation</Text>
             <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Salary Range (optional)</Text>
+              <Text style={styles.fieldLabel}>Salary Range (Optional)</Text>
               <View style={styles.salaryRowInputs}>
                 <TouchableOpacity
                   style={styles.currencyButton}
