@@ -1279,12 +1279,12 @@ const { jobId, fromReferralRequest } = route.params || {};
               <Ionicons 
                 name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
                 size={hasReferred ? 24 : 20} 
-                color={hasReferred ? colors.success : referralRequesting ? colors.warning : colors.warning} 
+                color={hasReferred ? colors.success : referralRequesting ? colors.gray400 : colors.white} 
               />
               {!hasReferred && (
                 <Text style={[
                   styles.referralButtonText, 
-                  referralRequesting && { color: colors.warning }
+                  referralRequesting && { color: colors.gray400 }
                 ]}>
                   {referralRequesting ? 'Requesting' : "Ask Referral"}
                 </Text>
@@ -1304,8 +1304,8 @@ const { jobId, fromReferralRequest } = route.params || {};
               onPress={handleApply}
               disabled={hasApplied || applying}
             >
-              {applying && <ActivityIndicator size="small" color={colors.white} />}
-              <Text style={styles.applyButtonText}>
+              {applying && <ActivityIndicator size="small" color={colors.primary} />}
+              <Text style={[styles.applyButtonText, (hasApplied || applying) && { color: colors.white }]}>
                 {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
               </Text>
             </TouchableOpacity>
@@ -1672,20 +1672,23 @@ const createStyles = (colors, responsive = {}) => {
   applyButton: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: colors.primary,
+    backgroundColor: 'transparent',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
   applyButtonDisabled: {
     backgroundColor: colors.gray300,
+    borderColor: colors.gray300,
   },
   applyButtonText: {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.bold,
-    color: colors.white,
+    color: colors.primary,
   },
   referralButton: {
     flex: 1,
@@ -1694,12 +1697,11 @@ const createStyles = (colors, responsive = {}) => {
     justifyContent: 'center',
     padding: 16,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.warning,
-    backgroundColor: colors.warning + '15'
+    borderWidth: 0,
+    backgroundColor: colors.primary,
   },
   referralButtonText: {
-    color: colors.warning,
+    color: colors.white,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
     marginLeft: 8,

@@ -40,10 +40,12 @@ const JobCard = ({
   onShareLinkedIn = null,
   showShare = false,
   // ✅ NEW: Current user ID to hide Ask Referral for own posted jobs
-  currentUserId = null
+  currentUserId = null,
+  // Desktop mode for enhanced card styling
+  isDesktop = false,
 }) => {
   const { colors } = useTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const styles = useMemo(() => createStyles(colors, isDesktop), [colors, isDesktop]);
   
   if (!job) return null;
   
@@ -174,7 +176,7 @@ const JobCard = ({
                 onPress={onAskReferral} 
                 accessibilityLabel="Ask for referral"
               >
-                <Ionicons name="people-outline" size={14} color={colors.orange} />
+                <Ionicons name="people-outline" size={14} color={colors.white} />
                 <Text style={styles.referralText}>Ask Referral</Text>
               </TouchableOpacity>
             ) : null
@@ -215,7 +217,7 @@ const JobCard = ({
           {/* Apply button - only show if not hidden and NOT a referrer-posted job */}
           {!hideApply && !isReferrerPosted && onApply && (
             <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-              <Ionicons name="paper-plane-outline" size={14} color={colors.white} />
+              <Ionicons name="paper-plane-outline" size={14} color={colors.primary} />
               <Text style={styles.applyText}>Apply</Text>
             </TouchableOpacity>
           )}
@@ -225,13 +227,24 @@ const JobCard = ({
   );
 };
 
-const createStyles = (colors) => StyleSheet.create({
+const createStyles = (colors, isDesktop = false) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
+    paddingVertical: isDesktop ? 18 : 14,
+    paddingHorizontal: isDesktop ? 16 : 12,
+    borderBottomWidth: isDesktop ? 0 : 1,
     borderBottomColor: colors.gray200 || colors.border,
+    // Desktop: elevated cards with rounded corners
+    ...(isDesktop ? {
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border + '60',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 3,
+    } : {}),
   },
   titleRow: {
     flexDirection: 'row',
@@ -265,7 +278,7 @@ const createStyles = (colors) => StyleSheet.create({
     marginBottom: 2,
   },
   title: {
-    fontSize: 15,
+    fontSize: isDesktop ? 16 : 15,
     fontWeight: '600',
     color: colors.text,
     flex: 1,
@@ -286,8 +299,8 @@ const createStyles = (colors) => StyleSheet.create({
     gap: 4,
   },
   metaText: {
-    fontSize: 12,
-    color: colors.gray500 || colors.textSecondary,
+    fontSize: isDesktop ? 13 : 12,
+    color: isDesktop ? (colors.gray400 || colors.textMuted) : (colors.gray500 || colors.textSecondary),
   },
   badgeRow: {
     flexDirection: 'row',
@@ -295,8 +308,8 @@ const createStyles = (colors) => StyleSheet.create({
   },
   metaBadge: {
     fontSize: 11,
-    color: colors.primary,
-    backgroundColor: colors.primaryLight + '30',
+    color: isDesktop ? (colors.textSecondary || colors.gray500) : colors.primary,
+    backgroundColor: isDesktop ? (colors.gray100 || colors.background) : (colors.primaryLight + '30'),
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -333,14 +346,12 @@ const createStyles = (colors) => StyleSheet.create({
   referralBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    paddingVertical: isDesktop ? 6 : 5,
+    paddingHorizontal: isDesktop ? 10 : 8,
     borderRadius: 6,
-    backgroundColor: colors.warning + '20',
-    borderWidth: 1,
-    borderColor: colors.warning,
+    backgroundColor: colors.primary,
   },
-  referralText: { color: colors.warning, marginLeft: 4, fontWeight: '600', fontSize: 11 },
+  referralText: { color: colors.white, marginLeft: 4, fontWeight: '600', fontSize: isDesktop ? 12 : 11 },
   referredPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -409,12 +420,14 @@ const createStyles = (colors) => StyleSheet.create({
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
+    paddingVertical: isDesktop ? 6 : 5,
+    paddingHorizontal: isDesktop ? 10 : 8,
     borderRadius: 6,
-    backgroundColor: colors.primary,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.primary,
   },
-  applyText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: 11 },
+  applyText: { color: colors.primary, marginLeft: 4, fontWeight: '700', fontSize: isDesktop ? 12 : 11 },
 });
 
 export default React.memo(JobCard);

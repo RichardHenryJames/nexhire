@@ -177,7 +177,7 @@ export const createStyles = (colors, responsive = {}) => {
     ...(Platform.OS === 'web' && !isMobile ? {
       display: 'grid',
       gridTemplateColumns: isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
-      gap: 16,
+      gap: isDesktop ? 20 : 16,
     } : {
       flexDirection: 'row',
       flexWrap: 'wrap',

@@ -1252,6 +1252,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             job={job}
             jobTypes={jobTypes}
             workplaceTypes={workplaceTypes}
+            isDesktop={!isMobile}
             onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
             onApply={() => handleApply(job)}
             onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}

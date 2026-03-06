@@ -716,7 +716,7 @@ export default function ApplicationsScreen({ navigation }) {
                 style={styles.referralButton}
                 onPress={() => handleAskReferral(application)}
               >
-                <Ionicons name="people-outline" size={14} color={colors.warning} />
+                <Ionicons name="people-outline" size={14} color={colors.white} />
                 <Text style={styles.referralText}>Ask Referral</Text>
               </TouchableOpacity>
             );
@@ -1156,13 +1156,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 8,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.warning,
-    backgroundColor: colors.warning + '15',
+    backgroundColor: colors.primary,
     gap: 4,
   },
   referralText: {
-    color: colors.warning,
+    color: colors.white,
     fontSize: 11,
     fontWeight: '600',
   },
