@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { formatLocalDate } from '../utils/dateUtils';
 
 /**
  * Cross-platform DatePicker component
@@ -88,13 +89,8 @@ export default function DatePicker({
     }
     
     if (selectedDate) {
-      // Return ISO string format (YYYY-MM-DD) in LOCAL timezone (not UTC)
-      // Using toISOString() shifts the date due to timezone conversion
-      const year = selectedDate.getFullYear();
-      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
-      const day = String(selectedDate.getDate()).padStart(2, '0');
-      const isoString = `${year}-${month}-${day}`;
-      onChange(isoString);
+      // Use local timezone formatting to avoid UTC date shift
+      onChange(formatLocalDate(selectedDate));
     }
   };
 
@@ -230,18 +226,15 @@ export default function DatePicker({
           <input
             ref={webInputRef}
             type={mode === 'time' ? 'time' : mode === 'datetime' ? 'datetime-local' : 'date'}
-            value={dateValue ? dateValue.toISOString().split('T')[0] : ''}
+            value={dateValue ? formatLocalDate(dateValue) : ''}
             onChange={(e) => {
               if (e.target.value) {
-                const selectedDate = new Date(e.target.value + 'T00:00:00');
-                if (!isNaN(selectedDate.getTime())) {
-                  const isoString = selectedDate.toISOString().split('T')[0];
-                  onChange(isoString);
-                }
+                // HTML date input already gives YYYY-MM-DD — pass directly
+                onChange(e.target.value);
               }
             }}
-            min={minimumDate ? minimumDate.toISOString().split('T')[0] : undefined}
-            max={maximumDate ? maximumDate.toISOString().split('T')[0] : undefined}
+            min={minimumDate ? formatLocalDate(minimumDate) : undefined}
+            max={maximumDate ? formatLocalDate(maximumDate) : undefined}
             style={{
               position: 'absolute',
               top: 0,

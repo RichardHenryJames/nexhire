@@ -22,6 +22,7 @@ import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
+import { parseLocalDate, todayString } from '../../../../utils/dateUtils';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 
 // Debounce hook for search
@@ -447,10 +448,9 @@ newErrors.jobTitle = 'Job title is required when company is selected';
     }
 
     if (formData.dateOfBirth) {
-      const dob = new Date(formData.dateOfBirth);
-   const today = new Date();
-      if (dob >= today) {
- newErrors.dateOfBirth = 'Date of birth must be in the past';
+      const dob = parseLocalDate(formData.dateOfBirth);
+      if (dob && dob >= new Date()) {
+        newErrors.dateOfBirth = 'Date of birth must be in the past';
       }
     }
 
@@ -487,7 +487,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         lastName: formData.lastName.trim(),
         userType: userType,
         ...(formData.phone && { phone: formData.phone.trim() }),
-        ...(formData.dateOfBirth && { dateOfBirth: new Date(formData.dateOfBirth) }),
+        ...(formData.dateOfBirth && { dateOfBirth: formData.dateOfBirth }),
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
         ...(formData.referralCode && { referralCode: formData.referralCode.trim() }), // 🎁 NEW: Add referral code
@@ -518,7 +518,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
           companyName: formData.currentCompany?.trim() || null,
           organizationId: formData.organizationId || null,
           jobTitle: formData.jobTitle?.trim() || 'Professional', // Use actual job title from form
-          startDate: formData.startDate?.trim() || new Date().toISOString().split('T')[0], // Use actual start date
+          startDate: formData.startDate?.trim() || todayString(), // Use actual start date
           endDate: null, // Currently working
           isCurrentPosition: true,
         };

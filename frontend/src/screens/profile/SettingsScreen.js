@@ -26,6 +26,7 @@ import WorkExperienceSection from '../../components/profile/WorkExperienceSectio
 import EducationSection from '../../components/profile/EducationSection';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
+import { toDateString } from '../../utils/dateUtils';
 import ModalToast from '../../components/ModalToast';
 
 export default function SettingsScreen({ navigation, route }) {
@@ -83,7 +84,7 @@ export default function SettingsScreen({ navigation, route }) {
     email: user?.Email || '',
     phone: user?.Phone || '',
     userType: user?.UserType || '',
-    dateOfBirth: user?.DateOfBirth ? new Date(user.DateOfBirth).toISOString().split('T')[0] : '',
+    dateOfBirth: toDateString(user?.DateOfBirth),
     gender: user?.Gender || '',
     profilePictureURL: user?.ProfilePictureURL || '',
   });
@@ -98,7 +99,7 @@ export default function SettingsScreen({ navigation, route }) {
         email: user.Email || '',
         phone: user.Phone || '',
         userType: user.UserType || '',
-        dateOfBirth: user.DateOfBirth ? new Date(user.DateOfBirth).toISOString().split('T')[0] : '',
+        dateOfBirth: toDateString(user.DateOfBirth),
         gender: user.Gender || '',
         profilePictureURL: user.ProfilePictureURL || '',
       });
@@ -173,9 +174,7 @@ export default function SettingsScreen({ navigation, route }) {
           email: data.Email || user?.Email || '',
           phone: data.Phone || user?.Phone || '',
           userType: data.UserType || user?.UserType || '',
-          dateOfBirth: data.DateOfBirth 
-            ? new Date(data.DateOfBirth).toISOString().split('T')[0] 
-            : (user?.DateOfBirth ? new Date(user.DateOfBirth).toISOString().split('T')[0] : ''),
+          dateOfBirth: toDateString(data.DateOfBirth || user?.DateOfBirth),
           gender: data.Gender || user?.Gender || '',
           profilePictureURL: data.ProfilePictureURL || user?.ProfilePictureURL || '',
         });

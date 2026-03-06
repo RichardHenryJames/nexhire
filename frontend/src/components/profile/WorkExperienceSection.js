@@ -10,6 +10,7 @@ import { useEditing } from './ProfileSection';
 import useResponsive from '../../hooks/useResponsive';
 import DatePicker from '../DatePicker';
 import VerifiedReferrerOverlay from '../VerifiedReferrerOverlay';
+import { toDateString } from '../../utils/dateUtils';
 import AddWorkExperienceModal from './AddWorkExperienceModal';
 
 const useDebounce = (value, delay = 300) => {
@@ -651,8 +652,8 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       companyName: getCompanyText(item) || '',
       department: item.Department || '',
       employmentType: item.EmploymentType || '',
-      startDate: (item.StartDate || item.startDate) ? new Date(item.StartDate || item.startDate).toISOString().split('T')[0] : '',
-      endDate: (item.EndDate || item.endDate) ? new Date(item.EndDate || item.endDate).toISOString().split('T')[0] : '',
+      startDate: toDateString(item.StartDate || item.startDate),
+      endDate: toDateString(item.EndDate || item.endDate),
       isCurrent: item.IsCurrent === 1 || item.IsCurrent === true || (!item.EndDate),
       location: item.Location || '',
       country: item.Country || '',

@@ -18,6 +18,7 @@ import { typography } from '../../styles/theme';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
+import { formatLocalDate } from '../../utils/dateUtils';
 
 const PAYMENT_METHODS = ['QR / UPI', 'Bank Transfer'];
 
@@ -170,7 +171,7 @@ const SubmitPaymentScreen = ({ navigation }) => {
         amount: parseFloat(amount),
         paymentMethod,
         referenceNumber: referenceNumber.trim(),
-        paymentDate: paymentDate.toISOString().split('T')[0],
+        paymentDate: formatLocalDate(paymentDate),
         userRemarks: userRemarks.trim() || null,
         packId: selectedPack?.PackID || null,
         promoCode: promoResult?.valid ? promoCode.trim().toUpperCase() : null,

@@ -30,6 +30,7 @@ import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 import { showToast } from '../../components/Toast';
 import ModalToast from '../../components/ModalToast';
+import { toDateString } from '../../utils/dateUtils';
 
 // Education level options
 const EDUCATION_LEVELS = [
@@ -111,7 +112,7 @@ export default function ProfileScreen({ navigation, route }) {
     email: user?.Email || '',
     phone: user?.Phone || '',
     userType: user?.UserType || '',
-    dateOfBirth: user?.DateOfBirth ? new Date(user.DateOfBirth).toISOString().split('T')[0] : '',
+    dateOfBirth: toDateString(user?.DateOfBirth),
     gender: user?.Gender || '',
     profilePictureURL: user?.ProfilePictureURL || '',
     profileVisibility: user?.ProfileVisibility || 'Public',

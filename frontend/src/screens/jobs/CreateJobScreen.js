@@ -7,6 +7,7 @@ import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import DatePicker from '../../components/DatePicker';
 import { showToast } from '../../components/Toast';
+import { formatLocalDate } from '../../utils/dateUtils';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { typography } from '../../styles/theme';
 
@@ -319,7 +320,7 @@ export default function CreateJobScreen({ navigation }) {
 
   const onDateSelect = (date) => {
     setDatePickerVisible(false);
-    const formattedDate = date ? date.toISOString().split('T')[0] : '';
+    const formattedDate = date ? formatLocalDate(date) : '';
     if (selectedDateKey === 'applicationDeadline') {
       setApplicationDeadline(formattedDate);
       setJobData(prev => ({ ...prev, applicationDeadline: formattedDate }));
