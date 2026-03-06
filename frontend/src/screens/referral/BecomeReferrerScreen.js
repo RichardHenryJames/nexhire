@@ -544,13 +544,12 @@ export default function BecomeReferrerScreen({ navigation }) {
               autoCorrect={false}
               spellCheck={false}
             />
-            {showJobTitleDropdown && jobTitleSearch.length > 0 && (
-              <View style={styles.dropdown}>
-                <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="handled">
-                  {jobRoles
-                    .filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()))
-                    .slice(0, 15)
-                    .map((role) => (
+            {showJobTitleDropdown && jobTitleSearch.length > 0 && (() => {
+              const matches = jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()));
+              if (matches.length > 0) return (
+                <View style={styles.dropdown}>
+                  <ScrollView style={{ maxHeight: 200 }} keyboardShouldPersistTaps="handled">
+                    {matches.slice(0, 15).map((role) => (
                       <TouchableOpacity
                         key={role.ReferenceID}
                         style={styles.dropdownItem}
@@ -563,14 +562,17 @@ export default function BecomeReferrerScreen({ navigation }) {
                         <Ionicons name="briefcase-outline" size={16} color={colors.gray400} style={{ marginRight: 10 }} />
                         <Text style={[styles.dropdownText, { marginLeft: 0 }]}>{role.Value}</Text>
                       </TouchableOpacity>
-                    ))
-                  }
-                  {jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
-                    <View style={{ paddingVertical: 14, paddingHorizontal: 14, alignItems: 'center' }}>
-                      <Text style={{ fontSize: 13, color: colors.textSecondary }}>No matches — keep typing</Text>
-                    </View>
-                  )}
-                </ScrollView>
+                    ))}
+                  </ScrollView>
+                </View>
+              );
+              return null;
+            })()}
+            {showJobTitleDropdown && jobTitleSearch.length > 0 &&
+              jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success || '#22c55e'} />
+                <Text style={{ fontSize: 11, color: colors.success || '#22c55e' }}>"{jobTitleSearch}" will be used as your job title</Text>
               </View>
             )}
           </View>

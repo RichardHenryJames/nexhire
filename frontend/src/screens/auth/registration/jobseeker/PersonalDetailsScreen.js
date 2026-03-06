@@ -948,41 +948,44 @@ styles.selectionButton,
                     autoCapitalize="words"
                     autoCorrect={false}
                   />
-                  {showJobTitleDropdown && jobTitleSearch.length > 0 && (
-                    <View style={styles.dropdownContainer}>
-                      {loadingJobRoles ? (
+                  {showJobTitleDropdown && jobTitleSearch.length > 0 && (() => {
+                    const matches = jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()));
+                    if (loadingJobRoles) return (
+                      <View style={styles.dropdownContainer}>
                         <View style={styles.dropdownLoading}>
                           <ActivityIndicator size="small" color={colors.primary} />
                         </View>
-                      ) : (
+                      </View>
+                    );
+                    if (matches.length > 0) return (
+                      <View style={styles.dropdownContainer}>
                         <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
-                          {jobRoles
-                            .filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()))
-                            .slice(0, 15)
-                            .map((role) => (
-                              <TouchableOpacity
-                                key={role.ReferenceID}
-                                style={styles.dropdownItem}
-                                onPress={() => {
-                                  setFormData({ ...formData, jobTitle: role.Value });
-                                  setJobTitleSearch('');
-                                  setShowJobTitleDropdown(false);
-                                  if (errors.jobTitle) {
-                                    setErrors({ ...errors, jobTitle: null });
-                                  }
-                                }}
-                              >
-                                <Text style={styles.dropdownItemText}>{role.Value}</Text>
-                              </TouchableOpacity>
-                            ))
-                          }
-                          {jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
-                            <View style={styles.dropdownEmpty}>
-                              <Text style={styles.dropdownEmptyText}>No matches - keep typing</Text>
-                            </View>
-                          )}
+                          {matches.slice(0, 15).map((role) => (
+                            <TouchableOpacity
+                              key={role.ReferenceID}
+                              style={styles.dropdownItem}
+                              onPress={() => {
+                                setFormData({ ...formData, jobTitle: role.Value });
+                                setJobTitleSearch('');
+                                setShowJobTitleDropdown(false);
+                                if (errors.jobTitle) {
+                                  setErrors({ ...errors, jobTitle: null });
+                                }
+                              }}
+                            >
+                              <Text style={styles.dropdownItemText}>{role.Value}</Text>
+                            </TouchableOpacity>
+                          ))}
                         </ScrollView>
-                      )}
+                      </View>
+                    );
+                    return null;
+                  })()}
+                  {showJobTitleDropdown && jobTitleSearch.length > 0 && !loadingJobRoles &&
+                    jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}>
+                      <Ionicons name="checkmark-circle" size={14} color={colors.success || '#22c55e'} />
+                      <Text style={{ fontSize: 11, color: colors.success || '#22c55e' }}>"{jobTitleSearch}" will be used as your job title</Text>
                     </View>
                   )}
                   {errors.jobTitle && <Text style={styles.errorText}>{errors.jobTitle}</Text>}
@@ -1100,7 +1103,7 @@ styles.selectionButton,
                 <View style={styles.summaryItem}>
                   <Ionicons name="school" size={16} color={colors.primary} />
                   <Text style={styles.summaryText}>
-                    {educationData.college?.name || educationData.customCollege}
+                    {educationData.institution || educationData.customCollege || educationData.college?.name}
                   </Text>
                 </View>
                 <View style={styles.summaryItem}>
@@ -1283,7 +1286,9 @@ styles.selectionButton,
             onPress={() => setManualOrgMode(v => !v)}
           >
             <Ionicons name={manualOrgMode ? 'checkbox-outline' : 'square-outline'} size={18} color={colors.primary} />
-            <Text style={{ color: colors.text, marginLeft: 8 }}>My company is not listed</Text>
+            <Text style={{ color: colors.text, marginLeft: 8 }}>
+              {manualOrgMode ? 'Type your company name above and tap ✓' : "Can't find your company? Enter manually"}
+            </Text>
           </TouchableOpacity>
 
           {!manualOrgMode && (

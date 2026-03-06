@@ -273,12 +273,14 @@ export default function EducationDetailsScreen({ navigation, route }) {
     if (activeModal === 'college') {
       if (!debouncedSearchTerm.trim()) return allColleges;
       const searchLower = debouncedSearchTerm.toLowerCase();
-      return allColleges.filter(college => 
+      const matched = allColleges.filter(college => 
+        college.id === 999999 || // Always keep "Other" option visible
         college.name.toLowerCase().includes(searchLower) ||
         (college.country && college.country.toLowerCase().includes(searchLower)) ||
         (college.state && college.state.toLowerCase().includes(searchLower)) ||
         (college.type && college.type.toLowerCase().includes(searchLower))
       );
+      return matched;
     } else if (activeModal === 'country') {
       if (!debouncedSearchTerm.trim()) return countries;
       const searchLower = debouncedSearchTerm.toLowerCase();
@@ -369,12 +371,19 @@ export default function EducationDetailsScreen({ navigation, route }) {
       return;
     }
 
+    // Resolve the institution name: use customCollege when "Other" is selected
+    const resolvedInstitution = formData.college?.name === 'Other'
+      ? customCollege
+      : (formData.college?.name || customCollege || '');
+
     // Enhanced: Include graduation year and GPA in the final data
     const finalFormData = {
       ...formData,
+      // Send resolved institution name so backend doesn't store "Other"
+      institution: resolvedInstitution,
       yearInCollege: experienceType === 'Student' ? formData.yearInCollege : 'Recently Graduated (0-1 year)',
-      graduationYear: formData.graduationYear || '', // Always include, even if empty
-      gpa: formData.gpa || '' // Always include, even if empty
+      graduationYear: formData.graduationYear || '',
+      gpa: formData.gpa || '',
     };
 
     
@@ -416,7 +425,12 @@ export default function EducationDetailsScreen({ navigation, route }) {
         });
         break;
       case 'college':
-        setFormData({ ...formData, college: item, customCollege: '' });
+        // If "Other" is selected, auto-fill customCollege with the search term the user already typed
+        if (item.name === 'Other' && searchTerm.trim()) {
+          setFormData({ ...formData, college: item, customCollege: searchTerm.trim() });
+        } else {
+          setFormData({ ...formData, college: item, customCollege: '' });
+        }
         break;
       case 'degree':
         // Reset field of study when degree changes since fields are degree-dependent
@@ -476,12 +490,13 @@ export default function EducationDetailsScreen({ navigation, route }) {
           <Text style={styles.modalItemText}>
             {isCountry ? `${item.flag} ${item.name}` : 
              isDegree ? item.name :
-             isString ? item : item.name}
+             isString ? item : 
+             (isCollege && item.id === 999999) ? "Can't find your college? Add it" : item.name}
           </Text>
           {isDegree && item.category && (
             <Text style={styles.modalItemType}>{item.category}</Text>
           )}
-          {isCollege && item.type && (
+          {isCollege && item.type && item.id !== 999999 && (
             <Text style={styles.modalItemType}>{item.type}</Text>
           )}
           {isCollege && item.state && item.country && (
@@ -539,6 +554,10 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
   const getCollegeDisplayText = () => {
     if (formData.college) {
+      // If "Other" is selected, show the custom college name instead of "Other"
+      if (formData.college.name === 'Other') {
+        return formData.customCollege || 'Enter your college name below';
+      }
       let text = formData.college.name;
       if (formData.college.state && formData.college.country !== 'Various') {
         text += ` (${formData.college.state}, ${formData.college.country})`;
@@ -678,7 +697,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
               />
             </View>
 
-            {formData.college?.name === 'Other' && (
+            {formData.college?.name === 'Other' && !formData.customCollege && (
               <View style={styles.inputContainer}>
                 <Text style={styles.inputLabel}>
                   College/School Name <Text style={styles.required}>*</Text>
@@ -809,7 +828,9 @@ export default function EducationDetailsScreen({ navigation, route }) {
                   </Text>
                   {debouncedSearchTerm && (
                     <Text style={styles.emptySubtext}>
-                      Try searching with different keywords
+                      {activeModal === 'college'
+                        ? 'Scroll down and select "Other" to enter your college name manually'
+                        : 'Try searching with different keywords'}
                     </Text>
                   )}
                 </View>

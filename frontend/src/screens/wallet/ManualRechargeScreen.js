@@ -17,6 +17,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { typography } from '../../styles/theme';
@@ -113,6 +114,16 @@ const BonusPercentBadge = ({ percent, colors }) => {
 // ─── UPI Deep Link helpers ───────────────────────────────────────
 const UPI_PAYEE_VPA = 'rocanafashionaccessoriesprivatelimited.ibz@icici';
 const UPI_PAYEE_NAME = 'Rocana Fashion Accessories Pvt Ltd';
+
+// Build UPI link for QR code scanning (amount pre-filled)
+const buildUpiQrValue = (amount) => {
+  const amt = parseFloat(amount) || 0;
+  let url = `upi://pay?pa=${encodeURIComponent(UPI_PAYEE_VPA)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&cu=INR`;
+  if (amt > 0) {
+    url += `&am=${amt.toFixed(2)}&tn=${encodeURIComponent(`RefOpen Wallet Recharge Rs${amt}`)}`;
+  }
+  return url;
+};
 
 const buildUpiUrl = (appScheme, amount) => {
   const amt = parseFloat(amount) || 0;
@@ -550,10 +561,11 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                     elevation: 4,
                   }}
                 >
-                  <Image
-                    source={require('../../../assets/payment-qr.png')}
-                    style={{ width: 120, height: 120 }}
-                    resizeMode="contain"
+                  <QRCode
+                    value={buildUpiQrValue(payAmt)}
+                    size={120}
+                    backgroundColor="white"
+                    color="black"
                   />
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                     <Ionicons name="scan-outline" size={10} color={colors.primary} style={{ marginRight: 3 }} />
@@ -637,10 +649,11 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                   elevation: 6,
                 }}
               >
-                <Image
-                  source={require('../../../assets/payment-qr.png')}
-                  style={{ width: 200, height: 200 }}
-                  resizeMode="contain"
+                <QRCode
+                  value={buildUpiQrValue(payAmt)}
+                  size={200}
+                  backgroundColor="white"
+                  color="black"
                 />
                 {payAmt > 0 && (
                   <Text style={{ fontSize: 16, fontWeight: '700', color: colors.primary, marginTop: 8 }}>₹{payAmt}</Text>
@@ -763,10 +776,11 @@ const ManualRechargeScreen = ({ navigation, route }) => {
               {payAmt > 0 && (
                 <Text style={{ fontSize: 14, color: colors.indigo, fontWeight: '600', marginBottom: 12, textAlign: 'center' }}>₹{payAmt}</Text>
               )}
-              <Image
-                source={require('../../../assets/payment-qr.png')}
-                style={{ width: 260, height: 260 }}
-                resizeMode="contain"
+              <QRCode
+                value={buildUpiQrValue(payAmt)}
+                size={260}
+                backgroundColor="white"
+                color="black"
               />
               <Text style={{ fontSize: 10, color: colors.gray300, marginTop: 12, textAlign: 'center' }}>
                 Scan with any UPI app to pay

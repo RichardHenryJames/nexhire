@@ -575,39 +575,42 @@ export default function AddWorkExperienceModal({
                   placeholderTextColor={colors.gray400}
                   autoCapitalize="words"
                 />
-                {showJobTitleDropdown && jobTitleSearch.length > 0 && (
-                  <View style={styles.jobTitleDropdown}>
-                    {loadingJobRoles ? (
+                {showJobTitleDropdown && jobTitleSearch.length > 0 && (() => {
+                  const matches = jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()));
+                  if (loadingJobRoles) return (
+                    <View style={styles.jobTitleDropdown}>
                       <View style={styles.dropdownLoading}>
                         <ActivityIndicator size="small" color={colors.primary} />
                       </View>
-                    ) : (
+                    </View>
+                  );
+                  if (matches.length > 0) return (
+                    <View style={styles.jobTitleDropdown}>
                       <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
-                        {jobRoles
-                          .filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase()))
-                          .slice(0, 15)
-                          .map((role) => (
-                            <TouchableOpacity
-                              key={role.ReferenceID}
-                              style={styles.dropdownItem}
-                              onPress={() => {
-                                setForm({ ...form, jobTitle: role.Value });
-                                setJobTitleSearch('');
-                                setShowJobTitleDropdown(false);
-                                if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined }));
-                              }}
-                            >
-                              <Text style={styles.dropdownItemText}>{role.Value}</Text>
-                            </TouchableOpacity>
-                          ))
-                        }
-                        {jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
-                          <View style={styles.dropdownEmpty}>
-                            <Text style={styles.dropdownEmptyText}>No matches - type your own</Text>
-                          </View>
-                        )}
+                        {matches.slice(0, 15).map((role) => (
+                          <TouchableOpacity
+                            key={role.ReferenceID}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setForm({ ...form, jobTitle: role.Value });
+                              setJobTitleSearch('');
+                              setShowJobTitleDropdown(false);
+                              if (validationErrors.jobTitle) setValidationErrors(v => ({ ...v, jobTitle: undefined }));
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>{role.Value}</Text>
+                          </TouchableOpacity>
+                        ))}
                       </ScrollView>
-                    )}
+                    </View>
+                  );
+                  return null;
+                })()}
+                {showJobTitleDropdown && jobTitleSearch.length > 0 && !loadingJobRoles &&
+                  jobRoles.filter(role => role.Value && role.Value.toLowerCase().includes(jobTitleSearch.toLowerCase())).length === 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}>
+                    <Ionicons name="checkmark-circle" size={14} color={colors.success || '#22c55e'} />
+                    <Text style={{ fontSize: 11, color: colors.success || '#22c55e' }}>"{jobTitleSearch}" will be used</Text>
                   </View>
                 )}
               </View>
@@ -685,9 +688,10 @@ export default function AddWorkExperienceModal({
                                 </View>
                               </TouchableOpacity>
                             ))}
-                            {orgResults.length === 0 && orgQuery.length > 0 && (
-                              <View style={styles.dropdownEmpty}>
-                                <Text style={styles.dropdownEmptyText}>No matches - your entry will be used</Text>
+                            {orgResults.length === 0 && orgQuery.length > 0 && !orgLoading && (
+                              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 10, gap: 4 }}>
+                                <Ionicons name="checkmark-circle" size={14} color={colors.success || '#22c55e'} />
+                                <Text style={{ fontSize: 11, color: colors.success || '#22c55e' }}>"{orgQuery}" will be used as your company</Text>
                               </View>
                             )}
                           </ScrollView>
@@ -828,38 +832,41 @@ export default function AddWorkExperienceModal({
                   placeholder="e.g., Engineering"
                   placeholderTextColor={colors.gray400}
                 />
-                {showDepartmentDropdown && (departmentSearch.length > 0 || departments.length > 0) && (
-                  <View style={styles.jobTitleDropdown}>
-                    {loadingDepartments ? (
+                {showDepartmentDropdown && (departmentSearch.length > 0 || departments.length > 0) && (() => {
+                  const matches = departments.filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase()));
+                  if (loadingDepartments) return (
+                    <View style={styles.jobTitleDropdown}>
                       <View style={styles.dropdownLoading}>
                         <ActivityIndicator size="small" color={colors.primary} />
                       </View>
-                    ) : (
+                    </View>
+                  );
+                  if (matches.length > 0) return (
+                    <View style={styles.jobTitleDropdown}>
                       <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled">
-                        {departments
-                          .filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase()))
-                          .slice(0, 15)
-                          .map((dept) => (
-                            <TouchableOpacity
-                              key={dept.ReferenceID}
-                              style={styles.dropdownItem}
-                              onPress={() => {
-                                setForm({ ...form, department: dept.Value });
-                                setDepartmentSearch('');
-                                setShowDepartmentDropdown(false);
-                              }}
-                            >
-                              <Text style={styles.dropdownItemText}>{dept.Value}</Text>
-                            </TouchableOpacity>
-                          ))
-                        }
-                        {departments.filter(dept => !departmentSearch || dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase())).length === 0 && (
-                          <View style={styles.dropdownEmpty}>
-                            <Text style={styles.dropdownEmptyText}>No matches - type your own</Text>
-                          </View>
-                        )}
+                        {matches.slice(0, 15).map((dept) => (
+                          <TouchableOpacity
+                            key={dept.ReferenceID}
+                            style={styles.dropdownItem}
+                            onPress={() => {
+                              setForm({ ...form, department: dept.Value });
+                              setDepartmentSearch('');
+                              setShowDepartmentDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownItemText}>{dept.Value}</Text>
+                          </TouchableOpacity>
+                        ))}
                       </ScrollView>
-                    )}
+                    </View>
+                  );
+                  return null;
+                })()}
+                {showDepartmentDropdown && departmentSearch.length > 0 && !loadingDepartments &&
+                  departments.filter(dept => dept.Value?.toLowerCase().includes(departmentSearch.toLowerCase())).length === 0 && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}>
+                    <Ionicons name="checkmark-circle" size={14} color={colors.success || '#22c55e'} />
+                    <Text style={{ fontSize: 11, color: colors.success || '#22c55e' }}>"{departmentSearch}" will be used</Text>
                   </View>
                 )}
               </View>

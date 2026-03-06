@@ -724,7 +724,7 @@ export class UserService {
             throw new NotFoundError('Applicant profile not found');
         }
         const applicantId = applicantRes.recordset[0].ApplicantID;
-        const institutionName = educationData.college?.name || educationData.institution || '';
+        const institutionName = educationData.institution || educationData.college?.name || '';
         const degreeType = educationData.degreeType || educationData.highestEducation || '';
         const fieldOfStudy = educationData.fieldOfStudy || '';
         const graduationYear = educationData.graduationYear || '';
