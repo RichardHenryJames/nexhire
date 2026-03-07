@@ -20,6 +20,7 @@ import CachedImage from '../../components/CachedImage';
 import TabHeader from '../../components/TabHeader';
 import DesktopLayout from '../../components/layout/DesktopLayout';
 import FilterModal from '../../components/jobs/FilterModal';
+import { getCached, hasCached, setCache, CACHE_KEYS } from '../../utils/homeCache';
 
 /**
  * JobsLandingScreen — LinkedIn-style Jobs discovery page
@@ -40,13 +41,13 @@ export default function JobsLandingScreen({ navigation, route }) {
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasCached(CACHE_KEYS.RECENT_JOBS));
   const [refreshing, setRefreshing] = useState(false);
-  const [recommendedJobs, setRecommendedJobs] = useState([]);
-  const [topMncJobs, setTopMncJobs] = useState([]);
-  const [recentJobs, setRecentJobs] = useState([]);
-  const [jobTypes, setJobTypes] = useState([]);
-  const [workplaceTypes, setWorkplaceTypes] = useState([]);
+  const [recommendedJobs, setRecommendedJobs] = useState(() => getCached(CACHE_KEYS.RECENT_JOBS) || []);
+  const [topMncJobs, setTopMncJobs] = useState(() => getCached(CACHE_KEYS.F500_JOBS) || []);
+  const [recentJobs, setRecentJobs] = useState(() => getCached('jobs_landing_recent') || []);
+  const [jobTypes, setJobTypes] = useState(() => getCached(CACHE_KEYS.JOBS_JOB_TYPES) || []);
+  const [workplaceTypes, setWorkplaceTypes] = useState(() => getCached(CACHE_KEYS.JOBS_WORKPLACE_TYPES) || []);
   const [searchQuery, setSearchQuery] = useState('');
   const abortRef = useRef(null);
 
@@ -103,15 +104,31 @@ export default function JobsLandingScreen({ navigation, route }) {
         refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']).catch(() => ({ success: false })),
       ]);
 
-      if (recRes.success) setRecommendedJobs((recRes.data || []).slice(0, 6));
-      if (f500Res.success) setTopMncJobs((f500Res.data || []).slice(0, 6));
-      if (recentRes.success) setRecentJobs((recentRes.data || []).slice(0, 6));
+      if (recRes.success) {
+        const data = (recRes.data || []).slice(0, 6);
+        setRecommendedJobs(data);
+        setCache(CACHE_KEYS.RECENT_JOBS, data);
+      }
+      if (f500Res.success) {
+        const data = (f500Res.data || []).slice(0, 6);
+        setTopMncJobs(data);
+        setCache(CACHE_KEYS.F500_JOBS, data);
+      }
+      if (recentRes.success) {
+        const data = (recentRes.data || []).slice(0, 6);
+        setRecentJobs(data);
+        setCache('jobs_landing_recent', data);
+      }
       if (refRes?.success && refRes.data) {
         if (refRes.data.JobType) {
-          setJobTypes(refRes.data.JobType.map(item => ({ JobTypeID: item.ReferenceID, Type: item.Value })));
+          const jt = refRes.data.JobType.map(item => ({ JobTypeID: item.ReferenceID, Type: item.Value }));
+          setJobTypes(jt);
+          setCache(CACHE_KEYS.JOBS_JOB_TYPES, jt);
         }
         if (refRes.data.WorkplaceType) {
-          setWorkplaceTypes(refRes.data.WorkplaceType.map(item => ({ WorkplaceTypeID: item.ReferenceID, Type: item.Value })));
+          const wt = refRes.data.WorkplaceType.map(item => ({ WorkplaceTypeID: item.ReferenceID, Type: item.Value }));
+          setWorkplaceTypes(wt);
+          setCache(CACHE_KEYS.JOBS_WORKPLACE_TYPES, wt);
         }
       }
     } catch (err) {
@@ -250,7 +267,7 @@ export default function JobsLandingScreen({ navigation, route }) {
             style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
             onPress={() => {
               if (chip.action === 'ai') {
-                navigation.navigate('AIRecommendedJobs');
+                navigation.navigate('JobsList', { screenTitle: 'AI Recommended Jobs', openAIJobs: true });
               } else if (chip.action === 'referrer') {
                 navigation.navigate('JobsList', { screenTitle: 'Referrer Jobs' });
               } else {

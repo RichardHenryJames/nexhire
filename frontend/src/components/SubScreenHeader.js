@@ -59,9 +59,27 @@ export default function SubScreenHeader({
     Notifications: 'Notifications', Profile: 'Profile', Wallet: 'Wallet',
     MyReferralRequests: 'My Referral Requests', Referral: 'Provide Referral',
     WalletRecharge: 'Recharge', ShareEarn: 'Social Share', Settings: 'Settings',
+    Earnings: 'Earnings', Applications: 'Applications', SavedJobs: 'Saved Jobs',
+    Messages: 'Messages', Support: 'Help & Support', BecomeReferrer: 'Become Referrer',
+    ProfileViews: 'Profile Views', PromoCodes: 'Promo Codes',
   };
 
-  const parentLabel = directBack ? (SCREEN_LABELS[directBack] || directBack) : (SCREEN_LABELS[fallbackTab] || fallbackTab);
+  // Map screen names to URL paths for Ctrl+Click new-tab support
+  const SCREEN_URLS = {
+    Home: '/', Jobs: '/jobs', AskReferral: '/ask-for-referral', Services: '/services',
+    Notifications: '/notifications', Profile: '/profile', Wallet: '/wallet',
+    MyReferralRequests: '/referrals/my-requests', Referral: '/provide-referral',
+    WalletRecharge: '/wallet/recharge', WalletTransactions: '/wallet/transactions',
+    WalletHolds: '/wallet/holds', SubmitPayment: '/wallet/submit-payment',
+    WithdrawalRequests: '/wallet/withdrawals', PromoCodes: '/promo-codes',
+    ShareEarn: '/share-earn', Settings: '/settings', Earnings: '/earnings',
+    Applications: '/applications', SavedJobs: '/saved-jobs', Messages: '/messages',
+    Support: '/support', BecomeReferrer: '/become-referrer', ProfileViews: '/ProfileViews',
+  };
+
+  const parentScreen = directBack || fallbackTab;
+  const parentLabel = SCREEN_LABELS[parentScreen] || parentScreen;
+  const parentUrl = SCREEN_URLS[parentScreen] || null;
 
   const handleBack = () => {
     // Tier 1: Full override
@@ -90,13 +108,23 @@ export default function SubScreenHeader({
     }
   };
 
+  // Handle breadcrumb click — Ctrl/Cmd+Click opens in new tab on web
+  const handleBreadcrumbClick = (e) => {
+    if (Platform.OS === 'web' && parentUrl && (e?.ctrlKey || e?.metaKey)) {
+      e?.preventDefault?.();
+      window.open(parentUrl, '_blank');
+      return;
+    }
+    handleBack();
+  };
+
   // Desktop: breadcrumb-style header
   if (isDesktopWeb) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }, styles.containerDesktop]}>
         {/* Breadcrumb navigation */}
         <View style={styles.breadcrumbRow}>
-          <TouchableOpacity onPress={handleBack} style={styles.breadcrumbLink} activeOpacity={0.7}>
+          <TouchableOpacity onPress={handleBreadcrumbClick} style={styles.breadcrumbLink} activeOpacity={0.7}>
             <Text style={[styles.breadcrumbText, { color: colors.primary }]}>{parentLabel}</Text>
           </TouchableOpacity>
           <Ionicons name="chevron-forward" size={14} color={colors.gray400} style={{ marginHorizontal: 4 }} />

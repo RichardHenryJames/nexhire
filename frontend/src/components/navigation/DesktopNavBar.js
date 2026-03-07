@@ -168,19 +168,79 @@ export default function DesktopNavBar() {
 
   // Nav items
   const navItems = [
-    { name: 'Home', icon: 'home', iconOutline: 'home-outline', label: 'Home', isTab: true },
-    { name: 'Jobs', icon: 'briefcase', iconOutline: 'briefcase-outline', label: 'Jobs', isTab: true },
-    ...(isJobSeeker ? [{ name: 'AskReferral', icon: 'person-add', iconOutline: 'person-add-outline', label: 'Ask Referral', isTab: true }] : []),
-    ...(isEmployer ? [{ name: 'CreateJob', icon: 'add-circle', iconOutline: 'add-circle-outline', label: 'Post Job', isTab: true }] : []),
-    ...(isJobSeeker ? [{ name: 'Services', icon: 'grid', iconOutline: 'grid-outline', label: 'Services', isTab: true }] : []),
-    { name: 'Messages', icon: 'chatbubbles', iconOutline: 'chatbubbles-outline', label: 'Messaging', isTab: false },
-    { name: 'Notifications', icon: 'notifications', iconOutline: 'notifications-outline', label: 'Notifications', isTab: true, badge: unreadCount },
+    { name: 'Home', icon: 'home', iconOutline: 'home-outline', label: 'Home', isTab: true, href: '/' },
+    { name: 'Jobs', icon: 'briefcase', iconOutline: 'briefcase-outline', label: 'Jobs', isTab: true, href: '/jobs' },
+    ...(isJobSeeker ? [{ name: 'AskReferral', icon: 'person-add', iconOutline: 'person-add-outline', label: 'Ask Referral', isTab: true, href: '/ask-for-referral' }] : []),
+    ...(isEmployer ? [{ name: 'CreateJob', icon: 'add-circle', iconOutline: 'add-circle-outline', label: 'Post Job', isTab: true, href: '/create-job' }] : []),
+    ...(isJobSeeker ? [{ name: 'Services', icon: 'grid', iconOutline: 'grid-outline', label: 'Services', isTab: true, href: '/services' }] : []),
+    { name: 'Messages', icon: 'chatbubbles', iconOutline: 'chatbubbles-outline', label: 'Messaging', isTab: false, href: '/messages' },
+    { name: 'Notifications', icon: 'notifications', iconOutline: 'notifications-outline', label: 'Notifications', isTab: true, badge: unreadCount, href: '/notifications' },
   ];
+
+  // URL map for right-click "Open in new tab" support
+  const SCREEN_URLS = {
+    Home: '/', Jobs: '/jobs', Wallet: '/wallet', Earnings: '/earnings',
+    ShareEarn: '/share-earn', MyReferralRequests: '/referrals/my-requests',
+    ProfileViews: '/ProfileViews', SavedJobs: '/saved-jobs', Applications: '/applications',
+    Referral: '/provide-referral', BecomeReferrer: '/become-referrer',
+    Settings: '/settings', Support: '/support', Profile: '/profile',
+    Services: '/services', Messages: '/messages', Notifications: '/notifications',
+  };
+
+  // Render a dropdown item as <a> on web for right-click support
+  const renderDropdownLink = (item, onPressOverride) => {
+    const href = SCREEN_URLS[item.screen];
+    const handleClick = onPressOverride || (() => navigateTo(item.screen));
+
+    const content = (
+      <View style={styles.dropdownItem}>
+        <Ionicons name={item.icon} size={18} color={colors.textSecondary} />
+        <Text style={[styles.dropdownItemText, { color: colors.text }]}>{item.label}</Text>
+        {item.right && <Text style={[styles.dropdownItemRight, { color: colors.primary }]}>{item.right}</Text>}
+      </View>
+    );
+
+    if (Platform.OS === 'web' && href) {
+      return (
+        <a
+          key={item.label}
+          href={href}
+          onClick={(e) => {
+            if (e.ctrlKey || e.metaKey) { setShowMeDropdown(false); return; }
+            e.preventDefault();
+            handleClick();
+          }}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+        >
+          {content}
+        </a>
+      );
+    }
+
+    return (
+      <TouchableOpacity key={item.label} onPress={handleClick}>
+        {content}
+      </TouchableOpacity>
+    );
+  };
 
   const profilePic = user?.ProfilePictureURL;
   const userName = user ? `${user.FirstName || ''} ${user.LastName || ''}`.trim() : 'User';
-  const userTitle = user?.CurrentJobTitle
-    ? (user?.CurrentCompany ? `${user.CurrentJobTitle} at ${user.CurrentCompany}` : user.CurrentJobTitle)
+
+  // Fetch applicant profile for job title/company (same as DesktopLayout sidebar)
+  const [applicantData, setApplicantData] = useState(null);
+  useEffect(() => {
+    if (user?.UserID && isJobSeeker) {
+      refopenAPI.getApplicantProfile(user.UserID).then(res => {
+        if (res?.success) setApplicantData(res.data);
+      }).catch(() => {});
+    }
+  }, [user?.UserID, isJobSeeker]);
+
+  const jobTitle = applicantData?.CurrentJobTitle || user?.CurrentJobTitle || '';
+  const company = applicantData?.CurrentCompanyName || user?.CurrentCompany || '';
+  const userTitle = jobTitle
+    ? (company ? `${jobTitle} at ${company}` : jobTitle)
     : (user?.HighestEducation || (isEmployer ? 'Employer' : isAdmin ? 'Admin' : ''));
 
   return (
@@ -252,15 +312,8 @@ export default function DesktopNavBar() {
         <View style={styles.navItems}>
           {navItems.map(item => {
             const isActive = activeRoute === item.name;
-            return (
-              <TouchableOpacity
-                key={item.name}
-                style={[styles.navItem, isActive && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-                onPress={() => {
-                  setActiveRoute(item.name);
-                  item.isTab ? navigateToTab(item.name) : navigateTo(item.name);
-                }}
-              >
+            const navContent = (
+              <View style={[styles.navItem, isActive && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}>
                 <View style={styles.navIconWrapper}>
                   <Ionicons 
                     name={isActive ? item.icon : item.iconOutline} 
@@ -276,21 +329,73 @@ export default function DesktopNavBar() {
                 <Text style={[styles.navLabel, { color: isActive ? colors.primary : colors.gray500 }]}>
                   {item.label}
                 </Text>
+              </View>
+            );
+
+            // On web: use <a> tag for right-click "Open in new tab" support
+            if (Platform.OS === 'web' && item.href) {
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  onClick={(e) => {
+                    // Ctrl/Cmd+Click: let browser handle (opens new tab)
+                    if (e.ctrlKey || e.metaKey) return;
+                    // Normal click: use React Navigation
+                    e.preventDefault();
+                    setActiveRoute(item.name);
+                    item.isTab ? navigateToTab(item.name) : navigateTo(item.name);
+                  }}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  {navContent}
+                </a>
+              );
+            }
+
+            return (
+              <TouchableOpacity
+                key={item.name}
+                onPress={() => {
+                  setActiveRoute(item.name);
+                  item.isTab ? navigateToTab(item.name) : navigateTo(item.name);
+                }}
+              >
+                {navContent}
               </TouchableOpacity>
             );
           })}
 
           {/* Wallet badge */}
           {walletBalance !== null && (
-            <TouchableOpacity 
-              style={[styles.navItem, { width: 'auto', paddingHorizontal: 8 }]}
-              onPress={() => navigateTo('Wallet')}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.success + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14 }}>
-                <Ionicons name="wallet-outline" size={14} color={colors.success} />
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.success }}>₹{walletBalance}</Text>
-              </View>
-            </TouchableOpacity>
+            Platform.OS === 'web' ? (
+              <a
+                href="/wallet"
+                onClick={(e) => {
+                  if (e.ctrlKey || e.metaKey) return;
+                  e.preventDefault();
+                  navigateTo('Wallet');
+                }}
+                style={{ textDecoration: 'none', color: 'inherit' }}
+              >
+                <View style={[styles.navItem, { width: 'auto', paddingHorizontal: 8 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.success + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14 }}>
+                    <Ionicons name="wallet-outline" size={14} color={colors.success} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: colors.success }}>₹{walletBalance}</Text>
+                  </View>
+                </View>
+              </a>
+            ) : (
+              <TouchableOpacity 
+                style={[styles.navItem, { width: 'auto', paddingHorizontal: 8 }]}
+                onPress={() => navigateTo('Wallet')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.success + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14 }}>
+                  <Ionicons name="wallet-outline" size={14} color={colors.success} />
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.success }}>₹{walletBalance}</Text>
+                </View>
+              </TouchableOpacity>
+            )
           )}
 
           {/* Me dropdown */}
@@ -315,109 +420,83 @@ export default function DesktopNavBar() {
             {/* Dropdown */}
             {showMeDropdown && (
               <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                {/* Profile header */}
-                <TouchableOpacity style={styles.dropdownProfile} onPress={() => navigateTo('Profile')}>
-                  {profilePic ? (
-                    <CachedImage source={{ uri: profilePic }} style={styles.avatarMed} />
-                  ) : (
-                    <View style={[styles.avatarMed, { backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' }]}>
-                      <Ionicons name="person" size={24} color={colors.primary} />
+                {/* Profile header — compact like LinkedIn */}
+                {Platform.OS === 'web' ? (
+                  <a href="/profile" onClick={(e) => { if (e.ctrlKey || e.metaKey) { setShowMeDropdown(false); return; } e.preventDefault(); navigateTo('Profile'); }} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <View style={styles.dropdownProfile}>
+                      {profilePic ? (
+                        <CachedImage source={{ uri: profilePic }} style={styles.avatarMed} />
+                      ) : (
+                        <View style={[styles.avatarMed, { backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' }]}>
+                          <Ionicons name="person" size={20} color={colors.primary} />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.dropdownName, { color: colors.text }]}>{userName}</Text>
+                        <Text style={[styles.dropdownTitle, { color: colors.textSecondary }]} numberOfLines={1}>{userTitle}</Text>
+                      </View>
                     </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.dropdownName, { color: colors.text }]}>{userName}</Text>
-                    <Text style={[styles.dropdownTitle, { color: colors.textSecondary }]} numberOfLines={1}>{userTitle}</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.viewProfileBtn, { borderColor: colors.primary }]} 
-                  onPress={() => navigateTo('Profile')}
-                >
-                  <Text style={[styles.viewProfileText, { color: colors.primary }]}>View Profile</Text>
-                </TouchableOpacity>
-
-                <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
-
-                {/* Menu items — matches ProfileSlider sections */}
-                {/* 💰 Wallet & Rewards */}
-                {[
-                  { icon: 'wallet-outline', label: 'Wallet', screen: 'Wallet', right: walletBalance !== null ? `₹${walletBalance}` : null },
-                  ...(isVerifiedReferrer || isAdmin ? [{ icon: 'trending-up-outline', label: 'Earnings', screen: 'Earnings' }] : []),
-                  { icon: 'megaphone-outline', label: 'Social Share', screen: 'ShareEarn' },
-                ].map(item => (
-                  <TouchableOpacity key={item.label} style={styles.dropdownItem} onPress={() => navigateTo(item.screen)}>
-                    <Ionicons name={item.icon} size={18} color={colors.textSecondary} />
-                    <Text style={[styles.dropdownItemText, { color: colors.text }]}>{item.label}</Text>
-                    {item.right && <Text style={[styles.dropdownItemRight, { color: colors.primary }]}>{item.right}</Text>}
-                  </TouchableOpacity>
-                ))}
-
-                <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
-
-                {/* 📋 Your Activity */}
-                {[
-                  { icon: 'send-outline', label: 'My Referral Requests', screen: 'MyReferralRequests' },
-                  { icon: 'eye-outline', label: 'Who Viewed My Profile', screen: 'ProfileViews' },
-                  { icon: 'bookmark-outline', label: 'Saved Jobs', screen: 'SavedJobs' },
-                  { icon: 'document-text-outline', label: 'Applications', screen: 'Applications' },
-                ].map(item => (
-                  <TouchableOpacity key={item.label} style={styles.dropdownItem} onPress={() => navigateTo(item.screen)}>
-                    <Ionicons name={item.icon} size={18} color={colors.textSecondary} />
-                    <Text style={[styles.dropdownItemText, { color: colors.text }]}>{item.label}</Text>
-                  </TouchableOpacity>
-                ))}
-
-                <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
-
-                {/* 🚀 Referrer */}
-                {isVerifiedReferrer || isAdmin ? (
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => navigateTo('Referral')}>
-                    <Ionicons name="people-outline" size={18} color={colors.textSecondary} />
-                    <Text style={[styles.dropdownItemText, { color: colors.text }]}>Provide Referral</Text>
-                  </TouchableOpacity>
+                    <View style={[styles.viewProfileBtn, { borderColor: colors.primary }]}>
+                      <Text style={[styles.viewProfileText, { color: colors.primary }]}>View Profile</Text>
+                    </View>
+                  </a>
                 ) : (
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => navigateTo('BecomeReferrer')}>
-                    <Ionicons name="shield-checkmark-outline" size={18} color={colors.textSecondary} />
-                    <Text style={[styles.dropdownItemText, { color: colors.text }]}>Become a Referrer 🚀</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity style={styles.dropdownProfile} onPress={() => navigateTo('Profile')}>
+                      {profilePic ? (
+                        <CachedImage source={{ uri: profilePic }} style={styles.avatarMed} />
+                      ) : (
+                        <View style={[styles.avatarMed, { backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' }]}>
+                          <Ionicons name="person" size={20} color={colors.primary} />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.dropdownName, { color: colors.text }]}>{userName}</Text>
+                        <Text style={[styles.dropdownTitle, { color: colors.textSecondary }]} numberOfLines={1}>{userTitle}</Text>
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.viewProfileBtn, { borderColor: colors.primary }]} onPress={() => navigateTo('Profile')}>
+                      <Text style={[styles.viewProfileText, { color: colors.primary }]}>View Profile</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
 
                 <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
 
-                {/* ⚙️ More */}
+                {/* Account section */}
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>Account</Text>
                 {[
-                  { icon: 'settings-outline', label: 'Settings and Privacy', screen: 'Settings' },
-                  { icon: 'help-circle-outline', label: 'Help & Support', screen: 'Support', isRoot: true },
-                ].map(item => (
-                  <TouchableOpacity key={item.label} style={styles.dropdownItem} onPress={() => {
-                    setShowMeDropdown(false);
-                    if (item.isRoot) {
-                      navigation.navigate(item.screen);
-                    } else if (item.isTab) {
-                      navigateToTab(item.screen);
-                    } else {
-                      navigateTo(item.screen);
-                    }
-                  }}>
-                    <Ionicons name={item.icon} size={18} color={colors.textSecondary} />
-                    <Text style={[styles.dropdownItemText, { color: colors.text }]}>{item.label}</Text>
-                  </TouchableOpacity>
-                ))}
+                  { icon: 'wallet-outline', label: 'Wallet', screen: 'Wallet', right: walletBalance !== null ? `₹${walletBalance}` : null },
+                  ...(isVerifiedReferrer || isAdmin ? [{ icon: 'trending-up-outline', label: 'Earnings', screen: 'Earnings' }] : []),
+                  { icon: 'settings-outline', label: 'Settings & Privacy', screen: 'Settings' },
+                ].map(item => renderDropdownLink(item))}
 
                 <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
 
-                {/* Dark mode toggle */}
-                <TouchableOpacity style={styles.dropdownItem} onPress={() => { toggleTheme(); setShowMeDropdown(false); }}>
-                  <Ionicons name={isDark ? 'sunny-outline' : 'moon-outline'} size={18} color={colors.textSecondary} />
-                  <Text style={[styles.dropdownItemText, { color: colors.text }]}>
+                {/* Manage section */}
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>Manage</Text>
+                {[
+                  { icon: 'send-outline', label: 'Referral Requests', screen: 'MyReferralRequests' },
+                  { icon: 'bookmark-outline', label: 'Saved Jobs', screen: 'SavedJobs' },
+                  { icon: 'document-text-outline', label: 'Applications', screen: 'Applications' },
+                  { icon: 'megaphone-outline', label: 'Social Share', screen: 'ShareEarn' },
+                ].map(item => renderDropdownLink(item))}
+                {isVerifiedReferrer || isAdmin
+                  ? renderDropdownLink({ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' })
+                  : renderDropdownLink({ icon: 'shield-checkmark-outline', label: 'Become Referrer', screen: 'BecomeReferrer' })
+                }
+
+                <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
+
+                {/* Bottom actions — no icons, compact like LinkedIn */}
+                <TouchableOpacity style={styles.dropdownItemCompact} onPress={() => { toggleTheme(); setShowMeDropdown(false); }}>
+                  <Text style={[styles.dropdownItemTextCompact, { color: colors.textSecondary }]}>
                     {isDark ? 'Light Mode' : 'Dark Mode'}
                   </Text>
                 </TouchableOpacity>
-
-                {/* Logout */}
-                <TouchableOpacity style={styles.dropdownItem} onPress={handleLogout}>
-                  <Ionicons name="log-out-outline" size={18} color={colors.error || '#EF4444'} />
-                  <Text style={[styles.dropdownItemText, { color: colors.error || '#EF4444' }]}>Sign Out</Text>
+                {renderDropdownLink({ icon: 'help-circle-outline', label: 'Help', screen: 'Support' })}
+                <TouchableOpacity style={styles.dropdownItemCompact} onPress={handleLogout}>
+                  <Text style={[styles.dropdownItemTextCompact, { color: colors.textSecondary }]}>Sign Out</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -543,7 +622,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 56,
     right: 0,
-    width: 280,
+    width: 260,
     maxHeight: 'calc(100vh - 60px)',
     borderRadius: 8,
     borderWidth: 1,
@@ -557,58 +636,72 @@ const styles = StyleSheet.create({
       shadowRadius: 20,
       elevation: 10,
     }),
-    paddingVertical: 8,
+    paddingVertical: 4,
     zIndex: 1001,
   },
   dropdownProfile: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   avatarMed: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   dropdownName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
   dropdownTitle: {
-    fontSize: 12,
-    marginTop: 2,
+    fontSize: 11,
+    marginTop: 1,
   },
   viewProfileBtn: {
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 6,
     borderWidth: 1,
     borderRadius: 16,
-    paddingVertical: 4,
+    paddingVertical: 3,
     alignItems: 'center',
   },
   viewProfileText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
   },
   dropdownDivider: {
     height: 1,
-    marginVertical: 6,
+    marginVertical: 4,
   },
   dropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 7,
   },
   dropdownItemText: {
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
   },
   dropdownItemRight: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
+  },
+  dropdownItemCompact: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+  },
+  dropdownItemTextCompact: {
+    fontSize: 13,
   },
 });

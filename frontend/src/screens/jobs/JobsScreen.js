@@ -239,7 +239,7 @@ export default function JobsScreen({ navigation, route }) {
   const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
   // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen or JobsLandingScreen
-  const { successMessage, appliedJobId, filterF500, screenTitle, searchQuery: initialSearchQuery, selectedJobId: initialSelectedJobId, openFilterSection, appliedFilters } = route.params || {};
+  const { successMessage, appliedJobId, filterF500, screenTitle, searchQuery: initialSearchQuery, selectedJobId: initialSelectedJobId, openFilterSection, appliedFilters, openAIJobs } = route.params || {};
   
   // Detect if used as a stack screen (JobsList) vs tab screen (Jobs)
   const isStackScreen = route.name === 'JobsList';
@@ -268,13 +268,20 @@ export default function JobsScreen({ navigation, route }) {
   // Auto-open filter modal when navigated with openFilterSection param
   useEffect(() => {
     if (openFilterSection && isStackScreen) {
-      // Set the initial section and ensure modal is open
       setInitialFilterSection(openFilterSection);
       setShowFilters(true);
-      // Clear the param so it doesn't re-open on re-render
       navigation.setParams({ openFilterSection: undefined });
     }
   }, [openFilterSection, isStackScreen]);
+
+  // Auto-trigger AI Jobs flow when navigated with openAIJobs param
+  useEffect(() => {
+    if (openAIJobs && isStackScreen) {
+      navigation.setParams({ openAIJobs: undefined });
+      // Delay slightly to ensure handleSearchWithAI dependencies are ready
+      setTimeout(() => handleSearchWithAI(), 300);
+    }
+  }, [openAIJobs, isStackScreen]);
   
   // Auto-select first job on desktop split-pane when jobs load
   // Also re-select when filtered list changes and current selection is no longer in list

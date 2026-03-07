@@ -238,10 +238,13 @@ const [dashboardData, setDashboardData] = useState(() => {
     if (isJobSeeker) {
       referralRequestsPromise = (async () => {
         try {
-          const res = await refopenAPI.getMyReferralRequests(1, 5, sig);
+          const res = await refopenAPI.getMyReferralRequests(1, 20, sig);
           if (res.success) {
-            const requests = res.data?.requests || res.data || [];
-            setMyReferralRequests(requests.slice(0, 5));
+            const allRequests = res.data?.requests || res.data || [];
+            // Only show active statuses (same as Active tab in MyReferralRequestsScreen)
+            const ACTIVE_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed', 'ProofUploaded', 'Completed'];
+            const activeOnly = allRequests.filter(r => ACTIVE_STATUSES.includes(r.Status));
+            setMyReferralRequests(activeOnly.slice(0, 5));
           }
         } catch (err) { if (err?.name !== 'AbortError') console.warn('Referral requests failed:', err); }
         finally { setLoadingMyReferrals(false); }
@@ -254,10 +257,13 @@ const [dashboardData, setDashboardData] = useState(() => {
       setLoadingReferrerJobs(true);
       referrerJobsPromise = (async () => {
         try {
-          const res = await refopenAPI.getAvailableReferralRequests(1, 5);
+          const res = await refopenAPI.getAvailableReferralRequests(1, 20);
           if (res.success) {
-            const requests = res.data?.requests || res.data || [];
-            setReferrerAvailableJobs(requests.slice(0, 5));
+            const allRequests = res.data?.requests || res.data || [];
+            // Only show open statuses (same as Open tab in ReferralScreen)
+            const OPEN_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
+            const openOnly = allRequests.filter(r => OPEN_STATUSES.includes(r.Status));
+            setReferrerAvailableJobs(openOnly.slice(0, 5));
           }
         } catch (err) { if (err?.name !== 'AbortError') console.warn('Referrer jobs failed:', err); }
         finally { setLoadingReferrerJobs(false); }
@@ -751,82 +757,7 @@ const [dashboardData, setDashboardData] = useState(() => {
           )}
         </View>
 
-        {/* My Referral Requests - Job Seekers only */}
-        {isJobSeeker && (
-          loadingMyReferrals ? (
-            <View style={styles.recentContainer}>
-              <Text style={styles.sectionTitle}>My Referral Requests</Text>
-              <HomeSectionLoader styles={styles} colors={colors} />
-            </View>
-          ) : myReferralRequests.length > 0 ? (
-            <View style={styles.recentContainer}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>My Referral Requests</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('MyReferralRequests')}>
-                  <Text style={styles.seeAllText}>See All</Text>
-                </TouchableOpacity>
-              </View>
-              {myReferralRequests.map((req, index) => {
-                const statusIcons = {
-                  Pending: { icon: 'time-outline', color: colors.warning },
-                  NotifiedToReferrers: { icon: 'notifications-outline', color: colors.warning },
-                  Viewed: { icon: 'eye-outline', color: colors.warning },
-                  Claimed: { icon: 'hand-left-outline', color: colors.info || '#3B82F6' },
-                  Submitted: { icon: 'checkmark-circle-outline', color: colors.success },
-                  Completed: { icon: 'checkmark-done-circle-outline', color: colors.success },
-                  Expired: { icon: 'timer-outline', color: colors.gray500 },
-                  Rejected: { icon: 'close-circle-outline', color: colors.error },
-                };
-                const si = statusIcons[req.Status] || statusIcons.Pending;
-                const companyName = req.OpenToAnyCompany ? 'Any Company' : (req.CompanyName || 'Company');
-                const isOTA = !!req.OpenToAnyCompany;
-                // Company initials
-                const initials = companyName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
-                const palette = [colors.primary, colors.accent || '#8B5CF6', colors.success, colors.warning, colors.error, '#EC4899', '#6366F1'];
-                let hash = 0;
-                for (let i = 0; i < companyName.length; i++) hash = companyName.charCodeAt(i) + ((hash << 5) - hash);
-                const bgColor = palette[Math.abs(hash) % palette.length];
-
-                return (
-                  <TouchableOpacity
-                    key={req.RequestID || index}
-                    style={[styles.refCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                    onPress={() => navigation.navigate('ReferralTracking', { requestId: req.RequestID, request: req })}
-                    activeOpacity={0.7}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      {/* Company Logo */}
-                      {isOTA ? (
-                        <View style={[styles.refLogo, { backgroundColor: colors.primary + '20' }]}>
-                          <Ionicons name="globe-outline" size={20} color={colors.primary} />
-                        </View>
-                      ) : req.OrganizationLogo ? (
-                        <CachedImage source={{ uri: req.OrganizationLogo }} style={styles.refLogo} />
-                      ) : (
-                        <View style={[styles.refLogo, { backgroundColor: bgColor }]}>
-                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{initials}</Text>
-                        </View>
-                      )}
-                      {/* Info */}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>{companyName}</Text>
-                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
-                          for <Text style={{ fontWeight: '600', color: colors.text }}>{req.JobTitle || 'Job Title'}</Text>
-                        </Text>
-                      </View>
-                      {/* Status icon */}
-                      <View style={[styles.refStatusIcon, { backgroundColor: si.color + '18' }]}>
-                        <Ionicons name={si.icon} size={16} color={si.color} />
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          ) : null
-        )}
-
-        {/* Provide Referral - Verified Referrers only */}
+        {/* Referral Requests for You - Verified Referrers only (shown first) */}
         {(isVerifiedReferrer || isAdmin) && (
           loadingReferrerJobs ? (
             <View style={styles.recentContainer}>
@@ -857,7 +788,6 @@ const [dashboardData, setDashboardData] = useState(() => {
                     activeOpacity={0.7}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      {/* Applicant avatar */}
                       {req.ApplicantProfilePictureURL ? (
                         <CachedImage source={{ uri: req.ApplicantProfilePictureURL }} style={[styles.refLogo, { borderRadius: 20 }]} />
                       ) : (
@@ -865,7 +795,6 @@ const [dashboardData, setDashboardData] = useState(() => {
                           <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{nameInitial}</Text>
                         </View>
                       )}
-                      {/* Info */}
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>{applicantName}</Text>
                         <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
@@ -873,13 +802,83 @@ const [dashboardData, setDashboardData] = useState(() => {
                         </Text>
                         <Text style={{ fontSize: 11, color: colors.gray500, marginTop: 2 }} numberOfLines={1}>{req.CompanyName || ''}</Text>
                       </View>
-                      {/* View button */}
                       <TouchableOpacity
                         style={{ backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 }}
                         onPress={() => navigation.navigate('Referral')}
                       >
                         <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>View</Text>
                       </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null
+        )}
+
+        {/* My Referral Requests - Job Seekers only */}
+        {isJobSeeker && (
+          loadingMyReferrals ? (
+            <View style={styles.recentContainer}>
+              <Text style={styles.sectionTitle}>My Referral Requests</Text>
+              <HomeSectionLoader styles={styles} colors={colors} />
+            </View>
+          ) : myReferralRequests.length > 0 ? (
+            <View style={styles.recentContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>My Referral Requests</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('MyReferralRequests')}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              {myReferralRequests.map((req, index) => {
+                const statusIcons = {
+                  Pending: { icon: 'time-outline', color: colors.warning },
+                  NotifiedToReferrers: { icon: 'notifications-outline', color: colors.warning },
+                  Viewed: { icon: 'eye-outline', color: colors.warning },
+                  Claimed: { icon: 'hand-left-outline', color: colors.info || '#3B82F6' },
+                  Submitted: { icon: 'checkmark-circle-outline', color: colors.success },
+                  Completed: { icon: 'checkmark-done-circle-outline', color: colors.success },
+                  Expired: { icon: 'timer-outline', color: colors.gray500 },
+                  Rejected: { icon: 'close-circle-outline', color: colors.error },
+                };
+                const si = statusIcons[req.Status] || statusIcons.Pending;
+                const companyName = req.OpenToAnyCompany ? 'Any Company' : (req.CompanyName || 'Company');
+                const isOTA = !!req.OpenToAnyCompany;
+                const initials = companyName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                const palette = [colors.primary, colors.accent || '#8B5CF6', colors.success, colors.warning, colors.error, '#EC4899', '#6366F1'];
+                let hash = 0;
+                for (let i = 0; i < companyName.length; i++) hash = companyName.charCodeAt(i) + ((hash << 5) - hash);
+                const bgColor = palette[Math.abs(hash) % palette.length];
+
+                return (
+                  <TouchableOpacity
+                    key={req.RequestID || index}
+                    style={[styles.refCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => navigation.navigate('ReferralTracking', { requestId: req.RequestID, request: req })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      {isOTA ? (
+                        <View style={[styles.refLogo, { backgroundColor: colors.primary + '20' }]}>
+                          <Ionicons name="globe-outline" size={20} color={colors.primary} />
+                        </View>
+                      ) : req.OrganizationLogo ? (
+                        <CachedImage source={{ uri: req.OrganizationLogo }} style={styles.refLogo} />
+                      ) : (
+                        <View style={[styles.refLogo, { backgroundColor: bgColor }]}>
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{initials}</Text>
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>{companyName}</Text>
+                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                          for <Text style={{ fontWeight: '600', color: colors.text }}>{req.JobTitle || 'Job Title'}</Text>
+                        </Text>
+                      </View>
+                      <View style={[styles.refStatusIcon, { backgroundColor: si.color + '18' }]}>
+                        <Ionicons name={si.icon} size={16} color={si.color} />
+                      </View>
                     </View>
                   </TouchableOpacity>
                 );
