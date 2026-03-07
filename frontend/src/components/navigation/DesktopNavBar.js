@@ -58,26 +58,44 @@ export default function DesktopNavBar() {
     return () => clearTimeout(timer);
   }, [searchQuery, searchOrganizations]);
 
-  // Get active route name for highlighting
-  const activeRoute = useNavigationState(state => {
+  // Get active route name for highlighting — on web, URL is the source of truth
+  const navStateRoute = useNavigationState(state => {
     try {
-      if (!state || !state.routes || state.index == null) return 'Home';
+      if (!state || !state.routes || state.index == null) return null;
       const mainRoute = state.routes[state.index];
-      if (!mainRoute) return 'Home';
+      if (!mainRoute) return null;
       if (mainRoute.name === 'Main' && mainRoute.state) {
         const mainState = mainRoute.state;
         const innerRoute = mainState.routes?.[mainState.index];
-        if (!innerRoute) return 'Home';
+        if (!innerRoute) return null;
         if (innerRoute.name === 'MainTabs' && innerRoute.state) {
-          return innerRoute.state.routes?.[innerRoute.state.index]?.name || 'Home';
+          return innerRoute.state.routes?.[innerRoute.state.index]?.name || null;
         }
+        if (innerRoute.name === 'JobsList' || innerRoute.name === 'JobDetails') return 'Jobs';
+        if (innerRoute.name === 'Conversations' || innerRoute.name === 'ChatScreen') return 'Messages';
         return innerRoute.name;
       }
       return mainRoute.name;
     } catch {
-      return 'Home';
+      return null;
     }
   });
+
+  // On web, always derive from URL path (most reliable on refresh)
+  const getRouteFromURL = () => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+    const path = window.location.pathname.toLowerCase();
+    if (path.includes('/jobs') || path.includes('/job-details')) return 'Jobs';
+    if (path.includes('/messages') || path.includes('/chat')) return 'Messages';
+    if (path.includes('/notifications')) return 'Notifications';
+    if (path.includes('/ask-for-referral') || path.includes('/ask-referral')) return 'AskReferral';
+    if (path.includes('/services')) return 'Services';
+    if (path.includes('/profile') || path.includes('/settings')) return 'Profile';
+    if (path === '/' || path.includes('/home')) return 'Home';
+    return null;
+  };
+
+  const activeRoute = (Platform.OS === 'web' ? getRouteFromURL() : null) || navStateRoute || 'Home';
 
   // Fetch wallet balance + unread count
   useEffect(() => {
@@ -138,7 +156,9 @@ export default function DesktopNavBar() {
 
   const profilePic = user?.ProfilePictureURL;
   const userName = user ? `${user.FirstName || ''} ${user.LastName || ''}`.trim() : 'User';
-  const userTitle = user?.CurrentJobTitle || (isEmployer ? 'Employer' : isAdmin ? 'Admin' : 'Job Seeker');
+  const userTitle = user?.CurrentJobTitle
+    ? (user?.CurrentCompany ? `${user.CurrentJobTitle} at ${user.CurrentCompany}` : user.CurrentJobTitle)
+    : (user?.HighestEducation || (isEmployer ? 'Employer' : isAdmin ? 'Admin' : ''));
 
   return (
     <View style={[styles.container, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -146,9 +166,9 @@ export default function DesktopNavBar() {
         {/* Left: Logo */}
         <TouchableOpacity style={styles.logoContainer} onPress={() => navigateToTab('Home')}>
           {Platform.OS === 'web' ? (
-            <img src="/refopen-logo.png" alt="RefOpen" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+            <img src="/refopen-logo.png" alt="RefOpen" style={{ width: 120, height: 44, objectFit: 'contain' }} />
           ) : (
-            <Image source={require('../../../assets/refopen-logo.png')} style={{ width: 44, height: 44 }} resizeMode="contain" />
+            <Image source={require('../../../assets/refopen-logo.png')} style={{ width: 120, height: 44 }} resizeMode="contain" />
           )}
         </TouchableOpacity>
 
@@ -396,7 +416,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: 16,
-    height: 56,
+    height: 60,
   },
   logoContainer: {
     flexDirection: 'row',
@@ -455,13 +475,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 'auto',
-    gap: 4,
+    gap: 0,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
-    height: 56,
+    paddingHorizontal: 20,
+    height: 60,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },

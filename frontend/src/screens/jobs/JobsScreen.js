@@ -268,13 +268,11 @@ export default function JobsScreen({ navigation, route }) {
   // Auto-open filter modal when navigated with openFilterSection param
   useEffect(() => {
     if (openFilterSection && isStackScreen) {
-      // Delay slightly to let screen mount
-      const timer = setTimeout(() => {
-        openFilters(openFilterSection);
-        // Clear the param so it doesn't re-open on re-render
-        navigation.setParams({ openFilterSection: undefined });
-      }, 300);
-      return () => clearTimeout(timer);
+      // Set the initial section and ensure modal is open
+      setInitialFilterSection(openFilterSection);
+      setShowFilters(true);
+      // Clear the param so it doesn't re-open on re-render
+      navigation.setParams({ openFilterSection: undefined });
     }
   }, [openFilterSection, isStackScreen]);
   
@@ -298,7 +296,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // Draft for modal
   const [filterDraft, setFilterDraft] = useState({ ...EMPTY_FILTERS });
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(!!openFilterSection);
   const [initialFilterSection, setInitialFilterSection] = useState(null);
 
   // ✅ NEW: Resume modal state
@@ -1644,7 +1642,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   if (isDesktopWeb && isStackScreen && selectedJobId) {
     return (
       <View style={styles.container}>
-        <SubScreenHeader title={screenTitle || (filterF500 ? "Jobs by Top MNCs" : "Browse Jobs")} directBack="Jobs" />
         {/* Search + Quick filters bar for split-pane */}
         <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
@@ -1675,6 +1672,15 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         <View style={{ flex: 1, flexDirection: 'row', maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
           {/* Left: Job list */}
           <View style={{ width: 400, borderRightWidth: 1, borderRightColor: colors.border }}>
+            {/* LinkedIn-style list header — height matches right pane sticky header */}
+            <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>
+                {screenTitle || (filterF500 ? 'Top MNC Jobs' : debouncedQuery ? `Results for "${debouncedQuery}"` : 'Recommended for you')}
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                {filterF500 ? 'Fortune 500 & top companies' : debouncedQuery ? 'Matching your search' : 'Based on your profile and preferences'}
+              </Text>
+            </View>
             <ScrollView showsVerticalScrollIndicator={false}>
               {jobs.map(job => {
                 const isSelected = job.JobID === selectedJobId;

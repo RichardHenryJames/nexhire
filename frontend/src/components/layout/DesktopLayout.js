@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
@@ -6,6 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import CachedImage from '../CachedImage';
+import refopenAPI from '../../services/api';
 
 /**
  * DesktopLayout — LinkedIn-style 3-column layout wrapper for desktop web.
@@ -53,10 +54,29 @@ export default function DesktopLayout({
   // On mobile, just render children
   if (!isDesktopWeb) return children;
 
+  // Fetch applicant profile for sidebar card (has job title, company, education)
+  const [applicantData, setApplicantData] = useState(null);
+  useEffect(() => {
+    if (user?.UserID && isJobSeeker) {
+      refopenAPI.getApplicantProfile(user.UserID).then(res => {
+        if (res?.success) setApplicantData(res.data);
+      }).catch(() => {});
+    }
+  }, [user?.UserID, isJobSeeker]);
+
   const profilePic = user?.ProfilePictureURL;
   const userName = user ? `${user.FirstName || ''} ${user.LastName || ''}`.trim() : '';
-  const userTitle = user?.CurrentJobTitle || 'Job Seeker';
-  const userLocation = user?.Location || '';
+  
+  // LinkedIn-style: read from applicant profile (same source as profile screen)
+  const jobTitle = applicantData?.CurrentJobTitle || applicantData?.currentJobTitle || user?.CurrentJobTitle || '';
+  const company = applicantData?.CurrentCompanyName || applicantData?.CurrentCompany || applicantData?.currentCompany || user?.CurrentCompany || '';
+  const education = applicantData?.HighestEducation || applicantData?.highestEducation || user?.HighestEducation || '';
+  const institution = applicantData?.Institution || applicantData?.institution || user?.Institution || '';
+  const location = applicantData?.CurrentLocation || applicantData?.currentLocation || user?.Location || user?.City || '';
+
+  const userTitle = jobTitle
+    ? (company ? `${jobTitle} at ${company}` : jobTitle)
+    : (education ? `${education}${institution ? ` at ${institution}` : ''}` : '');
 
   // Smart context-aware sidebar links based on current screen
   const getSmartLinks = () => {
@@ -160,8 +180,16 @@ export default function DesktopLayout({
               <TouchableOpacity onPress={() => navigateTo('Profile')}>
                 <Text style={[styles.profileName, { color: colors.text }]}>{userName}</Text>
               </TouchableOpacity>
-              <Text style={[styles.profileTitle, { color: colors.textSecondary }]}>{userTitle}</Text>
-              {userLocation ? <Text style={[styles.profileLocation, { color: colors.textSecondary }]}>{userLocation}</Text> : null}
+              {userTitle ? <Text style={[styles.profileTitle, { color: colors.textSecondary }]} numberOfLines={2}>{userTitle}</Text> : null}
+              {location ? (
+                <Text style={[styles.profileLocation, { color: colors.textSecondary }]}>{location}</Text>
+              ) : null}
+              {company && jobTitle ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}>
+                  <Ionicons name="business" size={14} color={colors.textSecondary} />
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>{company}</Text>
+                </View>
+              ) : null}
             </View>
           )}
 

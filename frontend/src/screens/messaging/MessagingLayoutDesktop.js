@@ -301,26 +301,6 @@ export default function MessagingLayoutDesktop() {
       top: 0,
       left: 0,
     }}>
-      {/* Top Header Bar */}
-      <div style={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: '12px 16px',
-        backgroundColor: colors.surface,
-        borderBottom: `1px solid ${colors.border}`,
-        minHeight: 56,
-        flexShrink: 0,
-      }}>
-        <TouchableOpacity
-          onPress={handleBackPress}
-          style={{ padding: 8, marginRight: 8 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold' }}>Messages</Text>
-      </div>
-
       {/* Main Content Area */}
       <div style={{ 
         display: 'flex', 

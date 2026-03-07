@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Platform,
   TextInput,
+  Modal,
+  Animated,
   useWindowDimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +50,18 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [isSaved, setIsSaved] = useState(false);
   const [publishing, setPublishing] = useState(false);
   
+  // Sticky header scroll tracking
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const headerCardHeight = useRef(0);
+  const handleScroll = useCallback((event) => {
+    const scrollY = event.nativeEvent.contentOffset.y;
+    const shouldShow = scrollY > (headerCardHeight.current || 200);
+    setShowStickyHeader(shouldShow);
+  }, []);
+  const handleHeaderLayout = useCallback((event) => {
+    headerCardHeight.current = event.nativeEvent.layout.height;
+  }, []);
+
   // PostedByType: 0 = Scraped, 1 = Employer posted, 2 = Referrer posted
   // For referrer-posted jobs, hide Apply button and show Ask Referral only
   const isReferrerPosted = job?.PostedByType === 2;
@@ -60,9 +74,9 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [hasReferred, setHasReferred] = useState(false);
   const [primaryResume, setPrimaryResume] = useState(null);
   const [referralMessage, setReferralMessage] = useState('');
-  const [showReferralMessageInput, setShowReferralMessageInput] = useState(true);
+  const [showReferralMessageModal, setShowReferralMessageModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
-  const [showCoverLetterMessageInput, setShowCoverLetterMessageInput] = useState(true);
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
   const [referralRequesting, setReferralRequesting] = useState(false);
   
   // 💎 NEW: Beautiful wallet modal state
@@ -336,7 +350,6 @@ const { jobId, fromReferralRequest } = route.params || {};
           
           showToast(message, 'success');
           setReferralMessage('');
-          setShowReferralMessageInput(false);
           
           // 🔧 FIXED: Set the resume directly so next referral doesn't ask for upload
           setPrimaryResume(resumeData);
@@ -492,7 +505,6 @@ const { jobId, fromReferralRequest } = route.params || {};
         
         showToast(message, 'success');
         setReferralMessage('');
-        setShowReferralMessageInput(false);
       } else {
         // Handle insufficient balance error
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
@@ -858,10 +870,60 @@ const { jobId, fromReferralRequest } = route.params || {};
           ) : null}
         />
       )}
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+
+      {/* Sticky Header Bar — appears when scrolling past header card */}
+      {showStickyHeader && (
+        <View style={styles.stickyHeader}>
+          <ResponsiveContainer style={styles.stickyHeaderInner}>
+            <View style={styles.stickyHeaderLeft}>
+              <Text style={styles.stickyHeaderTitle} numberOfLines={1}>{job?.Title}</Text>
+              <Text style={styles.stickyHeaderSub} numberOfLines={1}>
+                {job?.OrganizationName}{formatLocation() !== 'Location not specified' ? ` · ${formatLocation()}` : ''}
+              </Text>
+            </View>
+            <View style={styles.stickyHeaderActions}>
+              {!fromReferralRequest && !job?.IsArchived && (
+                <>
+                  {(isJobSeeker || !user) && !isOwnPostedJob && (
+                    <TouchableOpacity
+                      style={[styles.stickyApplyBtn, hasReferred && { backgroundColor: colors.success }, (referralRequesting) && styles.stickyApplyBtnDisabled]}
+                      onPress={(hasReferred || referralRequesting) ? null : () => setShowReferralMessageModal(true)}
+                      disabled={hasReferred || referralRequesting}
+                    >
+                      {referralRequesting ? (
+                        <ActivityIndicator size="small" color={colors.white} />
+                      ) : (
+                        <Ionicons name={hasReferred ? 'checkmark-circle' : 'people-outline'} size={16} color={colors.white} />
+                      )}
+                      <Text style={styles.stickyApplyBtnText}>
+                        {referralRequesting ? 'Requesting...' : hasReferred ? 'Requested' : 'Ask Referral'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {!hasApplied && !isEmployer && (
+                    <TouchableOpacity
+                      style={styles.stickySaveBtn}
+                      onPress={handleSaveJob}
+                    >
+                      <Text style={styles.stickySaveBtnText}>{isSaved ? 'Saved' : 'Save'}</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </View>
+          </ResponsiveContainer>
+        </View>
+      )}
+
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      onScroll={handleScroll}
+      scrollEventThrottle={16}
+    >
       <ResponsiveContainer style={styles.contentWrapper}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.header} onLayout={handleHeaderLayout}>
         <View style={styles.companyHeader}>
           {/* 🏢 Company Logo and Details */}
           <View style={styles.companyInfo}>
@@ -950,63 +1012,92 @@ const { jobId, fromReferralRequest } = route.params || {};
             <Text style={[styles.tag, styles.remoteTag]}>Remote</Text>
           )}
         </View>
-      </View>
 
-      {/* Action Buttons — LinkedIn style: right after header, before description */}
-      {!fromReferralRequest && !job.IsArchived && (
-        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingBottom: 16 }}>
-          {(isJobSeeker || !user) && !isOwnPostedJob && (
-            <TouchableOpacity 
-              style={[
-                styles.referralButton,
-                { flex: 0, paddingHorizontal: 20 },
-                hasReferred && styles.referralButtonReferred,
-                referralRequesting && styles.referralButtonDisabled
-              ]}
-              onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
-              disabled={hasReferred || referralRequesting}
-            >
-              <Ionicons 
-                name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
-                size={18} 
-                color={hasReferred ? colors.success : referralRequesting ? colors.gray400 : colors.white} 
-              />
-              {!hasReferred && (
-                <Text style={[styles.referralButtonText, referralRequesting && { color: colors.gray400 }]}>
-                  {referralRequesting ? 'Requesting...' : "Ask Referral"}
+        {/* Action Buttons — LinkedIn style */}
+        {!fromReferralRequest && !job.IsArchived && (
+          <View style={styles.headerActions}>
+            {/* Primary: Ask Referral — filled blue */}
+            {(isJobSeeker || !user) && !isOwnPostedJob && (
+              <TouchableOpacity 
+                style={[
+                  styles.btnApply,
+                  hasReferred && { backgroundColor: colors.success },
+                  referralRequesting && styles.btnApplyDisabled
+                ]}
+                onPress={(hasReferred || referralRequesting) ? null : () => setShowReferralMessageModal(true)}
+                disabled={hasReferred || referralRequesting}
+              >
+                {referralRequesting ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons 
+                    name={hasReferred ? 'checkmark-circle' : 'people-outline'} 
+                    size={16} 
+                    color={colors.white} 
+                  />
+                )}
+                <Text style={styles.btnApplyText}>
+                  {referralRequesting ? 'Requesting...' : hasReferred ? 'Requested' : 'Ask Referral'}
                 </Text>
-              )}
+              </TouchableOpacity>
+            )}
+            {/* Apply — outlined, no icon */}
+            {(isJobSeeker || !user) && !isReferrerPosted && (
+              <TouchableOpacity 
+                style={[
+                  styles.btnOutlined,
+                  hasApplied && styles.btnOutlinedSuccess,
+                  applying && styles.btnOutlinedDisabled
+                ]} 
+                onPress={(hasApplied || applying) ? null : () => setShowCoverLetterModal(true)}
+                disabled={hasApplied || applying}
+              >
+                {applying && <ActivityIndicator size="small" color={colors.primary} />}
+                <Text style={[
+                  styles.btnOutlinedText,
+                  hasApplied && { color: colors.success },
+                  applying && { color: colors.gray400 }
+                ]}>
+                  {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {/* Save — outlined */}
+            {!hasApplied && !isEmployer && (
+              <TouchableOpacity
+                style={[styles.btnOutlined, isSaved && styles.btnOutlinedActive]}
+                onPress={handleSaveJob}
+              >
+                <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={16} color={isSaved ? colors.primary : colors.text} />
+                <Text style={[styles.btnOutlinedText, isSaved && { color: colors.primary }]}>
+                  {isSaved ? 'Saved' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {/* More options */}
+            <TouchableOpacity style={styles.btnMore}>
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
-          )}
-          {(isJobSeeker || !user) && !isReferrerPosted && (
-            <TouchableOpacity 
-              style={[
-                styles.applyButton,
-                { flex: 0, paddingHorizontal: 20 },
-                (hasApplied || applying) && styles.applyButtonDisabled
-              ]} 
-              onPress={handleApply}
-              disabled={hasApplied || applying}
-            >
-              {applying && <ActivityIndicator size="small" color={colors.primary} />}
-              <Text style={[styles.applyButtonText, (hasApplied || applying) && { color: colors.white }]}>
-                {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          {/* Save button */}
-          {!hasApplied && !isEmployer && (
-            <TouchableOpacity
-              style={{ paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.border }}
-              onPress={handleSaveJob}
-            >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-                {isSaved ? 'Saved' : 'Save'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
+            {/* Publish button for employers */}
+            {isEmployer && job.Status === 'Draft' && (
+              <TouchableOpacity
+                style={[styles.btnApply, { backgroundColor: colors.success }, publishing && styles.btnApplyDisabled]}
+                onPress={handlePublishJob}
+                disabled={publishing}
+              >
+                {publishing ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Ionicons name="cloud-upload-outline" size={16} color={colors.white} />
+                )}
+                <Text style={styles.btnApplyText}>
+                  {publishing ? 'Publishing...' : pricing.jobPublishCost > 0 ? `Publish (₹${pricing.jobPublishCost})` : 'Publish (Free)'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      </View>
 
       {/* ✅ NEW: Job Tags Section - Only show if there are valid skills after filtering */}
       {job.Tags && parseJobTags().length > 0 && (
@@ -1164,182 +1255,7 @@ const { jobId, fromReferralRequest } = route.params || {};
         </View>
       )}
 
-      {/* 🆕 MOVED: Referral Message Section - now appears ABOVE action buttons */}
-      {/* Show for job seekers OR public users (not logged in), but NOT for own posted jobs */}
-      {(isJobSeeker || !user) && !hasReferred && !isOwnPostedJob && (
-        <View style={styles.referralMessageSection}>
-          {!showReferralMessageInput ? (
-            // Collapsed state - just show button to expand
-            <TouchableOpacity
-              style={styles.addMessageButton}
-              onPress={() => setShowReferralMessageInput(true)}
-            >
-              <Ionicons name="chatbubble-outline" size={20} color={colors.primary} />
-              <Text style={styles.addMessageButtonText}>Add referral message (optional)</Text>
-              <Ionicons name="chevron-down" size={16} color={colors.gray500} />
-            </TouchableOpacity>
-          ) : (
-            // Expanded state - show input and collapse button
-            <>
-              <View style={styles.messageHeader}>
-                <Text style={styles.referralMessageLabel}>Message to Referrer</Text>
-                <TouchableOpacity
-                  style={styles.collapseButton}
-                  onPress={() => {
-                    setShowReferralMessageInput(false);
-                    setReferralMessage(''); // Clear message when collapsed
-                  }}
-                >
-                  <Ionicons name="chevron-up" size={16} color={colors.gray500} />
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.referralMessageInput}
-                placeholder="Tell referrer what makes you the ideal fit..."
-                value={referralMessage}
-                onChangeText={setReferralMessage}
-                multiline
-                numberOfLines={4}
-                maxLength={1000}
-                textAlignVertical="top"
-              />
-              <View style={styles.messageFooter}>
-                <Text style={styles.referralMessageHint}>
-                  (max 1000 characters)
-                </Text>
-                <Text style={styles.characterCount}>
-                  {referralMessage.length}/1000
-                </Text>
-              </View>
-            </>
-          )}
-        </View>
-      )}
 
-      {/* 🆕 NEW: Cover Letter Section - appears before action buttons */}
-      {/* Show for job seekers OR public users (not logged in), but hide for referrer-posted jobs */}
-      {(isJobSeeker || !user) && !hasApplied && !isReferrerPosted && (
-        <View style={styles.coverLetterSection}>
-          {!showCoverLetterMessageInput ? (
-            // Collapsed state - show button to expand
-            <TouchableOpacity
-              style={styles.addMessageButton}
-              onPress={() => setShowCoverLetterMessageInput(true)}
-            >
-              <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-              <Text style={styles.addMessageButtonText}>
-                {coverLetter ? 'Edit cover letter' : 'Add cover letter (optional)'}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color={colors.gray500} />
-            </TouchableOpacity>
-          ) : (
-            // Expanded state - show input and collapse button
-            <>
-              <View style={styles.messageHeader}>
-                <Text style={styles.referralMessageLabel}>Cover Letter</Text>
-                <TouchableOpacity
-                  style={styles.collapseButton}
-                  onPress={() => setShowCoverLetterMessageInput(false)}
-                >
-                  <Ionicons name="chevron-up" size={16} color={colors.gray500} />
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.coverLetterInput}
-                placeholder="Tell job poster what makes you the ideal fit..."
-                value={coverLetter}
-                onChangeText={setCoverLetter}
-                multiline
-                numberOfLines={8}
-                maxLength={2000}
-                textAlignVertical="top"
-              />
-              <View style={styles.messageFooter}>
-                <Text style={styles.referralMessageHint}>
-                  Personalize to highlight relevant achievements
-                </Text>
-                <Text style={styles.characterCount}>
-                  {coverLetter.length}/2000
-                </Text>
-              </View>
-            </>
-          )}
-        </View>
-      )}
-
-      {/* Action Buttons - REMOVED Save Job button since it's in the header */}
-      {/* Hide buttons when navigating from ReferralScreen "Requests To Me" tab OR when job is archived */}
-      {!fromReferralRequest && !job.IsArchived && (
-        <View style={styles.actionContainer}>        
-          {/* Show Ask Referral for job seekers OR public users, but NOT if they posted this job */}
-          {(isJobSeeker || !user) && !isOwnPostedJob && (
-            <TouchableOpacity 
-              style={[
-                styles.referralButton,
-                hasReferred && styles.referralButtonReferred,
-                referralRequesting && styles.referralButtonDisabled
-              ]}
-              onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
-              disabled={hasReferred || referralRequesting}
-            >
-              <Ionicons 
-                name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
-                size={hasReferred ? 24 : 20} 
-                color={hasReferred ? colors.success : referralRequesting ? colors.gray400 : colors.white} 
-              />
-              {!hasReferred && (
-                <Text style={[
-                  styles.referralButtonText, 
-                  referralRequesting && { color: colors.gray400 }
-                ]}>
-                  {referralRequesting ? 'Requesting' : "Ask Referral"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          )}
-          
-          {/* Apply button - hide for referrer-posted jobs (they should use Ask Referral instead) */}
-          {/* Show for job seekers OR public users */}
-          {(isJobSeeker || !user) && !isReferrerPosted && (
-            <TouchableOpacity 
-              style={[
-
-                styles.applyButton, 
-                (hasApplied || applying) && styles.applyButtonDisabled
-              ]} 
-              onPress={handleApply}
-              disabled={hasApplied || applying}
-            >
-              {applying && <ActivityIndicator size="small" color={colors.primary} />}
-              <Text style={[styles.applyButtonText, (hasApplied || applying) && { color: colors.white }]}>
-                {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply Now'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        
-          {/* ✅ NEW: Publish button for employers viewing draft jobs */}
-          {isEmployer && job.Status === 'Draft' && (
-            <TouchableOpacity
-              style={[
-
-                styles.publishButton,
-                publishing && styles.publishButtonDisabled
-              ]}
-              onPress={handlePublishJob}
-              disabled={publishing}
-            >
-              {publishing ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <Ionicons name="cloud-upload-outline" size={20} color={colors.white} />
-              )}
-              <Text style={styles.publishButtonText}>
-                {publishing ? 'Publishing...' : pricing.jobPublishCost > 0 ? `Publish Job (₹${pricing.jobPublishCost})` : 'Publish Job (Free)'}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
       
       {/* Show archived job notice */}
       {job.IsArchived && (
@@ -1349,6 +1265,114 @@ const { jobId, fromReferralRequest } = route.params || {};
         </View>
       )}
       
+      {/* Referral Message Modal */}
+      <Modal
+        visible={showReferralMessageModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowReferralMessageModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Message to Referrer</Text>
+              <TouchableOpacity onPress={() => setShowReferralMessageModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+              Add a personal note to increase your chances (optional)
+            </Text>
+            <TextInput
+              style={[styles.modalTextInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+              placeholder="Tell the referrer what makes you the ideal fit..."
+              placeholderTextColor={colors.textSecondary}
+              value={referralMessage}
+              onChangeText={setReferralMessage}
+              multiline
+              numberOfLines={5}
+              maxLength={1000}
+              textAlignVertical="top"
+            />
+            <Text style={[styles.modalCharCount, { color: colors.textSecondary }]}>
+              {referralMessage.length}/1000
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalSecondaryBtn, { borderColor: colors.border }]}
+                onPress={() => setShowReferralMessageModal(false)}
+              >
+                <Text style={[styles.modalSecondaryBtnText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalPrimaryBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setShowReferralMessageModal(false);
+                  handleAskReferral();
+                }}
+              >
+                <Ionicons name="people-outline" size={18} color={colors.white} />
+                <Text style={styles.modalPrimaryBtnText}>Ask Referral</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cover Letter Modal */}
+      <Modal
+        visible={showCoverLetterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCoverLetterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Cover Letter</Text>
+              <TouchableOpacity onPress={() => setShowCoverLetterModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+              Personalize your application to stand out (optional)
+            </Text>
+            <TextInput
+              style={[styles.modalTextInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, minHeight: 160 }]}
+              placeholder="Highlight your relevant skills and achievements..."
+              placeholderTextColor={colors.textSecondary}
+              value={coverLetter}
+              onChangeText={setCoverLetter}
+              multiline
+              numberOfLines={8}
+              maxLength={2000}
+              textAlignVertical="top"
+            />
+            <Text style={[styles.modalCharCount, { color: colors.textSecondary }]}>
+              {coverLetter.length}/2000
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalSecondaryBtn, { borderColor: colors.border }]}
+                onPress={() => setShowCoverLetterModal(false)}
+              >
+                <Text style={[styles.modalSecondaryBtnText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalPrimaryBtn, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setShowCoverLetterModal(false);
+                  handleApply();
+                }}
+              >
+                <Ionicons name="paper-plane-outline" size={18} color={colors.white} />
+                <Text style={styles.modalPrimaryBtnText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Resume Upload Modal */}
       <ResumeUploadModal
         visible={showResumeModal}
@@ -1485,17 +1509,85 @@ const createStyles = (colors, responsive = {}) => {
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.medium,
   },
-  header: {
-    padding: isMobile ? 20 : 32,
+  // Sticky header bar
+  stickyHeader: {
+    position: Platform.OS === 'web' ? 'sticky' : 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    ...(isDesktop && {
-      borderRadius: 12,
-      marginTop: 16,
-      marginHorizontal: 0,
-      borderWidth: 1,
-    }),
+    paddingVertical: 14,
+    paddingHorizontal: isMobile ? 16 : 24,
+  },
+  stickyHeaderInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    maxWidth: isDesktop ? 900 : '100%',
+    width: '100%',
+    alignSelf: 'center',
+  },
+  stickyHeaderLeft: {
+    flex: 1,
+    marginRight: 16,
+  },
+  stickyHeaderTitle: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+  },
+  stickyHeaderSub: {
+    fontSize: typography.sizes.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  stickyHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stickyApplyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+  },
+  stickyApplyBtnDisabled: {
+    backgroundColor: colors.gray300,
+  },
+  stickyApplyBtnText: {
+    color: '#FFFFFF',
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.bold,
+  },
+  stickySaveBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  stickySaveBtnText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
+  },
+  stickyMoreBtn: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  // Header card
+  header: {
+    padding: isMobile ? 20 : 24,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   companyHeader: {
     marginBottom: 16,
@@ -1573,6 +1665,71 @@ const createStyles = (colors, responsive = {}) => {
     fontWeight: typography.weights.medium,
     marginLeft: 6,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    flexWrap: 'wrap',
+  },
+  btnApply: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    minWidth: 90,
+    justifyContent: 'center',
+  },
+  btnApplyDisabled: {
+    backgroundColor: colors.gray300,
+  },
+  btnApplyText: {
+    color: '#FFFFFF',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
+  },
+  btnOutlined: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  btnOutlinedText: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+    color: colors.primary,
+  },
+  btnOutlinedSuccess: {
+    borderColor: colors.success,
+    backgroundColor: colors.success + '10',
+  },
+  btnOutlinedDisabled: {
+    borderColor: colors.gray300,
+    backgroundColor: colors.gray100,
+  },
+  btnOutlinedActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primary + '08',
+  },
+  btnMore: {
+    padding: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1624,15 +1781,9 @@ const createStyles = (colors, responsive = {}) => {
     color: colors.text,
   },
   section: {
-    padding: isMobile ? 20 : 32,
+    padding: isMobile ? 20 : 24,
     backgroundColor: colors.surface,
     marginTop: 8,
-    ...(isDesktop && {
-      borderRadius: 12,
-      marginTop: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    }),
   },
   sectionTitle: {
     fontSize: isDesktop ? typography.sizes.xl : typography.sizes.lg,
@@ -1872,6 +2023,84 @@ const createStyles = (colors, responsive = {}) => {
     fontSize: typography.sizes.md,
     color: colors.textSecondary,
     fontWeight: typography.weights.medium,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 16,
+    padding: 24,
+    ...(Platform.OS === 'web' ? { boxShadow: '0 8px 32px rgba(0,0,0,0.2)' } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.2,
+      shadowRadius: 32,
+      elevation: 10,
+    }),
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+  },
+  modalSubtitle: {
+    fontSize: typography.sizes.sm,
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  modalTextInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: typography.sizes.md,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    lineHeight: 22,
+  },
+  modalCharCount: {
+    fontSize: typography.sizes.xs,
+    textAlign: 'right',
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-end',
+  },
+  modalSecondaryBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  modalSecondaryBtnText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  },
+  modalPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  modalPrimaryBtnText: {
+    color: '#FFFFFF',
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.bold,
   },
 });
 };

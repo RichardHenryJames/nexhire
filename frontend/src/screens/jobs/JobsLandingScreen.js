@@ -262,7 +262,7 @@ export default function JobsLandingScreen({ navigation, route }) {
         rightContent={
           <TouchableOpacity 
             style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}
-            onPress={() => navigation.navigate('JobsList', { openFilterSection: null, screenTitle: 'Browse Jobs' })}
+            onPress={() => navigation.navigate('JobsList', { openFilterSection: 'all', screenTitle: 'Browse Jobs' })}
           >
             <Ionicons name="options-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
