@@ -622,10 +622,14 @@ export default function AskReferralScreen({ navigation, route }) {
               How do you want to be referred?
             </Text>
 
+            {/* Desktop: cards side by side */}
+            <View style={Platform.OS === 'web' && responsive.isDesktop ? { flexDirection: 'row', gap: 16 } : {}}>
+
             {/* ── Open to Any Company (Flagship) ─────────────────── */}
             <TouchableOpacity
               style={[
                 styles.modeCard,
+                Platform.OS === 'web' && responsive.isDesktop && { flex: 1 },
                 openToAnyCompany && styles.modeCardActive,
                 openToAnyCompany && { borderColor: colors.primary },
               ]}
@@ -723,6 +727,7 @@ export default function AskReferralScreen({ navigation, route }) {
             <TouchableOpacity
               style={[
                 styles.modeCard,
+                Platform.OS === 'web' && responsive.isDesktop && { flex: 1 },
                 !openToAnyCompany && styles.modeCardActive,
                 !openToAnyCompany && { borderColor: colors.primary },
               ]}
@@ -786,6 +791,9 @@ export default function AskReferralScreen({ navigation, route }) {
                 {!openToAnyCompany && <View style={styles.modeRadioInner} />}
               </View>
             </TouchableOpacity>
+
+            {/* Close desktop cards row wrapper */}
+            </View>
           </View>
 
           {/* ── Live Social Proof — Fortune 500 Ticker ────────────── */}
@@ -1454,7 +1462,7 @@ const createStyles = (colors, responsive = {}) =>
     innerContainer: {
       width: '100%',
       maxWidth:
-        Platform.OS === 'web' && responsive.isDesktop ? 720 : '100%',
+        Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
       flex: 1,
     },
     scrollContainer: {
@@ -1538,12 +1546,15 @@ const createStyles = (colors, responsive = {}) =>
     modeSection: {
       padding: 16,
       paddingBottom: 8,
+      ...(Platform.OS === 'web' && responsive.isDesktop ? {
+        paddingHorizontal: 0,
+      } : {}),
     },
     modeHeading: {
-      fontSize: typography.sizes.lg,
+      fontSize: Platform.OS === 'web' && responsive.isDesktop ? 24 : typography.sizes.lg,
       fontWeight: typography.weights.bold,
       color: colors.textPrimary,
-      marginBottom: 14,
+      marginBottom: Platform.OS === 'web' && responsive.isDesktop ? 20 : 14,
       textAlign: 'center',
     },
     modeCard: {

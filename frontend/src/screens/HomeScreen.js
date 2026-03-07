@@ -25,6 +25,7 @@ import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
 import useResponsive from '../hooks/useResponsive';
+import DesktopLayout from '../components/layout/DesktopLayout';
 import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
 import { showToast } from '../components/Toast';
 import TabHeader from '../components/TabHeader';
@@ -572,6 +573,7 @@ const [dashboardData, setDashboardData] = useState(() => {
         }
       />
 
+      <DesktopLayout>
       <ScrollView
         ref={scrollViewRef}
         style={styles.container}
@@ -903,6 +905,7 @@ const [dashboardData, setDashboardData] = useState(() => {
         )}
         </ResponsiveContainer>
       </ScrollView>
+      </DesktopLayout>
 
       {/* Confirm Current Company Modal */}
       <Modal

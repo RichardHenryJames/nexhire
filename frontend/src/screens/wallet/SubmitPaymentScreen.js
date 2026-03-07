@@ -214,7 +214,7 @@ const SubmitPaymentScreen = ({ navigation }) => {
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     content: { flex: 1 },
-    scrollContent: { padding: 16 },
+    scrollContent: { padding: 16, maxWidth: 800, width: '100%', alignSelf: 'center' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     section: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 16 },
     sectionTitle: { fontSize: typography.sizes?.md || 16, fontWeight: typography.weights?.semibold || '600', color: colors.text, marginBottom: 12 },

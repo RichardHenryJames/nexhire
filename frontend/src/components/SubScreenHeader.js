@@ -29,10 +29,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
+import { useResponsive } from '../hooks/useResponsive';
 import { HEADER_CONTAINER_BASE, HEADER_TITLE, HEADER_BACK_BUTTON } from './headerStyles';
 
 export default function SubScreenHeader({
@@ -48,6 +50,8 @@ export default function SubScreenHeader({
 }) {
   const nav = navProp || useNavigation();
   const { colors } = useTheme();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
 
   const handleBack = () => {
     // Tier 1: Full override
@@ -78,16 +82,18 @@ export default function SubScreenHeader({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Left: Back/Close button */}
-      <TouchableOpacity
-        onPress={handleBack}
-        activeOpacity={0.7}
-        style={styles.backButton}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-      >
-        <Ionicons name={icon} size={24} color={colors.text} />
-      </TouchableOpacity>
+    <View style={[styles.container, { backgroundColor: colors.background }, isDesktopWeb && styles.containerDesktop]}>
+      {/* Left: Back/Close button — hidden on desktop (navbar handles navigation) */}
+      {!isDesktopWeb && (
+        <TouchableOpacity
+          onPress={handleBack}
+          activeOpacity={0.7}
+          style={styles.backButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name={icon} size={24} color={colors.text} />
+        </TouchableOpacity>
+      )}
 
       {/* Center: Custom content or Title + optional subtitle */}
       <View style={[styles.center, centerContent ? { alignItems: 'stretch' } : null]}>
@@ -117,6 +123,11 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     width: '100%',
     ...HEADER_CONTAINER_BASE,
+  },
+  containerDesktop: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
   },
   backButton: {
     ...HEADER_BACK_BUTTON,

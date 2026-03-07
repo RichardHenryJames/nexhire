@@ -27,6 +27,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import { useFocusEffect } from '@react-navigation/native';
 import refopenAPI from '../services/api';
 import TabHeader from '../components/TabHeader';
+import DesktopLayout from '../components/layout/DesktopLayout';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -255,6 +256,7 @@ export default function ServicesScreen({ navigation }) {
         title="Career Tools"
         navigation={navigation}
       />
+      <DesktopLayout maxWidth={900}>
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
@@ -291,6 +293,7 @@ export default function ServicesScreen({ navigation }) {
         {/* ── Bottom Spacer ────────────────────────────── */}
         <View style={{ height: 100 }} />
       </ScrollView>
+      </DesktopLayout>
     </View>
   );
 }

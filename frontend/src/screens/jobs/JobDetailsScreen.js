@@ -31,7 +31,7 @@ import { useCustomAlert } from '../../components/CustomAlert';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 
-export default function JobDetailsScreen({ route, navigation }) {
+export default function JobDetailsScreen({ route, navigation, hideHeader = false }) {
 const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
   const { colors } = useTheme();
@@ -845,17 +845,19 @@ const { jobId, fromReferralRequest } = route.params || {};
     : [];
 
   return (
-    <ScreenWrapper withKeyboard>
+    <ScreenWrapper withKeyboard={!hideHeader}>
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <SubScreenHeader
-        title="Job Details"
-        fallbackTab="Jobs"
-        rightContent={(!hasApplied && !isEmployer) ? (
-          <TouchableOpacity onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
-          </TouchableOpacity>
-        ) : null}
-      />
+      {!hideHeader && (
+        <SubScreenHeader
+          title="Job Details"
+          fallbackTab="Jobs"
+          rightContent={(!hasApplied && !isEmployer) ? (
+            <TouchableOpacity onPress={handleSaveJob} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={isSaved ? colors.primary : colors.text} />
+            </TouchableOpacity>
+          ) : null}
+        />
+      )}
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <ResponsiveContainer style={styles.contentWrapper}>
       {/* Header */}

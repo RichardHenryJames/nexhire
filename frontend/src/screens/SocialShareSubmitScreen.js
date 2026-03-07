@@ -301,7 +301,7 @@ export default function SocialShareSubmitScreen() {
         directBack="ShareEarn"
       />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ padding: 16 }}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ padding: 16, maxWidth: 800, width: '100%', alignSelf: 'center' }}>
         {/* Header Card */}
         <View style={[styles.headerCard, { borderColor: config.color }]}>
           <View style={[styles.platformIcon, { backgroundColor: config.color + '20' }]}>

@@ -281,49 +281,35 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* AI Premium Header - Modern indigo/violet gradient matching new design system */}
-      <LinearGradient
-        colors={[colors.text, colors.background, colors.accentBg]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.headerFixed}
-      >
+      {/* AI Jobs Header — clean, centered, aesthetic */}
+      <View style={[styles.headerFixed, { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
         <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => {
-              // Smart back navigation - check if we have navigation history
-              const navState = navigation.getState();
-              const routes = navState?.routes || [];
-              const currentIndex = navState?.index || 0;
-              
-              // If we have more than 1 route in the stack, go back normally
-              if (routes.length > 1 && currentIndex > 0) {
-                navigation.goBack();
-              } else {
-                // Hard refresh scenario - navigate to Home
-                navigation.navigate('Main', {
-                  screen: 'MainTabs',
-                  params: {
-                    screen: 'Home'
-                  }
-                });
-              }
-            }} 
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.white} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <View style={styles.headerIcon}>
-              <Image source={AILogo} style={{ width: 24, height: 24 }} resizeMode="contain" />
+          {/* Back button — mobile only */}
+          {!(Platform.OS === 'web' && responsive.isDesktop) && (
+            <TouchableOpacity 
+              onPress={() => {
+                const navState = navigation.getState();
+                const routes = navState?.routes || [];
+                const currentIndex = navState?.index || 0;
+                if (routes.length > 1 && currentIndex > 0) navigation.goBack();
+                else navigation.navigate('Main', { screen: 'MainTabs', params: { screen: 'Home' } });
+              }} 
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.text} />
+            </TouchableOpacity>
+          )}
+          <View style={styles.headerCenter}>
+            <View style={styles.headerTitleRow}>
+              <Image source={AILogo} style={{ width: 22, height: 22 }} resizeMode="contain" />
+              <Text style={[styles.headerTitle, { color: colors.text }]}>AI Recommended Jobs</Text>
             </View>
-            <View>
-              <Text style={styles.headerTitle}>AI Recommended Jobs</Text>
-              <Text style={styles.headerSubtitle}>{aiJobs.length > 0 ? `${aiJobs.length} AI-matched jobs for you` : 'AI-matched jobs for you'}</Text>
-            </View>
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+              {aiJobs.length > 0 ? `${aiJobs.length} AI-matched jobs for you` : 'Personalized job matches powered by AI'}
+            </Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <WalletRechargeModal
         visible={showWalletModal}
@@ -432,7 +418,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
 container: {
   flex: 1,
-  backgroundColor: colors.text,
+  backgroundColor: colors.background,
   ...(Platform.OS === 'web' && responsive.isDesktop ? {
     alignItems: 'center',
   } : {}),
@@ -443,7 +429,7 @@ innerContainer: {
   flex: 1,
 },
 headerFixed: {
-  paddingVertical: 12,
+  paddingVertical: 16,
   position: Platform.OS === 'web' ? 'sticky' : 'relative',
   top: 0,
   left: 0,
@@ -454,33 +440,30 @@ headerFixed: {
 header: {
   flexDirection: 'row',
   alignItems: 'center',
-  paddingHorizontal: 12,
+  maxWidth: 900,
+  width: '100%',
+  alignSelf: 'center',
+  paddingHorizontal: 16,
 },
 backButton: {
   marginRight: 16,
 },
-headerTitleContainer: {
+headerCenter: {
+  flex: 1,
+  alignItems: 'center',
+},
+headerTitleRow: {
   flexDirection: 'row',
   alignItems: 'center',
-  flex: 1,
+  gap: 8,
 },
-  headerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(99,102,241,0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
 headerTitle: {
-  fontSize: typography.sizes.lg,
-  fontWeight: typography.weights.bold,
-  color: colors.white,
+  fontSize: 20,
+  fontWeight: '700',
 },
 headerSubtitle: {
-  fontSize: typography.sizes.xs,
-  color: 'rgba(255, 255, 255, 0.9)',
+  fontSize: 13,
+  marginTop: 2,
 },
 loadingContainer: {
   flex: 1,
@@ -498,7 +481,7 @@ scrollView: {
   ...(Platform.OS === 'web' ? { overflow: 'auto' } : {}),
 },
 scrollContent: {
-  padding: 12,
+  padding: Platform.OS === 'web' && responsive.isDesktop ? 24 : 12,
 },
 emptyState: {
   flex: 1,

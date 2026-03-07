@@ -104,12 +104,6 @@ const JobCard = ({
         <View style={styles.titleContent}>
           <View style={styles.titleHeader}>
             <Text style={styles.title} numberOfLines={1}>{title}</Text>
-            {(jobTypeName || workplaceName) && (
-              <View style={styles.badgeRow}>
-                {jobTypeName ? (<Text style={styles.metaBadge}>{jobTypeName}</Text>) : null}
-                {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
-              </View>
-            )}
           </View>
           <Text style={styles.company} numberOfLines={1}>{org}</Text>
           <View style={styles.metaRow}>
@@ -117,10 +111,13 @@ const JobCard = ({
               <Ionicons name="location-outline" size={12} color={colors.gray500 || colors.textSecondary} />
               <Text style={styles.metaText} numberOfLines={1}>{loc}</Text>
             </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="calendar-outline" size={12} color={colors.gray500 || colors.textSecondary} />
-              <Text style={styles.metaText}>{posted}</Text>
-            </View>
+            {/* Mobile only: show job type & workplace badges in meta row */}
+            {!isDesktop && (jobTypeName || workplaceName) && (
+              <View style={styles.badgeRow}>
+                {jobTypeName ? (<Text style={styles.metaBadge}>{jobTypeName}</Text>) : null}
+                {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
+              </View>
+            )}
           </View>
           {(job.ExperienceMin != null || job.ExperienceMax != null) && (
             <View style={styles.metaRow}>

@@ -806,7 +806,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
 const createStyles = (colors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { flex: 1 },
-  scrollContent: { padding: 16 },
+  scrollContent: { padding: 16, maxWidth: 800, width: '100%', alignSelf: 'center' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   section: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 16 },
   input: {

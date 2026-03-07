@@ -19,6 +19,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import refopenAPI from '../services/api';
 import TabHeader from '../components/TabHeader';
+import { useResponsive } from '../hooks/useResponsive';
+import DesktopLayout from '../components/layout/DesktopLayout';
 import { colors as brandColors } from '../styles/theme';
 
 const getTypeColors = (colors) => ({
@@ -80,6 +82,8 @@ export default function NotificationsScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -409,6 +413,8 @@ export default function NotificationsScreen() {
         ) : null}
       />
 
+      <DesktopLayout>
+
       {loading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -444,6 +450,7 @@ export default function NotificationsScreen() {
           )}
         </ScrollView>
       )}
+      </DesktopLayout>
     </View>
   );
 }

@@ -758,6 +758,7 @@ const createStyles = (colors) => StyleSheet.create({
     paddingVertical: 20,
     paddingHorizontal: 20,
     marginTop: 12,
+    ...(Platform.OS === 'web' ? { borderRadius: 12 } : {}),
   },
 
   // Main Content Layout

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, ActivityIndicator, Modal, StyleSheet, Animated } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, TouchableOpacity, TextInput, ActivityIndicator, Modal, StyleSheet, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -22,6 +22,7 @@ import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 import { getCached, hasCached, setCache, invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
+import JobDetailsScreen from './JobDetailsScreen';
 
 // Ad configuration - Google AdSense
 const AD_CONFIG = {
@@ -233,11 +234,15 @@ export default function JobsScreen({ navigation, route }) {
   const { pricing } = usePricing(); // 💰 DB-driven pricing
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet, gridColumns, contentWidth } = responsive;
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
-  // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen
-  const { successMessage, appliedJobId, filterF500 } = route.params || {};
+  // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen or JobsLandingScreen
+  const { successMessage, appliedJobId, filterF500, screenTitle, searchQuery: initialSearchQuery, selectedJobId: initialSelectedJobId, openFilterSection } = route.params || {};
+  
+  // Detect if used as a stack screen (JobsList) vs tab screen (Jobs)
+  const isStackScreen = route.name === 'JobsList';
 
   // 🔧 Reset filterF500 when Jobs tab is pressed directly (not from HomeScreen's "See All")
   useEffect(() => {
@@ -253,9 +258,36 @@ export default function JobsScreen({ navigation, route }) {
   const [jobs, setJobs] = useState(() => getCached(CACHE_KEYS.JOBS_LIST) || []);
   const [loading, setLoading] = useState(!hasCached(CACHE_KEYS.JOBS_LIST));
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const debouncedQuery = useDebounce(searchQuery, 350);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 30, hasMore: true });
+  
+  // Split-pane: selected job for desktop inline detail
+  const [selectedJobId, setSelectedJobId] = useState(initialSelectedJobId || null);
+
+  // Auto-open filter modal when navigated with openFilterSection param
+  useEffect(() => {
+    if (openFilterSection && isStackScreen) {
+      // Delay slightly to let screen mount
+      const timer = setTimeout(() => {
+        openFilters(openFilterSection);
+        // Clear the param so it doesn't re-open on re-render
+        navigation.setParams({ openFilterSection: undefined });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [openFilterSection, isStackScreen]);
+  
+  // Auto-select first job on desktop split-pane when jobs load
+  // Also re-select when filtered list changes and current selection is no longer in list
+  useEffect(() => {
+    if (isDesktopWeb && isStackScreen && jobs.length > 0) {
+      const currentStillExists = selectedJobId && jobs.some(j => j.JobID === selectedJobId);
+      if (!currentStillExists) {
+        setSelectedJobId(jobs[0].JobID);
+      }
+    }
+  }, [isDesktopWeb, isStackScreen, jobs]);
 
   // Applied filters
   const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
@@ -1253,7 +1285,13 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             jobTypes={jobTypes}
             workplaceTypes={workplaceTypes}
             isDesktop={!isMobile}
-            onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })}
+            onPress={() => {
+              if (isDesktopWeb && isStackScreen) {
+                setSelectedJobId(job.JobID);
+              } else {
+                navigation.navigate('JobDetails', { jobId: job.JobID });
+              }
+            }}
             onApply={() => handleApply(job)}
             onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
             onSave={() => handleSave(job)}
@@ -1602,11 +1640,112 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   }, [jobs.length, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
   // ===== Render =====
+  // Desktop split-pane: if a job is selected, show list (left) + detail (right)
+  if (isDesktopWeb && isStackScreen && selectedJobId) {
+    return (
+      <View style={styles.container}>
+        <SubScreenHeader title={screenTitle || (filterF500 ? "Jobs by Top MNCs" : "Browse Jobs")} directBack="Jobs" />
+        {/* Search + Quick filters bar for split-pane */}
+        <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 }}>
+            <View style={[styles.searchContainer, { flex: 1 }]}>
+              <Ionicons name="search" size={18} color={colors.textSecondary} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search jobs..."
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  if (text.trim().length > 0) { setJobs([]); setLoading(true); }
+                }}
+                onSubmitEditing={handleSearchSubmit}
+                placeholderTextColor={colors.textMuted}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+                  <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
+              <Ionicons name="options-outline" size={22} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+        <View style={{ flex: 1, flexDirection: 'row', maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+          {/* Left: Job list */}
+          <View style={{ width: 400, borderRightWidth: 1, borderRightColor: colors.border }}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {jobs.map(job => {
+                const isSelected = job.JobID === selectedJobId;
+                return (
+                  <TouchableOpacity 
+                    key={job.JobID} 
+                    onPress={() => setSelectedJobId(job.JobID)}
+                    style={{ 
+                      backgroundColor: isSelected ? (colors.primary + '10') : colors.surface,
+                      borderLeftWidth: isSelected ? 3 : 0,
+                      borderLeftColor: colors.primary,
+                    }}
+                  >
+                    <JobCard
+                      job={job}
+                      jobTypes={jobTypes}
+                      workplaceTypes={workplaceTypes}
+                      isDesktop={false}
+                      onPress={() => setSelectedJobId(job.JobID)}
+                      hideApply
+                      hideReferral
+                      hideSave
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+              {loadingMore && (
+                <View style={{ padding: 16, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              )}
+            </ScrollView>
+          </View>
+          {/* Right: Job detail (no header since we're inline) */}
+          <View style={{ flex: 1 }}>
+            <JobDetailsScreen 
+              route={{ params: { jobId: selectedJobId } }} 
+              navigation={navigation}
+              hideHeader
+            />
+          </View>
+        </View>
+
+        {/* Filter modal — needed in split-pane view too */}
+        <FilterModal
+          visible={showFilters}
+          onClose={closeFilters}
+          filters={filterDraft}
+          onFiltersChange={onChangeDraft}
+          onApply={applyDraft}
+          onClear={resetDraft}
+          jobTypes={jobTypes}
+          workplaceTypes={workplaceTypes}
+          currencies={currencies}
+          companies={companies}
+          loadingCompanies={loadingCompanies}
+          onToggleJobType={onToggleJobType}
+          onToggleWorkplaceType={onToggleWorkplaceType}
+          onSelectCurrency={onSelectCurrency}
+          initialSection={initialFilterSection}
+        />
+      </View>
+    );
+  }
+
+  // Normal render (mobile + non-split desktop)
   return (
     <View style={styles.container}>
-      {/* Fortune 500 Mode: SubScreenHeader */}
-      {filterF500 ? (
-        <SubScreenHeader title="Jobs by Top MNCs" fallbackTab="Home" />
+      {/* Stack screen mode or Fortune 500 Mode: SubScreenHeader with back button */}
+      {(isStackScreen || filterF500) ? (
+        <SubScreenHeader title={screenTitle || (filterF500 ? "Jobs by Top MNCs" : "Browse Jobs")} directBack="Jobs" />
       ) : (
         <TabHeader
           navigation={navigation}

@@ -987,6 +987,7 @@ const createStyles = (colors, responsive = {}) => {
     marginTop: 12,
     paddingVertical: 20,
     paddingHorizontal: 20,
+    ...(Platform.OS === 'web' ? { borderRadius: 12 } : {}),
   },
   sectionHeaderRow: {
     flexDirection: 'row',

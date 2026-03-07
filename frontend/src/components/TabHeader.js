@@ -24,6 +24,7 @@ import {
   StyleSheet,
   PanResponder,
   Platform,
+  Dimensions,
 } from 'react-native';
 import CachedImage from './CachedImage';
 import { Ionicons } from '@expo/vector-icons';
@@ -34,6 +35,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUnreadMessages } from '../contexts/UnreadMessagesContext';
 import ProfileSlider from './ProfileSlider';
 import { HEADER_CONTAINER_BASE, HEADER_TITLE } from './headerStyles';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function TabHeader({
   title,
@@ -51,8 +53,13 @@ export default function TabHeader({
   const navigation = navProp || useNavigation();
   const { colors, isDark } = useTheme();
   const { user } = useAuth();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const [profileSliderVisible, setProfileSliderVisible] = useState(false);
   const { unreadCount: unreadMessageCount, refreshUnreadCount } = useUnreadMessages();
+
+  // On desktop web, TabHeader is replaced by DesktopNavBar — don't render
+  if (isDesktopWeb) return null;
 
   // ⚡ Left-edge swipe to open ProfileSlider (like LinkedIn)
   const edgePanResponder = useRef(

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Platform } from "react-native";
+import { Platform, Dimensions, View } from "react-native";
 import { createStackNavigator, CardStyleInterpolators } from "@react-navigation/stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { useResponsive } from "../hooks/useResponsive";
 import refopenAPI from "../services/api";
 import LoadingScreen from "../screens/LoadingScreen";
 
@@ -32,6 +33,7 @@ import OrganizationDetailsScreen from "../screens/organization/OrganizationDetai
 // Main App Screens
 import HomeScreen from "../screens/HomeScreen";
 import JobsScreen from "../screens/jobs/JobsScreen";
+import JobsLandingScreen from "../screens/jobs/JobsLandingScreen";
 import SavedJobsScreen from "../screens/jobs/SavedJobsScreen";
 import EmployerJobsScreen from "../screens/employer/EmployerJobsScreen"; // NEW: Employer jobs screen
 import JobDetailsScreen from "../screens/jobs/JobDetailsScreen";
@@ -40,6 +42,7 @@ import CreateJobScreen from "../screens/jobs/CreateJobScreen";
 import ApplicationsScreen from "../screens/applications/ApplicationsScreen";
 import ProfileScreen from "../screens/profile/ProfileScreen";
 import SettingsScreen from "../screens/profile/SettingsScreen";
+import NotificationPreferencesScreen from "../screens/profile/NotificationPreferencesScreen";
 import ReferralScreen from "../screens/referral/ReferralScreen";
 import AskReferralScreen from "../screens/referral/AskReferralScreen";
 import MyReferralRequestsScreen from "../screens/referral/MyReferralRequestsScreen";
@@ -224,6 +227,7 @@ const linking = {
 
           // Modal/Stack screens
           JobDetails: "job-details/:jobId",
+          JobsList: "jobs/browse",
           AIRecommendedJobs: "ai-jobs",
           SavedJobs: "saved-jobs",
           Applications: "applications",
@@ -235,6 +239,7 @@ const linking = {
           MyReferralRequests: "referrals/my-requests",
           ReferralTracking: "referrals/tracking/:requestId",
           Settings: "settings",
+          NotificationPreferences: "notification-preferences",
           
           // Organization screen with organizationId parameter
           OrganizationDetails: "OrganizationDetails/:organizationId",
@@ -430,6 +435,8 @@ function AuthStack() {
 function MainTabNavigator() {
   const { userType, isEmployer, isJobSeeker, isAdmin, isVerifiedReferrer } = useAuth();
   const { colors } = useTheme();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const pollRef = useRef(null);
 
@@ -484,12 +491,13 @@ function MainTabNavigator() {
           backgroundColor: colors.surface,
           borderTopWidth: 0,
           borderTopColor: 'transparent',
-          // v7 auto-calculates: 49pt + safeArea (iOS standard)
           shadowColor: colors.black,
           shadowOffset: { width: 0, height: -3 },
           shadowOpacity: 0.08,
           shadowRadius: 6,
           elevation: 12,
+          // Hide bottom tabs on desktop web — navigation is in DesktopNavBar
+          ...(isDesktopWeb ? { display: 'none' } : {}),
         },
         tabBarLabelStyle: {
           // iOS HIG standard: 10pt, Material Design: 12sp
@@ -518,7 +526,7 @@ function MainTabNavigator() {
       {!isAdmin && (
         <Tab.Screen
           name="Jobs"
-          component={isEmployer ? EmployerJobsScreen : JobsScreen}
+          component={isEmployer ? EmployerJobsScreen : JobsLandingScreen}
           options={{ title: "Jobs" }}
         />
       )}
@@ -597,13 +605,19 @@ function MainTabNavigator() {
 // Main Stack Navigator with nested Tab Navigator
 function MainStack() {
   const { colors } = useTheme();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && isDesktop;
+
+  const DesktopNavBar = isDesktopWeb ? require('../components/navigation/DesktopNavBar').default : null;
 
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        cardStyle: { backgroundColor: colors.background },
-        gestureEnabled: true,
+    <View style={{ flex: 1 }}>
+      {isDesktopWeb && DesktopNavBar && <DesktopNavBar />}
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          cardStyle: { backgroundColor: colors.background },
+          gestureEnabled: true,
         gestureDirection: 'horizontal',
         cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
       }}
@@ -617,6 +631,11 @@ function MainStack() {
       <Stack.Screen
         name="JobDetails"
         component={JobDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="JobsList"
+        component={JobsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -679,6 +698,12 @@ function MainStack() {
           title: 'Settings',
           headerShown: false, // Custom header in component
         }}
+      />
+      {/* Notification Preferences — standalone screen */}
+      <Stack.Screen
+        name="NotificationPreferences"
+        component={NotificationPreferencesScreen}
+        options={{ headerShown: false }}
       />
       {/* ?? NEW: Profile Views - Who viewed my profile */}
       <Stack.Screen
@@ -835,6 +860,7 @@ function MainStack() {
         options={{ headerShown: false, title: 'Pricing - RefOpen Referral & AI Tools' }}
       />
     </Stack.Navigator>
+    </View>
   );
 }
 

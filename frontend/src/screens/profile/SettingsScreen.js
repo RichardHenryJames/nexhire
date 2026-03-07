@@ -1548,8 +1548,7 @@ export default function SettingsScreen({ navigation, route }) {
             'Notification Settings',
             'notifications-outline',
             () => {
-              loadNotificationPreferences();
-              setActiveModal('notifications');
+              navigation.navigate('NotificationPreferences');
             },
             'Manage email & push notifications'
           )}

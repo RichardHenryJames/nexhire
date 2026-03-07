@@ -77,7 +77,7 @@ export default function ShareEarnScreen() {
 
       <ScrollView 
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 80, maxWidth: 800, width: '100%', alignSelf: 'center' }}
         showsVerticalScrollIndicator={false}
       >
         {/* Post on Social Media */}
