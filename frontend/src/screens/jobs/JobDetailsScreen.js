@@ -890,7 +890,7 @@ const { jobId, fromReferralRequest } = route.params || {};
             
             <View style={styles.companyDetails}>
               <Text style={styles.title}>{job.Title}</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <TouchableOpacity 
                   onPress={() => {
                     if (job.OrganizationID) {
@@ -905,40 +905,31 @@ const { jobId, fromReferralRequest } = route.params || {};
                   </Text>
                 </TouchableOpacity>
                 
-                {/* Inline icon links — globe and LinkedIn */}
+                {/* Inline icon links */}
                 {job.OrganizationWebsite && (
                   <TouchableOpacity 
-                    onPress={() => {
-                      if (Platform.OS === 'web') {
-                        window.open(job.OrganizationWebsite, '_blank');
-                      } else {
-                        import('react-native').then(({ Linking }) => {
-                          Linking.openURL(job.OrganizationWebsite);
-                        });
-                      }
-                    }}
+                    onPress={() => { if (Platform.OS === 'web') window.open(job.OrganizationWebsite, '_blank'); }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="globe-outline" size={18} color={colors.primary} />
+                    <Ionicons name="globe-outline" size={16} color={colors.primary} />
                   </TouchableOpacity>
                 )}
                 {job.OrganizationLinkedIn && (
                   <TouchableOpacity 
-                    onPress={() => {
-                      if (Platform.OS === 'web') {
-                        window.open(job.OrganizationLinkedIn, '_blank');
-                      } else {
-                        import('react-native').then(({ Linking }) => {
-                          Linking.openURL(job.OrganizationLinkedIn);
-                        });
-                      }
-                    }}
+                    onPress={() => { if (Platform.OS === 'web') window.open(job.OrganizationLinkedIn, '_blank'); }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="logo-linkedin" size={18} color="#0A66C2" />
+                    <Ionicons name="logo-linkedin" size={16} color="#0A66C2" />
                   </TouchableOpacity>
                 )}
               </View>
+
+              {/* Location + Posted ago — inline like LinkedIn */}
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>
+                {formatLocation()}
+                {(job.PublishedAt || job.CreatedAt) ? ` · ${formatDate(job.PublishedAt || job.CreatedAt)}` : ''}
+                {job.ApplicationDeadline ? ` · Deadline: ${formatDate(job.ApplicationDeadline)}` : ''}
+              </Text>
             </View>
           </View>
         </View>
@@ -958,46 +949,64 @@ const { jobId, fromReferralRequest } = route.params || {};
           {job.IsRemote && (
             <Text style={[styles.tag, styles.remoteTag]}>Remote</Text>
           )}
-          <Text style={[styles.tag, styles.statusTag]}>{job.Status || 'Active'}</Text>
         </View>
       </View>
 
-      {/* Quick Info */}
-      <View style={styles.infoSection}>
-        <InfoRow
-          icon="location"
-          label="Location"
-          value={formatLocation()}
-        />
-        <InfoRow
-          icon="briefcase"
-          label="Job Type"
-          value={job.JobTypeName || 'Full-time'
-          }
-        />
-        <InfoRow
-          icon="time"
-          label="Posted"
-          value={formatDate(job.PublishedAt || job.CreatedAt)}
-        />
-        <InfoRow
-          icon="calendar"
-          label="Application Deadline"
-          value={formatDate(job.ApplicationDeadline)}
-        />
-        {(job.ExperienceMin != null || job.ExperienceMax != null) && (
-          <InfoRow
-            icon="school"
-            label="Experience Required"
-            value={`${job.ExperienceMin || 0}-${job.ExperienceMax || '+'} years`}
-          />
-        )}
-        <InfoRow
-          icon="cash"
-          label="Salary"
-          value={formatSalary()}
-        />
-      </View>
+      {/* Action Buttons — LinkedIn style: right after header, before description */}
+      {!fromReferralRequest && !job.IsArchived && (
+        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingBottom: 16 }}>
+          {(isJobSeeker || !user) && !isOwnPostedJob && (
+            <TouchableOpacity 
+              style={[
+                styles.referralButton,
+                { flex: 0, paddingHorizontal: 20 },
+                hasReferred && styles.referralButtonReferred,
+                referralRequesting && styles.referralButtonDisabled
+              ]}
+              onPress={(hasReferred || referralRequesting) ? null : handleAskReferral}
+              disabled={hasReferred || referralRequesting}
+            >
+              <Ionicons 
+                name={hasReferred ? "checkmark-circle" : referralRequesting ? "time-outline" : "people-outline"} 
+                size={18} 
+                color={hasReferred ? colors.success : referralRequesting ? colors.gray400 : colors.white} 
+              />
+              {!hasReferred && (
+                <Text style={[styles.referralButtonText, referralRequesting && { color: colors.gray400 }]}>
+                  {referralRequesting ? 'Requesting...' : "Ask Referral"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+          {(isJobSeeker || !user) && !isReferrerPosted && (
+            <TouchableOpacity 
+              style={[
+                styles.applyButton,
+                { flex: 0, paddingHorizontal: 20 },
+                (hasApplied || applying) && styles.applyButtonDisabled
+              ]} 
+              onPress={handleApply}
+              disabled={hasApplied || applying}
+            >
+              {applying && <ActivityIndicator size="small" color={colors.primary} />}
+              <Text style={[styles.applyButtonText, (hasApplied || applying) && { color: colors.white }]}>
+                {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {/* Save button */}
+          {!hasApplied && !isEmployer && (
+            <TouchableOpacity
+              style={{ paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: colors.border }}
+              onPress={handleSaveJob}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+                {isSaved ? 'Saved' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* ✅ NEW: Job Tags Section - Only show if there are valid skills after filtering */}
       {job.Tags && parseJobTags().length > 0 && (
