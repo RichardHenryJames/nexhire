@@ -67,16 +67,16 @@ export default function DesktopLayout({
   const profilePic = user?.ProfilePictureURL;
   const userName = user ? `${user.FirstName || ''} ${user.LastName || ''}`.trim() : '';
   
-  // LinkedIn-style: read from applicant profile (same source as profile screen)
-  const jobTitle = applicantData?.CurrentJobTitle || applicantData?.currentJobTitle || user?.CurrentJobTitle || '';
-  const company = applicantData?.CurrentCompanyName || applicantData?.CurrentCompany || applicantData?.currentCompany || user?.CurrentCompany || '';
-  const education = applicantData?.HighestEducation || applicantData?.highestEducation || user?.HighestEducation || '';
-  const institution = applicantData?.Institution || applicantData?.institution || user?.Institution || '';
-  const location = applicantData?.CurrentLocation || applicantData?.currentLocation || user?.Location || user?.City || '';
+  // Read from applicant profile (same API as profile screen)
+  const jobTitle = applicantData?.CurrentJobTitle || '';
+  const company = applicantData?.CurrentCompanyName || '';
+  const education = applicantData?.HighestEducation || '';
+  const inst = applicantData?.Institution || '';
+  const location = applicantData?.CurrentLocation || user?.Location || '';
 
   const userTitle = jobTitle
     ? (company ? `${jobTitle} at ${company}` : jobTitle)
-    : (education ? `${education}${institution ? ` at ${institution}` : ''}` : '');
+    : (education ? `${education}${inst ? ` at ${inst}` : ''}` : '');
 
   // Smart context-aware sidebar links based on current screen
   const getSmartLinks = () => {
