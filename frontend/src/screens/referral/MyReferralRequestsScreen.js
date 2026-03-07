@@ -19,6 +19,7 @@ import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import DesktopLayout from '../../components/layout/DesktopLayout';
 import VerifyReferralModal from '../../components/modals/VerifyReferralModal';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
@@ -459,6 +460,7 @@ export default function MyReferralRequestsScreen() {
   return (
     <View style={styles.container}>
       <SubScreenHeader title="My Referral Requests" directBack="Home" />
+      <DesktopLayout>
       <View style={styles.innerContainer}>
         {/* Active / History Tabs */}
         {!loading && myRequests.length > 0 && (
@@ -575,6 +577,7 @@ export default function MyReferralRequestsScreen() {
           if (requestId != null) performVerifyReferral(requestId, verified);
         }}
       />
+      </DesktopLayout>
     </View>
   );
 }

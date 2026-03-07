@@ -540,13 +540,26 @@ export default function UserProfileHeader({
   // ✅ Fix the "0" issue by ensuring no stray elements are rendered
   return (
     <View style={styles.headerCard}>
+      {/* Desktop cover banner */}
+      {Platform.OS === 'web' && (
+        <View style={{
+          height: 120,
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          backgroundColor: colors.primary + '15',
+          marginTop: -20,
+          marginHorizontal: -20,
+          marginBottom: -40,
+          background: `linear-gradient(135deg, ${colors.primary}25 0%, ${colors.primary}08 100%)`,
+        }} />
+      )}
       {/* CLEAN COMPACT LAYOUT */}
       <View style={styles.mainContent}>
         {/* Profile Picture with Progress Ring */}
         <View style={styles.profileSection}>
           {showProgress ? (
             <View style={styles.profileImageWrapper}>
-              <CircularProgress percentage={profileCompleteness} size={100} />
+              <CircularProgress percentage={profileCompleteness} size={Platform.OS === 'web' ? 130 : 100} />
               
               <TouchableOpacity 
                 style={styles.profileImageTouchable}
@@ -755,10 +768,10 @@ const createStyles = (colors) => StyleSheet.create({
   // Main Header Card
   headerCard: {
     backgroundColor: colors.surface,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+    paddingVertical: Platform.OS === 'web' ? 24 : 20,
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 20,
     marginTop: 12,
-    ...(Platform.OS === 'web' ? { borderRadius: 12 } : {}),
+    ...(Platform.OS === 'web' ? { borderRadius: 12, overflow: 'hidden' } : {}),
   },
 
   // Main Content Layout
@@ -792,9 +805,9 @@ const createStyles = (colors) => StyleSheet.create({
     bottom: 8,
   },
   profileImageInner: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: Platform.OS === 'web' ? 114 : 84,
+    height: Platform.OS === 'web' ? 114 : 84,
+    borderRadius: Platform.OS === 'web' ? 57 : 42,
     backgroundColor: colors.gray100,
     alignItems: 'center',
     justifyContent: 'center',

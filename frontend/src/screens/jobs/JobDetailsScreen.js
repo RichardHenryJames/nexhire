@@ -890,26 +890,24 @@ const { jobId, fromReferralRequest } = route.params || {};
             
             <View style={styles.companyDetails}>
               <Text style={styles.title}>{job.Title}</Text>
-              <TouchableOpacity 
-                onPress={() => {
-                  if (job.OrganizationID) {
-                    navigation.navigate('OrganizationDetails', { 
-                      organizationId: job.OrganizationID 
-                    });
-                  }
-                }}
-              >
-                <Text style={[styles.company, { textDecorationLine: 'underline' }]}>
-                  {job.OrganizationName || 'Company Name'}
-                </Text>
-              </TouchableOpacity>
-              
-              {/* Company Links Container */}
-              <View style={styles.companyLinksContainer}>
-                {/* 🌐 Website URL Link */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (job.OrganizationID) {
+                      navigation.navigate('OrganizationDetails', { 
+                        organizationId: job.OrganizationID 
+                      });
+                    }
+                  }}
+                >
+                  <Text style={[styles.company, { textDecorationLine: 'underline' }]}>
+                    {job.OrganizationName || 'Company Name'}
+                  </Text>
+                </TouchableOpacity>
+                
+                {/* Inline icon links — globe and LinkedIn */}
                 {job.OrganizationWebsite && (
                   <TouchableOpacity 
-                    style={styles.websiteButton}
                     onPress={() => {
                       if (Platform.OS === 'web') {
                         window.open(job.OrganizationWebsite, '_blank');
@@ -919,16 +917,13 @@ const { jobId, fromReferralRequest } = route.params || {};
                         });
                       }
                     }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="globe-outline" size={16} color={colors.primary} />
-                    <Text style={styles.websiteText}>Visit Website</Text>
+                    <Ionicons name="globe-outline" size={18} color={colors.primary} />
                   </TouchableOpacity>
                 )}
-
-                {/* 💼 LinkedIn Profile Link */}
                 {job.OrganizationLinkedIn && (
                   <TouchableOpacity 
-                    style={styles.linkedinButton}
                     onPress={() => {
                       if (Platform.OS === 'web') {
                         window.open(job.OrganizationLinkedIn, '_blank');
@@ -938,9 +933,9 @@ const { jobId, fromReferralRequest } = route.params || {};
                         });
                       }
                     }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Ionicons name="logo-linkedin" size={16} color={colors.primary} />
-                    <Text style={styles.linkedinText}>LinkedIn Profile</Text>
+                    <Ionicons name="logo-linkedin" size={18} color="#0A66C2" />
                   </TouchableOpacity>
                 )}
               </View>
