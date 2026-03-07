@@ -1697,7 +1697,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 {filterF500 ? 'Fortune 500 & top companies' : debouncedQuery ? 'Matching your search' : 'Based on your profile and preferences'}
               </Text>
             </View>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} onScroll={onScrollNearEnd} scrollEventThrottle={16}>
               {loading && jobs.length === 0 ? (
                 <View style={{ padding: 40, alignItems: 'center' }}>
                   <ActivityIndicator size="large" color={colors.primary} />
