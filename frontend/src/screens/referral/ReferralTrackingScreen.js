@@ -39,6 +39,7 @@ export default function ReferralTrackingScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const responsive = useResponsive();
+  const isDesktopWeb = Platform.OS === 'web' && responsive.isDesktop;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
   const { requestId, request: initialRequest } = route.params || {};
@@ -711,10 +712,35 @@ export default function ReferralTrackingScreen() {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Referral Tracking" directBack="Home" />
+      <SubScreenHeader 
+        title="Referral Tracking" 
+        directBack="MyReferralRequests"
+        rightContent={isDesktopWeb && canWithdraw ? (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.withdrawActionBtn, { paddingVertical: 6, paddingHorizontal: 12 }]}
+              onPress={() => setShowWithdrawConfirm(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close-circle-outline" size={15} color={colors.white} />
+              <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Withdraw</Text>
+            </TouchableOpacity>
+            {!request?.OpenToAnyCompany && (
+              <TouchableOpacity
+                style={[styles.convertOpenBtn, { paddingVertical: 6, paddingHorizontal: 12 }]}
+                onPress={() => setShowConvertModal(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="globe-outline" size={15} color={colors.white} />
+                <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Convert to Open</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : null}
+      />
 
-      {/* Action buttons bar below header */}
-      {canWithdraw && (
+      {/* Action buttons bar below header — mobile only */}
+      {!isDesktopWeb && canWithdraw && (
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.withdrawActionBtn}

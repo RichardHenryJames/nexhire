@@ -379,7 +379,7 @@ export default function WalletRechargeScreen({ navigation, route }) {
     <View style={styles.container}>
       <SubScreenHeader
         title="Add Money"
-        fallbackTab="Home"
+        directBack="Wallet"
         rightContent={
           <TouchableOpacity onPress={() => setShowFaqModal(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="information-circle-outline" size={24} color={colors.textSecondary} />

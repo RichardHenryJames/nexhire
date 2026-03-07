@@ -239,7 +239,7 @@ export default function JobsScreen({ navigation, route }) {
   const aiModalStyles = useMemo(() => createAiModalStyles(colors), [colors]);
   
   // 🔧 REQUIREMENT 1: Handle navigation params from JobDetailsScreen or JobsLandingScreen
-  const { successMessage, appliedJobId, filterF500, screenTitle, searchQuery: initialSearchQuery, selectedJobId: initialSelectedJobId, openFilterSection } = route.params || {};
+  const { successMessage, appliedJobId, filterF500, screenTitle, searchQuery: initialSearchQuery, selectedJobId: initialSelectedJobId, openFilterSection, appliedFilters } = route.params || {};
   
   // Detect if used as a stack screen (JobsList) vs tab screen (Jobs)
   const isStackScreen = route.name === 'JobsList';
@@ -278,17 +278,26 @@ export default function JobsScreen({ navigation, route }) {
   
   // Auto-select first job on desktop split-pane when jobs load
   // Also re-select when filtered list changes and current selection is no longer in list
+  // Clear selection when no jobs found (after loading finishes)
   useEffect(() => {
-    if (isDesktopWeb && isStackScreen && jobs.length > 0) {
-      const currentStillExists = selectedJobId && jobs.some(j => j.JobID === selectedJobId);
-      if (!currentStillExists) {
-        setSelectedJobId(jobs[0].JobID);
+    if (isDesktopWeb && isStackScreen) {
+      if (jobs.length > 0) {
+        const currentStillExists = selectedJobId && jobs.some(j => j.JobID === selectedJobId);
+        if (!currentStillExists) {
+          setSelectedJobId(jobs[0].JobID);
+        }
+      } else if (!loading) {
+        // No jobs and not loading — clear stale selection
+        setSelectedJobId(null);
       }
     }
-  }, [isDesktopWeb, isStackScreen, jobs]);
+  }, [isDesktopWeb, isStackScreen, jobs, loading]);
 
-  // Applied filters
-  const [filters, setFilters] = useState({ ...EMPTY_FILTERS });
+  // Applied filters — initialize from navigation param if provided
+  const [filters, setFilters] = useState(() => {
+    if (appliedFilters) return { ...EMPTY_FILTERS, ...appliedFilters };
+    return { ...EMPTY_FILTERS };
+  });
 
   // Manual reload trigger
   const [reloadKey, setReloadKey] = useState(0);
@@ -1638,8 +1647,8 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   }, [jobs.length, loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
   // ===== Render =====
-  // Desktop split-pane: if a job is selected, show list (left) + detail (right)
-  if (isDesktopWeb && isStackScreen && selectedJobId) {
+  // Desktop split-pane view for stack screen
+  if (isDesktopWeb && isStackScreen) {
     return (
       <View style={styles.container}>
         {/* Search + Quick filters bar for split-pane */}
@@ -1682,31 +1691,51 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
               </Text>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {jobs.map(job => {
-                const isSelected = job.JobID === selectedJobId;
-                return (
-                  <TouchableOpacity 
-                    key={job.JobID} 
-                    onPress={() => setSelectedJobId(job.JobID)}
-                    style={{ 
-                      backgroundColor: isSelected ? (colors.primary + '10') : colors.surface,
-                      borderLeftWidth: isSelected ? 3 : 0,
-                      borderLeftColor: colors.primary,
-                    }}
-                  >
-                    <JobCard
-                      job={job}
-                      jobTypes={jobTypes}
-                      workplaceTypes={workplaceTypes}
-                      isDesktop={false}
+              {loading && jobs.length === 0 ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 13 }}>Loading jobs...</Text>
+                </View>
+              ) : jobs.length === 0 ? (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Ionicons name="search-outline" size={40} color={colors.gray400} />
+                  <Text style={{ color: colors.text, fontWeight: '600', fontSize: 15, marginTop: 12 }}>No jobs found</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 6, textAlign: 'center', paddingHorizontal: 16 }}>
+                    Try a different search or adjust your filters
+                  </Text>
+                  {(searchQuery || isFiltersDirty(filters)) && (
+                    <TouchableOpacity onPress={clearAllFilters} style={{ marginTop: 16, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.primary + '15' }}>
+                      <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>Clear All</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                jobs.map(job => {
+                  const isSelected = job.JobID === selectedJobId;
+                  return (
+                    <TouchableOpacity 
+                      key={job.JobID} 
                       onPress={() => setSelectedJobId(job.JobID)}
-                      hideApply
-                      hideReferral
-                      hideSave
-                    />
-                  </TouchableOpacity>
-                );
-              })}
+                      style={{ 
+                        backgroundColor: isSelected ? (colors.primary + '10') : colors.surface,
+                        borderLeftWidth: isSelected ? 3 : 0,
+                        borderLeftColor: colors.primary,
+                      }}
+                    >
+                      <JobCard
+                        job={job}
+                        jobTypes={jobTypes}
+                        workplaceTypes={workplaceTypes}
+                        isDesktop={false}
+                        onPress={() => setSelectedJobId(job.JobID)}
+                        hideApply
+                        hideReferral
+                        hideSave
+                      />
+                    </TouchableOpacity>
+                  );
+                })
+              )}
               {loadingMore && (
                 <View style={{ padding: 16, alignItems: 'center' }}>
                   <ActivityIndicator size="small" color={colors.primary} />
@@ -1714,13 +1743,26 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
               )}
             </ScrollView>
           </View>
-          {/* Right: Job detail (no header since we're inline) */}
+          {/* Right: Job detail or empty state */}
           <View style={{ flex: 1 }}>
-            <JobDetailsScreen 
-              route={{ params: { jobId: selectedJobId } }} 
-              navigation={navigation}
-              hideHeader
-            />
+            {selectedJobId ? (
+              <JobDetailsScreen 
+                route={{ params: { jobId: selectedJobId } }} 
+                navigation={navigation}
+                hideHeader
+              />
+            ) : loading ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+                <Ionicons name="briefcase-outline" size={56} color={colors.gray300} />
+                <Text style={{ color: colors.textSecondary, fontSize: 15, marginTop: 16, textAlign: 'center' }}>
+                  {jobs.length === 0 ? 'No jobs match your search' : 'Select a job to view details'}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 

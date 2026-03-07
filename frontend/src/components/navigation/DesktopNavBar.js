@@ -58,7 +58,29 @@ export default function DesktopNavBar() {
     return () => clearTimeout(timer);
   }, [searchQuery, searchOrganizations]);
 
-  // Get active route name for highlighting — on web, URL is the source of truth
+  // Helper: derive active tab name from a URL path
+  const getTabFromPath = useCallback((path) => {
+    if (!path) return null;
+    const p = path.toLowerCase();
+    if (p.includes('/jobs') || p.includes('/job-details')) return 'Jobs';
+    if (p.includes('/messages') || p.includes('/chat')) return 'Messages';
+    if (p.includes('/notifications')) return 'Notifications';
+    if (p.includes('/ask-for-referral') || p.includes('/ask-referral')) return 'AskReferral';
+    if (p.includes('/services')) return 'Services';
+    if (p.includes('/profile') || p.includes('/settings')) return 'Profile';
+    if (p === '/' || p.includes('/home')) return 'Home';
+    return null;
+  }, []);
+
+  // Track active tab in local state — updates immediately on click
+  const [activeRoute, setActiveRoute] = useState(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return getTabFromPath(window.location.pathname) || 'Home';
+    }
+    return 'Home';
+  });
+
+  // Sync from navigation state (handles programmatic navigation from other components)
   const navStateRoute = useNavigationState(state => {
     try {
       if (!state || !state.routes || state.index == null) return null;
@@ -81,21 +103,21 @@ export default function DesktopNavBar() {
     }
   });
 
-  // On web, always derive from URL path (most reliable on refresh)
-  const getRouteFromURL = () => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-    const path = window.location.pathname.toLowerCase();
-    if (path.includes('/jobs') || path.includes('/job-details')) return 'Jobs';
-    if (path.includes('/messages') || path.includes('/chat')) return 'Messages';
-    if (path.includes('/notifications')) return 'Notifications';
-    if (path.includes('/ask-for-referral') || path.includes('/ask-referral')) return 'AskReferral';
-    if (path.includes('/services')) return 'Services';
-    if (path.includes('/profile') || path.includes('/settings')) return 'Profile';
-    if (path === '/' || path.includes('/home')) return 'Home';
-    return null;
-  };
+  // When navigation state changes (e.g. sidebar link click, deep link), sync active tab
+  useEffect(() => {
+    if (navStateRoute) setActiveRoute(navStateRoute);
+  }, [navStateRoute]);
 
-  const activeRoute = (Platform.OS === 'web' ? getRouteFromURL() : null) || navStateRoute || 'Home';
+  // Listen for browser back/forward to keep active tab in sync
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    const onPopState = () => {
+      const tab = getTabFromPath(window.location.pathname);
+      if (tab) setActiveRoute(tab);
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [getTabFromPath]);
 
   // Fetch wallet balance + unread count
   useEffect(() => {
@@ -150,6 +172,7 @@ export default function DesktopNavBar() {
     { name: 'Jobs', icon: 'briefcase', iconOutline: 'briefcase-outline', label: 'Jobs', isTab: true },
     ...(isJobSeeker ? [{ name: 'AskReferral', icon: 'person-add', iconOutline: 'person-add-outline', label: 'Ask Referral', isTab: true }] : []),
     ...(isEmployer ? [{ name: 'CreateJob', icon: 'add-circle', iconOutline: 'add-circle-outline', label: 'Post Job', isTab: true }] : []),
+    ...(isJobSeeker ? [{ name: 'Services', icon: 'grid', iconOutline: 'grid-outline', label: 'Services', isTab: true }] : []),
     { name: 'Messages', icon: 'chatbubbles', iconOutline: 'chatbubbles-outline', label: 'Messaging', isTab: false },
     { name: 'Notifications', icon: 'notifications', iconOutline: 'notifications-outline', label: 'Notifications', isTab: true, badge: unreadCount },
   ];
@@ -233,7 +256,10 @@ export default function DesktopNavBar() {
               <TouchableOpacity
                 key={item.name}
                 style={[styles.navItem, isActive && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-                onPress={() => item.isTab ? navigateToTab(item.name) : navigateTo(item.name)}
+                onPress={() => {
+                  setActiveRoute(item.name);
+                  item.isTab ? navigateToTab(item.name) : navigateTo(item.name);
+                }}
               >
                 <View style={styles.navIconWrapper}>
                   <Ionicons 
@@ -257,7 +283,7 @@ export default function DesktopNavBar() {
           {/* Wallet badge */}
           {walletBalance !== null && (
             <TouchableOpacity 
-              style={[styles.navItem, { paddingHorizontal: 8 }]}
+              style={[styles.navItem, { width: 'auto', paddingHorizontal: 8 }]}
               onPress={() => navigateTo('Wallet')}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.success + '12', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 14 }}>
@@ -361,7 +387,6 @@ export default function DesktopNavBar() {
                 {/* ⚙️ More */}
                 {[
                   { icon: 'settings-outline', label: 'Settings and Privacy', screen: 'Settings' },
-                  ...(isJobSeeker ? [{ icon: 'grid-outline', label: 'Services', screen: 'Services', isTab: true }] : []),
                   { icon: 'help-circle-outline', label: 'Help & Support', screen: 'Support', isRoot: true },
                 ].map(item => (
                   <TouchableOpacity key={item.label} style={styles.dropdownItem} onPress={() => {
@@ -475,12 +500,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginLeft: 'auto',
-    gap: 0,
   },
   navItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    width: 80,
     height: 60,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',

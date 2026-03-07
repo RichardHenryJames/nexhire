@@ -61,50 +61,6 @@ const getStatusText = (statusId) => {
   }
 };
 
-const formatJobDate = (job) => {
-  const dateString = job.PublishedAt || job.CreatedAt || job.UpdatedAt;
-  if (!dateString) return 'Recently posted';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return 'Recently posted';
-  const now = new Date();
-  const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-  if (hours < 1) return 'Just posted';
-  if (hours < 24) return `${hours} hours ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days} days ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 4) return `${weeks} weeks ago`;
-  return date.toLocaleDateString();
-};
-
-const HomeJobCard = React.memo(({ job, styles, colors, onPress }) => {
-  const logo = job.OrganizationLogo || job.organizationLogo || '';
-  return (
-    <TouchableOpacity style={styles.jobCard} onPress={onPress}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 10 }}>
-        {logo ? (
-          <CachedImage source={{ uri: logo }} style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: '#f0f0f0' }} resizeMode="contain" />
-        ) : (
-          <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.gray200, justifyContent: 'center', alignItems: 'center' }}>
-            <Ionicons name="business-outline" size={18} color={colors.gray500} />
-          </View>
-        )}
-        <View style={{ flex: 1 }}>
-          <Text style={styles.jobTitle} numberOfLines={1}>{job.Title}</Text>
-          <Text style={styles.jobCompany}>{job.OrganizationName}</Text>
-        </View>
-      </View>
-      <Text style={styles.jobLocation}>{job.Location}</Text>
-      <View style={styles.jobMeta}>
-        <View style={styles.jobTypeTag}>
-          <Text style={styles.jobTypeText}>{job.JobTypeName}</Text>
-        </View>
-        <Text style={styles.jobDate}>{formatJobDate(job)}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-});
-
 const HomeApplicationCard = React.memo(({ application, styles, colors, onPress }) => {
   const logo = application.OrganizationLogo || application.CompanyLogo || '';
   return (
@@ -140,7 +96,7 @@ const HomeSectionLoader = React.memo(({ styles, colors }) => (
 ));
 
 export default function HomeScreen({ navigation }) {
-const { user, isEmployer, isJobSeeker, isAdmin, isVerifiedUser, currentWork, refreshVerificationStatus } = useAuth();
+const { user, isEmployer, isJobSeeker, isAdmin, isVerifiedUser, isVerifiedReferrer, currentWork, refreshVerificationStatus } = useAuth();
 const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
@@ -155,9 +111,11 @@ const [showSearchResults, setShowSearchResults] = useState(false);
   
 // ⚡ PERF: Loading states initialized from cache — if cache exists, NO loading spinners!
 const [loadingStats, setLoadingStats] = useState(!hasCached(CACHE_KEYS.DASHBOARD_STATS));
-const [loadingJobs, setLoadingJobs] = useState(!hasCached(CACHE_KEYS.RECENT_JOBS));
-const [loadingF500Jobs, setLoadingF500Jobs] = useState(!hasCached(CACHE_KEYS.F500_JOBS));
 const [loadingApplications, setLoadingApplications] = useState(!hasCached(CACHE_KEYS.RECENT_APPLICATIONS));
+const [loadingMyReferrals, setLoadingMyReferrals] = useState(true);
+const [myReferralRequests, setMyReferralRequests] = useState([]);
+const [loadingReferrerJobs, setLoadingReferrerJobs] = useState(false);
+const [referrerAvailableJobs, setReferrerAvailableJobs] = useState([]);
 
 // 🎯 Fortune 500 companies for Get Referrals card — initialized from cache
 const [fortune500Companies, setFortune500Companies] = useState(() => getCached(CACHE_KEYS.F500_COMPANIES) || []);
@@ -191,13 +149,9 @@ const [walletBalance, setWalletBalance] = useState(() => getCached(CACHE_KEYS.WA
 const [dashboardData, setDashboardData] = useState(() => {
   // ⚡ PERF: Initialize from cache — instant render, no loading spinners
   const cachedStats = getCached(CACHE_KEYS.DASHBOARD_STATS);
-  const cachedJobs = getCached(CACHE_KEYS.RECENT_JOBS);
-  const cachedF500 = getCached(CACHE_KEYS.F500_JOBS);
   const cachedApps = getCached(CACHE_KEYS.RECENT_APPLICATIONS);
   return {
     stats: cachedStats || {},
-    recentJobs: cachedJobs || [],
-    f500Jobs: cachedF500 || [],
     recentApplications: cachedApps || [],
     referralStats: {}
   };
@@ -262,8 +216,6 @@ const [dashboardData, setDashboardData] = useState(() => {
       // Don't show spinners — cached data is already visible
     } else {
       setLoadingStats(true);
-      setLoadingJobs(true);
-      setLoadingF500Jobs(true);
       setLoadingApplications(true);
     }
 
@@ -281,37 +233,36 @@ const [dashboardData, setDashboardData] = useState(() => {
       .catch(err => { if (err?.name !== 'AbortError') console.warn('Dashboard stats failed:', err); })
       .finally(() => setLoadingStats(false));
 
-    // 2. Recommended Jobs
-    let jobsPromise = Promise.resolve();
+    // 2. My Referral Requests (job seekers)
+    let referralRequestsPromise = Promise.resolve();
     if (isJobSeeker) {
-      jobsPromise = (async () => {
+      referralRequestsPromise = (async () => {
         try {
-          const res = await refopenAPI.getJobs(1, 5, {}, sig);
+          const res = await refopenAPI.getMyReferralRequests(1, 5, sig);
           if (res.success) {
-            const recentJobs = (res.data || []).slice(0, 5);
-            setCache(CACHE_KEYS.RECENT_JOBS, recentJobs);
-            setDashboardData(prev => ({ ...prev, recentJobs }));
+            const requests = res.data?.requests || res.data || [];
+            setMyReferralRequests(requests.slice(0, 5));
           }
-        } catch (err) { if (err?.name !== 'AbortError') console.warn('Jobs failed:', err); }
-        finally { setLoadingJobs(false); }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Referral requests failed:', err); }
+        finally { setLoadingMyReferrals(false); }
       })();
-    } else { setLoadingJobs(false); }
+    } else { setLoadingMyReferrals(false); }
 
-    // 3. F500 Jobs
-    let f500JobsPromise = Promise.resolve();
-    if (isJobSeeker) {
-      f500JobsPromise = (async () => {
+    // 3. Available Referral Jobs (verified referrers)
+    let referrerJobsPromise = Promise.resolve();
+    if (isVerifiedReferrer || isAdmin) {
+      setLoadingReferrerJobs(true);
+      referrerJobsPromise = (async () => {
         try {
-          const res = await refopenAPI.getJobs(1, 5, { isFortune500: true }, sig);
+          const res = await refopenAPI.getAvailableReferralRequests(1, 5);
           if (res.success) {
-            const f500Jobs = (res.data || []).slice(0, 5);
-            setCache(CACHE_KEYS.F500_JOBS, f500Jobs);
-            setDashboardData(prev => ({ ...prev, f500Jobs }));
+            const requests = res.data?.requests || res.data || [];
+            setReferrerAvailableJobs(requests.slice(0, 5));
           }
-        } catch (err) { if (err?.name !== 'AbortError') console.warn('F500 jobs failed:', err); }
-        finally { setLoadingF500Jobs(false); }
+        } catch (err) { if (err?.name !== 'AbortError') console.warn('Referrer jobs failed:', err); }
+        finally { setLoadingReferrerJobs(false); }
       })();
-    } else { setLoadingF500Jobs(false); }
+    }
 
     // 4. Applications
     let applicationsPromise = Promise.resolve();
@@ -391,7 +342,7 @@ const [dashboardData, setDashboardData] = useState(() => {
     }
 
     Promise.all([
-      statsPromise, jobsPromise, f500JobsPromise, applicationsPromise,
+      statsPromise, referralRequestsPromise, referrerJobsPromise, applicationsPromise,
       f500CompaniesPromise, referrerRequestsPromise, socialSharePromise, walletPromise
     ]).catch(err => {
       if (err?.name === 'AbortError') return;
@@ -493,7 +444,7 @@ const [dashboardData, setDashboardData] = useState(() => {
 
   // ⚡ Remove the global loading screen - show content immediately
 
-  const { stats, recentJobs, recentApplications, referralStats } = dashboardData;
+  const { stats, recentApplications, referralStats } = dashboardData;
 
   return (
     <>
@@ -800,59 +751,142 @@ const [dashboardData, setDashboardData] = useState(() => {
           )}
         </View>
 
-        {/* Jobs from Top MNCs (Fortune 500) - Job Seekers only - MOVED ABOVE Recommended Jobs */}
+        {/* My Referral Requests - Job Seekers only */}
         {isJobSeeker && (
-          loadingF500Jobs ? (
+          loadingMyReferrals ? (
             <View style={styles.recentContainer}>
-              <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
+              <Text style={styles.sectionTitle}>My Referral Requests</Text>
               <HomeSectionLoader styles={styles} colors={colors} />
             </View>
-          ) : dashboardData.f500Jobs?.length > 0 ? (
+          ) : myReferralRequests.length > 0 ? (
             <View style={styles.recentContainer}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Jobs by Top MNCs</Text>
-                <TouchableOpacity onPress={() => navigation.navigate('Jobs', { filterF500: true })}>
+                <Text style={styles.sectionTitle}>My Referral Requests</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('MyReferralRequests')}>
                   <Text style={styles.seeAllText}>See All</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalScroll}
-              >
-                {dashboardData.f500Jobs.map((job, index) => (
-                  <HomeJobCard key={job.JobID || index} job={job} styles={styles} colors={colors} onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })} />
-                ))}
-              </ScrollView>
+              {myReferralRequests.map((req, index) => {
+                const statusIcons = {
+                  Pending: { icon: 'time-outline', color: colors.warning },
+                  NotifiedToReferrers: { icon: 'notifications-outline', color: colors.warning },
+                  Viewed: { icon: 'eye-outline', color: colors.warning },
+                  Claimed: { icon: 'hand-left-outline', color: colors.info || '#3B82F6' },
+                  Submitted: { icon: 'checkmark-circle-outline', color: colors.success },
+                  Completed: { icon: 'checkmark-done-circle-outline', color: colors.success },
+                  Expired: { icon: 'timer-outline', color: colors.gray500 },
+                  Rejected: { icon: 'close-circle-outline', color: colors.error },
+                };
+                const si = statusIcons[req.Status] || statusIcons.Pending;
+                const companyName = req.OpenToAnyCompany ? 'Any Company' : (req.CompanyName || 'Company');
+                const isOTA = !!req.OpenToAnyCompany;
+                // Company initials
+                const initials = companyName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                const palette = [colors.primary, colors.accent || '#8B5CF6', colors.success, colors.warning, colors.error, '#EC4899', '#6366F1'];
+                let hash = 0;
+                for (let i = 0; i < companyName.length; i++) hash = companyName.charCodeAt(i) + ((hash << 5) - hash);
+                const bgColor = palette[Math.abs(hash) % palette.length];
+
+                return (
+                  <TouchableOpacity
+                    key={req.RequestID || index}
+                    style={[styles.refCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => navigation.navigate('ReferralTracking', { requestId: req.RequestID, request: req })}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      {/* Company Logo */}
+                      {isOTA ? (
+                        <View style={[styles.refLogo, { backgroundColor: colors.primary + '20' }]}>
+                          <Ionicons name="globe-outline" size={20} color={colors.primary} />
+                        </View>
+                      ) : req.OrganizationLogo ? (
+                        <CachedImage source={{ uri: req.OrganizationLogo }} style={styles.refLogo} />
+                      ) : (
+                        <View style={[styles.refLogo, { backgroundColor: bgColor }]}>
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{initials}</Text>
+                        </View>
+                      )}
+                      {/* Info */}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>{companyName}</Text>
+                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                          for <Text style={{ fontWeight: '600', color: colors.text }}>{req.JobTitle || 'Job Title'}</Text>
+                        </Text>
+                      </View>
+                      {/* Status icon */}
+                      <View style={[styles.refStatusIcon, { backgroundColor: si.color + '18' }]}>
+                        <Ionicons name={si.icon} size={16} color={si.color} />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           ) : null
         )}
 
-        {/* Recommended Jobs Section - Job Seekers only */}
-        {isJobSeeker && (loadingJobs ? (
-          <View style={styles.recentContainer}>
-            <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-            <HomeSectionLoader styles={styles} colors={colors} />
-          </View>
-        ) : recentJobs.length > 0 ? (
-          <View style={styles.recentContainer}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recommended Jobs</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Jobs')}>
-                <Text style={styles.seeAllText}>See All</Text>
-              </TouchableOpacity>
+        {/* Provide Referral - Verified Referrers only */}
+        {(isVerifiedReferrer || isAdmin) && (
+          loadingReferrerJobs ? (
+            <View style={styles.recentContainer}>
+              <Text style={styles.sectionTitle}>Referral Requests for You</Text>
+              <HomeSectionLoader styles={styles} colors={colors} />
             </View>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalScroll}
-            >
-              {recentJobs.map((job, index) => (
-                <HomeJobCard key={job.JobID || index} job={job} styles={styles} colors={colors} onPress={() => navigation.navigate('JobDetails', { jobId: job.JobID })} />
-              ))}
-            </ScrollView>
-          </View>
-        ) : null)}
+          ) : referrerAvailableJobs.length > 0 ? (
+            <View style={styles.recentContainer}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Referral Requests for You</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Referral')}>
+                  <Text style={styles.seeAllText}>See All</Text>
+                </TouchableOpacity>
+              </View>
+              {referrerAvailableJobs.map((req, index) => {
+                const applicantName = req.ApplicantName || 'Job Seeker';
+                const nameInitial = applicantName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+                const avatarPalette = [colors.accent || '#8B5CF6', colors.primary, colors.success, colors.warning, colors.error, '#EC4899', '#6366F1'];
+                let h = 0;
+                for (let i = 0; i < applicantName.length; i++) h = applicantName.charCodeAt(i) + ((h << 5) - h);
+                const avatarBg = avatarPalette[Math.abs(h) % avatarPalette.length];
+
+                return (
+                  <TouchableOpacity
+                    key={req.RequestID || index}
+                    style={[styles.refCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    onPress={() => navigation.navigate('Referral')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      {/* Applicant avatar */}
+                      {req.ApplicantProfilePictureURL ? (
+                        <CachedImage source={{ uri: req.ApplicantProfilePictureURL }} style={[styles.refLogo, { borderRadius: 20 }]} />
+                      ) : (
+                        <View style={[styles.refLogo, { borderRadius: 20, backgroundColor: avatarBg }]}>
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{nameInitial}</Text>
+                        </View>
+                      )}
+                      {/* Info */}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>{applicantName}</Text>
+                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
+                          wants referral for <Text style={{ fontWeight: '600', color: colors.text }}>{req.JobTitle || 'Job Title'}</Text>
+                        </Text>
+                        <Text style={{ fontSize: 11, color: colors.gray500, marginTop: 2 }} numberOfLines={1}>{req.CompanyName || ''}</Text>
+                      </View>
+                      {/* View button */}
+                      <TouchableOpacity
+                        style={{ backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 }}
+                        onPress={() => navigation.navigate('Referral')}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>View</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null
+        )}
 
         {/* Recent Applications (Job Seekers only) */}
         {isJobSeeker && (
@@ -877,7 +911,7 @@ const [dashboardData, setDashboardData] = useState(() => {
         )}
 
         {/* Enhanced Empty State */}
-        {!loadingJobs && !loadingApplications && recentJobs.length === 0 && recentApplications.length === 0 && (
+        {!loadingMyReferrals && !loadingApplications && myReferralRequests.length === 0 && recentApplications.length === 0 && (
           <View style={styles.emptyState}>
             <Ionicons 
               name={isEmployer ? "briefcase-outline" : "search-outline"} 
@@ -1609,61 +1643,26 @@ sectionLoaderText: {
   horizontalScroll: {
     paddingRight: isMobile ? 16 : 24,
   },
-  jobCard: {
-    backgroundColor: colors.surface,
-    padding: isMobile ? 16 : 20,
-    borderRadius: 14,
-    marginRight: 12,
-    width: isMobile ? 280 : 320,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  jobHeader: {
+  refCard: {
+    padding: 14,
+    borderRadius: 12,
     marginBottom: 8,
+    borderWidth: 1,
   },
-  jobTitle: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  jobCompany: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray600,
-    fontWeight: typography.weights.medium,
-  },
-  jobLocation: {
-    fontSize: typography.sizes.sm,
-    color: colors.gray500,
-    marginBottom: 12,
-  },
-  jobMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  refLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.gray200,
   },
-  jobTypeTag: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  jobTypeText: {
-    fontSize: typography.sizes.xs,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
-  },
-  jobDate: {
-    fontSize: typography.sizes.xs,
-    color: colors.gray400,
+  refStatusIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   applicationCard: {
     backgroundColor: colors.surface,

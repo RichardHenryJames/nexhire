@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet, Image, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ScrollView, TextInput, StyleSheet, Image, ActivityIndicator, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import refopenAPI from '../../services/api';
@@ -456,75 +456,127 @@ const active = (filters.jobTypeIds || []).map(String).includes(String(jt.JobType
     }
   };
 
+  const isDesktopWeb = Platform.OS === 'web' && Dimensions.get('window').width >= 768;
+
+  const filterContent = (
+    <View style={[styles.container, isDesktopWeb && styles.desktopContainer]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          {isDesktopWeb && (
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={22} color={colors.text} />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.headerTitle}>Filter Jobs</Text>
+        </View>
+        {activeFiltersCount() > 0 && (
+          <TouchableOpacity onPress={onClear} style={styles.clearAll}>
+            <Text style={styles.clearAllText}>Clear All</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Two Column Layout */}
+      <View style={styles.twoColumnContainer}>
+        {/* Left Column - Categories */}
+        <View style={[styles.leftColumn, isDesktopWeb && { width: 180 }]}>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {categories.map(cat => {
+              const isActive = selectedCategory === cat.id;
+              const hasFilters = isSectionActive(cat.id);
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.categoryItem, isActive && styles.categoryItemActive]}
+                  onPress={() => setSelectedCategory(cat.id)}
+                >
+                  <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>
+                    {cat.label}
+                  </Text>
+                  {hasFilters && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Right Column - Filter Options */}
+        <View style={styles.rightColumn}>
+          {selectedCategory === 'company' ? (
+            renderRightContent()
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {renderRightContent()}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+          <Text style={styles.cancelButtonText}>Cancel</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.applyButton} onPress={onApply}>
+          <Text style={styles.applyButtonText}>Apply</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   return (
     <Modal
       visible={visible}
-    animationType="slide"
-      presentationStyle="pageSheet"
+      animationType={isDesktopWeb ? 'fade' : 'slide'}
+      presentationStyle={isDesktopWeb ? 'overFullScreen' : 'pageSheet'}
+      transparent={isDesktopWeb}
       onRequestClose={onClose}
     >
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Filter Jobs</Text>
-          {activeFiltersCount() > 0 && (
-            <TouchableOpacity onPress={onClear} style={styles.clearAll}>
-      <Text style={styles.clearAllText}>Clear All</Text>
-   </TouchableOpacity>
-  )}
- </View>
-
-        {/* Two Column Layout */}
-        <View style={styles.twoColumnContainer}>
-          {/* Left Column - Categories */}
-          <View style={styles.leftColumn}>
-    <ScrollView showsVerticalScrollIndicator={false}>
-              {categories.map(cat => {
-      const isActive = selectedCategory === cat.id;
- const hasFilters = isSectionActive(cat.id);
-     return (
-       <TouchableOpacity
-        key={cat.id}
-     style={[styles.categoryItem, isActive && styles.categoryItemActive]}
-          onPress={() => setSelectedCategory(cat.id)}
-      >
-            <Text style={[styles.categoryLabel, isActive && styles.categoryLabelActive]}>
-        {cat.label}
-      </Text>
-        {hasFilters && <View style={styles.activeDot} />}
-  </TouchableOpacity>
-    );
-    })}
-      </ScrollView>
-  </View>
-
-          {/* Right Column - Filter Options */}
-          <View style={styles.rightColumn}>
-     {selectedCategory === 'company' ? (
-       renderRightContent()
-     ) : (
-       <ScrollView showsVerticalScrollIndicator={false}>
-         {renderRightContent()}
-       </ScrollView>
-     )}
-      </View>
+      {isDesktopWeb ? (
+        <View style={styles.desktopOverlay}>
+          <TouchableOpacity style={styles.desktopBackdrop} activeOpacity={1} onPress={onClose} />
+          <View style={styles.desktopDialog}>
+            {filterContent}
+          </View>
         </View>
-
-     {/* Footer */}
-        <View style={styles.footer}>
-     <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.applyButton} onPress={onApply}>
-<Text style={styles.applyButtonText}>Apply</Text>
-          </TouchableOpacity>
-        </View>
-    </View>
+      ) : (
+        filterContent
+      )}
     </Modal>
   );
 };
 
 const createStyles = (colors) => StyleSheet.create({
+  desktopOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  desktopBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  desktopDialog: {
+    width: '90%',
+    maxWidth: 700,
+    height: '80%',
+    maxHeight: 600,
+    borderRadius: 12,
+    overflow: 'hidden',
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 8px 32px rgba(0,0,0,0.24)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.24,
+      shadowRadius: 32,
+      elevation: 20,
+    }),
+  },
+  desktopContainer: {
+    borderRadius: 12,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.surface

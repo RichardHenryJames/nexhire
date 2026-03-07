@@ -19,6 +19,7 @@ import JobCard from '../../components/jobs/JobCard';
 import CachedImage from '../../components/CachedImage';
 import TabHeader from '../../components/TabHeader';
 import DesktopLayout from '../../components/layout/DesktopLayout';
+import FilterModal from '../../components/jobs/FilterModal';
 
 /**
  * JobsLandingScreen — LinkedIn-style Jobs discovery page
@@ -48,6 +49,35 @@ export default function JobsLandingScreen({ navigation, route }) {
   const [workplaceTypes, setWorkplaceTypes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const abortRef = useRef(null);
+
+  // Filter modal state (opens in-place, navigates to JobsList on apply)
+  const EMPTY_FILTERS = {
+    locations: [], jobTypeIds: [], workplaceTypeIds: [], organizationIds: [],
+    salaryMin: '', salaryMax: '', currencyId: null, experienceMin: '', experienceMax: '',
+    postedWithinDays: null, department: '', postedByType: null,
+  };
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [filterDraft, setFilterDraft] = useState({ ...EMPTY_FILTERS });
+  const [initialFilterSection, setInitialFilterSection] = useState(null);
+
+  const openFilterChip = useCallback((section) => {
+    setFilterDraft({ ...EMPTY_FILTERS });
+    setInitialFilterSection(section);
+    setShowFilterModal(true);
+  }, []);
+
+  const handleFilterApply = useCallback(() => {
+    setShowFilterModal(false);
+    // Navigate to browse screen with filters pre-applied
+    navigation.navigate('JobsList', {
+      screenTitle: 'Browse Jobs',
+      appliedFilters: { ...filterDraft },
+    });
+  }, [filterDraft, navigation]);
+
+  const handleFilterClose = useCallback(() => setShowFilterModal(false), []);
+  const handleFilterClear = useCallback(() => setFilterDraft({ ...EMPTY_FILTERS }), []);
+  const handleFilterChange = useCallback((patch) => setFilterDraft(prev => ({ ...prev, ...patch })), []);
 
   // Navigate to full jobs list with search
   const handleSearch = () => {
@@ -224,7 +254,7 @@ export default function JobsLandingScreen({ navigation, route }) {
               } else if (chip.action === 'referrer') {
                 navigation.navigate('JobsList', { screenTitle: 'Referrer Jobs' });
               } else {
-                navigation.navigate('JobsList', { openFilterSection: chip.filterSection, screenTitle: 'Browse Jobs' });
+                openFilterChip(chip.filterSection);
               }
             }}
           >
@@ -262,7 +292,7 @@ export default function JobsLandingScreen({ navigation, route }) {
         rightContent={
           <TouchableOpacity 
             style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}
-            onPress={() => navigation.navigate('JobsList', { openFilterSection: 'all', screenTitle: 'Browse Jobs' })}
+            onPress={() => openFilterChip('workMode')}
           >
             <Ionicons name="options-outline" size={22} color={colors.primary} />
           </TouchableOpacity>
@@ -272,6 +302,18 @@ export default function JobsLandingScreen({ navigation, route }) {
       <DesktopLayout>
         {mainContent}
       </DesktopLayout>
+
+      <FilterModal
+        visible={showFilterModal}
+        onClose={handleFilterClose}
+        filters={filterDraft}
+        onFiltersChange={handleFilterChange}
+        onApply={handleFilterApply}
+        onClear={handleFilterClear}
+        jobTypes={jobTypes}
+        workplaceTypes={workplaceTypes}
+        initialSection={initialFilterSection}
+      />
     </View>
   );
 }

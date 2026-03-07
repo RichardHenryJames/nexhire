@@ -53,6 +53,16 @@ export default function SubScreenHeader({
   const { isDesktop } = useResponsive();
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
 
+  // Map screen names to human-readable breadcrumb labels
+  const SCREEN_LABELS = {
+    Home: 'Home', Jobs: 'Jobs', AskReferral: 'Ask Referral', Services: 'Services',
+    Notifications: 'Notifications', Profile: 'Profile', Wallet: 'Wallet',
+    MyReferralRequests: 'My Referral Requests', Referral: 'Provide Referral',
+    WalletRecharge: 'Recharge', ShareEarn: 'Social Share', Settings: 'Settings',
+  };
+
+  const parentLabel = directBack ? (SCREEN_LABELS[directBack] || directBack) : (SCREEN_LABELS[fallbackTab] || fallbackTab);
+
   const handleBack = () => {
     // Tier 1: Full override
     if (onBack) {
@@ -60,7 +70,6 @@ export default function SubScreenHeader({
       return;
     }
     // Tier 2: Direct navigate (non-tab parent, e.g. 'Wallet')
-    // Handles both tab screens (Home, Jobs, Profile etc.) and stack screens (Wallet)
     if (directBack) {
       const TAB_SCREENS = ['Home', 'Jobs', 'AskReferral', 'Services', 'Notifications', 'Profile', 'CreateJob', 'ActionCenter', 'Admin'];
       if (TAB_SCREENS.includes(directBack)) {
@@ -81,21 +90,39 @@ export default function SubScreenHeader({
     }
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }, isDesktopWeb && styles.containerDesktop]}>
-      {/* Left: Back/Close button — hidden on desktop (navbar handles navigation) */}
-      {!isDesktopWeb && (
-        <TouchableOpacity
-          onPress={handleBack}
-          activeOpacity={0.7}
-          style={styles.backButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Ionicons name={icon} size={24} color={colors.text} />
-        </TouchableOpacity>
-      )}
+  // Desktop: breadcrumb-style header
+  if (isDesktopWeb) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }, styles.containerDesktop]}>
+        {/* Breadcrumb navigation */}
+        <View style={styles.breadcrumbRow}>
+          <TouchableOpacity onPress={handleBack} style={styles.breadcrumbLink} activeOpacity={0.7}>
+            <Text style={[styles.breadcrumbText, { color: colors.primary }]}>{parentLabel}</Text>
+          </TouchableOpacity>
+          <Ionicons name="chevron-forward" size={14} color={colors.gray400} style={{ marginHorizontal: 4 }} />
+          <Text style={[styles.breadcrumbCurrent, { color: colors.text }]} numberOfLines={1}>{title}</Text>
+        </View>
 
-      {/* Center: Custom content or Title + optional subtitle */}
+        {/* Right: Custom content */}
+        <View style={styles.right}>
+          {rightContent || null}
+        </View>
+      </View>
+    );
+  }
+
+  // Mobile: standard back + centered title
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TouchableOpacity
+        onPress={handleBack}
+        activeOpacity={0.7}
+        style={styles.backButton}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Ionicons name={icon} size={24} color={colors.text} />
+      </TouchableOpacity>
+
       <View style={[styles.center, centerContent ? { alignItems: 'stretch' } : null]}>
         {centerContent || (
           <>
@@ -107,7 +134,6 @@ export default function SubScreenHeader({
         )}
       </View>
 
-      {/* Right: Custom content or empty spacer */}
       <View style={styles.right}>
         {rightContent || <View style={styles.spacer} />}
       </View>
@@ -128,6 +154,27 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     alignSelf: 'center',
     paddingHorizontal: 24,
+  },
+  breadcrumbRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  breadcrumbLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingRight: 2,
+  },
+  breadcrumbText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  breadcrumbCurrent: {
+    fontSize: 14,
+    fontWeight: '600',
+    flexShrink: 1,
   },
   backButton: {
     ...HEADER_BACK_BUTTON,
