@@ -919,7 +919,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: colors.surfaceOverlayDark,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 12,

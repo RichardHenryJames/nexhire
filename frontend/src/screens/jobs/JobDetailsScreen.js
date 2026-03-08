@@ -76,6 +76,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   const [referralMessage, setReferralMessage] = useState('');
   const [showReferralMessageModal, setShowReferralMessageModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
+  const [coverLetterError, setCoverLetterError] = useState('');
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
   const [referralRequesting, setReferralRequesting] = useState(false);
   
@@ -1052,7 +1053,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                 </Text>
               </TouchableOpacity>
             )}
-            {/* Apply — outlined, no icon */}
+            {/* Apply — outlined with icon */}
             {(isJobSeeker || !user) && !isReferrerPosted && (
               <TouchableOpacity 
                 style={[
@@ -1063,7 +1064,15 @@ const { jobId, fromReferralRequest } = route.params || {};
                 onPress={(hasApplied || applying) ? null : () => setShowCoverLetterModal(true)}
                 disabled={hasApplied || applying}
               >
-                {applying && <ActivityIndicator size="small" color={colors.primary} />}
+                {applying ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Ionicons 
+                    name={hasApplied ? 'checkmark-circle' : 'paper-plane-outline'} 
+                    size={16} 
+                    color={hasApplied ? colors.success : colors.text} 
+                  />
+                )}
                 <Text style={[
                   styles.btnOutlinedText,
                   hasApplied && { color: colors.success },
@@ -1345,19 +1354,28 @@ const { jobId, fromReferralRequest } = route.params || {};
               Personalize your application to stand out (optional)
             </Text>
             <TextInput
-              style={[styles.modalTextInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background, minHeight: 160 }]}
+              style={[styles.modalTextInput, { color: colors.text, borderColor: coverLetterError ? colors.error : colors.border, backgroundColor: colors.background, minHeight: 160 }]}
               placeholder="Highlight your relevant skills and achievements..."
               placeholderTextColor={colors.textSecondary}
               value={coverLetter}
-              onChangeText={setCoverLetter}
+              onChangeText={(text) => { setCoverLetter(text); setCoverLetterError(''); }}
               multiline
               numberOfLines={8}
               maxLength={2000}
               textAlignVertical="top"
             />
-            <Text style={[styles.modalCharCount, { color: colors.textSecondary }]}>
-              {coverLetter.length}/2000
-            </Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              {coverLetterError ? (
+                <Text style={{ fontSize: 12, color: colors.error, flex: 1 }}>{coverLetterError}</Text>
+              ) : (
+                <Text style={[styles.modalCharCount, { color: colors.textSecondary }]}>
+                  {coverLetter.length > 0 && coverLetter.length < 20 ? `${20 - coverLetter.length} more chars needed` : 'Min 20 chars if provided'}
+                </Text>
+              )}
+              <Text style={[styles.modalCharCount, { color: colors.textSecondary }]}>
+                {coverLetter.length}/2000
+              </Text>
+            </View>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={[styles.modalSecondaryBtn, { borderColor: colors.border }]}
@@ -1368,6 +1386,11 @@ const { jobId, fromReferralRequest } = route.params || {};
               <TouchableOpacity
                 style={[styles.modalPrimaryBtn, { backgroundColor: colors.primary }]}
                 onPress={() => {
+                  const trimmed = coverLetter.trim();
+                  if (trimmed.length > 0 && trimmed.length < 20) {
+                    setCoverLetterError('Cover letter must be at least 20 characters. Leave empty to skip.');
+                    return;
+                  }
                   setShowCoverLetterModal(false);
                   handleApply();
                 }}
@@ -1585,10 +1608,6 @@ const createStyles = (colors, responsive = {}) => {
     fontWeight: typography.weights.semibold,
     color: colors.text,
   },
-  stickyMoreBtn: {
-    padding: 8,
-    borderRadius: 20,
-  },
   // Header card
   header: {
     padding: isMobile ? 20 : 24,
@@ -1726,16 +1745,6 @@ const createStyles = (colors, responsive = {}) => {
   btnOutlinedActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primary + '08',
-  },
-  btnMore: {
-    padding: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   tagsContainer: {
     flexDirection: 'row',
