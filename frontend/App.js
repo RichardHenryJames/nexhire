@@ -60,6 +60,8 @@ import { ToastHost } from './src/components/Toast';
 import TermsConsentModal from './src/components/modals/TermsConsentModal';
 import refopenAPI from './src/services/api';
 import { frontendConfig } from './src/config/appConfig';
+import * as Font from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import {
   configureForegroundHandler,
   setupNotificationResponseListener,
@@ -325,10 +327,22 @@ function ThemedAppRoot() {
 }
 
 export default function App() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  // Preload Ionicons font so icons render instantly (no flash of empty space)
+  useEffect(() => {
+    Font.loadAsync(Ionicons.font)
+      .then(() => setFontsLoaded(true))
+      .catch(() => setFontsLoaded(true)); // Proceed even if font fails
+  }, []);
+
   // GestureHandlerRootView is required on native for @react-navigation/stack gestures.
   // On web, it intercepts pointer/touch events and kills ScrollView/FlatList scrolling.
-  // Master branch never had it — scrolling worked. Adding it for native broke web scroll.
   const Wrapper = Platform.OS === 'web' ? View : GestureHandlerRootView;
+
+  if (!fontsLoaded) {
+    return <Wrapper style={{ flex: 1, backgroundColor: '#1E1E1E' }} />;
+  }
 
   return (
     <Wrapper style={{ flex: 1 }}>

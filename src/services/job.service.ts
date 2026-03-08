@@ -1306,10 +1306,8 @@ export class JobService {
                 });
 
                 scored.sort((a: any, b: any) => {
-                    const tierOrder: Record<string, number> = { 'Elite': 0, 'Premium': 1, 'Standard': 2 };
-                    const ta = tierOrder[a.OrganizationTier] ?? 2;
-                    const tb = tierOrder[b.OrganizationTier] ?? 2;
-                    if (ta !== tb) return ta - tb;
+                    // Sort by title relevance first, then preference score, then recency
+                    // No tier boosting — JobsLandingScreen has dedicated Top MNC section
                     if (b._titleScore !== a._titleScore) return b._titleScore - a._titleScore;
                     if (b._prefScore !== a._prefScore) return b._prefScore - a._prefScore;
                     const wa = wpOrder[a.WorkplaceTypeID] || 4;
@@ -1324,12 +1322,11 @@ export class JobService {
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 fetched = scored.slice(offset, offset + pageSizeNum + 1);
             } else {
-                const tierOrderSql = `CASE WHEN o.Tier = 'Elite' THEN 0 WHEN o.Tier = 'Premium' THEN 1 ELSE 2 END`;
                 const orderPrefix = skipPersonalization
-                    ? `${tierOrderSql}, `
+                    ? '' // No tier boosting — JobsLandingScreen has dedicated Top MNC section
                     : (hasSearchText
-                        ? `${tierOrderSql}, ${preferenceScoreSql} DESC, `
-                        : `${tierOrderSql}, ${preferenceScoreSql} DESC, `);
+                        ? `${preferenceScoreSql} DESC, `
+                        : `${preferenceScoreSql} DESC, `);
 
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 dataQuery += ` ORDER BY ${orderPrefix}j.PublishedAt DESC, j.JobID DESC 

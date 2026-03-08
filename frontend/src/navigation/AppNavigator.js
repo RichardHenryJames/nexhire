@@ -506,7 +506,7 @@ function MainTabNavigator() {
           fontWeight: "600",
         },
         headerShown: false,
-        lazy: Platform.OS === 'web',
+        lazy: false, // Don't lazy-load tabs — prevents header/icons appearing late
         freezeOnBlur: false,
         detachInactiveScreens: false,
         ...(Platform.OS !== 'web' ? { animationEnabled: false } : {}),

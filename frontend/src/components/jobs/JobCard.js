@@ -111,13 +111,6 @@ const JobCard = ({
               <Ionicons name="location-outline" size={12} color={colors.gray500 || colors.textSecondary} />
               <Text style={styles.metaText} numberOfLines={1}>{loc}</Text>
             </View>
-            {/* Mobile only: show job type & workplace badges in meta row */}
-            {!isDesktop && (jobTypeName || workplaceName) && (
-              <View style={styles.badgeRow}>
-                {jobTypeName ? (<Text style={styles.metaBadge}>{jobTypeName}</Text>) : null}
-                {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
-              </View>
-            )}
           </View>
           {(job.ExperienceMin != null || job.ExperienceMax != null) && (
             <View style={styles.metaRow}>
@@ -131,6 +124,13 @@ const JobCard = ({
                       : `Up to ${job.ExperienceMax} years exp`}
                 </Text>
               </View>
+            </View>
+          )}
+          {/* Job type & workplace badges — below experience */}
+          {(jobTypeName || workplaceName) && (
+            <View style={styles.badgeRow}>
+              {jobTypeName ? (<Text style={styles.metaBadge}>{jobTypeName}</Text>) : null}
+              {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
             </View>
           )}
         </View>
@@ -294,10 +294,13 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flex: 1,
+    minWidth: 0,
   },
   metaText: {
     fontSize: isDesktop ? 13 : 12,
     color: isDesktop ? (colors.gray400 || colors.textMuted) : (colors.gray500 || colors.textSecondary),
+    flexShrink: 1,
   },
   badgeRow: {
     flexDirection: 'row',
