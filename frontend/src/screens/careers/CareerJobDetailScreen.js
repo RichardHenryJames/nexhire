@@ -45,6 +45,46 @@ const BRAND = '#4F46E5';
 const BRAND_LIGHT = '#6366F1';
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80';
 
+const ABOUT_REFOPEN_HTML = `
+<h3>About RefOpen</h3>
+<p>RefOpen isn't just another job portal. We have built <strong>India's first all-in-one career platform</strong> — a single app that handles every step of your job search journey, from finding the right opportunity to landing the offer.</p>
+
+<h4>The Problem We Solved</h4>
+<p>India has 900+ million working-age people, yet the job search experience was broken. Job portals are flooded with spam listings. Referrals — the #1 way people actually get hired — were gatekept by personal networks. Resume tools are expensive. Interview prep is scattered across YouTube videos and random PDFs. There was no single platform that truly helps a candidate go from "I need a job" to "I got the offer." <strong>RefOpen changed that.</strong></p>
+
+<h4>Referral Marketplace (Our Core)</h4>
+<p>We've built India's largest verified employee referral network. Job seekers can request referrals directly from real employees at Google, Amazon, Microsoft, Flipkart, Swiggy, Razorpay, and 500+ top companies — no connections needed. Referrals increase your chances of getting hired by 10x, and we've made them accessible to everyone, not just IIT alumni with LinkedIn networks.</p>
+
+<h4>AI-Powered Career Tools Suite</h4>
+<p>Beyond referrals, we've built a complete suite of AI-powered tools that no other Indian platform offers in one place:</p>
+<ul>
+<li><strong>AI Resume Analyzer</strong> — Instant ATS compatibility score, keyword gap analysis, and AI-powered improvement suggestions.</li>
+<li><strong>AI Resume Builder</strong> — Create stunning, ATS-optimized resumes with professional templates and AI-generated bullet points.</li>
+<li><strong>Interview Decoded</strong> — AI-powered mock interviews with real-time feedback and company-specific question banks.</li>
+<li><strong>Salary Spy</strong> — Research real market compensation data across roles, companies, and experience levels.</li>
+<li><strong>Offer Negotiation Coach</strong> — AI-guided strategies to negotiate better compensation packages.</li>
+<li><strong>LinkedIn Profile Optimizer</strong> — AI analysis with actionable suggestions to rank higher in recruiter searches.</li>
+<li><strong>Blind Resume Review</strong> — Unbiased, anonymous feedback on your resume from peers.</li>
+<li><strong>Career Path Simulator</strong> — Explore career trajectories and identify skill gaps with AI.</li>
+<li><strong>Job Market Pulse</strong> — Real-time hiring trends, in-demand skills, and salary benchmarks.</li>
+</ul>
+
+<h4>The Numbers</h4>
+<ul>
+<li>125,000+ active job listings aggregated and enriched daily from across India</li>
+<li>500+ companies with verified employee referrers on the platform</li>
+<li>Thousands of active job seekers using our tools every day</li>
+<li>Cross-platform app serving Android, iOS, and Web from a single codebase</li>
+</ul>
+
+<h4>The Tech</h4>
+<p>We're a tech-first company built on a modern stack that rivals FAANG engineering standards: React Native (Expo), Node.js, TypeScript, Azure Functions (serverless), SQL Server, Azure SignalR (real-time), and AI/ML integrations with Google Gemini and Groq. We ship to production daily, run automated data pipelines that index thousands of listings, and use AI to enrich every job posting with salary estimates, company insights, and skill matching.</p>
+
+<h4>The Vision</h4>
+<p>We built the platform we wish existed when we were job hunting. One app where you can find the right job, get a referral, build a perfect resume, practice for interviews, research salaries, negotiate your offer, and track everything — all without switching between 10 different tools. We're growing fast, and every person who joins now gets to shape what this becomes.</p>
+<p>RefOpen is based in Bengaluru, India. We're a small, elite team that moves fast, ships often, and believes talent should be discovered on merit — not connections.</p>
+`;
+
 export default function CareerJobDetailScreen({ route, navigation }) {
   const jobId = route?.params?.jobId;
   const { colors } = useTheme();
@@ -353,6 +393,18 @@ export default function CareerJobDetailScreen({ route, navigation }) {
                 />
               </View>
             )}
+
+            {/* About RefOpen — hardcoded, same for all jobs */}
+            <View style={styles.section}>
+              <RenderHtml
+                contentWidth={contentWidth}
+                source={{ html: ABOUT_REFOPEN_HTML }}
+                tagsStyles={htmlTagsStyles}
+                renderersProps={htmlRenderersProps}
+                systemFonts={htmlSystemFonts}
+                defaultTextProps={{ selectable: true }}
+              />
+            </View>
           </View>
 
           {/* Right column — Company Info (desktop only) */}

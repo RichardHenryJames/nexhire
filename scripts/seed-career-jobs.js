@@ -16,43 +16,8 @@ const PROD = {
   options: { encrypt: true, trustServerCertificate: false, requestTimeout: 30000 }
 };
 
-const ABOUT_REFOPEN = `<h3>About RefOpen</h3>
-<p>RefOpen isn't just another job portal. We're building <strong>India's first all-in-one career platform</strong> — a single app that handles every step of your job search journey, from finding the right opportunity to landing the offer.</p>
-
-<h4>The Problem We're Solving</h4>
-<p>India has 900+ million working-age people, yet the job search experience is broken. Job portals are flooded with spam listings. Referrals — the #1 way people actually get hired — are gatekept by personal networks. Resume tools are expensive. Interview prep is scattered across YouTube videos and random PDFs. There's no single platform that truly helps a candidate go from "I need a job" to "I got the offer." <strong>RefOpen changes that.</strong></p>
-
-<h4>Referral Marketplace (Our Core)</h4>
-<p>We've built India's largest verified employee referral network. Job seekers can request referrals directly from real employees at Google, Amazon, Microsoft, Flipkart, Swiggy, Razorpay, and 500+ top companies — no connections needed. Referrals increase your chances of getting hired by 10x, and we've made them accessible to everyone, not just IIT alumni with LinkedIn networks.</p>
-
-<h4>AI-Powered Career Tools Suite</h4>
-<p>Beyond referrals, we've built a complete suite of AI-powered tools that no other Indian platform offers in one place:</p>
-<ul>
-<li><strong>AI Resume Analyzer</strong> — Instant ATS compatibility score, keyword gap analysis, and AI-powered improvement suggestions. Used by thousands of candidates to optimize their resumes before applying.</li>
-<li><strong>AI Resume Builder</strong> — Create stunning, ATS-optimized resumes with professional templates, AI-generated bullet points, and one-click formatting. Export to PDF in seconds.</li>
-<li><strong>Interview Decoded</strong> — AI-powered mock interviews with real-time feedback, company-specific question banks, and behavioral/technical round prep for FAANG and top startups.</li>
-<li><strong>Salary Spy</strong> — Research real market compensation data across roles, companies, and experience levels. Know your worth before you negotiate.</li>
-<li><strong>Offer Negotiation Coach</strong> — AI-guided strategies to negotiate better base pay, stock options, bonuses, and total compensation packages.</li>
-<li><strong>LinkedIn Profile Optimizer</strong> — AI analysis of your LinkedIn profile with actionable suggestions to rank higher in recruiter searches.</li>
-<li><strong>Blind Resume Review</strong> — Get unbiased, anonymous feedback on your resume from peers and professionals.</li>
-<li><strong>Career Path Simulator</strong> — Explore career trajectories, identify skill gaps, and plan your growth path with AI-powered insights.</li>
-<li><strong>Job Market Pulse</strong> — Real-time hiring trends, in-demand skills, and salary benchmarks across industries and cities.</li>
-</ul>
-
-<h4>The Numbers</h4>
-<ul>
-<li>125,000+ active job listings aggregated and enriched daily from across India</li>
-<li>500+ companies with verified employee referrers on the platform</li>
-<li>Thousands of active job seekers using our tools every day</li>
-<li>Cross-platform app serving Android, iOS, and Web from a single React Native codebase</li>
-</ul>
-
-<h4>The Tech</h4>
-<p>We're a tech-first company built on a modern stack that rivals FAANG engineering standards: React Native (Expo), Node.js, TypeScript, Azure Functions (serverless), SQL Server, Azure SignalR (real-time), and AI/ML integrations with Google Gemini and Groq. We ship to production daily, run automated data pipelines that index thousands of listings, and use AI to enrich every job posting with salary estimates, company insights, and skill matching.</p>
-
-<h4>The Vision</h4>
-<p>We're building the platform we wish existed when we were job hunting. One app where you can find the right job, get a referral, build a perfect resume, practice for interviews, research salaries, negotiate your offer, and track everything — all without switching between 10 different tools. We're early-stage, growing fast, and every person who joins now gets to shape what this becomes.</p>
-<p>RefOpen is based in Bengaluru, India. We're a small, elite team that moves fast, ships often, and believes talent should be discovered on merit — not connections.</p>`;
+// About RefOpen is now hardcoded in the frontend CareerJobDetailScreen
+// JD descriptions only contain role-specific content
 
 const jobs = [
   {
@@ -65,9 +30,6 @@ const jobs = [
     salaryMin: 800000, salaryMax: 1600000, currency: 'INR',
     skills: 'React Native, Node.js, TypeScript, Azure, SQL Server, REST APIs',
     desc: `<h2>Software Development Engineer (SDE-1)</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>We're looking for a <strong>Software Development Engineer (SDE-1)</strong> to join our core engineering team in Bengaluru. You'll work across the full stack — building features on our React Native mobile app and Node.js backend that directly impact thousands of job seekers daily. This is a high-ownership role where you'll ship to production within your first week.</p>
 <p>You'll be part of a small, elite engineering team where every engineer has a voice in architecture decisions. We move fast, ship often, and hold ourselves to FAANG-level engineering standards — code reviews, CI/CD, monitoring, on-call, the works.</p>
@@ -155,9 +117,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 800000, salaryMax: 1400000, currency: 'INR',
     skills: 'React Native, Expo, JavaScript, TypeScript, CSS, Responsive Design',
     desc: `<h2>Frontend Engineer (React Native)</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>We're looking for a <strong>Frontend Engineer</strong> who's passionate about building pixel-perfect, performant mobile interfaces. You'll own the entire frontend of RefOpen — a React Native (Expo) app that serves <strong>Android, iOS, and Web from a single codebase</strong>. Think of it as building the next LinkedIn, but with a focus on referrals and real human connections.</p>
 <p>This role is perfect for someone who obsesses over smooth animations, responsive layouts, and delightful user experiences. You'll work on features that thousands of users interact with daily.</p>
@@ -238,9 +197,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 900000, salaryMax: 1800000, currency: 'INR',
     skills: 'Node.js, TypeScript, Azure Functions, SQL Server, REST APIs, Serverless',
     desc: `<h2>Backend Engineer (Node.js + Azure)</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>As a <strong>Backend Engineer</strong>, you'll build and scale the APIs that power RefOpen's entire referral marketplace. This means working on complex data problems — job matching algorithms, wallet and payment systems, referral workflow state machines, and AI-powered enrichment pipelines.</p>
 <p>This is not a CRUD role. You'll tackle real engineering challenges: designing efficient database schemas for multi-tenant systems, building background job processors that aggregate and enrich thousands of job listings, implementing rate-limited AI pipelines, and optimizing queries that return sub-100ms responses.</p>
@@ -312,9 +268,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 600000, salaryMax: 1200000, currency: 'INR',
     skills: 'SQL, Python, Excel, Power BI/Tableau, Data Visualization, Statistics',
     desc: `<h2>Data Analyst</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>As our <strong>first Data Analyst</strong>, you'll have an outsized impact on RefOpen's growth and strategy. You'll analyze user behavior, job market trends, and platform metrics to drive product decisions that affect thousands of users. Working directly with the founding team, you'll translate raw data into actionable insights that shape our roadmap, pricing, and go-to-market strategy.</p>
 <p>This is not a passive reporting role. You'll be a strategic partner to the founders — your analyses will directly influence which features we build, how we price our products, and where we focus our growth efforts.</p>
@@ -383,9 +336,6 @@ ${ABOUT_REFOPEN}
     salaryMin: null, salaryMax: null, currency: 'INR',
     skills: 'JavaScript, React, Node.js, Git, Problem Solving',
     desc: `<h2>Software Engineering Intern</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Internship</h3>
 <p>This is <strong>not</strong> a "fetch coffee" internship. As a Software Engineering Intern at RefOpen, you'll write <strong>production code from day one</strong>. Your code will be deployed to our live platform, used by thousands of real users. You'll work alongside senior engineers who've built systems at scale, learning the same engineering practices used at FAANG companies.</p>
 <p>Past interns at RefOpen have shipped major features — building complete screens, implementing API endpoints, fixing production bugs. Several have converted to full-time SDE roles with competitive packages.</p>
@@ -463,9 +413,6 @@ ${ABOUT_REFOPEN}
     salaryMin: null, salaryMax: null, currency: 'INR',
     skills: 'Python, Pandas, SQL, Machine Learning basics, Statistics',
     desc: `<h2>Data Science Intern</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Internship</h3>
 <p>As a <strong>Data Science Intern</strong>, you'll work on real ML problems with production data — not Kaggle datasets or toy examples. You'll build recommendation models that are deployed to serve real users, analyze behavioral patterns that drive product decisions, and create NLP pipelines that process thousands of job descriptions daily.</p>
 
@@ -539,9 +486,6 @@ ${ABOUT_REFOPEN}
     salaryMin: null, salaryMax: null, currency: 'INR',
     skills: 'Figma, UI Design, UX Research, Prototyping, Mobile Design',
     desc: `<h2>Product Design Intern (UI/UX)</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Internship</h3>
 <p>As a <strong>Product Design Intern</strong>, you'll shape the visual identity and user experience of RefOpen's platform. You'll design screens for our React Native app that works across <strong>mobile (Android/iOS) and desktop web</strong> — think LinkedIn meets Naukri, but with cleaner design and more intuitive flows.</p>
 <p>You'll work directly with the founders and engineering team, seeing your designs come to life within days — not months.</p>
@@ -616,9 +560,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 1000000, salaryMax: 2000000, currency: 'INR',
     skills: 'Azure, CI/CD, Docker, GitHub Actions, Monitoring, Terraform, PowerShell',
     desc: `<h2>DevOps Engineer</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>As our <strong>DevOps Engineer</strong>, you'll own the entire infrastructure and deployment pipeline at RefOpen. From code commit to production deployment, from cost optimization to incident response — you'll be the guardian of our platform's reliability and performance.</p>
 <p>You'll work with a modern Azure stack that includes serverless functions, managed SQL, real-time SignalR hubs, CDN-backed static web hosting, and AI service integrations. The challenge is making all of this work seamlessly while keeping costs under control and maintaining 99.9%+ uptime.</p>
@@ -705,9 +646,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 800000, salaryMax: 1500000, currency: 'INR',
     skills: 'Digital Marketing, SEO/SEM, Google Ads, Meta Ads, Analytics, Content Strategy, Growth Hacking',
     desc: `<h2>Growth Marketing Manager</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>As our <strong>Growth Marketing Manager</strong>, you'll own RefOpen's entire user acquisition and brand awareness strategy. From SEO and paid ads to viral referral loops and partnerships — you'll be the person who takes us from thousands to millions of users. This is a high-impact, high-ownership role where your work directly drives the company's top-line growth.</p>
 <p>You'll work directly with the founders, have full budget authority for campaigns, and see the results of your work in real-time through our analytics dashboards. No bureaucracy, no approval chains — just move fast and grow.</p>
@@ -785,9 +723,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 500000, salaryMax: 1000000, currency: 'INR',
     skills: 'Content Writing, SEO, Blog Writing, Social Media, Copywriting, WordPress, Canva',
     desc: `<h2>Content Marketing Specialist</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>As our <strong>Content Marketing Specialist</strong>, you'll be the voice of RefOpen. You'll create content that ranks on Google, goes viral on LinkedIn, and genuinely helps job seekers succeed. From SEO blog articles and career guides to social media posts and email newsletters — you'll own the entire content engine.</p>
 <p>This role is perfect for someone who loves writing, understands SEO, and is passionate about helping people find jobs. Your content will be read by thousands of job seekers every day.</p>
@@ -861,9 +796,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 500000, salaryMax: 1000000, currency: 'INR',
     skills: 'Social Media Marketing, Community Building, Instagram, LinkedIn, Twitter, Video Editing, Canva',
     desc: `<h2>Social Media &amp; Community Manager</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>As our <strong>Social Media &amp; Community Manager</strong>, you'll own RefOpen's presence across all social platforms and build a community of job seekers who actively engage with our brand. You'll create viral content, manage our social accounts, host community events (AMAs, webinars, Twitter Spaces), and turn our social following into a growth engine.</p>
 <p>This is a creative, high-energy role where you'll see the direct impact of your work in engagement metrics, follower growth, and user sign-ups.</p>
@@ -938,9 +870,6 @@ ${ABOUT_REFOPEN}
     salaryMin: 500000, salaryMax: 1200000, currency: 'INR',
     skills: 'Sales, B2B Partnerships, Lead Generation, CRM, Negotiation, Cold Outreach, LinkedIn Sales',
     desc: `<h2>Business Development Executive</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Role</h3>
 <p>As a <strong>Business Development Executive</strong>, you'll be responsible for growing RefOpen's supply side (referrers) and building B2B partnerships. You'll reach out to companies, HR teams, placement cells, and career platforms to create mutually beneficial partnerships. You'll also work on getting more verified employees onto the platform as referrers.</p>
 <p>This is a high-energy, results-driven role. You'll have clear targets, full autonomy in how you achieve them, and the satisfaction of seeing your partnerships directly impact user growth.</p>
@@ -1016,9 +945,6 @@ ${ABOUT_REFOPEN}
     salaryMin: null, salaryMax: null, currency: 'INR',
     skills: 'Social Media, Campus Outreach, Event Management, Public Speaking, Marketing, Networking',
     desc: `<h2>Campus Ambassador (Marketing Intern)</h2>
-
-${ABOUT_REFOPEN}
-
 <h3>About the Internship</h3>
 <p>As a <strong>Campus Ambassador</strong>, you'll represent RefOpen at your college and drive awareness among students in your network. You'll organize events, create content, and get your peers excited about using RefOpen for their job search. This is a fun, flexible, remote role with real rewards — swag, certificates, cash incentives, and a direct pipeline to a full-time marketing role.</p>
 
@@ -1092,10 +1018,11 @@ async function seedDB(config, label) {
   const p = await sql.connect(config);
   console.log(`\n🔌 Connected to ${label}`);
 
-  // Clear existing
-  await p.request().query('DELETE FROM CareerApplications');
+  // Clear existing jobs only (preserve applications!)
+  // Applications have FK to CareerJobs, so we need to handle this carefully
+  // Use MERGE/upsert approach: delete only jobs, applications will be orphaned but safe
   await p.request().query('DELETE FROM CareerJobs');
-  console.log('🗑️ Cleared existing data');
+  console.log('🗑️ Cleared existing jobs (applications preserved)');
 
   for (const j of jobs) {
     await p.request().query(`

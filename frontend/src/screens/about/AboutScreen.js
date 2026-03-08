@@ -129,14 +129,15 @@ const TESTIMONIALS = [
 // ============================================
 const getCareerTools = (colors) => [
   { id: 1, title: 'Resume Analyzer', desc: 'AI scores your resume, catches ATS killers, suggests fixes in 30 seconds', icon: 'document-text', gradient: [colors.indigo, colors.indigo], ready: true, free: true },
-  { id: 2, title: 'Cover Letter AI', desc: 'Generates role-specific cover letters that actually sound human', icon: 'create', gradient: [colors.cyan, colors.cyanLight], ready: false, free: false },
-  { id: 3, title: 'Interview Prep', desc: 'AI mock interviews with real questions from your target company', icon: 'mic', gradient: [colors.warning, colors.warningLight], ready: false, free: false },
-  { id: 4, title: 'Salary Negotiator', desc: 'Know your worth: real-time comp data + AI negotiation scripts', icon: 'cash', gradient: [colors.success, colors.successLight], ready: false, free: false },
-  { id: 5, title: 'LinkedIn Optimizer', desc: 'Rewrite your headline, about, and experience for maximum visibility', icon: 'logo-linkedin', gradient: [colors.primaryDark, colors.primary], ready: false, free: false },
-  { id: 6, title: 'Job Match Score', desc: 'Instantly see how well you match any job before applying', icon: 'git-compare', gradient: [colors.rose, colors.roseLight], ready: false, free: false },
-  { id: 7, title: 'Market Pulse', desc: 'Live dashboard: who\'s hiring, trending roles, layoff alerts', icon: 'pulse', gradient: [colors.successDark, colors.successLight], ready: false, free: false },
-  { id: 8, title: 'Blind Review', desc: 'Anonymous profile review by referrers at your target company', icon: 'eye-off', gradient: [colors.accentDark, colors.accentLight], ready: false, free: false },
-  { id: 9, title: 'Career Simulator', desc: 'AI maps your 3-year career trajectory with salary projections', icon: 'rocket', gradient: [colors.orange, colors.orange], ready: false, free: false },
+  { id: 2, title: 'Resume Builder', desc: 'Create stunning ATS-optimized resumes with pro templates and AI bullet points', icon: 'construct', gradient: [colors.primaryDark, colors.indigo], ready: true, free: false },
+  { id: 3, title: 'Interview Prep', desc: 'AI mock interviews with real questions from your target company', icon: 'mic', gradient: [colors.warning, colors.warningLight], ready: true, free: false },
+  { id: 4, title: 'Salary Spy', desc: 'Know your worth: real market compensation data across roles and companies', icon: 'cash', gradient: [colors.success, colors.successLight], ready: true, free: false },
+  { id: 5, title: 'LinkedIn Optimizer', desc: 'Rewrite your headline, about, and experience for maximum visibility', icon: 'logo-linkedin', gradient: [colors.primaryDark, colors.primary], ready: true, free: false },
+  { id: 6, title: 'Offer Coach', desc: 'AI-guided strategies to negotiate better base pay, bonuses & packages', icon: 'trophy', gradient: [colors.rose, colors.roseLight], ready: true, free: false },
+  { id: 7, title: 'Market Pulse', desc: 'Live dashboard: who\'s hiring, trending roles, salary benchmarks', icon: 'pulse', gradient: [colors.successDark, colors.successLight], ready: true, free: false },
+  { id: 8, title: 'Blind Review', desc: 'Anonymous profile review by referrers at your target company', icon: 'eye-off', gradient: [colors.accentDark, colors.accentLight], ready: true, free: false },
+  { id: 9, title: 'Career Simulator', desc: 'AI maps your 3-year career trajectory with salary projections', icon: 'rocket', gradient: [colors.orange, colors.orange], ready: true, free: false },
+  { id: 10, title: 'Cover Letter AI', desc: 'Generates role-specific cover letters that actually sound human', icon: 'create', gradient: [colors.cyan, colors.cyanLight], ready: false, free: false },
 ];
 
 
@@ -397,8 +398,9 @@ export default function AboutScreenNew() {
                   color: C.text,
                 }}
               >
-                The Future of{'\n'}
-                <Text style={{ color: C.primary }}>Job Referrals</Text>
+                Your Entire{' '}
+                <Text style={{ color: C.primary }}>Career</Text>.{'\n'}
+                One <Text style={{ color: C.accent }}>Platform</Text>.
               </Text>
             </View>
 
@@ -415,7 +417,7 @@ export default function AboutScreenNew() {
             >
               Stop cold-applying. Referred candidates are{' '}
               <Text style={{ color: C.accent, fontWeight: '700' }}>15x more likely</Text> to get hired.
-              Get referrals directly from employees at your dream companies.
+              Get referrals from employees at top companies — plus AI-powered resume analyzer, interview prep, salary insights, and 7 more career tools. All in one app.
             </Text>
 
             {/* CTA Buttons */}
@@ -642,7 +644,7 @@ export default function AboutScreenNew() {
               <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: C.violet, textTransform: 'uppercase' }}>Career Tools</Text>
             </View>
             <Text style={{ fontSize: isLg ? 36 : 28, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
-              9 AI-Powered Career Tools.{"\n"}One Platform.
+              9+ AI-Powered Career Tools.{"\n"}One Platform.
             </Text>
             <Text style={{ fontSize: 14, color: C.textSub, textAlign: 'center', marginTop: 12, maxWidth: 520 }}>
               The most complete career toolkit — no more paying for 5 different subscriptions.
@@ -826,7 +828,7 @@ export default function AboutScreenNew() {
               <FastLogo width={180} height={50} />
             </TouchableOpacity>
             <Text style={{ fontSize: 14, color: C.textSub, marginBottom: 24 }}>
-              Find Jobs · Get Referred · Hire Talent · Earn Rewards
+              Find Jobs · Get Referred · AI Career Tools · Hire & Earn
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 32, gap: 20 }}>
               <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/company/refopen')}>
@@ -843,7 +845,9 @@ export default function AboutScreenNew() {
           </View>
         </View>
 
-        <ComplianceFooter currentPage="about" />
+        <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+          <ComplianceFooter currentPage="about" />
+        </View>
       </ScrollView>
     </View>
   );
