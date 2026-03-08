@@ -28,6 +28,7 @@ import {
   Modal,
   TextInput,
   Share,
+  Linking,
   useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,7 +36,6 @@ import RenderHtml from 'react-native-render-html';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
-import SubScreenHeader from '../../components/SubScreenHeader';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import { showToast } from '../../components/Toast';
 import ComplianceFooter from '../../components/ComplianceFooter';
@@ -97,6 +97,8 @@ export default function CareerJobDetailScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [allJobs, setAllJobs] = useState([]);
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
+  const [myApplications, setMyApplications] = useState([]);
+  const [showMyApps, setShowMyApps] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverLetter, setCoverLetter] = useState('');
   const [applying, setApplying] = useState(false);
@@ -119,6 +121,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
           const apps = await refopenAPI.getMyCareerApplications();
           if (apps?.success && apps.data) {
             setAppliedJobIds(new Set(apps.data.map(a => a.CareerJobID)));
+            setMyApplications(apps.data);
           }
         } catch {}
       }
@@ -171,6 +174,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
       });
       if (r?.success) {
         setAppliedJobIds(prev => new Set([...prev, job.CareerJobID]));
+        setMyApplications(prev => [{ CareerJobID: job.CareerJobID, Title: job.Title, Department: job.Department, Location: job.Location, Status: 'Submitted', AppliedAt: new Date().toISOString() }, ...prev]);
         setShowApplyModal(false);
         showToast('Application submitted! 🎉', 'success');
       } else { showToast(r?.error || r?.message || 'Failed', 'error'); }
@@ -222,16 +226,77 @@ export default function CareerJobDetailScreen({ route, navigation }) {
     ? ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
     : undefined;
 
+  const STATUS_COLORS = { 'Submitted': '#3b82f6', 'Under Review': '#f59e0b', 'Shortlisted': '#22c55e', 'Interview': '#8b5cf6', 'Offered': '#06b6d4', 'Hired': '#10b981', 'On Hold': '#f97316', 'Rejected': '#ef4444' };
+
+  const LogoLink = ({ children }) => {
+    if (Platform.OS === 'web') {
+      return <a href="/" style={{ textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); navigation.navigate('Main'); }}>{children}</a>;
+    }
+    return <TouchableOpacity onPress={() => navigation.navigate('Main')}>{children}</TouchableOpacity>;
+  };
+
+  const renderHeader = () => (
+    <View>
+      <View style={styles.customHeader}>
+        <LogoLink>
+          <Image source={require('../../../assets/refopen-logo.png')} style={styles.headerLogo} resizeMode="contain" />
+        </LogoLink>
+        <TouchableOpacity style={styles.headerLink} onPress={() => {
+          if (!isAuthenticated) { navigation.navigate('Auth'); showToast('Please log in to view your applications', 'info'); return; }
+          if (myApplications.length === 0) { showToast('No applications yet. Apply to a role first!', 'info'); return; }
+          setShowMyApps(true);
+        }}>
+          <Text style={styles.headerLinkT}>My Applications</Text>
+          {myApplications.length > 0 && <View style={styles.headerBadge}><Text style={styles.headerBadgeT}>{myApplications.length}</Text></View>}
+        </TouchableOpacity>
+      </View>
+      <View style={styles.breadcrumb}>
+        <TouchableOpacity onPress={() => navigation.navigate('Careers')}><Text style={styles.breadcrumbLink}>Careers</Text></TouchableOpacity>
+        <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
+        <Text style={styles.breadcrumbCurrent} numberOfLines={1}>{job?.Title || 'Job Details'}</Text>
+      </View>
+    </View>
+  );
+
+  const renderMyAppsModal = () => (
+    <Modal visible={showMyApps} transparent animationType="fade" onRequestClose={() => setShowMyApps(false)}>
+      <Pressable style={styles.overlay} onPress={() => setShowMyApps(false)}>
+        <Pressable style={styles.myAppsModal} onPress={e => e.stopPropagation()}>
+          <View style={styles.myAppsModalHead}>
+            <Text style={styles.myAppsModalTitle}>My Applications</Text>
+            <TouchableOpacity onPress={() => setShowMyApps(false)}><Ionicons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
+          </View>
+          <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+            {myApplications.map((app, i) => (
+              <TouchableOpacity key={app.ApplicationID || i} style={styles.myAppItem}
+                onPress={() => { setShowMyApps(false); navigation.push('CareerJobDetail', { jobId: app.CareerJobID }); }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.myAppTitle}>{app.Title || 'Position'}</Text>
+                  <Text style={styles.myAppMeta}>{app.Department} \u2022 {app.Location}</Text>
+                  <Text style={styles.myAppDate}>Applied {app.AppliedAt ? new Date(app.AppliedAt).toLocaleDateString() : ''}</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[app.Status] || '#6b7280') + '18', borderColor: (STATUS_COLORS[app.Status] || '#6b7280') + '40' }]}>
+                  <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[app.Status] || '#6b7280' }]} />
+                  <Text style={[styles.statusText, { color: STATUS_COLORS[app.Status] || '#6b7280' }]}>{app.Status || 'Submitted'}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
   if (loading) return (
     <View style={styles.container}>
-      <SubScreenHeader title="Job Details" fallbackTab="Careers" />
+      {renderHeader()}
       <View style={styles.loadingC}><ActivityIndicator size="large" color={BRAND} /><Text style={styles.loadingT}>Loading job details...</Text></View>
     </View>
   );
 
   if (!job) return (
     <View style={styles.container}>
-      <SubScreenHeader title="Job Details" fallbackTab="Careers" />
+      {renderHeader()}
       <View style={styles.loadingC}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.gray400} />
         <Text style={styles.emptyTitle}>Job not found</Text>
@@ -249,7 +314,8 @@ export default function CareerJobDetailScreen({ route, navigation }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title={job.Title} fallbackTab="Careers" />
+      {renderHeader()}
+      {renderMyAppsModal()}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
         {/* Hero Banner */}
@@ -364,8 +430,8 @@ export default function CareerJobDetailScreen({ route, navigation }) {
               />
             </View>
 
-            {/* Requirements — only if not already part of Description */}
-            {job.Requirements && (
+            {/* Requirements — show in left column on mobile only (desktop shows in sidebar) */}
+            {!isDesktop && job.Requirements && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Requirements</Text>
                 <RenderHtml
@@ -379,8 +445,8 @@ export default function CareerJobDetailScreen({ route, navigation }) {
               </View>
             )}
 
-            {/* Responsibilities */}
-            {job.Responsibilities && (
+            {/* Responsibilities — show in left column on mobile only */}
+            {!isDesktop && job.Responsibilities && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Responsibilities</Text>
                 <RenderHtml
@@ -393,18 +459,6 @@ export default function CareerJobDetailScreen({ route, navigation }) {
                 />
               </View>
             )}
-
-            {/* About RefOpen — hardcoded, same for all jobs */}
-            <View style={styles.section}>
-              <RenderHtml
-                contentWidth={contentWidth}
-                source={{ html: ABOUT_REFOPEN_HTML }}
-                tagsStyles={htmlTagsStyles}
-                renderersProps={htmlRenderersProps}
-                systemFonts={htmlSystemFonts}
-                defaultTextProps={{ selectable: true }}
-              />
-            </View>
           </View>
 
           {/* Right column — Company Info (desktop only) */}
@@ -413,11 +467,11 @@ export default function CareerJobDetailScreen({ route, navigation }) {
               <View style={styles.sideCard}>
                 <Image source={require('../../../public/favicon.png')} style={styles.sideLogoImg} resizeMode="contain" />
                 <Text style={styles.sideCompanyName}>RefOpen</Text>
-                <Text style={styles.sideCompanyTag}>Job Referral Platform</Text>
+                <Text style={styles.sideCompanyTag}>All-in-One Career Platform</Text>
                 <View style={styles.sideDivider} />
                 <View style={styles.sideInfoRow}>
                   <Ionicons name="people-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.sideInfoT}>10-50 employees</Text>
+                  <Text style={styles.sideInfoT}>50-100 employees</Text>
                 </View>
                 <View style={styles.sideInfoRow}>
                   <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
@@ -433,8 +487,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
                 </View>
                 <View style={styles.sideDivider} />
                 <Text style={styles.sideAbout}>
-                  RefOpen connects job seekers with employees at top companies for verified referrals. 
-                  We're making job referrals accessible to everyone — not just those with connections.
+                  India's first all-in-one career platform. Get referred to 500+ top companies, build ATS-optimized resumes with AI, prep for interviews, check salaries, and more — all in one app.
                 </Text>
               </View>
 
@@ -449,8 +502,52 @@ export default function CareerJobDetailScreen({ route, navigation }) {
                   {applied ? 'Already Applied' : 'Apply for this role'}
                 </Text>
               </TouchableOpacity>
+
+              {/* Requirements in sidebar (desktop) */}
+              {job.Requirements && (
+                <View style={[styles.sideCard, { marginTop: 16, alignItems: 'flex-start' }]}>
+                  <Text style={[styles.sideCompanyName, { fontSize: 16, marginBottom: 10 }]}>Requirements</Text>
+                  <RenderHtml
+                    contentWidth={240}
+                    source={{ html: job.Requirements }}
+                    tagsStyles={htmlTagsStyles}
+                    renderersProps={htmlRenderersProps}
+                    systemFonts={htmlSystemFonts}
+                    defaultTextProps={{ selectable: true }}
+                  />
+                </View>
+              )}
+
+              {/* Responsibilities in sidebar (desktop) */}
+              {job.Responsibilities && (
+                <View style={[styles.sideCard, { marginTop: 12, alignItems: 'flex-start' }]}>
+                  <Text style={[styles.sideCompanyName, { fontSize: 16, marginBottom: 10 }]}>Responsibilities</Text>
+                  <RenderHtml
+                    contentWidth={240}
+                    source={{ html: job.Responsibilities }}
+                    tagsStyles={htmlTagsStyles}
+                    renderersProps={htmlRenderersProps}
+                    systemFonts={htmlSystemFonts}
+                    defaultTextProps={{ selectable: true }}
+                  />
+                </View>
+              )}
             </View>
           )}
+        </View>
+
+        {/* About RefOpen — full width, below both columns */}
+        <View style={styles.aboutSection}>
+          <View style={styles.section}>
+            <RenderHtml
+              contentWidth={Math.min(windowWidth, isDesktop ? 900 : windowWidth) - (isMobile ? 32 : 0)}
+              source={{ html: ABOUT_REFOPEN_HTML }}
+              tagsStyles={htmlTagsStyles}
+              renderersProps={htmlRenderersProps}
+              systemFonts={htmlSystemFonts}
+              defaultTextProps={{ selectable: true }}
+            />
+          </View>
         </View>
 
         {/* Similar Roles */}
@@ -500,7 +597,18 @@ export default function CareerJobDetailScreen({ route, navigation }) {
         {/* CTA Banner */}
         <View style={styles.ctaBanner}>
           <Text style={styles.ctaTitle}>Don't see a perfect fit?</Text>
-          <Text style={styles.ctaSub}>Send your resume to careers@refopen.com or browse all openings</Text>
+          <Text style={styles.ctaSub}>Reach us on our socials or browse all openings</Text>
+          <View style={styles.socialRow}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/company/refopen')}>
+              <Ionicons name="logo-linkedin" size={24} color={BRAND} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.instagram.com/refopensolutions')}>
+              <Ionicons name="logo-instagram" size={24} color={BRAND} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://x.com/refopensolution')}>
+              <Ionicons name="logo-twitter" size={24} color={BRAND} />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('Careers')}>
             <Ionicons name="arrow-back" size={16} color="#fff" />
             <Text style={styles.ctaBtnT}>View All Openings</Text>
@@ -566,6 +674,27 @@ const createStyles = (colors, responsive = {}) => {
     scroll: { alignItems: 'center' },
     loadingC: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
     loadingT: { marginTop: 12, color: colors.textSecondary },
+
+    // Custom Header
+    customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background },
+    headerLogo: { height: 32, width: 120 },
+    headerLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    headerLinkT: { fontSize: 13, fontWeight: '600', color: BRAND },
+    headerBadge: { backgroundColor: BRAND, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 },
+    headerBadgeT: { fontSize: 10, fontWeight: '700', color: '#fff' },
+    breadcrumb: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background },
+    breadcrumbLink: { fontSize: 13, fontWeight: '600', color: BRAND },
+    breadcrumbCurrent: { fontSize: 13, fontWeight: '600', color: colors.text, flex: 1 },
+    myAppsModal: { backgroundColor: colors.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 500, maxHeight: '80%' },
+    myAppsModalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    myAppsModalTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
+    myAppItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
+    myAppTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 2 },
+    myAppMeta: { fontSize: 12, color: colors.textSecondary },
+    myAppDate: { fontSize: 11, color: colors.textSecondary, marginTop: 2, fontStyle: 'italic' },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, marginLeft: 10 },
+    statusDot: { width: 7, height: 7, borderRadius: 4 },
+    statusText: { fontSize: 11, fontWeight: '600' },
     emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 12 },
     emptySub: { fontSize: 14, color: colors.textSecondary, marginTop: 4 },
     backBtn: { marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: BRAND },
@@ -629,6 +758,10 @@ const createStyles = (colors, responsive = {}) => {
     sideApplyBtnT: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
     // Similar Roles
+    // About RefOpen — full width
+    aboutSection: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginTop: 32, alignSelf: 'center' },
+
+    // Similar Roles
     similarSection: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginTop: 32, alignSelf: 'center' },
     similarTitle: { fontSize: isMobile ? 20 : 22, fontWeight: '800', color: colors.text, marginBottom: 16 },
     similarGrid: {
@@ -650,7 +783,8 @@ const createStyles = (colors, responsive = {}) => {
     // CTA
     ctaBanner: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginTop: 32, alignItems: 'center', paddingVertical: 32, alignSelf: 'center' },
     ctaTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 },
-    ctaSub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: 16 },
+    ctaSub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: 12 },
+    socialRow: { flexDirection: 'row', alignItems: 'center', gap: 20, marginBottom: 16 },
     ctaBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: BRAND, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
     ctaBtnT: { fontSize: 14, fontWeight: '600', color: '#fff' },
 

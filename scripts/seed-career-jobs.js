@@ -1018,41 +1018,64 @@ async function seedDB(config, label) {
   const p = await sql.connect(config);
   console.log(`\n🔌 Connected to ${label}`);
 
-  // Clear existing jobs only (preserve applications!)
-  // Applications have FK to CareerJobs, so we need to handle this carefully
-  // Use MERGE/upsert approach: delete only jobs, applications will be orphaned but safe
-  await p.request().query('DELETE FROM CareerJobs');
-  console.log('🗑️ Cleared existing jobs (applications preserved)');
-
+  // UPSERT: If job with same Title exists and is Published, skip it. 
+  // If it doesn't exist, insert it. Never delete, never archive.
+  // ExpiresAt = 1 month from now (not shown to users, used internally to filter stale jobs)
+  let inserted = 0, skipped = 0;
   for (const j of jobs) {
-    await p.request().query(`
-      INSERT INTO CareerJobs (Title, Department, Location, WorkplaceType, JobType,
-        Description, Requirements, Responsibilities,
-        ExperienceMin, ExperienceMax, SalaryMin, SalaryMax, Currency, Skills, Status, PublishedAt)
-      VALUES (
-        N'${j.title.replace(/'/g, "''")}',
-        N'${j.dept}',
-        N'${j.location}',
-        N'${j.workplace}',
-        N'${j.jobType}',
-        N'${j.desc.replace(/'/g, "''")}',
-        N'${j.requirements.replace(/'/g, "''")}',
-        N'${j.responsibilities.replace(/'/g, "''")}',
-        ${j.expMin},
-        ${j.expMax},
-        ${j.salaryMin || 'NULL'},
-        ${j.salaryMax || 'NULL'},
-        N'${j.currency}',
-        N'${j.skills}',
-        'Published',
-        DATEADD(day, -${Math.floor(Math.random() * 7)}, GETUTCDATE())
-      )
+    const exists = await p.request().query(`
+      SELECT CareerJobID FROM CareerJobs 
+      WHERE Title = N'${j.title.replace(/'/g, "''")}' AND Status = 'Published'
     `);
-    console.log(`  ✅ ${j.title} (${j.jobType})`);
+    if (exists.recordset.length > 0) {
+      // Update existing job's description, expiry etc (refresh it)
+      await p.request().query(`
+        UPDATE CareerJobs SET
+          Description = N'${j.desc.replace(/'/g, "''")}',
+          Requirements = N'${j.requirements.replace(/'/g, "''")}',
+          Responsibilities = N'${j.responsibilities.replace(/'/g, "''")}',
+          Skills = N'${j.skills}',
+          SalaryMin = ${j.salaryMin || 'NULL'},
+          SalaryMax = ${j.salaryMax || 'NULL'},
+          ExpiresAt = DATEADD(month, 1, GETUTCDATE()),
+          UpdatedAt = SYSDATETIMEOFFSET()
+        WHERE Title = N'${j.title.replace(/'/g, "''")}' AND Status = 'Published'
+      `);
+      console.log(`  🔄 ${j.title} (updated)`);
+      skipped++;
+    } else {
+      await p.request().query(`
+        INSERT INTO CareerJobs (Title, Department, Location, WorkplaceType, JobType,
+          Description, Requirements, Responsibilities,
+          ExperienceMin, ExperienceMax, SalaryMin, SalaryMax, Currency, Skills, Status, PublishedAt, ExpiresAt)
+        VALUES (
+          N'${j.title.replace(/'/g, "''")}',
+          N'${j.dept}',
+          N'${j.location}',
+          N'${j.workplace}',
+          N'${j.jobType}',
+          N'${j.desc.replace(/'/g, "''")}',
+          N'${j.requirements.replace(/'/g, "''")}',
+          N'${j.responsibilities.replace(/'/g, "''")}',
+          ${j.expMin},
+          ${j.expMax},
+          ${j.salaryMin || 'NULL'},
+          ${j.salaryMax || 'NULL'},
+          N'${j.currency}',
+          N'${j.skills}',
+          'Published',
+          DATEADD(day, -${Math.floor(Math.random() * 7)}, GETUTCDATE()),
+          DATEADD(month, 1, GETUTCDATE())
+        )
+      `);
+      console.log(`  ✅ ${j.title} (inserted)`);
+      inserted++;
+    }
   }
 
-  const count = await p.request().query('SELECT COUNT(*) as cnt FROM CareerJobs');
-  console.log(`\n📊 Total career jobs in ${label}: ${count.recordset[0].cnt}`);
+  const count = await p.request().query(`SELECT COUNT(*) as cnt FROM CareerJobs WHERE Status = 'Published'`);
+  console.log(`\n📊 ${label}: ${count.recordset[0].cnt} published (${inserted} new, ${skipped} updated)`);
+
   await p.close();
 }
 

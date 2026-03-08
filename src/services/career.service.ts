@@ -16,7 +16,7 @@ export class CareerService {
     const offset = (Math.max(page, 1) - 1) * pageSize;
 
     const countResult = await dbService.executeQuery(
-      `SELECT COUNT(*) as total FROM CareerJobs WHERE Status = 'Published'`,
+      `SELECT COUNT(*) as total FROM CareerJobs WHERE Status = 'Published' AND (ExpiresAt IS NULL OR ExpiresAt > GETUTCDATE())`,
       []
     );
     const total = countResult.recordset[0]?.total || 0;
@@ -27,7 +27,7 @@ export class CareerService {
               ExperienceMin, ExperienceMax, SalaryMin, SalaryMax, Currency,
               Skills, PublishedAt
        FROM CareerJobs
-       WHERE Status = 'Published'
+       WHERE Status = 'Published' AND (ExpiresAt IS NULL OR ExpiresAt > GETUTCDATE())
        ORDER BY PublishedAt DESC
        OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY`,
       [offset, pageSize]
@@ -51,7 +51,7 @@ export class CareerService {
               ExperienceMin, ExperienceMax, SalaryMin, SalaryMax, Currency,
               Skills, PublishedAt
        FROM CareerJobs
-       WHERE CareerJobID = @param0 AND Status = 'Published'`,
+       WHERE CareerJobID = @param0 AND Status = 'Published' AND (ExpiresAt IS NULL OR ExpiresAt > GETUTCDATE())`,
       [jobId]
     );
     return result.recordset[0] || null;
@@ -88,9 +88,9 @@ export class CareerService {
 
     // Insert application
     const result = await dbService.executeQuery(
-      `INSERT INTO CareerApplications (CareerJobID, UserID, FullName, Email, Phone, ResumeURL, CoverLetter, LinkedInURL)
-       OUTPUT INSERTED.ApplicationID, INSERTED.AppliedAt
-       VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7)`,
+      `INSERT INTO CareerApplications (CareerJobID, UserID, FullName, Email, Phone, ResumeURL, CoverLetter, LinkedInURL, Status)
+       OUTPUT INSERTED.ApplicationID, INSERTED.AppliedAt, INSERTED.Status
+       VALUES (@param0, @param1, @param2, @param3, @param4, @param5, @param6, @param7, 'Submitted')`,
       [data.careerJobId, data.userId, data.fullName, data.email, data.phone || null, data.resumeURL, data.coverLetter || null, data.linkedInURL || null]
     );
 
@@ -147,7 +147,7 @@ export class CareerService {
               ca.ResumeURL, ca.CoverLetter, ca.LinkedInURL, ca.Status, ca.AppliedAt,
               ca.ReviewedAt, ca.ReviewNotes,
               cj.Title AS JobTitle, cj.Department, cj.Location, cj.JobType,
-              u.FirstName, u.LastName, u.ProfileImageURL
+              u.FirstName, u.LastName, u.ProfilePictureURL
        FROM CareerApplications ca
        INNER JOIN CareerJobs cj ON ca.CareerJobID = cj.CareerJobID
        LEFT JOIN Users u ON ca.UserID = u.UserID
@@ -168,6 +168,10 @@ export class CareerService {
    * [ADMIN] Update application status + review notes
    */
   static async updateApplicationStatus(applicationId: string, status: string, reviewNotes?: string): Promise<any> {
+    const ALLOWED_STATUSES = ['Submitted', 'Under Review', 'Shortlisted', 'Interview', 'Offered', 'Hired', 'On Hold', 'Rejected'];
+    if (!ALLOWED_STATUSES.includes(status)) {
+      throw Object.assign(new Error(`Invalid status. Allowed: ${ALLOWED_STATUSES.join(', ')}`), { name: 'ValidationError' });
+    }
     const result = await dbService.executeQuery(
       `UPDATE CareerApplications
        SET Status = @param1, ReviewedAt = SYSDATETIMEOFFSET(), ReviewNotes = @param2

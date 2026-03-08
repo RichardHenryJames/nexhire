@@ -27,6 +27,7 @@ import {
   Image,
   Modal,
   Pressable,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -187,22 +188,27 @@ export default function CareersScreen({ navigation }) {
     );
   };
 
-  const STATUS_COLORS = { Applied: '#3b82f6', Reviewed: '#f59e0b', Shortlisted: '#22c55e', Rejected: '#ef4444', Hired: '#10b981' };
+  const STATUS_COLORS = { 'Submitted': '#3b82f6', 'Under Review': '#f59e0b', 'Shortlisted': '#22c55e', 'Interview': '#8b5cf6', 'Offered': '#06b6d4', 'Hired': '#10b981', 'On Hold': '#f97316', 'Rejected': '#ef4444' };
+
+  const LogoLink = ({ children }) => {
+    if (Platform.OS === 'web') {
+      return <a href="/" style={{ textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); navigation.navigate('Main'); }}>{children}</a>;
+    }
+    return <TouchableOpacity onPress={() => navigation.navigate('Main')}>{children}</TouchableOpacity>;
+  };
 
   const renderHeader = () => (
     <View style={styles.customHeader}>
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBack}>
-        <Ionicons name="arrow-back" size={22} color={colors.text} />
-      </TouchableOpacity>
-      <Image source={require('../../../assets/refopen-logo.png')} style={styles.headerLogo} resizeMode="contain" />
-      <TouchableOpacity style={styles.myAppsBtn} onPress={() => {
+      <LogoLink>
+        <Image source={require('../../../assets/refopen-logo.png')} style={styles.headerLogo} resizeMode="contain" />
+      </LogoLink>
+      <TouchableOpacity style={styles.headerLink} onPress={() => {
         if (!isAuthenticated) { navigation.navigate('Auth'); showToast('Please log in to view your applications', 'info'); return; }
         if (myApplications.length === 0) { showToast('No applications yet. Apply to a role first!', 'info'); return; }
         setShowMyApps(true);
       }}>
-        <Ionicons name="document-text-outline" size={16} color={BRAND} />
-        <Text style={styles.myAppsBtnT}>My Applications</Text>
-        {myApplications.length > 0 && <View style={styles.myAppsBadge}><Text style={styles.myAppsBadgeT}>{myApplications.length}</Text></View>}
+        <Text style={styles.headerLinkT}>My Applications</Text>
+        {myApplications.length > 0 && <View style={styles.headerBadge}><Text style={styles.headerBadgeT}>{myApplications.length}</Text></View>}
       </TouchableOpacity>
     </View>
   );
@@ -226,7 +232,7 @@ export default function CareersScreen({ navigation }) {
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[app.Status] || '#6b7280') + '18', borderColor: (STATUS_COLORS[app.Status] || '#6b7280') + '40' }]}>
                   <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[app.Status] || '#6b7280' }]} />
-                  <Text style={[styles.statusText, { color: STATUS_COLORS[app.Status] || '#6b7280' }]}>{app.Status || 'Applied'}</Text>
+                  <Text style={[styles.statusText, { color: STATUS_COLORS[app.Status] || '#6b7280' }]}>{app.Status || 'Submitted'}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -394,7 +400,18 @@ export default function CareersScreen({ navigation }) {
 
         <View style={styles.footer}>
           <Text style={styles.footerTitle}>Don't see a role that fits?</Text>
-          <Text style={styles.footerSub}>Send your resume to careers@refopen.com</Text>
+          <Text style={styles.footerSub}>Reach us on our socials</Text>
+          <View style={styles.socialRow}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.linkedin.com/company/refopen')}>
+              <Ionicons name="logo-linkedin" size={24} color={BRAND} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://www.instagram.com/refopensolutions')}>
+              <Ionicons name="logo-instagram" size={24} color={BRAND} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://x.com/refopensolution')}>
+              <Ionicons name="logo-twitter" size={24} color={BRAND} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={{ maxWidth: isDesktop ? 900 : '100%', width: '100%', alignSelf: 'center' }}>
@@ -416,13 +433,12 @@ const createStyles = (colors, responsive = {}) => {
     loadingT: { marginTop: 12, color: colors.textSecondary },
 
     // Custom Header
-    customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background },
-    headerBack: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+    customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background },
     headerLogo: { height: 32, width: 120 },
-    myAppsBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: BRAND + '12', borderWidth: 1, borderColor: BRAND + '30' },
-    myAppsBtnT: { fontSize: 12, fontWeight: '600', color: BRAND },
-    myAppsBadge: { backgroundColor: BRAND, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 },
-    myAppsBadgeT: { fontSize: 10, fontWeight: '700', color: '#fff' },
+    headerLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    headerLinkT: { fontSize: 13, fontWeight: '600', color: BRAND },
+    headerBadge: { backgroundColor: BRAND, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 },
+    headerBadgeT: { fontSize: 10, fontWeight: '700', color: '#fff' },
 
     // My Applications Modal
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
@@ -520,6 +536,7 @@ const createStyles = (colors, responsive = {}) => {
     footer: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginTop: 32, alignItems: 'center', paddingVertical: 24 },
     footerTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
     footerSub: { fontSize: 13, color: colors.textSecondary, marginTop: 4 },
+    socialRow: { flexDirection: 'row', alignItems: 'center', gap: 20, marginTop: 16 },
 
     // Why RefOpen — enhanced with images
     whySection: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginTop: 40 },

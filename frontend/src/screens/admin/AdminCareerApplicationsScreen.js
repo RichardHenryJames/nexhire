@@ -3,7 +3,7 @@
  * 
  * Features:
  * - List all career applications with user info, job title, resume links
- * - Filter by status (All, Applied, Reviewed, Shortlisted, Rejected)
+ * - Filter by status (All, Submitted, Under Review, Shortlisted, Interview, Offered, Hired, On Hold, Rejected)
  * - Update application status
  * - View resume (opens URL)
  * - Responsive: mobile + desktop
@@ -34,13 +34,16 @@ import { showToast } from '../../components/Toast';
 import refopenAPI from '../../services/api';
 
 const BRAND = '#4F46E5';
-const STATUSES = ['All', 'Applied', 'Reviewed', 'Shortlisted', 'Rejected', 'Hired'];
+const STATUSES = ['All', 'Submitted', 'Under Review', 'Shortlisted', 'Interview', 'Offered', 'Hired', 'On Hold', 'Rejected'];
 const STATUS_COLORS = {
-  Applied: '#3b82f6',
-  Reviewed: '#f59e0b',
-  Shortlisted: '#22c55e',
-  Rejected: '#ef4444',
-  Hired: '#8b5cf6',
+  'Submitted': '#3b82f6',
+  'Under Review': '#f59e0b',
+  'Shortlisted': '#22c55e',
+  'Interview': '#8b5cf6',
+  'Offered': '#06b6d4',
+  'Hired': '#10b981',
+  'On Hold': '#f97316',
+  'Rejected': '#ef4444',
 };
 
 export default function AdminCareerApplicationsScreen({ navigation }) {
