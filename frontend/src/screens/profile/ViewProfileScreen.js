@@ -21,6 +21,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import messagingApi from '../../services/messagingApi';
 import ConfirmationModal from '../../components/common/ConfirmationModal';
 import UserProfileHeader from '../../components/profile/UserProfileHeader';
+import SubScreenHeader from '../../components/SubScreenHeader';
 import { showToast } from '../../components/Toast';
 
 export default function ViewProfileScreen() {
@@ -155,13 +156,7 @@ export default function ViewProfileScreen() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <SubScreenHeader title="Profile" fallbackTab="Home" />
 
         <View style={styles.loadingContainer}>
           <View style={styles.skeletonAvatar} />
@@ -291,15 +286,15 @@ export default function ViewProfileScreen() {
     <View style={styles.container}>
       <View style={styles.innerContainer}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => setShowMenuPopup(true)} style={styles.headerButton}>
-          <Ionicons name="ellipsis-vertical" size={24} color={colors.text} />
-        </TouchableOpacity>
-      </View>
+      <SubScreenHeader
+        title="Profile"
+        fallbackTab="Home"
+        rightContent={
+          <TouchableOpacity onPress={() => setShowMenuPopup(true)} style={styles.headerButton}>
+            <Ionicons name="ellipsis-vertical" size={24} color={colors.text} />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Compact Profile Header - Same as ProfileScreenNew */}
@@ -1031,6 +1026,7 @@ const createStyles = (colors, isDark, responsive = {}) => StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
+    alignItems: 'center',
   },
   menuPopup: {
     backgroundColor: colors.surface || colors.white,
@@ -1038,6 +1034,8 @@ const createStyles = (colors, isDark, responsive = {}) => StyleSheet.create({
     borderTopRightRadius: 24,
     paddingBottom: 34,
     paddingTop: 8,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 480 : '100%',
   },
   menuHandle: {
     width: 40,
