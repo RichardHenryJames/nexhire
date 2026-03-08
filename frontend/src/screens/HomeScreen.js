@@ -581,6 +581,21 @@ const [dashboardData, setDashboardData] = useState(() => {
 
                 <TouchableOpacity 
                   style={styles.quickActionCard}
+                  onPress={() => navigation.navigate('CareerApps')}
+                  activeOpacity={0.8}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: '#8b5cf6' + '20' }]}>
+                    <Ionicons name="document-text" size={24} color="#8b5cf6" />
+                  </View>
+                  <View style={styles.quickActionContent}>
+                    <Text style={styles.quickActionTitle}>Career Applications</Text>
+                    <Text style={styles.quickActionDescription}>Review resumes, update status, manage applicants</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color={colors.gray400} />
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.quickActionCard}
                   onPress={() => navigation.navigate('Settings')}
                   activeOpacity={0.8}
                 >

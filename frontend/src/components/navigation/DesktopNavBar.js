@@ -173,6 +173,7 @@ export default function DesktopNavBar() {
     ...(isJobSeeker ? [{ name: 'AskReferral', icon: 'person-add', iconOutline: 'person-add-outline', label: 'Ask Referral', isTab: true, href: '/ask-for-referral' }] : []),
     ...(isEmployer ? [{ name: 'CreateJob', icon: 'add-circle', iconOutline: 'add-circle-outline', label: 'Post Job', isTab: true, href: '/create-job' }] : []),
     ...(isJobSeeker ? [{ name: 'Services', icon: 'grid', iconOutline: 'grid-outline', label: 'Services', isTab: true, href: '/services' }] : []),
+    ...(isAdmin ? [{ name: 'CareerApps', icon: 'document-text', iconOutline: 'document-text-outline', label: 'Applications', isTab: true, href: '/admin/career-apps' }] : []),
     { name: 'Messages', icon: 'chatbubbles', iconOutline: 'chatbubbles-outline', label: 'Messaging', isTab: false, href: '/messages' },
     { name: 'Notifications', icon: 'notifications', iconOutline: 'notifications-outline', label: 'Notifications', isTab: true, badge: unreadCount, href: '/notifications' },
   ];

@@ -92,6 +92,7 @@ import AdminVerificationsScreen from "../screens/admin/AdminVerificationsScreen"
 import AdminSocialShareScreen from "../screens/admin/AdminSocialShareScreen";
 import AdminPaymentsScreen from "../screens/admin/AdminPaymentsScreen";
 import AdminSupportScreen from "../screens/admin/AdminSupportScreen";
+import AdminCareerApplicationsScreen from "../screens/admin/AdminCareerApplicationsScreen";
 
 // Notifications Screen
 import NotificationsScreen from "../screens/NotificationsScreen";
@@ -113,6 +114,8 @@ import LinkedInOptimizerScreen from "../screens/services/LinkedInOptimizerScreen
 import BlindReviewScreen from "../screens/services/BlindReviewScreen";
 import CareerSimulatorScreen from "../screens/services/CareerSimulatorScreen";
 import MarketPulseScreen from "../screens/services/MarketPulseScreen";
+import CareersScreen from "../screens/careers/CareersScreen";
+import CareerJobDetailScreen from "../screens/careers/CareerJobDetailScreen";
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -145,6 +148,8 @@ const linking = {
       BlindReview: "services/blind-review",
       CareerSimulator: "services/career-simulator",
       MarketPulse: "services/market-pulse",
+      Careers: "careers",
+      CareerJobDetail: "careers/job/:jobId",
       
       // Public Blog screens - accessible without auth
       Blog: "blog",
@@ -218,6 +223,7 @@ const linking = {
                 },
               },
               ActionCenter: "action-center",
+              CareerApps: "admin/career-apps",
               Services: "services",
             },
           },
@@ -568,6 +574,14 @@ function MainTabNavigator() {
 
       {isAdmin && (
         <Tab.Screen
+          name="CareerApps"
+          component={AdminCareerApplicationsScreen}
+          options={{ title: "Applications" }}
+        />
+      )}
+
+      {isAdmin && (
+        <Tab.Screen
           name="Admin"
           component={AdminDashboardScreen}
           options={{ title: "Analytics" }}
@@ -759,6 +773,11 @@ function MainStack() {
       <Stack.Screen
         name="AdminSupport"
         component={AdminSupportScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AdminCareerApplications"
+        component={AdminCareerApplicationsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
@@ -1005,6 +1024,8 @@ export default function AppNavigator() {
       <Stack.Screen name="BlindReview" component={BlindReviewScreen} options={{ headerShown: false, title: 'Blind Resume Review' }} />
       <Stack.Screen name="CareerSimulator" component={CareerSimulatorScreen} options={{ headerShown: false, title: 'Career Path Simulator' }} />
       <Stack.Screen name="MarketPulse" component={MarketPulseScreen} options={{ headerShown: false, title: 'Job Market Pulse - Hiring Trends' }} />
+      <Stack.Screen name="Careers" component={CareersScreen} options={{ headerShown: false, title: 'Careers at RefOpen - Join Our Team' }} />
+      <Stack.Screen name="CareerJobDetail" component={CareerJobDetailScreen} options={{ headerShown: false, title: 'Job Details - Careers at RefOpen' }} />
       
       {/* Public Ask Referral Screen - accessible without auth but actions require login */}
       <Stack.Screen

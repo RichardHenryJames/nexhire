@@ -3317,6 +3317,45 @@ if (!resumeId) {
       method: 'POST',
     });
   }
+
+  // ============================================================
+  // CAREERS API — RefOpen's own career page (public)
+  // ============================================================
+
+  async getCareerJobs(page = 1, pageSize = 20) {
+    return this.apiCall(`/careers/jobs?page=${page}&pageSize=${pageSize}`, {}, false);
+  }
+
+  async getCareerJobById(jobId) {
+    return this.apiCall(`/careers/jobs/${jobId}`, {}, false);
+  }
+
+  async applyToCareerJob(data) {
+    return this.apiCall('/careers/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getMyCareerApplications() {
+    return this.apiCall('/careers/my-applications');
+  }
+
+  // ============================================================
+  // ADMIN — Career Applications Management
+  // ============================================================
+
+  async getAdminCareerApplications(page = 1, pageSize = 50, status) {
+    const statusParam = status && status !== 'All' ? `&status=${status}` : '';
+    return this.apiCall(`/management/career-applications?page=${page}&pageSize=${pageSize}${statusParam}`);
+  }
+
+  async updateCareerApplicationStatus(applicationId, status, reviewNotes) {
+    return this.apiCall(`/management/career-applications/${applicationId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status, reviewNotes }),
+    });
+  }
 }
 
 export default new RefOpenAPI();

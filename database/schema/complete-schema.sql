@@ -3169,3 +3169,59 @@ BEGIN
     );
 END
 GO
+
+-- ========================================================================
+-- CAREER JOBS & APPLICATIONS (RefOpen's own careers page)
+-- Separate from the main job marketplace (Jobs table)
+-- ========================================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CareerJobs')
+BEGIN
+    CREATE TABLE CareerJobs (
+        CareerJobID UNIQUEIDENTIFIER NOT NULL DEFAULT (NEWID()),
+        Title NVARCHAR(200) NOT NULL,
+        Department NVARCHAR(100) NOT NULL,
+        Location NVARCHAR(200) NOT NULL,
+        WorkplaceType NVARCHAR(50) NOT NULL DEFAULT 'Onsite',
+        JobType NVARCHAR(50) NOT NULL DEFAULT 'Full-time',
+        Description NVARCHAR(MAX) NOT NULL,
+        Requirements NVARCHAR(MAX) NULL,
+        Responsibilities NVARCHAR(MAX) NULL,
+        ExperienceMin INT NULL DEFAULT 0,
+        ExperienceMax INT NULL,
+        SalaryMin DECIMAL(15,2) NULL,
+        SalaryMax DECIMAL(15,2) NULL,
+        Currency NVARCHAR(10) NULL DEFAULT 'INR',
+        Skills NVARCHAR(1000) NULL,
+        Status NVARCHAR(20) NOT NULL DEFAULT 'Draft',
+        PublishedAt DATETIMEOFFSET NULL,
+        CreatedAt DATETIMEOFFSET NOT NULL DEFAULT (SYSDATETIMEOFFSET()),
+        UpdatedAt DATETIMEOFFSET NOT NULL DEFAULT (SYSDATETIMEOFFSET()),
+        CONSTRAINT PK_CareerJobs PRIMARY KEY (CareerJobID)
+    );
+    PRINT 'Created table CareerJobs';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CareerApplications')
+BEGIN
+    CREATE TABLE CareerApplications (
+        ApplicationID UNIQUEIDENTIFIER NOT NULL DEFAULT (NEWID()),
+        CareerJobID UNIQUEIDENTIFIER NOT NULL,
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        FullName NVARCHAR(200) NOT NULL,
+        Email NVARCHAR(320) NOT NULL,
+        Phone NVARCHAR(20) NULL,
+        ResumeURL NVARCHAR(1000) NOT NULL,
+        CoverLetter NVARCHAR(MAX) NULL,
+        LinkedInURL NVARCHAR(500) NULL,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'Applied',
+        AppliedAt DATETIMEOFFSET NOT NULL DEFAULT (SYSDATETIMEOFFSET()),
+        ReviewedAt DATETIMEOFFSET NULL,
+        ReviewNotes NVARCHAR(MAX) NULL,
+        CONSTRAINT PK_CareerApplications PRIMARY KEY (ApplicationID),
+        CONSTRAINT FK_CareerApplications_Job FOREIGN KEY (CareerJobID) REFERENCES CareerJobs(CareerJobID),
+        CONSTRAINT FK_CareerApplications_User FOREIGN KEY (UserID) REFERENCES Users(UserID)
+    );
+    PRINT 'Created table CareerApplications';
+END
+GO

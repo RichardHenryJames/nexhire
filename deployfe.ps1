@@ -258,23 +258,23 @@ if (Test-Path $indexPath) {
     $seoTags = @"
     <link rel="preload" as="image" href="/refopen-logo.png" />
     <meta name="google-site-verification" content="d2gTyIhcv5i6OYtnNqXg3zOY5nKXykW8_3-QZ4XtD8g" />
-    <meta name="description" content="RefOpen - India's leading job & referral platform. Find jobs, get referred to Google, Amazon, Microsoft & 500+ top companies. Hire talent & earn rewards. Apply, Hire, Refer & Earn!" />
-    <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement, hire talent, earn rewards, referral bonus" />
+    <meta name="description" content="RefOpen - India's first all-in-one career platform. Get referred to Google, Amazon, Microsoft & 500+ top companies. AI Resume Analyzer, AI Resume Builder, Interview Prep, Salary Checker, LinkedIn Optimizer & 125K+ jobs. One app for your entire job search journey." />
+    <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, resume analyzer, ats resume checker, resume builder, ai resume builder, interview prep, mock interview, salary checker, salary spy, linkedin optimizer, offer negotiation, career tools, ai career tools, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement, hire talent, earn rewards, referral bonus, careers at refopen" />
     <meta name="author" content="RefOpen" />
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://refopen.com/" />
-    <meta property="og:title" content="RefOpen - India's Leading Job & Referral Platform | Apply, Hire, Refer, Earn" />
-    <meta property="og:description" content="Find jobs, get referred to top companies. Hire talent & earn rewards. India's #1 job & referral platform with 125K+ jobs." />
+    <meta property="og:title" content="RefOpen - India's All-in-One Career Platform | Referrals, AI Resume, Interview Prep" />
+    <meta property="og:description" content="India's first all-in-one career platform. Get referred to 500+ top companies. AI Resume Analyzer, Resume Builder, Interview Prep, Salary Checker & 125K+ jobs." />
     <meta property="og:image" content="https://refopen.com/refopen-logo.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
     <meta property="og:site_name" content="RefOpen" />
     <meta property="og:locale" content="en_IN" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="RefOpen - India's Leading Job & Referral Platform" />
-    <meta name="twitter:description" content="Find jobs, get referred, hire talent & earn rewards. Apply, Hire, Refer & Earn at India's #1 job referral platform." />
+    <meta name="twitter:title" content="RefOpen - India's All-in-One Career Platform" />
+    <meta name="twitter:description" content="Get referred to Google, Amazon, Microsoft & 500+ companies. AI Resume Analyzer, Resume Builder, Interview Prep, Salary Checker & 125K+ jobs. One app for everything." />
     <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
@@ -306,7 +306,7 @@ if (Test-Path $indexPath) {
       "sameAs": [
         "https://www.linkedin.com/company/refopen"
       ],
-      "description": "The leading job referral platform connecting job seekers with employees at top companies. Get referred to your dream job.",
+      "description": "India's first all-in-one career platform. RefOpen connects job seekers with employees at 500+ top companies for verified referrals, and offers AI-powered career tools: Resume Analyzer, Resume Builder, Interview Prep, Salary Checker, LinkedIn Optimizer, Offer Negotiation Coach, and more. One app for your entire job search journey.",
       "foundingDate": "2024",
       "contactPoint": {
         "@type": "ContactPoint",
@@ -319,10 +319,10 @@ if (Test-Path $indexPath) {
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "RefOpen - Job Referral & Job Search Platform",
+      "name": "RefOpen - All-in-One Career & Job Referral Platform",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web, Android, iOS",
-      "description": "Find jobs, apply, and request referrals from employees at top companies. Browse jobs for free, search openings, and boost your chances with employee referrals.",
+      "description": "India's first all-in-one career platform. Get referred to top companies, analyze resumes with AI, build ATS-optimized resumes, practice mock interviews, check salaries, optimize LinkedIn profiles, and browse 125K+ jobs — all in one app.",
       "aggregateRating": {
         "@type": "AggregateRating",
         "ratingValue": "4.8",
@@ -417,6 +417,7 @@ if (Test-Path $indexPath) {
         <nav>
           <a href="/jobs">Browse Jobs</a>
           <a href="/referrals">Ask for Referral</a>
+          <a href="/careers">Careers - Join Our Team</a>
           <a href="/about">About Us</a>
           <a href="/blog">Career Blog</a>
         </nav>
@@ -428,6 +429,29 @@ if (Test-Path $indexPath) {
           
           <h2>How RefOpen Works</h2>
           <p>1. Create your free profile and upload your resume. 2. Browse thousands of job openings across IT, software, engineering, and more. 3. Apply directly or request a referral from employees at that company. 4. Get referred and boost your chances of landing interviews.</p>
+
+          <h2>About RefOpen - India's First All-in-One Career Platform</h2>
+          <p>RefOpen isn't just another job portal. We're building India's first all-in-one career platform — a single app that handles every step of your job search journey, from finding the right opportunity to landing the offer.</p>
+          <p>India has 900+ million working-age people, yet the job search experience is broken. Job portals are flooded with spam listings. Referrals — the #1 way people actually get hired — are gatekept by personal networks. Resume tools are expensive. Interview prep is scattered. There's no single platform that truly helps a candidate go from "I need a job" to "I got the offer." RefOpen changes that.</p>
+          
+          <h3>Verified Employee Referral Marketplace</h3>
+          <p>India's largest verified employee referral network. Request referrals directly from real employees at Google, Amazon, Microsoft, Flipkart, Swiggy, Razorpay, and 500+ top companies — no connections needed. Referrals increase your chances of getting hired by 10x.</p>
+          
+          <h3>AI-Powered Career Tools</h3>
+          <ul>
+            <li>AI Resume Analyzer — Instant ATS compatibility score, keyword gap analysis, and AI-powered improvement suggestions</li>
+            <li>AI Resume Builder — Stunning, ATS-optimized resumes with professional templates and AI-generated bullet points</li>
+            <li>Interview Decoded — AI-powered mock interviews with real-time feedback and company-specific question banks</li>
+            <li>Salary Spy — Real market compensation data across roles, companies, and experience levels</li>
+            <li>Offer Negotiation Coach — AI-guided strategies to negotiate better compensation packages</li>
+            <li>LinkedIn Profile Optimizer — AI analysis with actionable suggestions to rank higher in recruiter searches</li>
+            <li>Blind Resume Review — Unbiased, anonymous feedback on your resume from peers</li>
+            <li>Career Path Simulator — Explore career trajectories and identify skill gaps with AI</li>
+            <li>Job Market Pulse — Real-time hiring trends, in-demand skills, and salary benchmarks</li>
+          </ul>
+          
+          <h3>RefOpen by the Numbers</h3>
+          <p>125,000+ active job listings. 500+ companies with verified employee referrers. Thousands of active job seekers daily. Available on Android, iOS, and Web.</p>
           
           <h2>Browse Jobs by Category</h2>
           <ul>
@@ -442,11 +466,30 @@ if (Test-Path $indexPath) {
           <h2>Top Companies Hiring</h2>
           <p>Find referrals and job openings at Google, Amazon, Microsoft, Meta, Apple, Flipkart, Swiggy, Zomato, Paytm, PhonePe, Razorpay, TCS, Infosys, Wipro, HCL, Cognizant, Accenture, Deloitte, and hundreds more top employers in India.</p>
           
+          <h2>Careers at RefOpen - Join Our Team</h2>
+          <p>We're hiring! Join RefOpen and build India's leading career platform. Open roles in Engineering, Marketing, Data, Design, and Business Development. Hybrid work in Bengaluru + remote internships across India.</p>
+          <ul>
+            <li><a href="/careers">View All Open Positions</a></li>
+            <li>Software Development Engineer (SDE-1)</li>
+            <li>Frontend Engineer (React Native)</li>
+            <li>Backend Engineer (Node.js + Azure)</li>
+            <li>Growth Marketing Manager</li>
+            <li>Content Marketing Specialist</li>
+            <li>Social Media & Community Manager</li>
+            <li>Business Development Executive</li>
+            <li>Data Analyst</li>
+            <li>DevOps Engineer</li>
+            <li>Software Engineering Intern</li>
+            <li>Data Science Intern</li>
+            <li>Product Design Intern (UI/UX)</li>
+            <li>Campus Ambassador (Marketing Intern)</li>
+          </ul>
+
           <h2>Career Resources</h2>
           <p>Explore our blog for expert career advice on resume writing, interview preparation, salary negotiation, networking, and job search strategies. Learn how to get referrals, prepare for FAANG interviews, and navigate your tech career in India.</p>
           
           <h2>Why Choose RefOpen?</h2>
-          <p>Free job search and applications. Direct employee referrals to top companies. 125,000+ active job listings. Trusted by thousands of job seekers and employees. Affordable referral requests with pay-per-use pricing.</p>
+          <p>Free job search and applications. Direct employee referrals to top companies. 125,000+ active job listings. Trusted by thousands of job seekers and employees. Affordable referral requests with pay-per-use pricing. AI-powered resume analyzer, resume builder, interview prep, salary checker, LinkedIn optimizer, and more career tools.</p>
         </article>
       </main>
       <footer>

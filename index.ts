@@ -3633,6 +3633,178 @@ app.timer("dailyReferrerNotificationEmail", {
 });
 
 // ========================================================================
+// CAREERS PAGE — RefOpen's own job listings (public)
+// ========================================================================
+
+app.http("careers-jobs", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "careers/jobs",
+  handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+      if (req.method === "OPTIONS") return { status: 204 };
+      const { CareerService } = await import("./src/services/career.service");
+      const url = new URL(req.url);
+      const page = parseInt(url.searchParams.get("page") || "1");
+      const pageSize = parseInt(url.searchParams.get("pageSize") || "20");
+      const result = await CareerService.getCareerJobs(page, pageSize);
+      return { status: 200, jsonBody: { success: true, data: result.jobs, meta: { total: result.total, hasMore: result.hasMore, page, pageSize } } };
+    } catch (error: any) {
+      context.error("Error fetching career jobs:", error);
+      return { status: 500, jsonBody: { success: false, error: error.message } };
+    }
+  },
+});
+
+app.http("careers-job-by-id", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "careers/jobs/{jobId}",
+  handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+      if (req.method === "OPTIONS") return { status: 204 };
+      const { CareerService } = await import("./src/services/career.service");
+      const jobId = req.params.jobId;
+      if (!jobId) return { status: 400, jsonBody: { success: false, error: "Job ID required" } };
+      const job = await CareerService.getCareerJobById(jobId);
+      if (!job) return { status: 404, jsonBody: { success: false, error: "Career job not found" } };
+      return { status: 200, jsonBody: { success: true, data: job } };
+    } catch (error: any) {
+      return { status: 500, jsonBody: { success: false, error: error.message } };
+    }
+  },
+});
+
+app.http("careers-apply", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "careers/apply",
+  handler: withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    // Manual auth check — extract user from JWT
+    const authHeader = req.headers.get('authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
+      return { status: 401, jsonBody: { success: false, error: "Authentication required" } };
+    }
+    const { AuthService } = await import("./src/services/auth.service");
+    let user: any;
+    try {
+      user = AuthService.verifyToken(token);
+    } catch {
+      return { status: 401, jsonBody: { success: false, error: "Invalid or expired token" } };
+    }
+    const body = await req.json() as any;
+    if (!body.careerJobId || !body.resumeURL) {
+      return { status: 400, jsonBody: { success: false, error: "careerJobId and resumeURL are required" } };
+    }
+    const { CareerService } = await import("./src/services/career.service");
+    const result = await CareerService.applyToCareerJob({
+      careerJobId: body.careerJobId,
+      userId: user.userId,
+      fullName: body.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+      email: body.email || user.email,
+      phone: body.phone,
+      resumeURL: body.resumeURL,
+      coverLetter: body.coverLetter,
+      linkedInURL: body.linkedInURL,
+    });
+    return { status: 201, jsonBody: { success: true, data: result, message: "Application submitted successfully" } };
+  }),
+});
+
+// GET /careers/my-applications — Get logged-in user's career applications
+app.http("careers-my-applications", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "careers/my-applications",
+  handler: withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const authHeader = req.headers.get('authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
+      return { status: 401, jsonBody: { success: false, error: "Authentication required" } };
+    }
+    const { AuthService } = await import("./src/services/auth.service");
+    let user: any;
+    try { user = AuthService.verifyToken(token); } catch {
+      return { status: 401, jsonBody: { success: false, error: "Invalid token" } };
+    }
+    const { CareerService } = await import("./src/services/career.service");
+    const applications = await CareerService.getUserApplications(user.userId);
+    return { status: 200, jsonBody: { success: true, data: applications } };
+  }),
+});
+
+// ========================================================================
+// ADMIN — CAREER APPLICATIONS MANAGEMENT
+// ========================================================================
+
+// GET /management/career-applications — List all career applications (admin only)
+app.http("admin-career-applications", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/career-applications",
+  handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+      if (req.method === "OPTIONS") return { status: 204 };
+      const authHeader = req.headers.get('authorization') || '';
+      const token = authHeader.replace('Bearer ', '');
+      if (!token) return { status: 401, jsonBody: { success: false, error: "Authentication required" } };
+      const { AuthService } = await import("./src/services/auth.service");
+      let user: any;
+      try { user = AuthService.verifyToken(token); } catch {
+        return { status: 401, jsonBody: { success: false, error: "Invalid token" } };
+      }
+      if (user.userType !== 'Admin') {
+        return { status: 403, jsonBody: { success: false, error: "Admin access required" } };
+      }
+      const url = new URL(req.url);
+      const page = parseInt(url.searchParams.get("page") || "1");
+      const pageSize = parseInt(url.searchParams.get("pageSize") || "50");
+      const status = url.searchParams.get("status") || undefined;
+      const { CareerService } = await import("./src/services/career.service");
+      const result = await CareerService.getAllCareerApplications(page, pageSize, status);
+      return { status: 200, jsonBody: { success: true, data: result.applications, meta: { total: result.total, hasMore: result.hasMore, page, pageSize } } };
+    } catch (error: any) {
+      context.error("Error fetching admin career applications:", error);
+      return { status: 500, jsonBody: { success: false, error: error.message } };
+    }
+  },
+});
+
+// PUT /management/career-applications/{applicationId} — Update application status (admin only)
+app.http("admin-update-career-application", {
+  methods: ["PUT", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/career-applications/{applicationId}",
+  handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    try {
+      if (req.method === "OPTIONS") return { status: 204 };
+      const authHeader = req.headers.get('authorization') || '';
+      const token = authHeader.replace('Bearer ', '');
+      if (!token) return { status: 401, jsonBody: { success: false, error: "Authentication required" } };
+      const { AuthService } = await import("./src/services/auth.service");
+      let user: any;
+      try { user = AuthService.verifyToken(token); } catch {
+        return { status: 401, jsonBody: { success: false, error: "Invalid token" } };
+      }
+      if (user.userType !== 'Admin') {
+        return { status: 403, jsonBody: { success: false, error: "Admin access required" } };
+      }
+      const applicationId = req.params.applicationId;
+      if (!applicationId) return { status: 400, jsonBody: { success: false, error: "Application ID required" } };
+      const body = await req.json() as any;
+      if (!body.status) return { status: 400, jsonBody: { success: false, error: "Status is required" } };
+      const { CareerService } = await import("./src/services/career.service");
+      const result = await CareerService.updateApplicationStatus(applicationId, body.status, body.reviewNotes);
+      return { status: 200, jsonBody: { success: true, data: result, message: "Application updated" } };
+    } catch (error: any) {
+      if (error.name === 'NotFoundError') return { status: 404, jsonBody: { success: false, error: error.message } };
+      return { status: 500, jsonBody: { success: false, error: error.message } };
+    }
+  },
+});
+
+// ========================================================================
 // TIMER TRIGGER - AUTOMATED JOB SCRAPING (Once daily at 2 AM UTC)
 // ========================================================================
 
