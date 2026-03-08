@@ -331,7 +331,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
 
   return (
     <RegistrationWrapper currentStep={4} totalSteps={4} stepLabel="Create your account" onBack={() => navigation.goBack()}>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24 }}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24, maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%', width: '100%', alignSelf: 'center' }}>
         {/* Show Google user info if applicable */}
         {isGoogleUser && googleUser && (
           <View style={styles.googleUserInfo}>

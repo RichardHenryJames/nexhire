@@ -3637,7 +3637,7 @@ app.timer("dailyReferrerNotificationEmail", {
 // ========================================================================
 
 app.timer("jobScraperTimer", {
-  schedule: "0 0 2 * * *", // Daily at 2:00 AM UTC (7:30 AM IST)
+  schedule: "0 0 2,14 * * *", // Twice daily: 2:00 AM UTC (7:30 AM IST) + 2:00 PM UTC (7:30 PM IST)
   handler: async (myTimer: Timer, context: InvocationContext) => {
     // Skip scraping on dev/staging — only run on production
     const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';

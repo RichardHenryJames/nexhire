@@ -141,7 +141,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
 
   return (
     <RegistrationWrapper currentStep={3} totalSteps={4} stepLabel="Your role" onBack={() => navigation.goBack()}>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24 }}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24, maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%', width: '100%', alignSelf: 'center' }}>
         {/* Show Google user info if applicable */}
         {isGoogleUser && googleUser && (
           <View style={styles.googleUserInfo}>

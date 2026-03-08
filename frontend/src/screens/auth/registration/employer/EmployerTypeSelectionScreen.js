@@ -402,7 +402,13 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
   scrollContainer: { flex: 1 },
-  content: { padding: 24, paddingTop: 8 },
+  content: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%',
+    padding: 24,
+    paddingTop: 8,
+    alignSelf: 'center',
+  },
   header: { marginBottom: 28 },
   title: {
     fontSize: 26,

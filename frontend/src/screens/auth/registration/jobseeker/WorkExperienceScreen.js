@@ -687,8 +687,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
   },
   content: {
+    width: '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%',
     padding: 24,
     paddingTop: 8,
+    alignSelf: 'center',
   },
   header: {
     marginBottom: 28,

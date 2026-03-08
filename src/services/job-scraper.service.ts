@@ -47,31 +47,32 @@ interface ScrapingResult {
 }
 
 export class JobScraperService {
-  // 🚀 ENHANCED CONFIG - 10X MORE JOBS
+  // 🚀 OPTIMIZED CONFIG - Fits within 10-min Azure Consumption timeout
+  // Runs twice daily (2 AM + 2 PM UTC), so each run scrapes a manageable batch
   private static config = {
     enabled: true,
-    maxJobsPerRun: 1000, // ⬆️ INCREASED FROM 150 TO 1000
+    maxJobsPerRun: 300, // ⬇️ Reduced from 1000 — fits 10-min timeout with delays
     sources: {
       remoteok: { 
         enabled: true, 
-        maxJobs: 200, // ⬆️ INCREASED FROM 50 TO 200
-        rateLimit: 2000 
+        maxJobs: 50, // ⬇️ Reduced from 200
+        rateLimit: 1000 // ⬇️ Reduced from 2000 (1s between requests)
       },
       adzuna: { 
         enabled: true, 
-        maxJobsPerConfig: 50, // ⬆️ INCREASED FROM 8 TO 50 (API MAX)
-        maxTotalJobs: 400, // ⬆️ NEW: TOTAL ADZUNA LIMIT
-        rateLimit: 3000 
+        maxJobsPerConfig: 25, // ⬇️ Reduced from 50 — fewer per country
+        maxTotalJobs: 200, // ⬇️ Reduced from 400
+        rateLimit: 1500 // ⬇️ Reduced from 3000
       },
       weworkremotely: { 
         enabled: true, 
-        maxJobsPerCategory: 25, // ⬆️ INCREASED FROM 8 TO 25
-        rateLimit: 1500 
+        maxJobsPerCategory: 10, // ⬇️ Reduced from 25
+        rateLimit: 1000 // ⬇️ Reduced from 1500
       },
       hackernews: { 
         enabled: true, 
-        maxJobs: 30, // ⬆️ INCREASED FROM 15 TO 30
-        rateLimit: 1000 
+        maxJobs: 20, // ⬇️ Reduced from 30
+        rateLimit: 800 // ⬇️ Reduced from 1000
       }
     },
     excludeKeywords: ['adult', 'gambling', 'crypto scam', 'mlm', 'pyramid'],
@@ -147,12 +148,12 @@ export class JobScraperService {
     return this.userAgents[this.sessionState.userAgentIndex];
   }
 
-  // 🧠 INTELLIGENT HUMAN-LIKE DELAYS - OPTIMIZED FOR AZURE FUNCTIONS
-  private static async intelligentDelay(baseMs: number = 1000): Promise<void> {
+  // 🧠 INTELLIGENT DELAYS - OPTIMIZED FOR 10-MIN AZURE TIMEOUT
+  private static async intelligentDelay(baseMs: number = 800): Promise<void> {
     this.sessionState.requestCount++;
     
-    // Reduced fatigue multiplier for faster execution
-    const fatigueMultiplier = Math.min(1 + (this.sessionState.requestCount * 0.02), 1.3);
+    // Minimal fatigue — cap at 1.15x to avoid ballooning over 10 min
+    const fatigueMultiplier = Math.min(1 + (this.sessionState.requestCount * 0.01), 1.15);
     
     // Add random variation (human unpredictability)
     const variation = 0.5 + (Math.random() * 0.5); // 50-100% of base
@@ -160,9 +161,9 @@ export class JobScraperService {
     // Calculate final delay
     const finalDelay = Math.floor(baseMs * fatigueMultiplier * variation);
     
-    // Ensure minimum gap between requests (reduced from 1000ms to 500ms)
+    // Ensure minimum gap between requests
     const timeSinceLastRequest = Date.now() - this.sessionState.lastRequestTime;
-    const additionalWait = Math.max(0, 500 - timeSinceLastRequest);
+    const additionalWait = Math.max(0, 400 - timeSinceLastRequest);
     
     const totalWait = finalDelay + additionalWait;
     

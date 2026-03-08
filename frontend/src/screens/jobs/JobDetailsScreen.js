@@ -662,7 +662,18 @@ const { jobId, fromReferralRequest } = route.params || {};
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not specified';
-    return new Date(dateString).toLocaleDateString();
+    const d = new Date(dateString);
+    const now = new Date();
+    const h = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60));
+    if (h < 1) return 'Just posted';
+    if (h < 24) return `${h} hours ago`;
+    const days = Math.floor(h / 24);
+    if (days < 7) return `${days} days ago`;
+    const w = Math.floor(days / 7);
+    if (w < 4) return `${w} weeks ago`;
+    const m = Math.floor(days / 30);
+    if (m < 12) return `${m} months ago`;
+    return d.toLocaleDateString();
   };
 
   // ✅ NEW: Helper functions for external job information
@@ -1074,10 +1085,6 @@ const { jobId, fromReferralRequest } = route.params || {};
                 </Text>
               </TouchableOpacity>
             )}
-            {/* More options */}
-            <TouchableOpacity style={styles.btnMore}>
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
             {/* Publish button for employers */}
             {isEmployer && job.Status === 'Draft' && (
               <TouchableOpacity

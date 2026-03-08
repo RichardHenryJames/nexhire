@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
@@ -37,7 +37,7 @@ export default function CreateOrganizationScreen({ navigation, route }) {
 
   return (
     <RegistrationWrapper currentStep={2} totalSteps={4} stepLabel="Organization details" onBack={() => navigation.goBack()}>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24 }}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24, maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%', width: '100%', alignSelf: 'center' }}>
         <Text style={styles.title}>Tell us about your organization</Text>
         <Text style={styles.subtitle}>We will use this to set up your hiring workspace</Text>
 
