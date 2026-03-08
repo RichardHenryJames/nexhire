@@ -173,13 +173,7 @@ export default function ViewProfileScreen() {
   if (error === 'private') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <SubScreenHeader title="Profile" fallbackTab="Home" />
 
         <View style={styles.errorContainer}>
           <View style={[styles.errorIconWrapper, { backgroundColor: colors.primary + '15' }]}>
@@ -202,13 +196,7 @@ export default function ViewProfileScreen() {
   if (error === 'not_found') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <SubScreenHeader title="Profile" fallbackTab="Home" />
 
         <View style={styles.errorContainer}>
           <View style={[styles.errorIconWrapper, { backgroundColor: colors.gray200 }]}>
@@ -231,13 +219,7 @@ export default function ViewProfileScreen() {
   if (error === 'general') {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <SubScreenHeader title="Profile" fallbackTab="Home" />
 
         <View style={styles.errorContainer}>
           <View style={[styles.errorIconWrapper, { backgroundColor: colors.error + '15' }]}>
@@ -262,13 +244,7 @@ export default function ViewProfileScreen() {
   if (!profile) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <View style={styles.headerButton} />
-        </View>
+        <SubScreenHeader title="Profile" fallbackTab="Home" />
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>No Profile Data</Text>
           <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.goBack()}>
