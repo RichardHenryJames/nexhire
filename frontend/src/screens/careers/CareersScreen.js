@@ -25,12 +25,13 @@ import {
   RefreshControl,
   TextInput,
   Image,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
-import SubScreenHeader from '../../components/SubScreenHeader';
 import { showToast } from '../../components/Toast';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import refopenAPI from '../../services/api';
@@ -62,6 +63,8 @@ export default function CareersScreen({ navigation }) {
   const [selectedDept, setSelectedDept] = useState('All');
   const [selectedType, setSelectedType] = useState('All');
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
+  const [myApplications, setMyApplications] = useState([]);
+  const [showMyApps, setShowMyApps] = useState(false);
 
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
@@ -74,6 +77,7 @@ export default function CareersScreen({ navigation }) {
           const apps = await refopenAPI.getMyCareerApplications();
           if (apps?.success && apps.data) {
             setAppliedJobIds(new Set(apps.data.map(a => a.CareerJobID)));
+            setMyApplications(apps.data);
           }
         } catch {}
       }
@@ -183,16 +187,66 @@ export default function CareersScreen({ navigation }) {
     );
   };
 
+  const STATUS_COLORS = { Applied: '#3b82f6', Reviewed: '#f59e0b', Shortlisted: '#22c55e', Rejected: '#ef4444', Hired: '#10b981' };
+
+  const renderHeader = () => (
+    <View style={styles.customHeader}>
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBack}>
+        <Ionicons name="arrow-back" size={22} color={colors.text} />
+      </TouchableOpacity>
+      <Image source={require('../../../assets/refopen-logo.png')} style={styles.headerLogo} resizeMode="contain" />
+      <TouchableOpacity style={styles.myAppsBtn} onPress={() => {
+        if (!isAuthenticated) { navigation.navigate('Auth'); showToast('Please log in to view your applications', 'info'); return; }
+        if (myApplications.length === 0) { showToast('No applications yet. Apply to a role first!', 'info'); return; }
+        setShowMyApps(true);
+      }}>
+        <Ionicons name="document-text-outline" size={16} color={BRAND} />
+        <Text style={styles.myAppsBtnT}>My Applications</Text>
+        {myApplications.length > 0 && <View style={styles.myAppsBadge}><Text style={styles.myAppsBadgeT}>{myApplications.length}</Text></View>}
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderMyAppsModal = () => (
+    <Modal visible={showMyApps} transparent animationType="fade" onRequestClose={() => setShowMyApps(false)}>
+      <Pressable style={styles.overlay} onPress={() => setShowMyApps(false)}>
+        <Pressable style={styles.myAppsModal} onPress={e => e.stopPropagation()}>
+          <View style={styles.myAppsModalHead}>
+            <Text style={styles.myAppsModalTitle}>My Applications</Text>
+            <TouchableOpacity onPress={() => setShowMyApps(false)}><Ionicons name="close" size={24} color={colors.textSecondary} /></TouchableOpacity>
+          </View>
+          <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+            {myApplications.map((app, i) => (
+              <TouchableOpacity key={app.ApplicationID || i} style={styles.myAppItem}
+                onPress={() => { setShowMyApps(false); navigation.navigate('CareerJobDetail', { jobId: app.CareerJobID }); }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.myAppTitle}>{app.Title || 'Position'}</Text>
+                  <Text style={styles.myAppMeta}>{app.Department} • {app.Location}</Text>
+                  <Text style={styles.myAppDate}>Applied {app.AppliedAt ? new Date(app.AppliedAt).toLocaleDateString() : ''}</Text>
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: (STATUS_COLORS[app.Status] || '#6b7280') + '18', borderColor: (STATUS_COLORS[app.Status] || '#6b7280') + '40' }]}>
+                  <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[app.Status] || '#6b7280' }]} />
+                  <Text style={[styles.statusText, { color: STATUS_COLORS[app.Status] || '#6b7280' }]}>{app.Status || 'Applied'}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+
   if (loading) return (
     <View style={styles.container}>
-      <SubScreenHeader title="Careers at RefOpen" fallbackTab="Home" />
+      {renderHeader()}
       <View style={styles.loadingC}><ActivityIndicator size="large" color={BRAND} /><Text style={styles.loadingT}>Loading openings...</Text></View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="Careers at RefOpen" fallbackTab="Home" />
+      {renderHeader()}
+      {renderMyAppsModal()}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadJobs(); }} />}
         showsVerticalScrollIndicator={false}>
@@ -360,6 +414,28 @@ const createStyles = (colors, responsive = {}) => {
     scroll: { alignItems: 'center' },
     loadingC: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     loadingT: { marginTop: 12, color: colors.textSecondary },
+
+    // Custom Header
+    customHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background },
+    headerBack: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+    headerLogo: { height: 32, width: 120 },
+    myAppsBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: BRAND + '12', borderWidth: 1, borderColor: BRAND + '30' },
+    myAppsBtnT: { fontSize: 12, fontWeight: '600', color: BRAND },
+    myAppsBadge: { backgroundColor: BRAND, borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 },
+    myAppsBadgeT: { fontSize: 10, fontWeight: '700', color: '#fff' },
+
+    // My Applications Modal
+    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    myAppsModal: { backgroundColor: colors.surface, borderRadius: 16, padding: 24, width: '100%', maxWidth: 500, maxHeight: '80%' },
+    myAppsModalHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+    myAppsModalTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
+    myAppItem: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 12, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
+    myAppTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 2 },
+    myAppMeta: { fontSize: 12, color: colors.textSecondary },
+    myAppDate: { fontSize: 11, color: colors.textSecondary, marginTop: 2, fontStyle: 'italic' },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, marginLeft: 10 },
+    statusDot: { width: 7, height: 7, borderRadius: 4 },
+    statusText: { fontSize: 11, fontWeight: '600' },
 
     // Hero — full-width with background image
     hero: { width: '100%', position: 'relative', overflow: 'hidden' },
