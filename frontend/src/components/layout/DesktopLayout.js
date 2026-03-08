@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -29,7 +29,7 @@ export default function DesktopLayout({
   hideProfileCard = false,
 }) {
   const { colors } = useTheme();
-  const { user, isJobSeeker, isVerifiedReferrer, isAdmin } = useAuth();
+  const { user, isJobSeeker, isVerifiedReferrer, isVerifiedUser, isAdmin, currentWork } = useAuth();
   const { isDesktop } = useResponsive();
   const navigation = useNavigation();
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
@@ -78,6 +78,9 @@ export default function DesktopLayout({
     ? (company ? `${jobTitle} at ${company}` : jobTitle)
     : (education ? `${education}${inst ? ` at ${inst}` : ''}` : '');
 
+  const currentWorkLogo = currentWork?.LogoURL || null;
+  const currentWorkCompany = currentWork?.CompanyName || company || '';
+
   // Smart context-aware sidebar links based on current screen
   const getSmartLinks = () => {
     if (sidebarLinks) return sidebarLinks; // explicit override
@@ -88,7 +91,8 @@ export default function DesktopLayout({
         { icon: 'bookmark-outline', label: 'Saved Jobs', screen: 'SavedJobs' },
         { icon: 'document-text-outline', label: 'Applications', screen: 'Applications' },
         { icon: 'sparkles-outline', label: 'AI Jobs', screen: 'AIRecommendedJobs' },
-        { icon: 'people-outline', label: 'My Referrals', screen: 'MyReferralRequests' },
+        { icon: 'send-outline', label: 'My Referral Requests', screen: 'MyReferralRequests' },
+        { icon: 'card-outline', label: 'Recharge Wallet', screen: 'WalletRecharge' },
       ];
     }
 
@@ -100,29 +104,6 @@ export default function DesktopLayout({
         { icon: 'lock-closed-outline', label: 'Holds', screen: 'WalletHolds' },
         { icon: 'trending-up-outline', label: 'Earnings', screen: 'Earnings' },
         { icon: 'pricetag-outline', label: 'Promo Codes', screen: 'PromoCodes' },
-      ];
-    }
-
-    // Referral context
-    if (['MyReferralRequests', 'ReferralTracking', 'Referral', 'BecomeReferrer', 'AskReferral'].includes(currentRoute)) {
-      return [
-        { icon: 'send-outline', label: 'My Referral Requests', screen: 'MyReferralRequests' },
-        { icon: 'wallet-outline', label: 'Wallet', screen: 'Wallet' },
-        ...(isVerifiedReferrer || isAdmin 
-          ? [{ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' }] 
-          : [{ icon: 'shield-checkmark-outline', label: 'Become a Referrer 🚀', screen: 'BecomeReferrer' }]
-        ),
-        { icon: 'briefcase-outline', label: 'Browse Jobs', screen: 'Jobs', isTab: true },
-      ];
-    }
-
-    // Profile / Settings context
-    if (['Profile', 'Settings', 'ViewProfile', 'ProfileViews'].includes(currentRoute)) {
-      return [
-        { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
-        { icon: 'eye-outline', label: 'Profile Views', screen: 'ProfileViews' },
-        { icon: 'wallet-outline', label: 'Wallet', screen: 'Wallet' },
-        { icon: 'help-circle-outline', label: 'Help & Support', screen: 'Support' },
       ];
     }
 
@@ -138,14 +119,13 @@ export default function DesktopLayout({
 
     // Default (Home, Services, etc.)
     return [
-      { icon: 'bookmark-outline', label: 'Saved Jobs', screen: 'SavedJobs' },
-      { icon: 'document-text-outline', label: 'Applications', screen: 'Applications' },
-      { icon: 'people-outline', label: 'My Referrals', screen: 'MyReferralRequests' },
-      ...(isVerifiedReferrer || isAdmin 
-        ? [{ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' }] 
-        : [{ icon: 'shield-checkmark-outline', label: 'Become a Referrer 🚀', screen: 'BecomeReferrer' }]
+      ...(!isVerifiedUser ? [{ icon: 'checkmark-circle-outline', label: 'Get Verified', screen: 'GetVerified' }] : []),
+      ...(!isVerifiedReferrer && !isAdmin
+        ? [{ icon: 'shield-checkmark-outline', label: 'Become a Referrer', screen: 'BecomeReferrer' }]
+        : [{ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' }]
       ),
       { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
+      { icon: 'card-outline', label: 'Recharge Wallet', screen: 'WalletRecharge' },
     ];
   };
 
@@ -178,7 +158,22 @@ export default function DesktopLayout({
                 )}
               </TouchableOpacity>
               <TouchableOpacity onPress={() => navigateTo('Profile')}>
-                <Text style={[styles.profileName, { color: colors.text }]}>{userName}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <Text style={[styles.profileName, { color: colors.text }]}>{userName}</Text>
+                  {isVerifiedUser && (
+                    <MaterialIcons name="verified" size={16} color={colors.primary} />
+                  )}
+                  {isVerifiedReferrer && currentWorkLogo ? (
+                    <CachedImage
+                      source={{ uri: currentWorkLogo }}
+                      style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: colors.success }}
+                    />
+                  ) : isVerifiedReferrer ? (
+                    <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: colors.success + '20', borderWidth: 1.5, borderColor: colors.success, justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="business" size={10} color={colors.success} />
+                    </View>
+                  ) : null}
+                </View>
               </TouchableOpacity>
               {userTitle ? <Text style={[styles.profileTitle, { color: colors.textSecondary }]} numberOfLines={2}>{userTitle}</Text> : null}
               {location ? (

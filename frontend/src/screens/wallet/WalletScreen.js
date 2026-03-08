@@ -183,7 +183,7 @@ export default function WalletScreen({ navigation, route }) {
   return (
     <View style={styles.container}>
       <SubScreenHeader title="My Wallet" directBack="Home" />
-      <View style={styles.innerContainer}>
+      <ScrollView style={styles.innerContainer} contentContainerStyle={{ paddingBottom: 40 }}>
       {/* Wallet Balance Card */}
       <View style={styles.balanceCard}>
         {/* Top Row: Total Balance + Available/Hold Info */}
@@ -321,7 +321,7 @@ export default function WalletScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
       </View>
-      </View>
+      </ScrollView>
 
       {/* Withdraw Modal */}
       <Modal

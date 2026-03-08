@@ -214,7 +214,7 @@ const PromoCodesScreen = ({ navigation }) => {
       <SubScreenHeader title="Promo Codes" directBack="WalletRecharge" />
       <View style={styles.content}>
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { maxWidth, alignSelf: 'center', width: '100%' }]}
+          contentContainerStyle={[styles.scrollContent, { maxWidth: 800, alignSelf: 'center', width: '100%' }]}
           showsVerticalScrollIndicator={false}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />}
         >
