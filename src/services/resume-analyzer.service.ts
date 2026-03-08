@@ -21,14 +21,15 @@ import { dbService } from './database.service';
 
 const pdfParse = require('pdf-parse');
 
-/** Gemini API key from environment */
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+/** Gemini API key — dedicated key for resume services so job enrichment doesn't consume all tokens */
+const GEMINI_API_KEY = process.env.GEMINI_RESUME_API_KEY || process.env.GEMINI_API_KEY || '';
 
 /** Gemini API endpoint - using Gemini 2.5 Flash for best price-performance */
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 /** Groq API key from environment (fallback when Gemini rate limited) */
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+/** Uses dedicated GROQ_RESUME_API_KEY so job enrichment doesn't consume all tokens */
+const GROQ_API_KEY = process.env.GROQ_RESUME_API_KEY || process.env.GROQ_API_KEY || '';
 
 /** Groq API endpoint - using Llama 3.3 70B */
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';

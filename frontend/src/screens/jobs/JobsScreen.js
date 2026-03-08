@@ -20,6 +20,7 @@ import { createStyles } from './JobsScreen.styles';
 import { showToast } from '../../components/Toast';
 import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
+import useWebInfiniteScroll from '../../hooks/useWebInfiniteScroll';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
 import { getCached, hasCached, setCache, invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import JobDetailsScreen from './JobDetailsScreen';
@@ -1043,6 +1044,18 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     }
   }, [loading, loadingMore, pagination.hasMore, loadMoreJobs]);
 
+  // ===== IntersectionObserver-based infinite scroll for web stack screens =====
+  // On mobile web, ScrollView's onScroll doesn't fire inside React Navigation's
+  // stack card. The shared hook watches a sentinel element via IntersectionObserver.
+  const jobListScrollRef = useRef(null);
+  const webSentinelRef = useWebInfiniteScroll({
+    loading,
+    loadingMore,
+    hasMore: pagination.hasMore,
+    loadMore: loadMoreJobs,
+    enabled: isStackScreen && !isDesktopWeb,
+  });
+
   // Smart pagination monitoring with improved UX
   useEffect(() => {
     if (loading || loadingMore) return;
@@ -2037,6 +2050,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         {/* Job List */}
         <ScrollView
           style={styles.jobList}
+          ref={jobListScrollRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.jobListContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -2052,6 +2066,11 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
             </View>
+          )}
+
+          {/* Sentinel for IntersectionObserver infinite scroll (web stack screens) */}
+          {Platform.OS === 'web' && isStackScreen && !isDesktopWeb && pagination.hasMore && (
+            <View ref={webSentinelRef} style={{ height: 1, width: '100%' }} />
           )}
           </ResponsiveContainer>
         </ScrollView>

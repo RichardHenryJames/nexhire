@@ -14,10 +14,11 @@
 
 import { dbService } from './database.service';
 
-// ── Gemini AI Config ────────────────────────────────────────
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+// ── AI Config (dedicated keys for resume services) ─────────
+const GEMINI_API_KEY = process.env.GEMINI_RESUME_API_KEY || process.env.GEMINI_API_KEY || '';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+// Dedicated Groq key for resume services — job enrichment uses its own GROQ_API_KEY
+const GROQ_API_KEY = process.env.GROQ_RESUME_API_KEY || process.env.GROQ_API_KEY || '';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // ── Types ───────────────────────────────────────────────────

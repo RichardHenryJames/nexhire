@@ -21,6 +21,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import VerifyReferralModal from '../../components/modals/VerifyReferralModal';
 import useResponsive from '../../hooks/useResponsive';
+import useWebInfiniteScroll from '../../hooks/useWebInfiniteScroll';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 
@@ -111,6 +112,14 @@ export default function MyReferralRequestsScreen() {
       loadMoreRequests();
     }
   }, [loading, loadingMore, pagination.hasMore, loadMoreRequests]);
+
+  // Web infinite scroll: IntersectionObserver watches sentinel at bottom of list
+  const webSentinelRef = useWebInfiniteScroll({
+    loading,
+    loadingMore,
+    hasMore: pagination.hasMore,
+    loadMore: loadMoreRequests,
+  });
 
   // Auto-load more if content doesn't fill the viewport after initial load
   useEffect(() => {
@@ -527,6 +536,9 @@ export default function MyReferralRequestsScreen() {
               <ActivityIndicator size="small" color={colors.primary} />
               <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more requests...</Text>
             </View>
+          )}
+          {Platform.OS === 'web' && pagination.hasMore && (
+            <View ref={webSentinelRef} style={{ height: 1, width: '100%' }} />
           )}
           </>
         )}

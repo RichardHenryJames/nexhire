@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
+import useWebInfiniteScroll from '../../hooks/useWebInfiniteScroll';
 import { showToast } from '../../components/Toast';
 import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 
@@ -103,6 +104,14 @@ const SavedJobsScreen = ({ navigation }) => {
       loadMoreSavedJobs();
     }
   }, [loading, loadingMore, pagination.hasMore, savedJobs.length, loadMoreSavedJobs]);
+
+  // Web infinite scroll: IntersectionObserver watches sentinel at bottom of list
+  const webSentinelRef = useWebInfiniteScroll({
+    loading,
+    loadingMore,
+    hasMore: pagination.hasMore,
+    loadMore: loadMoreSavedJobs,
+  });
 
   // Initial load
   useEffect(() => {
@@ -232,12 +241,19 @@ const SavedJobsScreen = ({ navigation }) => {
           maxToRenderPerBatch={5}
           initialNumToRender={10}
           removeClippedSubviews={Platform.OS !== 'web'}
-          ListFooterComponent={loadingMore ? (
-            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
-            </View>
-          ) : null}
+          ListFooterComponent={
+            <>
+              {loadingMore && (
+                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more jobs...</Text>
+                </View>
+              )}
+              {Platform.OS === 'web' && pagination.hasMore && (
+                <View ref={webSentinelRef} style={{ height: 1, width: '100%' }} />
+              )}
+            </>
+          }
         />
       </View>
     </View>

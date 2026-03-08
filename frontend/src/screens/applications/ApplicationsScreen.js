@@ -28,6 +28,7 @@ import { showToast } from '../../components/Toast';
 import { useCustomAlert } from '../../components/CustomAlert';
 import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import useResponsive from '../../hooks/useResponsive';
+import useWebInfiniteScroll from '../../hooks/useWebInfiniteScroll';
 import { typography } from '../../styles/theme';
 
 // Ad configuration - Google AdSense
@@ -186,6 +187,14 @@ export default function ApplicationsScreen({ navigation }) {
       fetchApplications(false);
     }
   };
+
+  // Web infinite scroll: IntersectionObserver watches sentinel at bottom of list
+  const webSentinelRef = useWebInfiniteScroll({
+    loading,
+    loadingMore: refreshing,
+    hasMore: pagination.page < pagination.totalPages,
+    loadMore: loadMoreApplications,
+  });
 
   const getStatusColor = (statusId) => {
     // Map status IDs to colors based on typical application statuses
@@ -798,7 +807,14 @@ export default function ApplicationsScreen({ navigation }) {
           onEndReached={loadMoreApplications}
           onEndReachedThreshold={0.2}
           ListEmptyComponent={<EmptyState />}
-          ListFooterComponent={<LoadingFooter />}
+          ListFooterComponent={
+            <>
+              <LoadingFooter />
+              {Platform.OS === 'web' && pagination.page < pagination.totalPages && (
+                <View ref={webSentinelRef} style={{ height: 1, width: '100%' }} />
+              )}
+            </>
+          }
           showsVerticalScrollIndicator={false}
           removeClippedSubviews={Platform.OS !== 'web'}
           maxToRenderPerBatch={10}
