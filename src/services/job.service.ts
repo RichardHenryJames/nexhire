@@ -703,12 +703,15 @@ export class JobService {
                 return row;
             });
 
-            // Sort: tier (Elite>Premium>Standard) > titleScore DESC > prefScore DESC > workplace order > recency
-            const tierOrder: Record<string, number> = { 'Elite': 0, 'Premium': 1, 'Standard': 2 };
+            // Sort: India first > titleScore DESC > prefScore DESC > workplace order > recency
+            // No tier boosting — JobsLandingScreen has dedicated Top MNC section
             scored.sort((a: any, b: any) => {
-                const ta = tierOrder[a.OrganizationTier] ?? 2;
-                const tb = tierOrder[b.OrganizationTier] ?? 2;
-                if (ta !== tb) return ta - tb;
+                // India jobs first
+                const countryA = (a.Country || '').toLowerCase();
+                const countryB = (b.Country || '').toLowerCase();
+                const isIndiaA = (countryA === 'in' || countryA === 'india') ? 0 : 1;
+                const isIndiaB = (countryB === 'in' || countryB === 'india') ? 0 : 1;
+                if (isIndiaA !== isIndiaB) return isIndiaA - isIndiaB;
                 if (b._titleScore !== a._titleScore) return b._titleScore - a._titleScore;
                 if (b._prefScore !== a._prefScore) return b._prefScore - a._prefScore;
                 const wa = wpOrder[a.WorkplaceTypeID] || 4;
@@ -1322,11 +1325,14 @@ export class JobService {
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 fetched = scored.slice(offset, offset + pageSizeNum + 1);
             } else {
+                // Default: boost India jobs first (most users are Indian), then by date
+                // Country column is in IX_Jobs_Optimized_GetSearch covering index
+                const indiaBoostSql = `CASE WHEN j.Country IN ('IN', 'India', 'india') THEN 0 ELSE 1 END`;
                 const orderPrefix = skipPersonalization
-                    ? '' // No tier boosting — JobsLandingScreen has dedicated Top MNC section
+                    ? `${indiaBoostSql}, ` // No personalization — just India first, then newest
                     : (hasSearchText
-                        ? `${preferenceScoreSql} DESC, `
-                        : `${preferenceScoreSql} DESC, `);
+                        ? `${indiaBoostSql}, ${preferenceScoreSql} DESC, `
+                        : `${indiaBoostSql}, ${preferenceScoreSql} DESC, `);
 
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 dataQuery += ` ORDER BY ${orderPrefix}j.PublishedAt DESC, j.JobID DESC 

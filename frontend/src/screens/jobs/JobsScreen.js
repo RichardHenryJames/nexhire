@@ -1251,7 +1251,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryDark} />
-       <Text style={[styles.loadingText, { marginTop: 12 }]}>Loading jobs...</Text>
+       <Text style={[styles.loadingText, { marginTop: 12 }]}>Curating jobs for you...</Text>
         </View>
    );
     }

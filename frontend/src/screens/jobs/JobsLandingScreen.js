@@ -20,6 +20,9 @@ import CachedImage from '../../components/CachedImage';
 import TabHeader from '../../components/TabHeader';
 import DesktopLayout from '../../components/layout/DesktopLayout';
 import FilterModal from '../../components/jobs/FilterModal';
+import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
+import { usePricing } from '../../contexts/PricingContext';
+import { showToast } from '../../components/Toast';
 import { getCached, hasCached, setCache, CACHE_KEYS } from '../../utils/homeCache';
 
 /**
@@ -80,6 +83,55 @@ export default function JobsLandingScreen({ navigation, route }) {
   const handleFilterClear = useCallback(() => setFilterDraft({ ...EMPTY_FILTERS }), []);
   const handleFilterChange = useCallback((patch) => setFilterDraft(prev => ({ ...prev, ...patch })), []);
 
+  // AI Jobs access check + payment modal (handled here, not in JobsScreen)
+  const { pricing } = usePricing();
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [aiWalletBalance, setAiWalletBalance] = useState(0);
+  const [aiInsufficientBalance, setAiInsufficientBalance] = useState(false);
+  const [aiChecking, setAiChecking] = useState(false);
+
+  const handleAIJobsPress = useCallback(async () => {
+    if (!user) { navigation.navigate('Auth'); return; }
+    if (!isJobSeeker) { showToast('Only job seekers can use AI job recommendations', 'error'); return; }
+    setAiChecking(true);
+    try {
+      // Check if user already has active AI access
+      const accessStatus = await refopenAPI.apiCall('/access/status?type=ai_jobs');
+      if (accessStatus?.success && accessStatus.data?.hasActiveAccess) {
+        navigation.navigate('AIRecommendedJobs');
+        return;
+      }
+    } catch (e) { /* fall through to payment */ }
+    // Need to pay — get wallet balance
+    try {
+      const bal = await refopenAPI.getWalletBalance();
+      const current = bal?.success ? (bal.data?.availableBalance ?? bal.data?.balance ?? 0) : 0;
+      setAiWalletBalance(current);
+      setAiInsufficientBalance(current < pricing.aiJobsCost);
+      setShowAIModal(true);
+    } catch (e) {
+      setAiWalletBalance(0);
+      setAiInsufficientBalance(true);
+      setShowAIModal(true);
+    } finally {
+      setAiChecking(false);
+    }
+  }, [user, isJobSeeker, navigation, pricing]);
+
+  const handleAIConfirm = useCallback(() => {
+    setShowAIModal(false);
+    if (!aiInsufficientBalance) {
+      navigation.navigate('AIRecommendedJobs');
+    }
+  }, [aiInsufficientBalance, navigation]);
+
+  const handleAICancel = useCallback(() => {
+    setShowAIModal(false);
+    if (aiInsufficientBalance) {
+      navigation.navigate('WalletRecharge');
+    }
+  }, [aiInsufficientBalance, navigation]);
+
   // Navigate to full jobs list with search
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -93,14 +145,16 @@ export default function JobsLandingScreen({ navigation, route }) {
     abortRef.current = controller;
     const sig = { signal: controller.signal };
 
-    if (!isRefresh) setLoading(true);
+    // Only show loading spinner on first load (no cached data)
+    // On refresh, keep existing data visible — no flash
+    if (!isRefresh && !hasCached(CACHE_KEYS.RECENT_JOBS)) setLoading(true);
 
     try {
-      // Parallel fetch: recommended, F500, recent, reference data
+      // Parallel fetch: recommended, F500, recent (page 2 for variety), reference data
       const [recRes, f500Res, recentRes, refRes] = await Promise.all([
         refopenAPI.getJobs(1, 6, {}).catch(() => ({ success: false })),
         refopenAPI.getJobs(1, 6, { isFortune500: true }).catch(() => ({ success: false })),
-        refopenAPI.getJobs(1, 6, {}).catch(() => ({ success: false })),
+        refopenAPI.getJobs(2, 6, {}).catch(() => ({ success: false })),
         refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']).catch(() => ({ success: false })),
       ]);
 
@@ -211,13 +265,28 @@ export default function JobsLandingScreen({ navigation, route }) {
     );
   };
 
+  // Engaging loading messages (Naukri-style)
+  const loadingMessages = useMemo(() => [
+    'Curating jobs for you...',
+    'Finding the best matches...',
+    'Scanning top companies...',
+    'Personalizing recommendations...',
+    'Almost there...',
+  ], []);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setInterval(() => setLoadingMsgIdx(i => (i + 1) % loadingMessages.length), 2000);
+    return () => clearInterval(timer);
+  }, [loading, loadingMessages]);
+
   if (loading) {
     return (
       <View style={styles.container}>
         <TabHeader title="Jobs" centerContent={null} gradient={null} showMessages={false} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading jobs...</Text>
+          <Text style={styles.loadingText}>{loadingMessages[loadingMsgIdx]}</Text>
         </View>
       </View>
     );
@@ -267,7 +336,7 @@ export default function JobsLandingScreen({ navigation, route }) {
             style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
             onPress={() => {
               if (chip.action === 'ai') {
-                navigation.navigate('JobsList', { screenTitle: 'AI Recommended Jobs', openAIJobs: true });
+                handleAIJobsPress();
               } else if (chip.action === 'referrer') {
                 navigation.navigate('JobsList', { screenTitle: 'Referrer Jobs' });
               } else {
@@ -331,6 +400,19 @@ export default function JobsLandingScreen({ navigation, route }) {
         workplaceTypes={workplaceTypes}
         initialSection={initialFilterSection}
       />
+
+      {/* AI Jobs confirmation modal */}
+      <ConfirmPurchaseModal
+        visible={showAIModal}
+        currentBalance={Number(aiWalletBalance || 0)}
+        requiredAmount={pricing.aiJobsCost}
+        contextType="ai-jobs"
+        itemName="Get 50 personalized job matches"
+        accessDays={pricing.aiAccessDurationDays}
+        onProceed={handleAIConfirm}
+        onAddMoney={handleAICancel}
+        onCancel={() => setShowAIModal(false)}
+      />
     </View>
   );
 }
@@ -376,10 +458,10 @@ const createStyles = (colors, responsive = {}) => {
       marginTop: 4,
     },
     section: {
-      marginBottom: isMobile ? 16 : 24,
+      marginBottom: isMobile ? 20 : 28,
       backgroundColor: colors.surface,
       borderRadius: isDesktopWeb ? 12 : 8,
-      padding: isMobile ? 12 : 20,
+      padding: isMobile ? 14 : 20,
       ...(isDesktopWeb ? {
         borderWidth: 1,
         borderColor: colors.border + '60',

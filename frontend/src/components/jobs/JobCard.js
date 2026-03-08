@@ -71,9 +71,9 @@ const JobCard = ({
     const d = new Date(ds); const now = new Date();
     const h = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60));
     if (h < 1) return 'Just posted';
-    if (h < 24) return `${h} hours ago`;
-    const days = Math.floor(h / 24); if (days < 7) return `${days} days ago`;
-    const w = Math.floor(days / 7); if (w < 4) return `${w} weeks ago`;
+    if (h < 24) return `${h} ${h === 1 ? 'hour' : 'hours'} ago`;
+    const days = Math.floor(h / 24); if (days < 7) return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    const w = Math.floor(days / 7); if (w < 4) return `${w} ${w === 1 ? 'week' : 'weeks'} ago`;
     return d.toLocaleDateString();
   })();
 
@@ -133,6 +133,26 @@ const JobCard = ({
               {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
             </View>
           )}
+          {/* FOMO insight — contextual urgency/social proof */}
+          {(() => {
+            const ds = job.PublishedAt || job.CreatedAt;
+            const hoursAgo = ds ? Math.floor((Date.now() - new Date(ds).getTime()) / (1000 * 60 * 60)) : 999;
+            const isElite = job.OrganizationTier === 'Elite' || job.IsFortune500;
+            const hasSalary = job.SalaryRangeMin || job.SalaryRangeMax;
+            const isFresher = job.ExperienceMin === 0 || job.ExperienceMin == null;
+            const isRemote = job.IsRemote;
+            let fomoText = null;
+            let fomoColor = colors.success || '#22c55e';
+            if (hoursAgo < 24) { fomoText = '\u26A1 Be an early applicant'; }
+            else if (hoursAgo < 72) { fomoText = '\ud83d\udd25 Posted recently'; fomoColor = colors.primary; }
+            else if (hoursAgo < 168) { fomoText = '\ud83d\udcc8 Actively hiring'; fomoColor = colors.primary; }
+            else if (isFresher) { fomoText = '\ud83c\udfaf Open to freshers'; }
+            else if (isRemote) { fomoText = '\ud83c\udf0d Work from anywhere'; fomoColor = colors.info || '#06b6d4'; }
+            else if (isElite) { fomoText = '\ud83c\udfe2 Top MNC \u2022 High response rate'; fomoColor = colors.warning || '#f59e0b'; }
+            else if (hasSalary) { fomoText = '\ud83d\udcb0 Salary disclosed'; }
+            if (!fomoText) return null;
+            return <Text style={[styles.fomoText, { color: fomoColor }]}>{fomoText}</Text>;
+          })()}
         </View>
       </View>
 
@@ -283,12 +303,13 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
   company: {
     fontSize: 14,
     color: colors.gray600 || colors.textSecondary,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginBottom: 4,
   },
   metaItem: {
     flexDirection: 'row',
@@ -305,6 +326,12 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
   badgeRow: {
     flexDirection: 'row',
     gap: 6,
+    marginTop: 4,
+  },
+  fomoText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 6,
   },
   metaBadge: {
     fontSize: 11,
