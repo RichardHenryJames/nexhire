@@ -1013,6 +1013,596 @@ const jobs = [
 <li>Collect student feedback and share insights with the team</li>
 </ul>`,
     benefits: '100% Remote | Exclusive merch | Certificate + LOR | PPO opportunity | LinkedIn badge | Networking'
+  },
+  {
+    title: 'Senior Full Stack Engineer',
+    dept: 'Engineering',
+    location: 'Bengaluru, India',
+    workplace: 'Hybrid',
+    jobType: 'Full-time',
+    expMin: 3, expMax: 5,
+    salaryMin: 1800000, salaryMax: 3000000, currency: 'INR',
+    skills: 'React Native, Node.js, TypeScript, Azure, SQL Server, System Design, CI/CD, Architecture',
+    desc: `<h2>Senior Full Stack Engineer</h2>
+
+<h3>About the Role</h3>
+<p>We're looking for a <strong>Senior Full Stack Engineer (3-5 years)</strong> to lead technical initiatives across our React Native app and Node.js backend. You'll own complex features end-to-end, mentor junior engineers, drive architecture decisions, and set engineering standards for the team.</p>
+<p>This is the role for someone who's shipped production code at scale, can design systems that handle thousands of concurrent users, and wants the ownership that only an early-stage startup offers. You'll work directly with the founders on technical strategy.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Lead design and implementation of <strong>complex features</strong> — referral workflows, payment systems, AI pipelines, real-time messaging</li>
+<li>Architect <strong>scalable systems</strong> — design database schemas, API contracts, caching strategies, and background job processors</li>
+<li>Mentor <strong>junior engineers and interns</strong> — code reviews, pair programming, technical guidance</li>
+<li>Drive <strong>engineering best practices</strong> — testing strategies, CI/CD improvements, monitoring, documentation</li>
+<li>Optimize <strong>performance</strong> — identify bottlenecks, reduce API latencies, improve app load times</li>
+<li>Collaborate with founders on <strong>technical roadmap</strong> and architecture decisions</li>
+<li>Build <strong>AI-powered features</strong> — integrate Gemini, Groq, and custom ML pipelines</li>
+<li>Handle <strong>production incidents</strong> — debug, fix, and implement preventive measures</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>3-5 years of professional experience in <strong>full-stack development</strong></li>
+<li>Strong proficiency in <strong>JavaScript/TypeScript, React/React Native, and Node.js</strong></li>
+<li>Experience with <strong>SQL databases</strong> — query optimization, schema design, indexing strategies</li>
+<li>Understanding of <strong>system design</strong> — scalability, reliability, distributed systems basics</li>
+<li>Experience with <strong>cloud platforms</strong> (Azure preferred) — serverless, storage, CDN, monitoring</li>
+<li>Track record of <strong>shipping production features</strong> that serve real users at scale</li>
+<li>Strong <strong>communication skills</strong> — can explain technical concepts to non-technical stakeholders</li>
+<li>Passion for <strong>mentoring</strong> — you enjoy helping junior engineers grow</li>
+</ul>
+
+<h3>Benefits &amp; Perks</h3>
+<ul>
+<li><strong>₹18-30 LPA</strong> — premium compensation for senior talent</li>
+<li><strong>Hybrid work:</strong> 3 days Bengaluru office + 2 days remote</li>
+<li><strong>Early-stage equity</strong> — significant ownership for senior hires</li>
+<li><strong>Technical leadership</strong> — shape the architecture from the ground up</li>
+<li><strong>Direct founder access</strong> — sit in on strategy and product meetings</li>
+<li><strong>Health insurance</strong> for you and family</li>
+<li><strong>MacBook Pro</strong> + all necessary hardware</li>
+<li><strong>Conference budget</strong> — speak at or attend any tech conference</li>
+</ul>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Resume + GitHub Review</strong> (1-2 days)</li>
+<li><strong>System Design Round</strong> (60 min) — Design a scalable feature</li>
+<li><strong>Technical Deep-Dive</strong> (60 min) — Live coding + architecture discussion</li>
+<li><strong>Culture + Leadership Round</strong> (45 min) — With founders</li>
+<li><strong>Offer</strong> (within 48 hours)</li>
+</ol>
+<p><em>If you've built systems that serve thousands of users and want to lead engineering at a fast-growing startup — let's talk.</em></p>`,
+    requirements: `<ul>
+<li>3-5 years full-stack experience (JavaScript/TypeScript, React/React Native, Node.js)</li>
+<li>Strong SQL and database design skills</li>
+<li>System design and architecture experience</li>
+<li>Cloud platform experience (Azure/AWS/GCP)</li>
+<li>Track record of shipping production features at scale</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Lead design and implementation of complex features end-to-end</li>
+<li>Architect scalable systems — schemas, APIs, caching, background jobs</li>
+<li>Mentor junior engineers — code reviews, pair programming</li>
+<li>Drive engineering best practices — testing, CI/CD, monitoring</li>
+<li>Collaborate with founders on technical roadmap</li>
+</ul>`,
+    benefits: 'Hybrid (3+2) | 18-30 LPA | Early-stage equity | Technical leadership | Direct founder access | Health insurance | Conference budget'
+  },
+  {
+    title: 'Product Manager',
+    dept: 'Product',
+    location: 'Bengaluru, India',
+    workplace: 'Hybrid',
+    jobType: 'Full-time',
+    expMin: 2, expMax: 5,
+    salaryMin: 1500000, salaryMax: 2500000, currency: 'INR',
+    skills: 'Product Strategy, User Research, Agile, Data Analysis, Roadmap, PRDs, A/B Testing, Wireframing',
+    desc: `<h2>Product Manager</h2>
+
+<h3>About the Role</h3>
+<p>We're looking for a <strong>Product Manager</strong> to own the product roadmap at RefOpen. You'll decide what we build, why we build it, and how we measure success. This is a high-impact role where your decisions directly shape the product used by thousands of job seekers daily.</p>
+<p>You'll work at the intersection of engineering, design, data, and business — translating user needs into features that drive growth. If you've ever wanted to own a product from strategy to execution at a company where your work actually matters, this is it.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Own the <strong>product roadmap</strong> — prioritize features based on user data, business goals, and market research</li>
+<li>Write <strong>PRDs and specs</strong> — clear, detailed requirements that engineers can build from</li>
+<li>Conduct <strong>user research</strong> — interviews, surveys, usability tests, session recordings</li>
+<li>Analyze <strong>product metrics</strong> — DAU/MAU, retention, conversion funnels, feature adoption</li>
+<li>Design and run <strong>A/B tests</strong> — validate hypotheses with data before full rollout</li>
+<li>Collaborate with <strong>engineering and design</strong> — sprint planning, daily standups, design reviews</li>
+<li>Monitor <strong>competitors</strong> — LinkedIn, Naukri, Indeed, Glassdoor — identify opportunities</li>
+<li>Define <strong>success metrics</strong> for every feature shipped and track them post-launch</li>
+<li>Present <strong>product strategy</strong> to founders and stakeholders</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>2-5 years of <strong>product management experience</strong> at a tech company or startup</li>
+<li>Strong <strong>analytical skills</strong> — comfortable with SQL, analytics tools, and data-driven decisions</li>
+<li>Experience with <strong>user research methods</strong> — qualitative and quantitative</li>
+<li>Excellent <strong>written communication</strong> — you can write clear PRDs and specs</li>
+<li>Understanding of <strong>agile/scrum</strong> methodologies</li>
+<li>Familiarity with <strong>design tools</strong> (Figma) and basic wireframing</li>
+<li>Experience in <strong>B2C products, marketplaces, or HR-tech</strong> is a strong plus</li>
+<li>MBA or B.Tech from a reputed institution preferred</li>
+</ul>
+
+<h3>Benefits &amp; Perks</h3>
+<ul>
+<li><strong>₹15-25 LPA</strong> based on experience</li>
+<li><strong>Hybrid work:</strong> 3 days Bengaluru office + 2 days remote</li>
+<li><strong>Own the product</strong> — your decisions shape what thousands of users experience</li>
+<li><strong>Direct founder collaboration</strong> — work side-by-side with founders on strategy</li>
+<li><strong>Early-stage equity potential</strong></li>
+<li><strong>Health insurance</strong> for you and family</li>
+<li><strong>Learning budget</strong> — courses, conferences, books</li>
+</ul>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Resume Review</strong> (1-2 days)</li>
+<li><strong>Product Sense Challenge</strong> (take-home, 3-4 hours) — Analyze a RefOpen feature and propose improvements</li>
+<li><strong>Product Deep-Dive</strong> (60 min) — Discuss your approach to prioritization, metrics, and strategy</li>
+<li><strong>Culture Fit + Founder Chat</strong> (30 min)</li>
+<li><strong>Offer</strong> (within 48 hours)</li>
+</ol>
+<p><em>If you've shipped products that users love and can back every decision with data — we want to talk.</em></p>`,
+    requirements: `<ul>
+<li>2-5 years product management experience at a tech company</li>
+<li>Strong analytical skills — SQL, data analysis, metrics</li>
+<li>Experience with user research and A/B testing</li>
+<li>Excellent written communication — PRDs, specs</li>
+<li>Understanding of agile methodologies</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Own the product roadmap and prioritize features</li>
+<li>Write PRDs and specs for engineering</li>
+<li>Conduct user research and analyze product metrics</li>
+<li>Design and run A/B tests to validate features</li>
+<li>Collaborate with engineering, design, and marketing</li>
+</ul>`,
+    benefits: 'Hybrid (3+2) | 15-25 LPA | Own the product | Direct founder collaboration | Equity potential | Health insurance'
+  },
+  {
+    title: 'QA / Test Automation Engineer',
+    dept: 'Engineering',
+    location: 'Bengaluru, India',
+    workplace: 'Hybrid',
+    jobType: 'Full-time',
+    expMin: 1, expMax: 3,
+    salaryMin: 600000, salaryMax: 1400000, currency: 'INR',
+    skills: 'Manual Testing, Automation, Selenium, Cypress, Jest, API Testing, Postman, CI/CD',
+    desc: `<h2>QA / Test Automation Engineer</h2>
+
+<h3>About the Role</h3>
+<p>We're looking for a <strong>QA / Test Automation Engineer</strong> to build and own our quality assurance processes from the ground up. You'll be the person who ensures every feature we ship works flawlessly across Android, iOS, and Web — catching bugs before users do.</p>
+<p>This is a greenfield role — we currently rely on manual testing and developer self-testing. You'll set up automated test suites, define QA processes, and build a culture of quality across the engineering team.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Build <strong>automated test suites</strong> — unit tests, integration tests, end-to-end tests for React Native and Node.js</li>
+<li>Set up <strong>CI/CD test pipelines</strong> — automated tests on every PR using GitHub Actions</li>
+<li>Perform <strong>manual testing</strong> — exploratory testing, regression testing, cross-browser/device testing</li>
+<li>Write <strong>API tests</strong> — validate all backend endpoints with Postman/Newman or Jest</li>
+<li>Create <strong>test plans and test cases</strong> for new features before development starts</li>
+<li>Test across <strong>multiple platforms</strong> — Android, iOS, Chrome, Safari, Firefox, mobile web</li>
+<li>Track and report <strong>bugs</strong> with clear reproduction steps and severity classification</li>
+<li>Define <strong>QA processes</strong> — release checklists, regression suites, quality gates</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>1-3 years of experience in <strong>software testing</strong> (manual + automation)</li>
+<li>Experience with <strong>test automation frameworks</strong> — Selenium, Cypress, Detox, or Playwright</li>
+<li>Proficiency in <strong>JavaScript/TypeScript</strong> for writing test scripts</li>
+<li>Experience with <strong>API testing tools</strong> — Postman, Newman, or similar</li>
+<li>Understanding of <strong>CI/CD pipelines</strong> and how tests integrate into them</li>
+<li>Strong <strong>attention to detail</strong> — you find bugs others miss</li>
+<li>Good <strong>communication skills</strong> — clear bug reports, test documentation</li>
+</ul>
+
+<h3>Benefits &amp; Perks</h3>
+<ul>
+<li><strong>₹6-14 LPA</strong> based on experience</li>
+<li><strong>Hybrid work:</strong> 3 days Bengaluru office + 2 days remote</li>
+<li><strong>Build QA from scratch</strong> — define processes, choose tools, set standards</li>
+<li><strong>Cross-platform exposure</strong> — test on Android, iOS, and Web</li>
+<li><strong>Health insurance</strong> coverage</li>
+<li><strong>Learning budget</strong> — testing certifications, courses</li>
+</ul>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Resume Review</strong> (1-2 days)</li>
+<li><strong>Testing Challenge</strong> (take-home, 2-3 hours) — Write test cases and automate a feature</li>
+<li><strong>Technical Interview</strong> (45 min) — Testing approach, automation, CI/CD</li>
+<li><strong>Culture Fit</strong> (30 min)</li>
+<li><strong>Offer</strong> (within 48 hours)</li>
+</ol>
+<p><em>If you have a passion for quality and want to build QA culture at a fast-growing startup — apply now.</em></p>`,
+    requirements: `<ul>
+<li>1-3 years in software testing (manual + automation)</li>
+<li>Experience with automation frameworks (Selenium, Cypress, Playwright)</li>
+<li>JavaScript/TypeScript proficiency for test scripts</li>
+<li>API testing experience (Postman, Newman)</li>
+<li>Understanding of CI/CD and test integration</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Build automated test suites — unit, integration, E2E tests</li>
+<li>Set up CI/CD test pipelines with GitHub Actions</li>
+<li>Perform manual and exploratory testing across platforms</li>
+<li>Create test plans and bug reports</li>
+<li>Define QA processes and quality standards</li>
+</ul>`,
+    benefits: 'Hybrid (3+2) | 6-14 LPA | Build QA from scratch | Cross-platform testing | Health insurance | Learning budget'
+  },
+  {
+    title: 'SEO Specialist',
+    dept: 'Marketing',
+    location: 'Bengaluru, India',
+    workplace: 'Hybrid',
+    jobType: 'Full-time',
+    expMin: 1, expMax: 3,
+    salaryMin: 500000, salaryMax: 1000000, currency: 'INR',
+    skills: 'SEO, Google Search Console, Ahrefs/SEMrush, Keyword Research, Technical SEO, Link Building, Content Strategy',
+    desc: `<h2>SEO Specialist</h2>
+
+<h3>About the Role</h3>
+<p>We're looking for an <strong>SEO Specialist</strong> to drive organic traffic growth for RefOpen. Search is one of our biggest acquisition channels — thousands of job seekers discover us through Google every month. We need someone who can 10x that number through smart keyword strategy, technical SEO, and content optimization.</p>
+<p>You'll own the entire SEO strategy — from keyword research and on-page optimization to technical SEO audits and link building. This is a high-impact role where your work directly drives user acquisition.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Develop and execute <strong>SEO strategy</strong> — keyword research, content planning, competitive analysis</li>
+<li>Perform <strong>technical SEO audits</strong> — site speed, crawlability, indexing, structured data, Core Web Vitals</li>
+<li>Optimize <strong>on-page SEO</strong> — meta titles, descriptions, headers, internal linking, schema markup</li>
+<li>Build <strong>link building campaigns</strong> — guest posts, digital PR, partnerships, directory listings</li>
+<li>Track and analyze <strong>SEO metrics</strong> — organic traffic, keyword rankings, CTR, conversions using Google Search Console and analytics tools</li>
+<li>Collaborate with <strong>content team</strong> — brief writers on keyword targets, review content for SEO</li>
+<li>Optimize for <strong>local SEO</strong> — job-related searches in Indian cities</li>
+<li>Monitor <strong>algorithm updates</strong> and adapt strategy accordingly</li>
+<li>Create <strong>monthly SEO reports</strong> with insights and recommendations</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>1-3 years of <strong>SEO experience</strong> — agency or in-house</li>
+<li>Proficiency with <strong>SEO tools</strong> — Google Search Console, Ahrefs, SEMrush, or Moz</li>
+<li>Strong understanding of <strong>technical SEO</strong> — HTML, site architecture, page speed, structured data</li>
+<li>Experience with <strong>keyword research</strong> and content strategy</li>
+<li>Understanding of <strong>Google ranking factors</strong> and algorithm updates</li>
+<li>Basic <strong>HTML/CSS knowledge</strong> for implementing on-page changes</li>
+<li>Analytical mindset — comfortable with <strong>data and metrics</strong></li>
+<li>Experience in <strong>B2C SEO</strong> or marketplace SEO is a strong plus</li>
+</ul>
+
+<h3>Benefits &amp; Perks</h3>
+<ul>
+<li><strong>₹5-10 LPA</strong> based on experience</li>
+<li><strong>Hybrid work:</strong> 3 days Bengaluru office + 2 days remote</li>
+<li><strong>High-impact role</strong> — SEO is a primary growth channel</li>
+<li><strong>Tool budget</strong> — Ahrefs, SEMrush, or any SEO tools you need</li>
+<li><strong>Health insurance</strong> coverage</li>
+<li><strong>Learning budget</strong> — SEO courses, conferences</li>
+</ul>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Resume Review</strong> (1-2 days)</li>
+<li><strong>SEO Audit Challenge</strong> (take-home, 2-3 hours) — Audit RefOpen's SEO and propose improvements</li>
+<li><strong>Strategy Discussion</strong> (45 min) — Walk through your approach to growing organic traffic</li>
+<li><strong>Culture Fit</strong> (30 min)</li>
+<li><strong>Offer</strong> (within 48 hours)</li>
+</ol>
+<p><em>If you can show us keyword rankings you've improved and organic traffic you've grown — we want to talk.</em></p>`,
+    requirements: `<ul>
+<li>1-3 years SEO experience (agency or in-house)</li>
+<li>Proficiency with SEO tools (Search Console, Ahrefs, SEMrush)</li>
+<li>Strong technical SEO understanding</li>
+<li>Keyword research and content strategy skills</li>
+<li>Basic HTML/CSS knowledge</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Develop and execute SEO strategy — keywords, content, competitive analysis</li>
+<li>Perform technical SEO audits and fix issues</li>
+<li>Optimize on-page SEO — meta tags, schema, internal linking</li>
+<li>Build link building campaigns and partnerships</li>
+<li>Track organic traffic, rankings, and report monthly</li>
+</ul>`,
+    benefits: 'Hybrid (3+2) | 5-10 LPA | High-impact growth role | SEO tool budget | Health insurance | Learning budget'
+  },
+  {
+    title: 'Technical Writer',
+    dept: 'Engineering',
+    location: 'Bengaluru, India',
+    workplace: 'Hybrid',
+    jobType: 'Full-time',
+    expMin: 0, expMax: 2,
+    salaryMin: 400000, salaryMax: 800000, currency: 'INR',
+    skills: 'Technical Writing, Documentation, API Docs, Markdown, Content Strategy, Developer Experience',
+    desc: `<h2>Technical Writer</h2>
+
+<h3>About the Role</h3>
+<p>We're looking for a <strong>Technical Writer</strong> to create clear, comprehensive documentation for RefOpen's platform. From API documentation and developer guides to help center articles and user onboarding content — you'll make our product easy to understand for everyone.</p>
+<p>This is a unique role where you'll sit between engineering, product, and users — translating complex technical concepts into simple, actionable content. Your work will directly reduce support tickets and improve user experience.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Write and maintain <strong>API documentation</strong> for all backend endpoints</li>
+<li>Create <strong>help center articles</strong> — how-to guides, FAQs, troubleshooting guides</li>
+<li>Build <strong>user onboarding content</strong> — tooltips, in-app guides, welcome sequences</li>
+<li>Document <strong>internal engineering processes</strong> — architecture decisions, runbooks, deployment guides</li>
+<li>Write <strong>release notes and changelogs</strong> for new features</li>
+<li>Create <strong>developer guides</strong> — setup instructions, contribution guidelines, code style guides</li>
+<li>Collaborate with <strong>engineering and product</strong> to understand features and document them accurately</li>
+<li>Maintain <strong>consistency</strong> in terminology, tone, and style across all documentation</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>Excellent <strong>technical writing skills</strong> — clear, concise, well-structured documentation</li>
+<li>Basic understanding of <strong>software development concepts</strong> — APIs, databases, web/mobile apps</li>
+<li>Experience with <strong>Markdown, Git, and documentation tools</strong> (Notion, Confluence, GitBook, or similar)</li>
+<li>Ability to <strong>learn new technologies quickly</strong> and explain them simply</li>
+<li>0-2 years of technical writing experience (strong portfolios from freshers welcome)</li>
+<li>B.Tech or degree in CS, English, Journalism, or related field</li>
+<li>Bonus: Experience with API documentation (Swagger/OpenAPI) or developer documentation</li>
+</ul>
+
+<h3>Benefits &amp; Perks</h3>
+<ul>
+<li><strong>₹4-8 LPA</strong> based on experience</li>
+<li><strong>Hybrid work:</strong> 3 days Bengaluru office + 2 days remote</li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team</li>
+<li><strong>Health insurance</strong> coverage</li>
+<li><strong>Learning budget</strong> — writing courses, tech conferences</li>
+</ul>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Resume + Writing Samples Review</strong> (1-2 days)</li>
+<li><strong>Writing Challenge</strong> (take-home, 2 hours) — Document a RefOpen feature</li>
+<li><strong>Discussion</strong> (30 min) — Walk through your approach to documentation</li>
+<li><strong>Offer</strong> (within 48 hours)</li>
+</ol>
+<p><em>If you can take complex tech and make it simple — send us your best writing samples.</em></p>`,
+    requirements: `<ul>
+<li>Excellent technical writing skills — clear, concise documentation</li>
+<li>Basic understanding of software development concepts</li>
+<li>Experience with Markdown, Git, and documentation tools</li>
+<li>Ability to learn new technologies quickly</li>
+<li>0-2 years experience (strong portfolio from freshers welcome)</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Write API documentation and developer guides</li>
+<li>Create help center articles and user onboarding content</li>
+<li>Document internal engineering processes and runbooks</li>
+<li>Write release notes and changelogs</li>
+<li>Maintain consistency in documentation style</li>
+</ul>`,
+    benefits: 'Hybrid (3+2) | 4-8 LPA | Work with founders | Health insurance | Learning budget'
+  },
+  {
+    title: 'Video Content Creator',
+    dept: 'Marketing',
+    location: 'Remote (India)',
+    workplace: 'Remote',
+    jobType: 'Full-time',
+    expMin: 0, expMax: 2,
+    salaryMin: 400000, salaryMax: 800000, currency: 'INR',
+    skills: 'Video Editing, YouTube, Instagram Reels, CapCut, Premiere Pro, Scripting, Thumbnails',
+    desc: `<h2>Video Content Creator</h2>
+
+<h3>About the Role</h3>
+<p>We're looking for a <strong>Video Content Creator</strong> to build RefOpen's presence on YouTube, Instagram Reels, and LinkedIn through engaging video content. You'll create everything from short-form career tips and job search hacks to product walkthroughs and company culture videos.</p>
+<p>Video is the fastest-growing content format, and we need someone who can create scroll-stopping content that drives awareness and user sign-ups. This is a creative role with full freedom to experiment with formats, styles, and trends.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Create <strong>short-form video content</strong> — Instagram Reels, YouTube Shorts, LinkedIn videos (3-5 per week)</li>
+<li>Produce <strong>long-form YouTube videos</strong> — product walkthroughs, career advice, interview tips (1-2 per month)</li>
+<li>Write <strong>video scripts</strong> — engaging, concise scripts optimized for attention retention</li>
+<li>Design <strong>thumbnails and graphics</strong> — eye-catching visuals that drive clicks</li>
+<li>Create <strong>product demo videos</strong> — showcase RefOpen features for marketing and onboarding</li>
+<li>Film and edit <strong>team culture content</strong> — behind-the-scenes, day-in-the-life, team intros</li>
+<li>Track <strong>video analytics</strong> — views, watch time, engagement, conversions</li>
+<li>Stay on top of <strong>video trends</strong> — use trending audio, formats, and hooks</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>Experience creating <strong>video content</strong> — personal YouTube channel, Instagram page, or professional work</li>
+<li>Proficiency in <strong>video editing tools</strong> — CapCut, Premiere Pro, DaVinci Resolve, or Final Cut Pro</li>
+<li>Understanding of <strong>social media algorithms</strong> — what makes videos go viral on each platform</li>
+<li>Strong <strong>storytelling skills</strong> — you can explain complex topics in under 60 seconds</li>
+<li>Basic <strong>graphic design skills</strong> — Canva, Photoshop, or Figma for thumbnails</li>
+<li>0-2 years experience (strong personal portfolio counts!)</li>
+<li>Passionate about <strong>career content and job search space</strong></li>
+</ul>
+
+<h3>Benefits &amp; Perks</h3>
+<ul>
+<li><strong>₹4-8 LPA</strong> based on experience and portfolio quality</li>
+<li><strong>100% Remote</strong> — work from anywhere in India</li>
+<li><strong>Creative freedom</strong> — pitch your own content ideas</li>
+<li><strong>Equipment budget</strong> — camera, mic, lighting if needed</li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team</li>
+<li><strong>Health insurance</strong> coverage</li>
+</ul>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Portfolio Review</strong> (1-2 days) — Share your best videos</li>
+<li><strong>Video Challenge</strong> (take-home, 3-4 hours) — Create a 60-second reel about RefOpen</li>
+<li><strong>Creative Discussion</strong> (30 min) — Talk through your content strategy</li>
+<li><strong>Offer</strong> (within 48 hours)</li>
+</ol>
+<p><em>If your videos get views and your reels get shares — send us your portfolio.</em></p>`,
+    requirements: `<ul>
+<li>Experience creating video content (personal channel or professional)</li>
+<li>Proficiency in video editing tools (CapCut, Premiere Pro, etc.)</li>
+<li>Understanding of social media algorithms and trends</li>
+<li>Strong storytelling and scripting skills</li>
+<li>0-2 years experience (strong portfolio counts)</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Create short-form video content for Instagram, YouTube, LinkedIn</li>
+<li>Produce long-form YouTube videos on career topics</li>
+<li>Write scripts and design thumbnails</li>
+<li>Create product demo and company culture videos</li>
+<li>Track video analytics and optimize for engagement</li>
+</ul>`,
+    benefits: '100% Remote | 4-8 LPA | Creative freedom | Equipment budget | Work with founders | Health insurance'
+  },
+  {
+    title: 'Customer Success Lead',
+    dept: 'Operations',
+    location: 'Bengaluru, India',
+    workplace: 'Hybrid',
+    jobType: 'Full-time',
+    expMin: 1, expMax: 3,
+    salaryMin: 500000, salaryMax: 1000000, currency: 'INR',
+    skills: 'Customer Support, User Onboarding, CRM, Communication, Problem Solving, Retention, Intercom/Freshdesk',
+    desc: `<h2>Customer Success Lead</h2>
+
+<h3>About the Role</h3>
+<p>We're looking for a <strong>Customer Success Lead</strong> to own the entire user experience after sign-up. You'll ensure job seekers and referrers have a smooth onboarding, resolve issues quickly, collect feedback that shapes our product, and drive user retention.</p>
+<p>This is a role for someone who genuinely cares about helping people and can turn frustrated users into loyal advocates. You'll be the voice of the user inside RefOpen — every bug report, feature request, and compliment flows through you.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Own <strong>user onboarding</strong> — ensure new users complete their profiles, upload resumes, and understand the platform</li>
+<li>Handle <strong>support tickets</strong> — respond to user queries via in-app chat, email, and social media</li>
+<li>Collect and organize <strong>user feedback</strong> — categorize feature requests, bug reports, and pain points</li>
+<li>Create <strong>self-service resources</strong> — FAQ articles, help center content, video tutorials</li>
+<li>Track <strong>user satisfaction metrics</strong> — NPS, CSAT, response time, resolution rate</li>
+<li>Identify <strong>churn signals</strong> — proactively reach out to at-risk users</li>
+<li>Collaborate with <strong>product and engineering</strong> — communicate user pain points and feature requests</li>
+<li>Build <strong>support processes</strong> — escalation workflows, SLA definitions, knowledge base</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>1-3 years of experience in <strong>customer support, customer success, or user operations</strong></li>
+<li>Excellent <strong>written and verbal communication</strong> — professional, empathetic, and clear</li>
+<li>Experience with <strong>support tools</strong> — Intercom, Freshdesk, Zendesk, or similar</li>
+<li>Strong <strong>problem-solving skills</strong> — you can debug user issues without engineering help</li>
+<li><strong>Empathy-driven</strong> — you understand what frustrated users need</li>
+<li>Data-literate — comfortable tracking metrics and creating reports</li>
+<li>Experience in <strong>B2C, marketplaces, or tech platforms</strong> is a plus</li>
+</ul>
+
+<h3>Benefits &amp; Perks</h3>
+<ul>
+<li><strong>₹5-10 LPA</strong> based on experience</li>
+<li><strong>Hybrid work:</strong> 3 days Bengaluru office + 2 days remote</li>
+<li><strong>Be the voice of users</strong> — your feedback directly shapes the product</li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team</li>
+<li><strong>Health insurance</strong> coverage</li>
+<li><strong>Learning budget</strong> — customer success certifications, courses</li>
+</ul>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Resume Review</strong> (1-2 days)</li>
+<li><strong>Support Scenario Challenge</strong> (take-home, 1-2 hours) — Handle 5 simulated user tickets</li>
+<li><strong>Discussion</strong> (30 min) — Talk through your approach to user success</li>
+<li><strong>Offer</strong> (within 48 hours)</li>
+</ol>
+<p><em>If you love helping people and can turn support into a growth engine — apply now.</em></p>`,
+    requirements: `<ul>
+<li>1-3 years in customer support/success or user operations</li>
+<li>Excellent written and verbal communication</li>
+<li>Experience with support tools (Intercom, Freshdesk, Zendesk)</li>
+<li>Strong problem-solving and empathy skills</li>
+<li>Data-literate — tracking metrics and creating reports</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Own user onboarding and ensure smooth first experience</li>
+<li>Handle support tickets via chat, email, and social media</li>
+<li>Collect and organize user feedback for product team</li>
+<li>Create FAQ articles and help center content</li>
+<li>Track user satisfaction metrics — NPS, CSAT, resolution rate</li>
+</ul>`,
+    benefits: 'Hybrid (3+2) | 5-10 LPA | Voice of users | Work with founders | Health insurance | Learning budget'
+  },
+  {
+    title: 'HR & Talent Acquisition Intern',
+    dept: 'People',
+    location: 'Remote (India)',
+    workplace: 'Remote',
+    jobType: 'Internship',
+    expMin: 0, expMax: 0,
+    salaryMin: null, salaryMax: null, currency: 'INR',
+    skills: 'Recruitment, Screening, LinkedIn Sourcing, HR, Communication, ATS, Interview Coordination',
+    desc: `<h2>HR &amp; Talent Acquisition Intern</h2>
+
+<h3>About the Internship</h3>
+<p>As an <strong>HR &amp; Talent Acquisition Intern</strong>, you'll help build RefOpen's team by sourcing candidates, screening resumes, coordinating interviews, and supporting the hiring process. This is a unique opportunity to learn recruitment and HR at a fast-growing startup where every hire matters.</p>
+<p>You'll work directly with the founders to understand what makes great hires, learn how to evaluate talent, and contribute to building the culture of a company from the ground up.</p>
+
+<h3>What You'll Do</h3>
+<ul>
+<li>Source candidates on <strong>LinkedIn, job boards, and college networks</strong> for open positions</li>
+<li>Screen <strong>resumes and applications</strong> — shortlist candidates based on role requirements</li>
+<li>Coordinate <strong>interviews</strong> — schedule calls, send reminders, collect feedback</li>
+<li>Post <strong>job listings</strong> on LinkedIn, Naukri, Internshala, and other platforms</li>
+<li>Maintain the <strong>candidate pipeline</strong> — track applicants, update statuses, follow up</li>
+<li>Assist with <strong>employer branding</strong> — write job descriptions, create hiring posts for social media</li>
+<li>Support <strong>onboarding</strong> — prepare welcome kits, documentation, first-week schedules</li>
+<li>Help with <strong>HR operations</strong> — attendance, leave management, team coordination</li>
+</ul>
+
+<h3>Who You Are</h3>
+<ul>
+<li>Currently pursuing <strong>MBA (HR), BBA, or any degree</strong> with interest in HR/recruitment</li>
+<li>Good <strong>communication skills</strong> — professional email writing, phone etiquette</li>
+<li>Familiarity with <strong>LinkedIn</strong> — knows how to search and connect with candidates</li>
+<li>Organized and <strong>detail-oriented</strong> — can manage multiple candidates and schedules</li>
+<li>Self-motivated — you don't need constant supervision</li>
+<li>Interest in <strong>startup culture and talent acquisition</strong></li>
+</ul>
+
+<h3>What You'll Gain</h3>
+<ul>
+<li><strong>Real recruitment experience</strong> — source, screen, and hire for a growing startup</li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team, learn product thinking, and have a real voice in decisions</li>
+<li><strong>Certificate + Letter of Recommendation</strong></li>
+<li><strong>PPO opportunity</strong> — top performers get full-time HR roles</li>
+<li><strong>100% Remote</strong> — flexible hours</li>
+<li><strong>LinkedIn badge</strong> — "RefOpen HR Intern" for your profile</li>
+</ul>
+
+<h3>Duration &amp; Logistics</h3>
+<p><strong>Duration:</strong> 3-6 months remote internship</p>
+<p><strong>Stipend:</strong> Unpaid with PPO opportunity</p>
+<p><strong>Hours:</strong> 25+ hours/week</p>
+
+<h3>Interview Process</h3>
+<ol>
+<li><strong>Resume Review</strong> (1-2 days)</li>
+<li><strong>HR Scenario Discussion</strong> (20 min) — How would you screen candidates for a role?</li>
+<li><strong>Offer</strong> (within 24 hours)</li>
+</ol>
+<p><em>If you're passionate about people, hiring, and startup culture — apply now!</em></p>`,
+    requirements: `<ul>
+<li>Pursuing MBA (HR), BBA, or any degree with interest in HR</li>
+<li>Good communication skills — email, phone</li>
+<li>Familiarity with LinkedIn for sourcing</li>
+<li>Organized and detail-oriented</li>
+<li>Self-motivated with interest in startup culture</li>
+</ul>`,
+    responsibilities: `<ul>
+<li>Source candidates on LinkedIn, job boards, and college networks</li>
+<li>Screen resumes and shortlist candidates</li>
+<li>Coordinate interviews — scheduling, reminders, feedback</li>
+<li>Post job listings on multiple platforms</li>
+<li>Support onboarding and HR operations</li>
+</ul>`,
+    benefits: '100% Remote | Certificate + LOR | PPO opportunity | LinkedIn badge | Work with founders | Real recruitment experience'
   }
 ];
 
@@ -1030,20 +1620,8 @@ async function seedDB(config, label) {
       WHERE Title = N'${j.title.replace(/'/g, "''")}' AND Status = 'Published'
     `);
     if (exists.recordset.length > 0) {
-      // Update existing job's description, expiry etc (refresh it)
-      await p.request().query(`
-        UPDATE CareerJobs SET
-          Description = N'${j.desc.replace(/'/g, "''")}',
-          Requirements = N'${j.requirements.replace(/'/g, "''")}',
-          Responsibilities = N'${j.responsibilities.replace(/'/g, "''")}',
-          Skills = N'${j.skills}',
-          SalaryMin = ${j.salaryMin || 'NULL'},
-          SalaryMax = ${j.salaryMax || 'NULL'},
-          ExpiresAt = DATEADD(month, 1, GETUTCDATE()),
-          UpdatedAt = SYSDATETIMEOFFSET()
-        WHERE Title = N'${j.title.replace(/'/g, "''")}' AND Status = 'Published'
-      `);
-      console.log(`  🔄 ${j.title} (updated)`);
+      // Job already exists — skip it (don't update existing jobs)
+      console.log(`  ⏭️  ${j.title} (already exists, skipped)`);
       skipped++;
     } else {
       await p.request().query(`
