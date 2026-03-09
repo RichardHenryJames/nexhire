@@ -371,6 +371,7 @@ const jobs = [
 <li><strong>100% Remote</strong> — work from anywhere in India</li>
 <li><strong>PPO opportunity</strong> — top performers get full-time offers at ₹8-16 LPA</li>
 <li><strong>Portfolio builder</strong> — contribute to a real product you can showcase</li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team, learn product thinking, and have a real voice in decisions</li>
 </ul>
 
 <h3>Duration &amp; Logistics</h3>
@@ -446,6 +447,7 @@ const jobs = [
 <li><strong>Mentorship</strong> from engineers with ML experience</li>
 <li><strong>100% Remote</strong> — flexible hours</li>
 <li><strong>Research paper opportunity</strong> — publish findings on job market analysis</li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team, learn product thinking, and have a real voice in decisions</li>
 </ul>
 
 <h3>Duration &amp; Logistics</h3>
@@ -517,7 +519,7 @@ const jobs = [
 <li><strong>Cross-platform design skills</strong> — mobile + web + responsive design</li>
 <li><strong>Certificate + Letter of Recommendation</strong></li>
 <li><strong>PPO opportunity</strong> for exceptional performers</li>
-<li><strong>Direct founder mentorship</strong></li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team, learn product thinking, and have a real voice in decisions</li>
 <li><strong>100% Remote</strong> — flexible hours</li>
 </ul>
 
@@ -946,7 +948,7 @@ const jobs = [
     skills: 'Social Media, Campus Outreach, Event Management, Public Speaking, Marketing, Networking',
     desc: `<h2>Campus Ambassador (Marketing Intern)</h2>
 <h3>About the Internship</h3>
-<p>As a <strong>Campus Ambassador</strong>, you'll represent RefOpen at your college and drive awareness among students in your network. You'll organize events, create content, and get your peers excited about using RefOpen for their job search. This is a fun, flexible, remote role with real rewards — swag, certificates, cash incentives, and a direct pipeline to a full-time marketing role.</p>
+<p>As a <strong>Campus Ambassador</strong>, you'll represent RefOpen at your college and drive awareness among students in your network. You'll organize events, create content, and get your peers excited about using RefOpen for their job search. This is a fun, flexible, remote role with real rewards — swag, certificates, and a direct pipeline to a full-time marketing role.</p>
 
 <h3>What You'll Do</h3>
 <ul>
@@ -973,7 +975,6 @@ const jobs = [
 
 <h3>What You'll Gain</h3>
 <ul>
-<li><strong>Performance-based cash incentives</strong> — earn per sign-up and active user from your campus</li>
 <li><strong>Exclusive RefOpen merchandise</strong> — hoodies, stickers, and swag</li>
 <li><strong>Certificate of Excellence</strong> + Letter of Recommendation</li>
 <li><strong>LinkedIn badge</strong> — "RefOpen Campus Ambassador" to boost your profile</li>
@@ -981,6 +982,7 @@ const jobs = [
 <li><strong>Networking</strong> — connect with ambassadors from top colleges across India</li>
 <li><strong>100% Remote</strong> — flexible hours, work from your campus</li>
 <li><strong>Priority access</strong> to RefOpen's referral network for your own job search</li>
+<li><strong>Work closely with founders</strong> — get direct mentorship from the founding team, learn product thinking, and have a real voice in decisions</li>
 </ul>
 
 <h3>Duration &amp; Logistics</h3>
@@ -1010,7 +1012,7 @@ const jobs = [
 <li>Collaborate with placement cells and student clubs</li>
 <li>Collect student feedback and share insights with the team</li>
 </ul>`,
-    benefits: '100% Remote | Cash incentives per sign-up | Exclusive merch | Certificate + LOR | PPO opportunity | LinkedIn badge | Networking'
+    benefits: '100% Remote | Exclusive merch | Certificate + LOR | PPO opportunity | LinkedIn badge | Networking'
   }
 ];
 
@@ -1064,7 +1066,7 @@ async function seedDB(config, label) {
           N'${j.currency}',
           N'${j.skills}',
           'Published',
-          DATEADD(day, -${Math.floor(Math.random() * 7)}, GETUTCDATE()),
+          DATEADD(day, -${Math.floor(Math.random() * 3)}, GETUTCDATE()),
           DATEADD(month, 1, GETUTCDATE())
         )
       `);
