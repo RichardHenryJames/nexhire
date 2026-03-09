@@ -383,6 +383,7 @@ export const AuthProvider = ({ children }) => {
         
         result = await refopenAPI.registerWithGoogle(googleTokenData, {
           userType: registrationData.userType,
+          phone: registrationData.phone,
           referralCode: registrationData.referralCode,
           organizationName: registrationData.organizationName,
           organizationIndustry: registrationData.organizationIndustry,

@@ -488,7 +488,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         userType: userType,
-        ...(formData.phone && { phone: formData.phone.trim() }),
+        phone: formData.phone.trim(),
         ...(formData.dateOfBirth && { dateOfBirth: formData.dateOfBirth }),
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
