@@ -250,7 +250,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             />
           </TouchableOpacity>
 
-          {/* Switch to employer */}
+          {/* Employer flow hidden for now
           <TouchableOpacity
             style={styles.switchFlowButton}
             onPress={handleSwitchToEmployer}
@@ -262,6 +262,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
             </Text>
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
+          */}
         </View>
       </ScrollView>
     </RegistrationWrapper>

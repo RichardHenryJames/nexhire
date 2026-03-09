@@ -286,9 +286,9 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   };
 
   const validatePhoneNumber = (phone) => {
-    if (!phone) return true; // Optional field
+    if (!phone) return false; // Required field
     const phoneRegex = /^\+?[\d\s\-()]+$/;
-    return phoneRegex.test(phone);
+    return phoneRegex.test(phone) && phone.replace(/[^\d]/g, '').length >= 10;
   };
 
   // ===== EMAIL VERIFICATION HANDLERS =====
@@ -442,9 +442,11 @@ newErrors.jobTitle = 'Job title is required when company is selected';
    }
     }
 
-    // Optional field validations
-    if (formData.phone && !validatePhoneNumber(formData.phone)) {
-      newErrors.phone = 'Please enter a valid phone number';
+    // Phone is mandatory
+    if (!formData.phone || !formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    } else if (!validatePhoneNumber(formData.phone)) {
+      newErrors.phone = 'Please enter a valid 10-digit phone number';
     }
 
     if (formData.dateOfBirth) {
@@ -879,7 +881,7 @@ styles.selectionButton,
               </>
             )}
             
-            {renderInput('phone', 'Phone Number', false, 'phone-pad')}
+            {renderInput('phone', 'Phone Number', false, 'phone-pad', true)}
             
             {/* ✅ REPLACED: DatePicker instead of manual input */}
             <DatePicker
