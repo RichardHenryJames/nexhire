@@ -1253,6 +1253,150 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'Jobs matched based on your profile pre
 </body>
 </html>
         `
+    },
+
+    // ========================================
+    // CAREER APPLICATION CONFIRMATION
+    // ========================================
+
+    'career_application_received': {
+        subject: '✅ Application received — {{jobTitle}} at RefOpen',
+        html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; -webkit-font-smoothing: antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); padding: 40px; text-align: center;">
+                            <img src="{{appUrl}}/refopen-logo.png" alt="RefOpen" width="120" style="margin-bottom: 16px;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">Application Received!</h1>
+                            <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">We've got your application and we're excited to review it</p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Hi {{applicantName}},
+                            </p>
+                            
+                            <p style="color: #4a4a4a; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+                                Thank you for applying to <strong style="color: #1a1a1a;">{{jobTitle}}</strong> at RefOpen! We've received your application and our team will review it carefully.
+                            </p>
+                            
+                            <!-- Application Details Card -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <p style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 15px; font-weight: 700;">📋 Application Details</p>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 13px; width: 120px;">Position</td>
+                                                <td style="padding: 6px 0; color: #1a1a1a; font-size: 14px; font-weight: 600;">{{jobTitle}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 13px;">Department</td>
+                                                <td style="padding: 6px 0; color: #1a1a1a; font-size: 14px;">{{department}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 13px;">Location</td>
+                                                <td style="padding: 6px 0; color: #1a1a1a; font-size: 14px;">{{location}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 13px;">Type</td>
+                                                <td style="padding: 6px 0; color: #1a1a1a; font-size: 14px;">{{jobType}}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #64748B; font-size: 13px;">Applied on</td>
+                                                <td style="padding: 6px 0; color: #1a1a1a; font-size: 14px;">{{appliedDate}}</td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- What Happens Next -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #EEF2FF; border: 1px solid #C7D2FE; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <p style="margin: 0 0 12px 0; color: #3730A3; font-size: 15px; font-weight: 700;">🔮 What happens next?</p>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #4338CA; font-size: 14px;">
+                                                    <strong>1.</strong> Our team will review your resume and application
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #4338CA; font-size: 14px;">
+                                                    <strong>2.</strong> If your profile matches, we'll reach out to schedule an interview
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 6px 0; color: #4338CA; font-size: 14px;">
+                                                    <strong>3.</strong> Track your application status anytime on our careers page
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{appUrl}}/careers" style="display: inline-block; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; font-weight: 600;">
+                                            Track Your Application →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #64748B; font-size: 13px; line-height: 1.6; margin: 0 0 20px 0;">
+                                We appreciate your interest in joining RefOpen. We review every application personally and aim to respond within 5-7 business days.
+                            </p>
+                            
+                            <!-- Social Links -->
+                            <p style="color: #64748B; font-size: 13px; margin: 0 0 8px 0;">
+                                Follow us for updates:
+                            </p>
+                            <p style="margin: 0;">
+                                <a href="https://www.linkedin.com/company/refopen" style="color: #4F46E5; text-decoration: none; font-size: 13px; margin-right: 12px;">LinkedIn</a>
+                                <a href="https://www.instagram.com/refopensolutions" style="color: #4F46E5; text-decoration: none; font-size: 13px; margin-right: 12px;">Instagram</a>
+                                <a href="https://x.com/refopensolution" style="color: #4F46E5; text-decoration: none; font-size: 13px;">X (Twitter)</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #F8FAFC; padding: 24px 40px; border-top: 1px solid #E2E8F0; text-align: center;">
+                            <p style="margin: 0 0 4px 0; color: #94A3B8; font-size: 11px;">
+                                You're receiving this because you applied for a position at RefOpen.
+                            </p>
+                            <p style="margin: 0; color: #94A3B8; font-size: 11px;">
+                                RefOpen · Bengaluru, India · <a href="{{appUrl}}" style="color: #4F46E5; text-decoration: none;">refopen.com</a>
+                            </p>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `
     }
 };
 

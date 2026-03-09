@@ -5,6 +5,8 @@
  */
 
 import { dbService } from './database.service';
+import { EmailService } from './emailService';
+import { TemplateService } from './templateService';
 
 export class CareerService {
 
@@ -94,7 +96,33 @@ export class CareerService {
       [data.careerJobId, data.userId, data.fullName, data.email, data.phone || null, data.resumeURL, data.coverLetter || null, data.linkedInURL || null]
     );
 
-    return result.recordset[0];
+    const application = result.recordset[0];
+
+    // Send confirmation email (non-blocking — don't fail the application if email fails)
+    try {
+      const template = TemplateService.render('career_application_received', {
+        applicantName: data.fullName || 'there',
+        jobTitle: job.Title,
+        department: job.Department,
+        location: job.Location,
+        jobType: job.JobType,
+        appliedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
+      });
+      await EmailService.send({
+        to: data.email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+        userId: data.userId,
+        emailType: 'career_application_received',
+        referenceType: 'CareerApplication',
+        referenceId: application.ApplicationID,
+      });
+    } catch (emailError: any) {
+      console.warn('Career application email failed (non-blocking):', emailError.message);
+    }
+
+    return application;
   }
 
   /**
