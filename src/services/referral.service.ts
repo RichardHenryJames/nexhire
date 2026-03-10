@@ -936,9 +936,8 @@ export class ReferralService {
             const safePageNumber = Math.max(1, Math.floor(page) || 1);
             const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 20));
 
-            // Filter by completed statuses
-            // Admin sees ALL completed referrals, normal users see only their own
-            const closedStatuses = "('ProofUploaded', 'Completed', 'Verified', 'Unverified')";
+            // Filter by completed/closed statuses (includes Expired and Refunded)
+            const closedStatuses = "('ProofUploaded', 'Completed', 'Verified', 'Unverified', 'Expired', 'Refunded')";
             const whereClause = isAdmin
                 ? `WHERE rr.Status IN ${closedStatuses}`
                 : `WHERE rr.Status IN ${closedStatuses} AND rr.AssignedReferrerID = @param0`;

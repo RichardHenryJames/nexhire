@@ -379,10 +379,6 @@ export default function ReferralScreen({ navigation }) {
     const applicantName = request.ApplicantName || 'Job Seeker';
     const applicantPhotoUrl = request.ApplicantProfilePictureURL ?? null;
     
-    // All cards are plain View (not clickable as a whole)
-    const CardWrapper = View;
-    const cardWrapperProps = {};
-    
     // Get initials for avatar
     const getInitials = (name) => {
       if (!name) return '?';
@@ -406,9 +402,17 @@ export default function ReferralScreen({ navigation }) {
 
     const initials = getInitials(applicantName);
     const avatarColor = getAvatarColor(applicantName);
+
+    const isOpenTab = activeTab === 'open';
     
     return (
-      <CardWrapper key={request.RequestID} style={styles.requestCard} {...cardWrapperProps}>
+      <TouchableOpacity 
+        key={request.RequestID} 
+        style={styles.requestCard}
+        activeOpacity={isOpenTab ? 0.7 : 1}
+        disabled={!isOpenTab}
+        onPress={() => isOpenTab ? handleViewRequest(request) : undefined}
+      >
         <View style={styles.requestHeader}>
           {/* Person Avatar - Clickable to open profile */}
           <TouchableOpacity 
@@ -462,37 +466,10 @@ export default function ReferralScreen({ navigation }) {
               </Text>
             </View>
 
-            {/* Quick Actions Row - View/Continue only */}
+            {/* Quick Actions Row */}
             <View style={styles.quickActionsRow}>
               {/* Spacer */}
               <View style={{ flex: 1 }} />
-
-              {/* View/Continue Button - Open tab (show Expired for old requests) */}
-              {activeTab === 'open' && (
-                <>
-                  {isRequestExpired(request.Status) ? (
-                    <View style={[styles.viewRequestBtn, { backgroundColor: colors.gray300 }]}>
-                      <Text style={[styles.viewRequestText, { marginLeft: 0, color: colors.gray600 }]}>Expired</Text>
-                    </View>
-                  ) : (request.AssignedReferrerUserID || request.AssignedReferrerID) && 
-                   ((request.AssignedReferrerUserID || '').toLowerCase() === (userId || '').toLowerCase() || 
-                    (request.AssignedReferrerID || '').toLowerCase() === (userId || '').toLowerCase()) ? (
-                    <TouchableOpacity 
-                      style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
-                      onPress={() => handleViewRequest(request)}
-                    >
-                      <Text style={[styles.viewRequestText, { marginLeft: 0 }]}>Next</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity 
-                      style={styles.viewRequestBtn}
-                      onPress={() => handleViewRequest(request)}
-                    >
-                      <Text style={[styles.viewRequestText, { marginLeft: 0 }]}>View</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
 
               {/* View Proof Button - Closed tab */}
               {activeTab === 'closed' && request.ProofFileURL && (
@@ -527,7 +504,7 @@ export default function ReferralScreen({ navigation }) {
             </View>
           )}
         </View>
-      </CardWrapper>
+      </TouchableOpacity>
     );
   };
 
