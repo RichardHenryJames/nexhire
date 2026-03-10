@@ -9,7 +9,18 @@ import { WalletService } from './wallet.service';
 import { PricingService } from './pricing.service';
 import { NotificationService } from './notificationService';
 import { SupportService } from './support.service';
+import { ResumeStorageService } from './resume-upload.service';
 import { ValidationError, NotFoundError, ConflictError } from '../utils/validation';
+
+// SECURITY: Lazy-init SAS URL generator for private blob access
+let _refSasHelper: ResumeStorageService | null = null;
+function signResumeUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    try {
+        if (!_refSasHelper) { try { _refSasHelper = new ResumeStorageService(); } catch { return url; } }
+        return _refSasHelper.generateSasUrl(url, 30) || url;
+    } catch { return url; }
+}
 import {
     ReferralPlan,
     ApplicantReferralSubscription,
@@ -622,9 +633,16 @@ export class ReferralService {
             `;
             
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
+
+            // SECURITY: Sign resume URLs for private blob access
+            const signedRequests = (dataResult.recordset || []).map((r: any) => ({
+                ...r,
+                ResumeURL: signResumeUrl(r.ResumeURL),
+                ProofFileURL: signResumeUrl(r.ProofFileURL)
+            }));
             
             return {
-                requests: dataResult.recordset || [],
+                requests: signedRequests,
                 total,
                 page: safePageNumber,
                 pageSize: safePageSize,
@@ -980,9 +998,16 @@ export class ReferralService {
             `;
             
             const dataResult = await dbService.executeQuery<ReferralRequest>(dataQuery, queryParams);
+
+            // SECURITY: Sign resume URLs for private blob access
+            const signedRequests = (dataResult.recordset || []).map((r: any) => ({
+                ...r,
+                ResumeURL: signResumeUrl(r.ResumeURL),
+                ProofFileURL: signResumeUrl(r.ProofFileURL)
+            }));
             
             return {
-                requests: dataResult.recordset || [],
+                requests: signedRequests,
                 total,
                 page: safePageNumber,
                 pageSize: safePageSize,

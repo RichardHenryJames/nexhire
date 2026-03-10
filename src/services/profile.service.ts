@@ -2,6 +2,26 @@ import { dbService } from '../services/database.service';
 import { AuthService } from '../services/auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
 import { decrypt, maskEmail } from '../utils/encryption';
+import { ResumeStorageService } from './resume-upload.service';
+
+// SECURITY: Lazy-init SAS URL generator for private blob access
+let _resumeSasHelper: ResumeStorageService | null = null;
+function getResumeSasHelper(): ResumeStorageService {
+    if (!_resumeSasHelper) {
+        try { _resumeSasHelper = new ResumeStorageService(); } catch { }
+    }
+    return _resumeSasHelper!;
+}
+
+/** Wrap a raw blob URL with a time-limited SAS token (for private containers) */
+function signResumeUrl(url: string | null | undefined, expiryMinutes = 30): string | null {
+    if (!url) return null;
+    try {
+        return getResumeSasHelper()?.generateSasUrl(url, expiryMinutes) || url;
+    } catch {
+        return url; // Fallback to raw URL if SAS generation fails
+    }
+}
 
 // Define interfaces for type safety
 interface ApplicantFieldMapping {
@@ -172,7 +192,9 @@ export class ApplicantService {
                 profile.resumes = resumes;
                 // Set primary resume for backward compatibility
                 const primaryResume = resumes.find(r => r.IsPrimary) || resumes[0];
-                profile.primaryResumeURL = primaryResume?.ResumeURL || null;
+                profile.primaryResumeURL = signResumeUrl(primaryResume?.ResumeURL);
+                // Also sign all resume URLs in the array
+                profile.resumes = resumes.map((r: any) => ({ ...r, ResumeURL: signResumeUrl(r.ResumeURL) }));
             } catch (error) {
                 console.warn('Could not load resumes:', error);
                 profile.resumes = [];
@@ -540,7 +562,8 @@ export class ApplicantService {
                 ORDER BY IsPrimary DESC, CreatedAt DESC
             `;
             const result = await dbService.executeQuery(query, [applicantId]);
-            return result.recordset || [];
+            // SECURITY: Sign URLs for private blob access
+            return (result.recordset || []).map((r: any) => ({ ...r, ResumeURL: signResumeUrl(r.ResumeURL) }));
         } catch (error) {
             console.error('Error getting applicant resumes:', error);
             throw error;
@@ -564,7 +587,10 @@ export class ApplicantService {
                 WHERE ResumeID = @param0
             `;
             const result = await dbService.executeQuery(query, [resumeId]);
-            return result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
+            const resume = result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
+            // SECURITY: Sign URL for private blob access
+            if (resume?.ResumeURL) resume.ResumeURL = signResumeUrl(resume.ResumeURL);
+            return resume;
         } catch (error) {
             console.error('Error getting resume for viewing:', error);
             return null;
@@ -587,7 +613,10 @@ export class ApplicantService {
                 ORDER BY CreatedAt DESC
             `;
             const result = await dbService.executeQuery(query, [applicantId]);
-            return result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
+            const resume = result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
+            // SECURITY: Sign URL for private blob access
+            if (resume?.ResumeURL) resume.ResumeURL = signResumeUrl(resume.ResumeURL);
+            return resume;
         } catch (error) {
             console.error('Error getting primary resume:', error);
             return null;

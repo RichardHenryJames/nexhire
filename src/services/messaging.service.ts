@@ -11,7 +11,28 @@ const SIGNALR_CONNECTION_STRING = process.env.SIGNALR_CONNECTION_STRING || "";
 // Admin account email for message notifications
 const REFOPEN_ADMIN_EMAIL = "admin@refopen.com";
 const ADMIN_NOTIFICATION_EMAIL = "parimalkumar261@gmail.com";
-const PLATFORM_ADMIN_USER_ID = "92FDC39F-EFC9-4F57-ADEA-5E88970CD69D"; // Platform Admin UserID
+
+// Cache admin UserID — looked up once by email, works across dev/prod
+let _cachedAdminUserId: string | null = null;
+async function getPlatformAdminUserId(): Promise<string | null> {
+  if (_cachedAdminUserId) return _cachedAdminUserId;
+  try {
+    const result = await dbService.executeQuery(
+      "SELECT UserID FROM Users WHERE Email = @param0 AND IsActive = 1",
+      [REFOPEN_ADMIN_EMAIL]
+    );
+    if (result.recordset && result.recordset.length > 0) {
+      _cachedAdminUserId = result.recordset[0].UserID;
+      console.log(`✅ Platform Admin resolved: ${REFOPEN_ADMIN_EMAIL} → ${_cachedAdminUserId}`);
+      return _cachedAdminUserId;
+    }
+    console.warn(`⚠️ Platform Admin user not found for email: ${REFOPEN_ADMIN_EMAIL}`);
+    return null;
+  } catch (err: any) {
+    console.error('Error looking up platform admin:', err.message);
+    return null;
+  }
+}
 
 // Welcome message template for new users (Job Seekers only) - single concise message
 const getWelcomeMessage = (firstName: string): string => `Hey ${firstName}! 👋
@@ -957,10 +978,17 @@ SELECT COUNT(*) as Total
   static async sendWelcomeMessageToNewUser(newUserId: string, firstName: string): Promise<void> {
     try {
       console.log(`📨 Sending welcome message to new user: ${newUserId}`);
+
+      // Look up admin by email — works in any environment
+      const adminUserId = await getPlatformAdminUserId();
+      if (!adminUserId) {
+        console.error('Cannot send welcome message: Platform Admin user not found in DB');
+        return;
+      }
       
       // Get or create conversation between admin and new user
       const conversation = await this.getOrCreateConversation({
-        user1Id: PLATFORM_ADMIN_USER_ID,
+        user1Id: adminUserId,
         user2Id: newUserId
       });
       
@@ -997,7 +1025,7 @@ SELECT COUNT(*) as Total
       
       await dbService.executeQuery(insertQuery, [
         conversation.ConversationID,
-        PLATFORM_ADMIN_USER_ID,
+        adminUserId,
         welcomeMessage,
         preview
       ]);

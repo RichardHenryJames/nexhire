@@ -914,12 +914,15 @@ styles.selectionButton,
             {/* NEW: Show jobTitle and startDate fields only when company is selected */
             userType === 'JobSeeker' && experienceType !== 'Student' && (formData.currentCompany || formData.organizationId) && (
               <>
-                <View style={styles.companyFieldsNotice}>
-                  <Ionicons name="information-circle" size={16} color={colors.info} />
-                  <Text style={styles.companyFieldsNoticeText}>
-                    Please provide your role details at {formData.currentCompany}
-                  </Text>
-                </View>
+                {/* Only show the hint when job title is not yet filled */}
+                {!formData.jobTitle && (
+                  <View style={styles.companyFieldsNotice}>
+                    <Ionicons name="information-circle" size={16} color={colors.info} />
+                    <Text style={styles.companyFieldsNoticeText}>
+                      Please provide your role details at {formData.currentCompany}
+                    </Text>
+                  </View>
+                )}
                 
                 {/* Job Title with searchable dropdown */}
                 <View style={[styles.inputContainer, { position: 'relative', zIndex: 1000 }]}>

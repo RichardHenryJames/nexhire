@@ -3,7 +3,8 @@ import { UserService } from '../services/user.service';
 import { AuthService } from '../services/auth.service';
 import { 
     withErrorHandling, 
-    withAuth
+    withAuth,
+    blacklistToken
 } from '../middleware';
 import { 
     successResponse, 
@@ -122,8 +123,12 @@ export const googleRegister = withErrorHandling(async (req: HttpRequest, context
  */
 export const logout = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
     try {
-        // Client will clear the tokens locally
-        // Additional logout logic (invalidate refresh tokens, log activity) can be added here
+        // SECURITY FIX: Actually invalidate the token on logout
+        const authHeader = req.headers.get('authorization');
+        const token = AuthService.extractTokenFromHeader(authHeader || '');
+        if (token) {
+            blacklistToken(token);
+        }
         
         return {
             status: 200,

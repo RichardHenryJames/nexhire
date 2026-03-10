@@ -9,6 +9,28 @@ import {
     errorResponse 
 } from '../utils/validation';
 
+// ============================================================
+// SECURITY FIX: Token blacklist for logout/revocation
+// ============================================================
+const tokenBlacklist = new Set<string>();
+
+// Cleanup expired tokens from blacklist every hour to prevent memory leak
+setInterval(() => {
+    // We can't decode tokens without verifying, so just clear old entries periodically
+    // Tokens naturally expire anyway, blacklist is just for early revocation
+    if (tokenBlacklist.size > 10000) {
+        tokenBlacklist.clear(); // Nuclear cleanup if too many entries
+    }
+}, 60 * 60 * 1000);
+
+export const blacklistToken = (token: string) => {
+    tokenBlacklist.add(token);
+};
+
+export const isTokenBlacklisted = (token: string): boolean => {
+    return tokenBlacklist.has(token);
+};
+
 // Authentication middleware
 export const authenticate = (req: HttpRequest) => {
     const authHeader = req.headers.get('authorization');
@@ -16,6 +38,11 @@ export const authenticate = (req: HttpRequest) => {
     
     if (!token) {
         throw new AuthenticationError('Access token required');
+    }
+
+    // SECURITY FIX: Check if token has been revoked (logout)
+    if (isTokenBlacklisted(token)) {
+        throw new AuthenticationError('Token has been revoked');
     }
     
     try {
@@ -213,22 +240,98 @@ export const withAuth = (
     });
 };
 
-// Rate limiting middleware (placeholder for future implementation)
-export const rateLimit = (requestsPerMinute: number = 60) => {
-    return (req: HttpRequest, context: InvocationContext, next: () => Promise<HttpResponseInit>) => {
-        // TODO: Implement rate limiting logic
+// ============================================================
+// SECURITY FIX: Rate limiting middleware (in-memory sliding window)
+// ============================================================
+interface RateLimitEntry {
+    count: number;
+    windowStart: number;
+}
+
+const rateLimitStore = new Map<string, RateLimitEntry>();
+
+// Cleanup stale entries every 5 minutes to prevent memory leak
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of rateLimitStore.entries()) {
+        if (now - entry.windowStart > 15 * 60 * 1000) { // 15 min max window
+            rateLimitStore.delete(key);
+        }
+    }
+}, 5 * 60 * 1000);
+
+export const rateLimit = (requestsPerWindow: number = 60, windowMs: number = 60000) => {
+    return async (req: HttpRequest, context: InvocationContext, next: () => Promise<HttpResponseInit>): Promise<HttpResponseInit> => {
+        // Use IP + endpoint as the rate limit key
+        const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+            || req.headers.get('x-real-ip')
+            || 'unknown';
+        const endpoint = new URL(req.url).pathname;
+        const key = `${clientIp}:${endpoint}`;
+
+        const now = Date.now();
+        const entry = rateLimitStore.get(key);
+
+        if (!entry || (now - entry.windowStart) > windowMs) {
+            // New window
+            rateLimitStore.set(key, { count: 1, windowStart: now });
+        } else {
+            entry.count++;
+            if (entry.count > requestsPerWindow) {
+                const retryAfterSec = Math.ceil((windowMs - (now - entry.windowStart)) / 1000);
+                context.log(`Rate limit exceeded for ${clientIp} on ${endpoint}: ${entry.count}/${requestsPerWindow}`);
+                return {
+                    status: 429,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Retry-After': String(retryAfterSec),
+                        ...getCorsHeaders(req.headers.get('origin'))
+                    },
+                    jsonBody: {
+                        success: false,
+                        error: 'Too many requests. Please try again later.',
+                        retryAfterSeconds: retryAfterSec
+                    }
+                };
+            }
+        }
+
         return next();
     };
 };
 
-// Request logging middleware
+// Pre-configured rate limiters for specific endpoints
+export const loginRateLimit = rateLimit(5, 15 * 60 * 1000);      // 5 attempts per 15 min
+export const registerRateLimit = rateLimit(10, 60 * 60 * 1000);  // 10 per hour (raised from 3 for shared office IPs)
+export const passwordResetRateLimit = rateLimit(3, 60 * 60 * 1000); // 3 per hour
+export const otpRateLimit = rateLimit(5, 10 * 60 * 1000);        // 5 per 10 min
+export const apiRateLimit = rateLimit(100, 60 * 1000);           // 100 per minute
+
+// ============================================================
+// SECURITY FIX: Request logging middleware — filters sensitive headers
+// ============================================================
+const SENSITIVE_HEADERS = new Set([
+    'authorization', 'cookie', 'set-cookie',
+    'x-functions-key', 'x-api-key', 'x-auth-token'
+]);
+
 export const logRequest = (req: HttpRequest, context: InvocationContext) => {
     const startTime = Date.now();
+
+    // Strip sensitive headers before logging
+    const safeHeaders: Record<string, string> = {};
+    for (const [key, value] of req.headers.entries()) {
+        if (SENSITIVE_HEADERS.has(key.toLowerCase())) {
+            safeHeaders[key] = '[REDACTED]';
+        } else {
+            safeHeaders[key] = value;
+        }
+    }
     
     context.log('Request received:', {
         method: req.method,
         url: req.url,
-        headers: Object.fromEntries(req.headers.entries()),
+        headers: safeHeaders,
         timestamp: new Date().toISOString()
     });
     

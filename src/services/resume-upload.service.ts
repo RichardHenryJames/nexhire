@@ -1,4 +1,4 @@
-import { BlobServiceClient } from '@azure/storage-blob';
+import { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential, SASProtocol } from '@azure/storage-blob';
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 // Azure Storage configuration
@@ -37,9 +37,9 @@ export class ResumeStorageService {
       // Create container client
       const containerClient = this.blobServiceClient.getContainerClient(STORAGE_CONTAINER_NAME);
       
-      // Ensure container exists
+      // SECURITY FIX: Private container — no public read access for resumes (contain PII)
       await containerClient.createIfNotExists({
-        access: 'blob' // Public read access for resumes (same as profile images)
+        access: undefined // Private — access only via SAS tokens or authenticated API
       });
 
       // Create folder structure: userId/filename (same as profile images)
@@ -136,6 +136,53 @@ export class ResumeStorageService {
       return [];
     }
   }
+
+  /**
+   * SECURITY FIX: Generate a short-lived SAS URL for private blob access.
+   * Since containers are now private, direct URLs won't work. Use this method
+   * to generate time-limited signed URLs (default: 10 minutes).
+   */
+  generateSasUrl(blobUrl: string, expiryMinutes: number = 10): string {
+    try {
+      // Parse account name and key from connection string
+      const connParts: Record<string, string> = {};
+      AZURE_STORAGE_CONNECTION_STRING.split(';').forEach(part => {
+        const [key, ...valueParts] = part.split('=');
+        if (key && valueParts.length) connParts[key] = valueParts.join('=');
+      });
+
+      const accountName = connParts['AccountName'];
+      const accountKey = connParts['AccountKey'];
+      if (!accountName || !accountKey) {
+        console.warn('Cannot generate SAS URL: missing storage credentials');
+        return blobUrl; // Fallback to raw URL
+      }
+
+      // Extract container and blob name from the URL
+      const url = new URL(blobUrl);
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const containerName = pathParts[0];
+      const blobName = pathParts.slice(1).join('/');
+
+      const credential = new StorageSharedKeyCredential(accountName, accountKey);
+      const startsOn = new Date();
+      const expiresOn = new Date(startsOn.getTime() + expiryMinutes * 60 * 1000);
+
+      const sasParams = generateBlobSASQueryParameters({
+        containerName,
+        blobName,
+        permissions: BlobSASPermissions.parse('r'), // Read only
+        startsOn,
+        expiresOn,
+        protocol: SASProtocol.HttpsAndHttp,
+      }, credential);
+
+      return `${blobUrl}?${sasParams.toString()}`;
+    } catch (error) {
+      console.error('Error generating SAS URL:', error);
+      return blobUrl; // Fallback
+    }
+  }
 }
 
 /**
@@ -176,8 +223,13 @@ function validateResumeUpload(data: any): ResumeUploadRequest {
     throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);
   }
 
-  // Generate secure filename following the same pattern as profile images
-  const fileExtension = data.fileName.split('.').pop() || 'pdf';
+  // SECURITY FIX: Derive extension from validated MIME type, not user-supplied filename
+  const mimeToExt: Record<string, string> = {
+      'application/pdf': 'pdf',
+      'application/msword': 'doc',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx'
+  };
+  const fileExtension = mimeToExt[data.mimeType.toLowerCase()] || 'pdf';
   const sanitizedFileName = `resume-${data.userId}-${Date.now()}.${fileExtension}`;
 
   return {
@@ -194,20 +246,25 @@ function validateResumeUpload(data: any): ResumeUploadRequest {
  * Following the exact same pattern as uploadProfileImage
  */
 export async function uploadResume(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  // SECURITY FIX: Dynamic CORS origin from allowlist (no more wildcard)
+  const { getCorsHeaders, authenticate } = await import('../middleware');
+  const requestOrigin = req.headers.get('origin');
+  const dynamicCorsHeaders = getCorsHeaders(requestOrigin);
+
   try {
-    // Handle OPTIONS for CORS (same as profile image)
+    // Handle OPTIONS for CORS
     if (req.method === 'OPTIONS') {
       return {
         status: 200,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          ...dynamicCorsHeaders,
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         }
       };
     }
 
-    // Only allow POST (same as profile image)
+    // Only allow POST
     if (req.method !== 'POST') {
       return {
         status: 405,
@@ -218,8 +275,14 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
       };
     }
 
-    // Parse and validate request body (same as profile image)
+    // SECURITY FIX: Authenticate user before processing upload
+    const authUser = authenticate(req);
+
+    // Parse and validate request body
     const requestBody = await req.json() as any;
+
+    // SECURITY FIX: Override userId from token — never trust client-supplied userId
+    requestBody.userId = authUser.userId;
     const uploadData = validateResumeUpload(requestBody);
 
     // Initialize storage service
@@ -295,14 +358,14 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
     return {
       status: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        ...dynamicCorsHeaders,
         'Content-Type': 'application/json',
       },
       jsonBody: {
         success: true,
         data: {
           resumeURL: resumeUrl,
-          resumeID: resumeId, // ? NEW: Include ResumeID for job applications
+          resumeID: resumeId,
           fileName: uploadData.fileName,
           uploadDate: new Date().toISOString(),
         },
@@ -320,7 +383,7 @@ export async function uploadResume(req: HttpRequest, context: InvocationContext)
     return {
       status: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        ...dynamicCorsHeaders,
         'Content-Type': 'application/json',
       },
       jsonBody: {

@@ -1,4 +1,4 @@
-import { BlobServiceClient } from '@azure/storage-blob';
+import { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential, SASProtocol } from '@azure/storage-blob';
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 
 // Azure Storage configuration
@@ -34,9 +34,10 @@ export class ProfileImageStorageService {
       // Create container client
       const containerClient = this.blobServiceClient.getContainerClient(STORAGE_CONTAINER_NAME);
       
-      // Ensure container exists
+      // Profile images are public — they're not sensitive PII and need to be embeddable in <img> tags
+      // across the app without SAS token expiry issues. Resumes stay private (contain full PII).
       await containerClient.createIfNotExists({
-        access: 'blob' // Public read access for profile images
+        access: 'blob' // Public read for profile images (not PII)
       });
 
       // Create folder structure: userId/filename
@@ -129,6 +130,47 @@ export class ProfileImageStorageService {
       return [];
     }
   }
+
+  /**
+   * SECURITY FIX: Generate a short-lived SAS URL for private blob access.
+   * Profile images are now in a private container — use this for time-limited signed URLs.
+   */
+  generateSasUrl(blobUrl: string, expiryMinutes: number = 60): string {
+    try {
+      const connParts: Record<string, string> = {};
+      AZURE_STORAGE_CONNECTION_STRING.split(';').forEach(part => {
+        const [key, ...valueParts] = part.split('=');
+        if (key && valueParts.length) connParts[key] = valueParts.join('=');
+      });
+
+      const accountName = connParts['AccountName'];
+      const accountKey = connParts['AccountKey'];
+      if (!accountName || !accountKey) return blobUrl;
+
+      const url = new URL(blobUrl);
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const containerName = pathParts[0];
+      const blobName = pathParts.slice(1).join('/');
+
+      const credential = new StorageSharedKeyCredential(accountName, accountKey);
+      const startsOn = new Date();
+      const expiresOn = new Date(startsOn.getTime() + expiryMinutes * 60 * 1000);
+
+      const sasParams = generateBlobSASQueryParameters({
+        containerName,
+        blobName,
+        permissions: BlobSASPermissions.parse('r'),
+        startsOn,
+        expiresOn,
+        protocol: SASProtocol.HttpsAndHttp,
+      }, credential);
+
+      return `${blobUrl}?${sasParams.toString()}`;
+    } catch (error) {
+      console.error('Error generating SAS URL:', error);
+      return blobUrl;
+    }
+  }
 }
 
 /**
@@ -164,8 +206,14 @@ function validateImageUpload(data: any): ProfileImageUploadRequest {
     throw new Error(`File too large. Maximum size: ${maxSizeBytes / 1024 / 1024}MB`);
   }
 
-  // Generate secure filename if needed
-  const fileExtension = data.fileName.split('.').pop() || 'jpg';
+  // SECURITY FIX: Derive extension from validated MIME type, not user-supplied filename
+  const mimeToExt: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/jpg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp'
+  };
+  const fileExtension = mimeToExt[data.mimeType.toLowerCase()] || 'jpg';
   const sanitizedFileName = `profile-${data.userId}-${Date.now()}.${fileExtension}`;
 
   return {
@@ -180,13 +228,18 @@ function validateImageUpload(data: any): ProfileImageUploadRequest {
  * Profile Image Upload Handler
  */
 export async function uploadProfileImage(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  // SECURITY FIX: Dynamic CORS origin from allowlist (no more wildcard)
+  const { getCorsHeaders, authenticate } = await import('../middleware');
+  const requestOrigin = req.headers.get('origin');
+  const dynamicCorsHeaders = getCorsHeaders(requestOrigin);
+
   try {
     // Handle OPTIONS for CORS
     if (req.method === 'OPTIONS') {
       return {
         status: 200,
         headers: {
-          'Access-Control-Allow-Origin': '*',
+          ...dynamicCorsHeaders,
           'Access-Control-Allow-Methods': 'POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         }
@@ -204,8 +257,14 @@ export async function uploadProfileImage(req: HttpRequest, context: InvocationCo
       };
     }
 
+    // SECURITY FIX: Authenticate user before processing upload
+    const authUser = authenticate(req);
+
     // Parse and validate request body
     const requestBody = await req.json() as any;
+
+    // SECURITY FIX: Override userId from token — never trust client-supplied userId
+    requestBody.userId = authUser.userId;
     const uploadData = validateImageUpload(requestBody);
 
     // Initialize storage service
@@ -244,7 +303,7 @@ export async function uploadProfileImage(req: HttpRequest, context: InvocationCo
     return {
       status: 200,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        ...dynamicCorsHeaders,
         'Content-Type': 'application/json',
       },
       jsonBody: {
@@ -268,7 +327,7 @@ export async function uploadProfileImage(req: HttpRequest, context: InvocationCo
     return {
       status: 500,
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        ...dynamicCorsHeaders,
         'Content-Type': 'application/json',
       },
       jsonBody: {

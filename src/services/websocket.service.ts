@@ -19,9 +19,13 @@ export class WebSocketService {
    * Initialize Socket.IO server
 */
   static initialize(httpServer: HttpServer) {
+    // SECURITY FIX: Use allowlist-based CORS instead of wildcard (credentials: true requires specific origin)
+    const allowedOrigins = (process.env.CORS_ORIGINS || process.env.CORS_ALLOWED_ORIGINS || '')
+        .split(',').map(o => o.trim()).filter(o => o.length > 0);
+
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: '*',
+        origin: allowedOrigins.length > 0 ? allowedOrigins : false,
         methods: ['GET', 'POST'],
         credentials: true,
       },

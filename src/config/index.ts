@@ -20,6 +20,7 @@ export const dbConfig = {
 // JWT Configuration
 // SECURITY: JWT_SECRET MUST be set via environment variable (Key Vault in production).
 // Never use a fallback secret in production. If missing, the app should fail to start.
+// SECURITY FIX: Shorter access tokens (24h), longer refresh tokens (30d) — was 7d/7d
 export const jwtConfig = {
     secret: (() => {
         const secret = process.env.JWT_SECRET;
@@ -28,8 +29,8 @@ export const jwtConfig = {
         }
         return secret;
     })(),
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',           // SECURITY: Was 7d — now 24 hours
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d', // SECURITY: Was 7d — now 30 days
     passwordResetExpiresIn: '1h' // Password reset tokens expire in 1 hour
 };
 

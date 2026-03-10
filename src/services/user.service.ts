@@ -10,6 +10,7 @@ import {
     userLoginSchema
 } from '../utils/validation';
 import { appConstants } from '../config';
+import { maskEmail } from '../utils/encryption';
 import { registrationEmailVerificationService } from './registrationEmailVerification.service';
 
 export class UserService {
@@ -508,7 +509,7 @@ export class UserService {
         
         // Always return success to prevent email enumeration attacks
         if (!user) {
-            console.log(`Password reset requested for non-existent email: ${email}`);
+            console.log(`Password reset requested for non-existent email: ${maskEmail(email)}`);
             return { 
                 success: true, 
                 message: 'If an account exists with this email, you will receive a password reset link.' 
@@ -517,7 +518,7 @@ export class UserService {
 
         // Check if user signed up with Google (empty password)
         if (!user.Password || user.Password === '') {
-            console.log(`Password reset requested for Google-only user: ${email}`);
+            console.log(`Password reset requested for Google-only user: ${maskEmail(email)}`);
             // Send helpful email to Google users explaining how to login
             try {
                 const { EmailService } = await import('./emailService');
@@ -2027,15 +2028,64 @@ export class UserService {
     }
 
     /**
-     * Helper method to verify Google token (optional - for extra security)
+     * SECURITY FIX: Verify Google ID token server-side via Google's tokeninfo endpoint.
+     * Never trust frontend-only verification — an attacker can fabricate googleUser data.
      */
     private static async verifyGoogleToken(idToken: string): Promise<any> {
+        if (!idToken) {
+            throw new ValidationError('Google ID token is required for server-side verification');
+        }
+
         try {
-            // In production, you would verify the Google ID token here
-            // For now, we trust the frontend verification
-            return { verified: true };
+            // Verify token with Google's tokeninfo endpoint
+            const response = await fetch(
+                `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`
+            );
+
+            if (!response.ok) {
+                throw new Error(`Google token verification failed with status ${response.status}`);
+            }
+
+            const payload: any = await response.json();
+
+            // Validate audience matches our client ID(s)
+            const allowedClientIds = [
+                process.env.GOOGLE_CLIENT_ID_WEB,
+                process.env.GOOGLE_CLIENT_ID_ANDROID,
+                process.env.GOOGLE_CLIENT_ID_IOS,
+                process.env.GOOGLE_CLIENT_ID_EXPO
+            ].filter(Boolean);
+
+            if (!allowedClientIds.includes(payload.aud)) {
+                throw new Error('Google token audience mismatch — token was not issued for this application');
+            }
+
+            // Validate token is not expired (Google already checks this, but belt-and-suspenders)
+            const now = Math.floor(Date.now() / 1000);
+            if (payload.exp && Number(payload.exp) < now) {
+                throw new Error('Google token has expired');
+            }
+
+            // Validate issuer
+            if (!['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss)) {
+                throw new Error('Google token issuer is invalid');
+            }
+
+            return {
+                verified: true,
+                email: payload.email,
+                email_verified: payload.email_verified === 'true',
+                name: payload.name,
+                picture: payload.picture,
+                sub: payload.sub, // Google user ID
+                given_name: payload.given_name,
+                family_name: payload.family_name
+            };
         } catch (error) {
-            throw new ValidationError('Invalid Google token');
+            console.error('Google token verification failed:', error instanceof Error ? error.message : '[redacted]');
+            throw new ValidationError(
+                'Google authentication failed. Please sign in with Google again.'
+            );
         }
     }
 
