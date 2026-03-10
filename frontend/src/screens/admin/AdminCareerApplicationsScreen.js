@@ -35,6 +35,7 @@ import refopenAPI from '../../services/api';
 
 const BRAND = '#4F46E5';
 const STATUSES = ['All', 'Submitted', 'Under Review', 'Shortlisted', 'Interview', 'Offered', 'Hired', 'On Hold', 'Rejected'];
+const JOB_TYPES = ['All', 'Full-time', 'Internship'];
 const STATUS_COLORS = {
   'Submitted': '#3b82f6',
   'Under Review': '#f59e0b',
@@ -56,7 +57,12 @@ export default function AdminCareerApplicationsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('All');
+  const [selectedJobType, setSelectedJobType] = useState('All');
+  const [selectedJobTitle, setSelectedJobTitle] = useState('All');
   const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Status update modal
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -67,13 +73,28 @@ export default function AdminCareerApplicationsScreen({ navigation }) {
 
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
+  const PAGE_SIZE = 100;
+
   const loadApplications = useCallback(async () => {
     try {
-      const result = await refopenAPI.getAdminCareerApplications(1, 100, selectedStatus);
-      if (result?.success) {
-        setApplications(result.data || []);
-        setTotal(result.meta?.total || 0);
+      let allApps = [];
+      let page = 1;
+      let more = true;
+      // Fetch all pages
+      while (more) {
+        const result = await refopenAPI.getAdminCareerApplications(page, PAGE_SIZE, selectedStatus);
+        if (result?.success) {
+          allApps = [...allApps, ...(result.data || [])];
+          setTotal(result.meta?.total || 0);
+          more = result.meta?.hasMore || false;
+          page++;
+        } else {
+          more = false;
+        }
       }
+      setApplications(allApps);
+      setHasMore(false);
+      setCurrentPage(page - 1);
     } catch (e) { console.warn('Failed to load applications:', e); }
     finally { setLoading(false); setRefreshing(false); }
   }, [selectedStatus]);
@@ -130,6 +151,24 @@ export default function AdminCareerApplicationsScreen({ navigation }) {
     return counts;
   }, [applications, selectedStatus]);
 
+  // Extract unique job titles for dropdown
+  const jobTitles = useMemo(() => {
+    const titles = [...new Set(applications.map(a => a.JobTitle).filter(Boolean))].sort();
+    return ['All', ...titles];
+  }, [applications]);
+
+  // Filter by job type and job title client-side
+  const filteredApplications = useMemo(() => {
+    let filtered = applications;
+    if (selectedJobType !== 'All') {
+      filtered = filtered.filter(a => a.JobType === selectedJobType);
+    }
+    if (selectedJobTitle !== 'All') {
+      filtered = filtered.filter(a => a.JobTitle === selectedJobTitle);
+    }
+    return filtered;
+  }, [applications, selectedJobType, selectedJobTitle]);
+
   if (!isAdmin) {
     return (
       <View style={styles.container}>
@@ -159,7 +198,7 @@ export default function AdminCareerApplicationsScreen({ navigation }) {
         {/* Header Stats */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Career Applications</Text>
-          <Text style={styles.headerSub}>{total} total applications</Text>
+          <Text style={styles.headerSub}>{applications.length} of {total} loaded{selectedJobType !== 'All' || selectedJobTitle !== 'All' ? ` • Showing ${filteredApplications.length}` : ''}</Text>
         </View>
 
         {/* Status summary cards */}
@@ -174,7 +213,7 @@ export default function AdminCareerApplicationsScreen({ navigation }) {
           </View>
         )}
 
-        {/* Filter Chips */}
+        {/* Status Filter Chips */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips} contentContainerStyle={{ gap: 8 }}>
           {STATUSES.map(s => (
             <TouchableOpacity key={s} style={[styles.chip, selectedStatus === s && styles.chipOn]} onPress={() => { setSelectedStatus(s); setLoading(true); }}>
@@ -183,12 +222,36 @@ export default function AdminCareerApplicationsScreen({ navigation }) {
           ))}
         </ScrollView>
 
+        {/* Job Type Filter Chips */}
+        <View style={styles.jobTypeFilterRow}>
+          <Text style={styles.filterLabel}>Job Type:</Text>
+          <View style={styles.jobTypeChips}>
+            {JOB_TYPES.map(jt => (
+              <TouchableOpacity key={jt} style={[styles.chip, selectedJobType === jt && styles.chipJobTypeOn]} onPress={() => setSelectedJobType(jt)}>
+                <Text style={[styles.chipT, selectedJobType === jt && styles.chipTOn]}>{jt}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Job Title Filter */}
+        <View style={styles.jobTitleFilterRow}>
+          <Text style={styles.filterLabel}>Role:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} style={{ flex: 1 }}>
+            {jobTitles.map(jt => (
+              <TouchableOpacity key={jt} style={[styles.chip, selectedJobTitle === jt && styles.chipRoleOn]} onPress={() => setSelectedJobTitle(jt)}>
+                <Text style={[styles.chipT, selectedJobTitle === jt && styles.chipTOn]} numberOfLines={1}>{jt}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Applications List */}
-        {applications.length === 0 ? (
+        {filteredApplications.length === 0 ? (
           <View style={styles.centerC}>
             <Ionicons name="document-text-outline" size={48} color={colors.gray400} />
             <Text style={styles.emptyTitle}>No applications found</Text>
-            <Text style={styles.emptySub}>No applications with status "{selectedStatus}"</Text>
+            <Text style={styles.emptySub}>{selectedJobTitle !== 'All' ? `No applications for "${selectedJobTitle}"` : selectedJobType !== 'All' ? `No ${selectedJobType} applications` : `No applications with status "${selectedStatus}"`}</Text>
           </View>
         ) : (
           <View style={styles.list}>
@@ -203,7 +266,7 @@ export default function AdminCareerApplicationsScreen({ navigation }) {
               </View>
             )}
 
-            {applications.map((app) => {
+            {filteredApplications.map((app) => {
               const statusColor = STATUS_COLORS[app.Status] || colors.textSecondary;
               return (
                 <View key={app.ApplicationID} style={styles.appCard}>
@@ -409,11 +472,25 @@ const createStyles = (colors, responsive = {}) => {
     statCount: { fontSize: 22, fontWeight: '800' },
     statLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '500', marginTop: 2 },
 
-    chips: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginBottom: 16, flexGrow: 0 },
+    chips: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginBottom: 8, flexGrow: 0 },
     chip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
     chipOn: { backgroundColor: BRAND, borderColor: BRAND },
+    chipJobTypeOn: { backgroundColor: '#22c55e', borderColor: '#22c55e' },
     chipT: { fontSize: 13, fontWeight: '600', color: colors.text },
     chipTOn: { color: '#fff' },
+
+    jobTypeFilterRow: {
+      maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginBottom: 16,
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+    },
+    filterLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    jobTypeChips: { flexDirection: 'row', gap: 8 },
+
+    jobTitleFilterRow: {
+      maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, marginBottom: 16,
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+    },
+    chipRoleOn: { backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' },
 
     list: { maxWidth: mw, width: '100%', paddingHorizontal: isMobile ? 16 : 0, gap: isMobile ? 12 : 0 },
 
