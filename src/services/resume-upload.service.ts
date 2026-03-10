@@ -53,7 +53,7 @@ export class ResumeStorageService {
       const uploadResult = await blockBlobClient.upload(buffer, buffer.length, {
         blobHTTPHeaders: {
           blobContentType: uploadData.mimeType,
-          blobContentDisposition: `attachment; filename="${uploadData.fileName}"`, // For downloads
+          blobContentDisposition: `inline; filename="${uploadData.fileName}"`, // Preview in browser
           blobCacheControl: 'public, max-age=31536000', // Cache for 1 year (same as images)
         },
         metadata: {
