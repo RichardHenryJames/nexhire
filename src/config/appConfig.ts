@@ -138,7 +138,11 @@ class ConfigService {
       },
 
       auth: {
-        jwtSecret: process.env.JWT_SECRET || 'your-super-secret-development-key',
+        jwtSecret: (() => {
+          const secret = process.env.JWT_SECRET;
+          if (!secret) throw new Error('FATAL: JWT_SECRET environment variable is required');
+          return secret;
+        })(),
         accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '7d',
         refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || '30d',
         bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12'),

@@ -1,15 +1,13 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { MessagingService } from '../services/messaging.service';
-import { withAuth } from '../middleware';
+import { withAuth, getCorsHeaders } from '../middleware';
 import { successResponse, extractRequestBody, extractQueryParams } from '../utils/validation';
 
-// ?? CORS Headers for all responses
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+// SECURITY FIX: Dynamic CORS headers from allowlist (was wildcard *)
+const getCorsSafe = (req: HttpRequest) => ({
+  ...getCorsHeaders(req.headers.get('origin')),
   'Content-Type': 'application/json'
-};
+});
 
 // Get or create conversation with another user
 export const getOrCreateConversation = withAuth(async (req: HttpRequest, context: InvocationContext, user): Promise<HttpResponseInit> => {
@@ -18,18 +16,18 @@ export const getOrCreateConversation = withAuth(async (req: HttpRequest, context
     const { otherUserId } = body;
 
     if (!otherUserId) {
-      return { status: 400, headers: corsHeaders, jsonBody: { success: false, error: 'otherUserId is required' } };
+      return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'otherUserId is required' } };
     }
 
     // Check if trying to message self
     if (otherUserId === user.userId) {
-      return { status: 400, headers: corsHeaders, jsonBody: { success: false, error: 'Cannot create conversation with yourself' } };
+      return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Cannot create conversation with yourself' } };
     }
 
     // Check if users are blocked
     const blockCheck = await MessagingService.isUserBlocked(user.userId, otherUserId);
     if (blockCheck.isBlocked) {
-      return { status: 403, headers: corsHeaders, jsonBody: { success: false, error: 'Cannot create conversation - users are blocked' } };
+      return { status: 403, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Cannot create conversation - users are blocked' } };
     }
 
     const conversation = await MessagingService.getOrCreateConversation({
@@ -37,10 +35,10 @@ export const getOrCreateConversation = withAuth(async (req: HttpRequest, context
       user2Id: otherUserId
     });
 
-    return { status: 200, headers: corsHeaders, jsonBody: successResponse(conversation, 'Conversation retrieved successfully') };
+    return { status: 200, headers: getCorsSafe(req), jsonBody: successResponse(conversation, 'Conversation retrieved successfully') };
   } catch (error) {
     console.error('Error in getOrCreateConversation:', error);
-    return { status: 500, headers: corsHeaders, jsonBody: { success: false, error: 'Failed to get/create conversation' } };
+    return { status: 500, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Failed to get/create conversation' } };
   }
 }); // Remove permissions - any authenticated user can message
 
@@ -61,7 +59,7 @@ export const getMyConversations = withAuth(async (req: HttpRequest, context: Inv
 
     return {
       status: 200,
-      headers: corsHeaders,
+      headers: getCorsSafe(req),
       jsonBody: successResponse(result.conversations, 'Conversations retrieved successfully', {
         page: result.page,
         pageSize: result.pageSize,
@@ -72,7 +70,7 @@ export const getMyConversations = withAuth(async (req: HttpRequest, context: Inv
     };
   } catch (error) {
     console.error('Error in getMyConversations:', error);
-    return { status: 500, headers: corsHeaders, jsonBody: { success: false, error: 'Failed to retrieve conversations' } };
+    return { status: 500, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Failed to retrieve conversations' } };
   }
 }); // Remove permissions
 
@@ -81,7 +79,7 @@ export const getConversationMessages = withAuth(async (req: HttpRequest, context
   try {
     const conversationId = req.params.conversationId;
     if (!conversationId) {
-      return { status: 400, headers: corsHeaders, jsonBody: { success: false, error: 'conversationId is required' } };
+      return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'conversationId is required' } };
     }
 
     const params = extractQueryParams(req);
@@ -98,7 +96,7 @@ export const getConversationMessages = withAuth(async (req: HttpRequest, context
 
     return {
       status: 200,
-      headers: corsHeaders,
+      headers: getCorsSafe(req),
       jsonBody: successResponse(result.messages, 'Messages retrieved successfully', {
         page: result.page,
         pageSize: result.pageSize,
@@ -109,7 +107,7 @@ export const getConversationMessages = withAuth(async (req: HttpRequest, context
     };
   } catch (error) {
     console.error('Error in getConversationMessages:', error);
-    return { status: 500, headers: corsHeaders, jsonBody: { success: false, error: 'Failed to retrieve messages' } };
+    return { status: 500, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Failed to retrieve messages' } };
   }
 }); // Remove permissions
 
@@ -129,7 +127,7 @@ export const sendMessage = withAuth(async (req: HttpRequest, context: Invocation
     } = body;
 
     if (!conversationId || !content) {
-      return { status: 400, headers: corsHeaders, jsonBody: { success: false, error: 'conversationId and content are required' } };
+      return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'conversationId and content are required' } };
     }
 
     const message = await MessagingService.sendMessage({
@@ -144,10 +142,10 @@ export const sendMessage = withAuth(async (req: HttpRequest, context: Invocation
       replyToMessageId
     });
 
-    return { status: 201, headers: corsHeaders, jsonBody: successResponse(message, 'Message sent successfully') };
+    return { status: 201, headers: getCorsSafe(req), jsonBody: successResponse(message, 'Message sent successfully') };
   } catch (error) {
     console.error('Error in sendMessage:', error);
-    return { status: 500, headers: corsHeaders, jsonBody: { success: false, error: 'Failed to send message' } };
+    return { status: 500, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Failed to send message' } };
   }
 });
 
@@ -417,7 +415,7 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
     const userId = req.params.userId;
 
     if (!userId) {
-      return { status: 400, headers: corsHeaders, jsonBody: { success: false, error: 'userId is required' } };
+      return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'userId is required' } };
     }
 
     // Import profile services
@@ -434,14 +432,14 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
     const userResult = await dbService.executeQuery(userQuery, [userId]);
 
     if (!userResult.recordset || userResult.recordset.length === 0) {
-      return { status: 404, headers: corsHeaders, jsonBody: { success: false, error: 'User not found' } };
+      return { status: 404, headers: getCorsSafe(req), jsonBody: { success: false, error: 'User not found' } };
     }
 
     const targetUser = userResult.recordset[0];
 
     // Check privacy settings
     if (targetUser.ProfileVisibility === 'Private' && targetUser.UserID !== user.userId) {
-      return { status: 403, headers: corsHeaders, jsonBody: { success: false, error: 'This profile is private' } };
+      return { status: 403, headers: getCorsSafe(req), jsonBody: { success: false, error: 'This profile is private' } };
     }
 
     // Record profile view (if not viewing own profile)
@@ -494,12 +492,12 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
         GraduationYear: profile.GraduationYear
       };
 
-      return { status: 200, headers: corsHeaders, jsonBody: successResponse(publicProfile, 'Public profile retrieved successfully') };
+      return { status: 200, headers: getCorsSafe(req), jsonBody: successResponse(publicProfile, 'Public profile retrieved successfully') };
     } else {
       // For employers, show basic info
       return {
         status: 200,
-        headers: corsHeaders,
+        headers: getCorsSafe(req),
         jsonBody: successResponse({
           UserID: targetUser.UserID,
           FirstName: targetUser.FirstName,
@@ -512,7 +510,7 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
     }
   } catch (error) {
     console.error('Error in getPublicProfile:', error);
-    return { status: 500, headers: corsHeaders, jsonBody: { success: false, error: 'Failed to retrieve public profile' } };
+    return { status: 500, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Failed to retrieve public profile' } };
   }
 });
 
@@ -525,7 +523,7 @@ export const searchUsers = withAuth(async (req: HttpRequest, context: Invocation
     const pageSize = Math.min(params.pageSize ? parseInt(String(params.pageSize)) : 20, 50);
 
     if (!query || query.trim().length < 2) {
-      return { status: 400, headers: corsHeaders, jsonBody: { success: false, error: 'Search query must be at least 2 characters' } };
+      return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Search query must be at least 2 characters' } };
     }
 
     const searchTerm = `%${query.trim()}%`;
@@ -586,7 +584,7 @@ export const searchUsers = withAuth(async (req: HttpRequest, context: Invocation
 
     return {
       status: 200,
-      headers: corsHeaders,
+      headers: getCorsSafe(req),
       jsonBody: successResponse(users, 'Users found successfully', {
 page,
         pageSize,
@@ -597,6 +595,6 @@ page,
     };
   } catch (error) {
     console.error('Error in searchUsers:', error);
-    return { status: 500, headers: corsHeaders, jsonBody: { success: false, error: 'Failed to search users' } };
+    return { status: 500, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Failed to search users' } };
   }
 });

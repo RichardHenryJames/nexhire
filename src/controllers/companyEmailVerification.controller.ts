@@ -1,5 +1,6 @@
 import { HttpRequest, HttpResponseInit, InvocationContext } from '@azure/functions';
 import { companyEmailVerificationService } from '../services/companyEmailVerification.service';
+import { AuthService } from '../services/auth.service';
 
 /**
  * Company Email Verification Controller
@@ -10,17 +11,16 @@ import { companyEmailVerificationService } from '../services/companyEmailVerific
  * - GET /verification/status - Get verification status
  */
 
-// Helper to extract user ID from JWT token
+// SECURITY FIX: Use proper JWT verification instead of manual Base64 decode
 const getUserIdFromRequest = (request: HttpRequest): string | null => {
   const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
+  const token = AuthService.extractTokenFromHeader(authHeader || '');
+  if (!token) return null;
 
   try {
-    const token = authHeader.substring(7);
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return payload.userId || payload.sub || null;
+    const payload = AuthService.verifyToken(token);
+    if (payload.type !== 'access') return null;
+    return payload.userId || null;
   } catch (error) {
     return null;
   }

@@ -72,7 +72,7 @@ export const userRegistrationSchema = Joi.object({
     password: Joi.string().min(8).required(),
     firstName: Joi.string().min(2).max(100).required(),
     lastName: Joi.string().min(2).max(100).required(),
-    userType: Joi.string().valid('JobSeeker', 'Employer', 'Admin').required(),
+    userType: Joi.string().valid('JobSeeker', 'Employer').required(), // SECURITY FIX: Removed 'Admin' — admin accounts created internally only
     phone: Joi.string().pattern(/^[+]?[\d\s\-()]+$/).optional(),
     dateOfBirth: Joi.date().max('now').optional(),
     gender: Joi.string().valid('Male', 'Female', 'Other', 'Prefer not to say').optional(),

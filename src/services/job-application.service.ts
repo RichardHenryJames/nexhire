@@ -282,6 +282,15 @@ export class JobApplicationService {
     // Get applications for a job (employer view) - FIXED: Better error handling
     static async getApplicationsByJob(jobId: string, employerUserId: string, params: PaginationParams & { statusFilter?: number }): Promise<{ applications: JobApplication[]; total: number; totalPages: number }> {
         const { page, pageSize, sortBy = 'SubmittedAt', sortOrder = 'desc', statusFilter } = params;
+
+        // SECURITY FIX: Allowlist for ORDER BY to prevent SQL injection
+        const ALLOWED_SORT_COLUMNS: Record<string, string> = {
+            'SubmittedAt': 'ja.SubmittedAt',
+            'LastUpdatedAt': 'ja.LastUpdatedAt',
+            'StatusID': 'ja.StatusID',
+        };
+        const safeSortColumn = ALLOWED_SORT_COLUMNS[sortBy] || 'ja.SubmittedAt';
+        const safeSortOrder = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
         
         try {
             // Verify employer has access to this job - FIXED: More flexible access check
@@ -345,7 +354,7 @@ export class JobApplicationService {
                 INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
                 LEFT JOIN ApplicationTracking at ON ja.ApplicationID = at.ApplicationID
                 ${whereClause}
-                ORDER BY ja.${sortBy} ${sortOrder.toUpperCase()}
+                ORDER BY ${safeSortColumn} ${safeSortOrder}
                 OFFSET @param${paramIndex} ROWS
                 FETCH NEXT @param${paramIndex + 1} ROWS ONLY
             `;

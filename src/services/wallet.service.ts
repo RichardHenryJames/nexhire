@@ -268,14 +268,14 @@ export class WalletService {
       const balanceBefore = wallet.Balance;
       let balanceAfter = balanceBefore + order.Amount;
 
-      // Update wallet balance
+      // SECURITY FIX: Atomic balance update to prevent race condition
       await dbService.executeQuery(
         `UPDATE Wallets 
-         SET Balance = @param1, 
+         SET Balance = Balance + @param1, 
              UpdatedAt = GETUTCDATE(), 
              LastTransactionAt = GETUTCDATE() 
          WHERE WalletID = @param0`,
-        [wallet.WalletID, balanceAfter]
+        [wallet.WalletID, order.Amount]
       );
 
       // Create transaction record
@@ -569,15 +569,20 @@ export class WalletService {
       const balanceBefore = wallet.Balance;
       const balanceAfter = balanceBefore - amount;
 
-      // Update wallet balance
-      await dbService.executeQuery(
+      // SECURITY FIX: Atomic balance update with WHERE clause to prevent race condition
+      const updateResult = await dbService.executeQuery(
         `UPDATE Wallets 
-         SET Balance = @param1, 
+         SET Balance = Balance - @param1, 
              UpdatedAt = GETUTCDATE(), 
              LastTransactionAt = GETUTCDATE() 
-         WHERE WalletID = @param0`,
-        [wallet.WalletID, balanceAfter]
+         WHERE WalletID = @param0 AND Balance >= @param1`,
+        [wallet.WalletID, amount]
       );
+
+      // If no rows updated, balance was insufficient (concurrent debit won the race)
+      if (!updateResult.rowsAffected || updateResult.rowsAffected[0] === 0) {
+        throw new InsufficientBalanceError('Insufficient wallet balance (concurrent transaction)');
+      }
 
       // Create transaction record
       const transactionId = AuthService.generateUniqueId();

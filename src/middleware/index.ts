@@ -308,6 +308,24 @@ export const otpRateLimit = rateLimit(5, 10 * 60 * 1000);        // 5 per 10 min
 export const apiRateLimit = rateLimit(100, 60 * 1000);           // 100 per minute
 
 // ============================================================
+// SECURITY FIX: withRateLimit wrapper for Azure Functions app.http() model
+// Wraps a handler with rate limiting check before execution
+// ============================================================
+export const withRateLimit = (
+    rateLimiter: ReturnType<typeof rateLimit>,
+    handler: (req: HttpRequest, context: InvocationContext) => Promise<HttpResponseInit>
+) => {
+    return withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+        // Run rate limiter — if it returns a 429, short-circuit
+        const rateLimitResult = await rateLimiter(req, context, async () => {
+            // Rate limit passed — run the actual handler
+            return handler(req, context);
+        });
+        return rateLimitResult;
+    });
+};
+
+// ============================================================
 // SECURITY FIX: Request logging middleware — filters sensitive headers
 // ============================================================
 const SENSITIVE_HEADERS = new Set([

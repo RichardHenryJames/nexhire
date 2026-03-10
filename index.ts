@@ -1,7 +1,7 @@
 import { app } from "@azure/functions";
 import type { HttpRequest, HttpResponseInit, InvocationContext, Timer } from "@azure/functions";
 
-import { withErrorHandling, corsHeaders } from "./src/middleware";
+import { withErrorHandling, withAuth, corsHeaders, withRateLimit, loginRateLimit, registerRateLimit, passwordResetRateLimit } from "./src/middleware";
 
 // User controllers
 import {
@@ -247,14 +247,14 @@ app.http("auth-register", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "auth/register",
-  handler: withErrorHandling(register),
+  handler: withRateLimit(registerRateLimit, register), // SECURITY: 10 per hour per IP
 });
 
 app.http("auth-login", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "auth/login",
-  handler: withErrorHandling(login),
+  handler: withRateLimit(loginRateLimit, login), // SECURITY: 5 attempts per 15 min per IP
 });
 
 // NEW: Google OAuth Login
@@ -293,7 +293,7 @@ app.http("auth-forgot-password", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "auth/forgot-password",
-  handler: withErrorHandling(forgotPassword),
+  handler: withRateLimit(passwordResetRateLimit, forgotPassword), // SECURITY: 3 per hour per IP
 });
 
 app.http("auth-reset-password", {
@@ -471,11 +471,14 @@ app.http("my-work-experiences", {
   handler: withErrorHandling(getMyWorkExperiences),
 });
 
+// SECURITY FIX: Work experiences now require auth
 app.http("applicant-work-experiences", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
   route: "work-experiences/applicant/{applicantId}",
-  handler: withErrorHandling(getWorkExperiences),
+  handler: withAuth(async (req, context, user) => {
+    return await getWorkExperiences(req, context);
+  }),
 });
 
 app.http("work-experience-by-id", {
@@ -521,17 +524,26 @@ app.http("employers-initialize", {
 // ========================================================================
 
 // FIXED: Combined Applicant Profile Management (GET + PUT in single function)
+// SECURITY FIX: Require auth + verify userId matches token
 app.http("applicants-profile", {
   methods: ["GET", "PUT", "OPTIONS"],
   authLevel: "anonymous",
   route: "applicants/{userId}/profile",
-  handler: withErrorHandling(async (req, context) => {
+  handler: withAuth(async (req, context, user) => {
     const userId = req.params.userId;
 
     try {
       // Handle OPTIONS for CORS
       if (req.method === "OPTIONS") {
         return { status: 200 };
+      }
+
+      // SECURITY FIX: Verify the requesting user owns this profile
+      if (user.userId !== userId) {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Access denied — you can only access your own profile" },
+        };
       }
 
       // Handle GET - Get applicant profile
