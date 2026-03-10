@@ -243,6 +243,12 @@ export default function MessagingLayoutDesktop() {
       otherUserId: conv.OtherUserID,
       otherUserProfilePic: conv.OtherUserProfilePic,
     });
+    // Immediately clear unread count in the conversation list
+    if (conv.UnreadCount > 0) {
+      setConversations(prev => prev.map(c =>
+        c.ConversationID === conv.ConversationID ? { ...c, UnreadCount: 0 } : c
+      ));
+    }
   };
 
   const renderConversation = ({ item }) => {

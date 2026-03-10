@@ -104,6 +104,10 @@ export default function NotificationsScreen() {
         navigation.setOptions({
           tabBarBadge: count > 0 ? (count > 99 ? '99+' : count) : undefined,
         });
+        // Notify DesktopNavBar (web) to update instantly
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('refopen:badge-update', { detail: { notificationCount: count } }));
+        }
       }
     } catch (e) { /* silent */ }
   }, [navigation]);

@@ -183,12 +183,20 @@ function ConversationsScreenMobile() {
     return (
       <TouchableOpacity
       style={styles.conversationItem}
-  onPress={() => navigation.navigate('Chat', { 
+  onPress={() => {
+          // Immediately clear unread count in the list
+          if (item.UnreadCount > 0) {
+            setConversations(prev => prev.map(c =>
+              c.ConversationID === item.ConversationID ? { ...c, UnreadCount: 0 } : c
+            ));
+          }
+          navigation.navigate('Chat', { 
           conversationId: item.ConversationID,
           otherUserName: item.OtherUserName,
           otherUserId: item.OtherUserID,
           otherUserProfilePic: item.OtherUserProfilePic,
-})}
+          });
+      }}
       >
         {/* Profile Picture */}
   <View style={styles.avatar}>

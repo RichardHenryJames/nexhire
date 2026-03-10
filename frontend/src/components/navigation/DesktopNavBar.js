@@ -5,6 +5,7 @@ import { useNavigation, useRoute, useNavigationState } from '@react-navigation/n
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
+import { useUnreadMessages } from '../../contexts/UnreadMessagesContext';
 import CachedImage from '../CachedImage';
 
 /**
@@ -19,6 +20,7 @@ export default function DesktopNavBar() {
   const [showMeDropdown, setShowMeDropdown] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -119,7 +121,7 @@ export default function DesktopNavBar() {
     return () => window.removeEventListener('popstate', onPopState);
   }, [getTabFromPath]);
 
-  // Fetch wallet balance + unread count
+  // Fetch wallet balance + notification unread count
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -133,7 +135,17 @@ export default function DesktopNavBar() {
     };
     fetchData();
     const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+
+    // Listen for instant notification badge updates from NotificationsScreen
+    const handleBadgeUpdate = (e) => {
+      if (e.detail?.notificationCount != null) setUnreadCount(e.detail.notificationCount);
+    };
+    window.addEventListener('refopen:badge-update', handleBadgeUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('refopen:badge-update', handleBadgeUpdate);
+    };
   }, []);
 
   // Close dropdown on outside click (web)
@@ -174,7 +186,7 @@ export default function DesktopNavBar() {
     ...(isEmployer ? [{ name: 'CreateJob', icon: 'add-circle', iconOutline: 'add-circle-outline', label: 'Post Job', isTab: true, href: '/create-job' }] : []),
     ...(isJobSeeker ? [{ name: 'Services', icon: 'grid', iconOutline: 'grid-outline', label: 'Services', isTab: true, href: '/services' }] : []),
     ...(isAdmin ? [{ name: 'CareerApps', icon: 'document-text', iconOutline: 'document-text-outline', label: 'Applications', isTab: true, href: '/admin/career-apps' }] : []),
-    { name: 'Messages', icon: 'chatbubbles', iconOutline: 'chatbubbles-outline', label: 'Messaging', isTab: false, href: '/messages' },
+    { name: 'Messages', icon: 'chatbubbles', iconOutline: 'chatbubbles-outline', label: 'Messaging', isTab: false, badge: messageUnreadCount, href: '/messages' },
     { name: 'Notifications', icon: 'notifications', iconOutline: 'notifications-outline', label: 'Notifications', isTab: true, badge: unreadCount, href: '/notifications' },
   ];
 
