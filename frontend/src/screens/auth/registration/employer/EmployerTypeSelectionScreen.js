@@ -235,7 +235,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
   return (
     <RegistrationWrapper currentStep={1} totalSteps={4} stepLabel="Organization type" onBack={() => navigation.goBack()}>
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           <View style={styles.header}>
             {/* Skip pill button - appears when selection made */}
@@ -402,9 +402,13 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
 
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
   scrollContainer: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    ...(Platform.OS === 'web' ? { justifyContent: 'center' } : {}),
+  },
   content: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
     padding: 24,
     paddingTop: 8,
     alignSelf: 'center',

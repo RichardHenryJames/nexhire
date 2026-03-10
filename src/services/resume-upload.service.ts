@@ -144,9 +144,23 @@ export class ResumeStorageService {
    */
   generateSasUrl(blobUrl: string, expiryMinutes: number = 10): string {
     try {
-      // Parse account name and key from connection string
+      // Extract container and blob name from the URL
+      const url = new URL(blobUrl);
+      const pathParts = url.pathname.split('/').filter(Boolean);
+      const containerName = pathParts[0];
+      const blobName = pathParts.slice(1).join('/');
+
+      if (!containerName || !blobName) {
+        console.warn('Cannot generate SAS URL: invalid blob URL structure');
+        return blobUrl;
+      }
+
+      const containerClient = this.blobServiceClient.getContainerClient(containerName);
+      const blobClient = containerClient.getBlobClient(blobName);
+
+      // Parse credentials from connection string for SAS generation
       const connParts: Record<string, string> = {};
-      AZURE_STORAGE_CONNECTION_STRING.split(';').forEach(part => {
+      (process.env.AZURE_STORAGE_CONNECTION_STRING || '').split(';').forEach(part => {
         const [key, ...valueParts] = part.split('=');
         if (key && valueParts.length) connParts[key] = valueParts.join('=');
       });
@@ -155,29 +169,20 @@ export class ResumeStorageService {
       const accountKey = connParts['AccountKey'];
       if (!accountName || !accountKey) {
         console.warn('Cannot generate SAS URL: missing storage credentials');
-        return blobUrl; // Fallback to raw URL
+        return blobUrl;
       }
 
-      // Extract container and blob name from the URL
-      const url = new URL(blobUrl);
-      const pathParts = url.pathname.split('/').filter(Boolean);
-      const containerName = pathParts[0];
-      const blobName = pathParts.slice(1).join('/');
-
       const credential = new StorageSharedKeyCredential(accountName, accountKey);
-      const startsOn = new Date();
-      const expiresOn = new Date(startsOn.getTime() + expiryMinutes * 60 * 1000);
+      const expiresOn = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
-      const sasParams = generateBlobSASQueryParameters({
+      const sasToken = generateBlobSASQueryParameters({
         containerName,
         blobName,
-        permissions: BlobSASPermissions.parse('r'), // Read only
-        startsOn,
+        permissions: BlobSASPermissions.parse('r'),
         expiresOn,
-        protocol: SASProtocol.HttpsAndHttp,
-      }, credential);
+      }, credential).toString();
 
-      return `${blobUrl}?${sasParams.toString()}`;
+      return `${blobClient.url}?${sasToken}`;
     } catch (error) {
       console.error('Error generating SAS URL:', error);
       return blobUrl; // Fallback

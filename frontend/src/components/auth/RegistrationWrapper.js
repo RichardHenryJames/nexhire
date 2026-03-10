@@ -108,7 +108,16 @@ export default function RegistrationWrapper({
           },
         ]}
       >
-        {children}
+        {/* Desktop: wrap in a card container for visual containment */}
+        {Platform.OS === 'web' && responsive.isDesktop ? (
+          <View style={styles.desktopCardOuter}>
+            <View style={styles.desktopCard}>
+              {children}
+            </View>
+          </View>
+        ) : (
+          children
+        )}
       </Animated.View>
 
       {/* Trust footer */}
@@ -193,6 +202,25 @@ const createStyles = (colors, responsive = {}) =>
     },
     contentWrapper: {
       flex: 1,
+    },
+    desktopCardOuter: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 12,
+    },
+    desktopCard: {
+      flex: 1,
+      width: '100%',
+      maxWidth: 640,
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      overflow: 'hidden',
+      // Subtle shadow for elevation
+      ...(Platform.OS === 'web' ? {
+        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+      } : {}),
     },
     trustFooter: {
       flexDirection: 'row',

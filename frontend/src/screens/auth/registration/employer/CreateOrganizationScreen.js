@@ -37,7 +37,7 @@ export default function CreateOrganizationScreen({ navigation, route }) {
 
   return (
     <RegistrationWrapper currentStep={2} totalSteps={4} stepLabel="Organization details" onBack={() => navigation.goBack()}>
-      <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24, maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%', width: '100%', alignSelf: 'center' }}>
+      <ScrollView style={styles.scroll} contentContainerStyle={{ flexGrow: 1, padding: 24, maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%', width: '100%', alignSelf: 'center', ...(Platform.OS === 'web' && responsive.isDesktop ? { justifyContent: 'center' } : {}) }}>
         <Text style={styles.title}>Tell us about your organization</Text>
         <Text style={styles.subtitle}>We will use this to set up your hiring workspace</Text>
 

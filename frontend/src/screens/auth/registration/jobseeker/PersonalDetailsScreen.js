@@ -875,10 +875,21 @@ styles.selectionButton,
             
             {/* Only show password fields for non-Google users */}
             {!isGoogleUser && (
-              <>
-                {renderInput('password', 'Password (8+ characters)', true, 'default', true)}
-                {renderInput('confirmPassword', 'Confirm Password', true, 'default', true)}
-              </>
+              Platform.OS === 'web' && responsive.isDesktop ? (
+                <View style={styles.row}>
+                  <View style={styles.halfInput}>
+                    {renderInput('password', 'Password (8+ characters)', true, 'default', true)}
+                  </View>
+                  <View style={[styles.halfInput, { marginRight: 0 }]}>
+                    {renderInput('confirmPassword', 'Confirm Password', true, 'default', true)}
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {renderInput('password', 'Password (8+ characters)', true, 'default', true)}
+                  {renderInput('confirmPassword', 'Confirm Password', true, 'default', true)}
+                </>
+              )
             )}
             
             {renderInput('phone', 'Phone Number', false, 'phone-pad', true)}
@@ -1344,7 +1355,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   content: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 520 : '100%',
+    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
     padding: 24,
     paddingTop: 8,
     alignSelf: 'center',
