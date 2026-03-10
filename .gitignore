@@ -8,8 +8,11 @@ TestResults/
 *.csproj.user
 packages/
 .env
+.env.*
 .env.local
 .env.development
+.env.prod
+frontend/.env.prod
 backups/*
 
 # Node.js related files
