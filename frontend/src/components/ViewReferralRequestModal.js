@@ -382,7 +382,7 @@ export default function ViewReferralRequestModal({
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.primary + '10', borderRadius: 10, padding: 10, marginBottom: 10 }}>
                   <Ionicons name="globe-outline" size={16} color={colors.primary} style={{ marginTop: 1 }} />
                   <Text style={{ flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 }}>
-                    This candidate is open to referrals at <Text style={{ fontWeight: '700', color: colors.primary }}>any company</Text>. If your company is hiring for this role, you can refer them!
+                    This candidate is open to referrals at <Text style={{ fontWeight: '700', color: colors.primary }}>any company</Text>. If your company is hiring for this role or similar, you can refer them!
                   </Text>
                 </View>
               )}
