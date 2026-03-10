@@ -60,7 +60,7 @@ export default function BlindReviewScreen({ navigation }) {
 
         <Text style={[styles.title, { color: colors.text }]}>Blind Review</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Submit your profile anonymously — verified referrers from your target company rate it and tell you if they'd refer you.
+          Submit your profile anonymously — referrers from your target company rate it and tell you if they'd refer you.
         </Text>
 
         {!checking && (

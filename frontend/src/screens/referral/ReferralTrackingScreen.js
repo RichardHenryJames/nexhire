@@ -939,7 +939,7 @@ export default function ReferralTrackingScreen() {
             </View>
 
             <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12, lineHeight: 18 }}>
-              Your request for "{request?.JobTitle}" will be sent to verified referrers at 500+ companies. Multiple referrers can refer you — you only pay once.
+              Your request for "{request?.JobTitle}" will be sent to referrers at 500+ companies. Multiple referrers can refer you — you only pay once.
             </Text>
 
             {/* Pricing Breakdown */}

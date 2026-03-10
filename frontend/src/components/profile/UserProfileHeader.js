@@ -646,7 +646,7 @@ export default function UserProfileHeader({
             )}
             {isVerifiedReferrer && (
               <TouchableOpacity
-                onPress={() => showToast(`Verified Referrer at ${currentWorkCompany || 'Company'}`, 'success', 2000)}
+                onPress={() => showToast(`Referrer at ${currentWorkCompany || 'Company'}`, 'success', 2000)}
                 activeOpacity={0.7}
                 style={{ marginLeft: 6 }}
               >

@@ -323,7 +323,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
   const [useCustomDomain, setUseCustomDomain] = useState(false); // Toggle for full email input
   const [emailDomainValid, setEmailDomainValid] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false); // Work exp level verification
@@ -420,7 +420,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
       return;
     }
 
-    setOtp(['', '', '', '']);
+    setOtp(['', '', '', '', '', '']);
     setSendingOtp(true);
     setVerificationError('');
     
@@ -455,7 +455,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     setVerificationError('');
 
     // Auto-focus next input
-    if (numericValue && index < 3) {
+    if (numericValue && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
   };
@@ -469,8 +469,8 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
 
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length !== 4) {
-      setVerificationError('Please enter complete 4-digit OTP');
+    if (otpCode.length !== 6) {
+      setVerificationError('Please enter complete 6-digit OTP');
       return;
     }
 
@@ -512,7 +512,7 @@ export default function WorkExperienceSection({ editing, showHeader = false, onL
     setEmailPrefix('');
     setEmailDomainValid(false);
     setShowOtpInput(false);
-    setOtp(['', '', '', '']);
+    setOtp(['', '', '', '', '', '']);
     setVerificationError('');
     setEmailVerified(false);
     setUserLevelVerified(false);

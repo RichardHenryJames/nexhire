@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -682,7 +682,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
                 value={formData.graduationYear}
                 onChangeText={(text) => setFormData({ ...formData, graduationYear: text })}
                 keyboardType="numeric"
-                maxLength={4}
+                maxLength={6}
               />
             </View>
 

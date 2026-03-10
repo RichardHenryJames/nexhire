@@ -326,7 +326,11 @@ export class RazorpayService {
         .update(`${orderId}|${paymentId}`)
         .digest('hex');
 
-      return expectedSignature === signature;
+      // SECURITY FIX: Use constant-time comparison to prevent timing attacks
+      return crypto.timingSafeEqual(
+        Buffer.from(expectedSignature, 'hex'),
+        Buffer.from(signature, 'hex')
+      );
     } catch (error) {
       console.error('Error verifying payment signature:', error);
       return false;

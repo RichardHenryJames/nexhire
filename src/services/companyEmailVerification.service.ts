@@ -17,9 +17,10 @@ import { isBlockedMarketplace } from '../data/blocked-marketplaces';
  * 5. If user adds new work experience: IsVerifiedReferrer = false (must re-verify)
  */
 
-// Generate a random 4-digit OTP
+// SECURITY FIX: 6-digit OTP using cryptographically secure random
 const generateOTP = (): string => {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  const crypto = require('crypto');
+  return crypto.randomInt(100000, 999999).toString();
 };
 
 // OTP expiry time in minutes

@@ -668,7 +668,7 @@ export default function AskReferralScreen({ navigation, route }) {
                     Open to Any Company
                   </Text>
                   <Text style={styles.modeCardDesc}>
-                    Broadcast to all verified referrers. Multiple companies can
+                    Broadcast to all referrers. Multiple companies can
                     refer you.
                   </Text>
                   <View style={styles.modeTagsRow}>

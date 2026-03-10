@@ -315,7 +315,7 @@ export default function EducationSection({ profile, setProfile, onSave }) {
           placeholder="e.g., 2024"
           placeholderTextColor={colors.gray400}
           keyboardType="numeric"
-          maxLength={4}
+          maxLength={6}
         />
       </View>
 

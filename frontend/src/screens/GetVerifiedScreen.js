@@ -109,11 +109,11 @@ export default function GetVerifiedScreen({ navigation }) {
   // Shared OTP state
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [verifying, setVerifying] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
-  const otpRefs = [useRef(), useRef(), useRef(), useRef()];
+  const otpRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
   // Aadhaar state
   const [aadhaarPhoto, setAadhaarPhoto] = useState(null);
@@ -315,7 +315,7 @@ export default function GetVerifiedScreen({ navigation }) {
   // ── Verify OTP ──
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length !== 4) { setOtpError('Please enter the 4-digit OTP'); return; }
+    if (otpCode.length !== 6) { setOtpError('Please enter the 6-digit OTP'); return; }
     setVerifying(true);
     setOtpError('');
     try {
@@ -331,7 +331,7 @@ export default function GetVerifiedScreen({ navigation }) {
         animateToStep(STEPS.SUCCESS);
       } else {
         setOtpError(res.error || 'Invalid OTP');
-        setOtp(['', '', '', '']);
+        setOtp(['', '', '', '', '', '']);
         otpRefs[0].current?.focus();
       }
     } catch (err) { setOtpError('Verification failed'); }
@@ -344,7 +344,7 @@ export default function GetVerifiedScreen({ navigation }) {
     newOtp[index] = text.replace(/[^0-9]/g, '');
     setOtp(newOtp);
     setOtpError('');
-    if (text && index < 3) otpRefs[index + 1].current?.focus();
+    if (text && index < 5) otpRefs[index + 1].current?.focus();
   };
   const handleOtpKeyPress = (e, index) => {
     if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
@@ -618,7 +618,7 @@ export default function GetVerifiedScreen({ navigation }) {
   const renderOtpInput = () => (
     <>
       <Text style={styles.sectionTitle}>Enter Verification Code</Text>
-      <Text style={[styles.sectionSubtitle, { marginBottom: 24 }]}>We sent a 4-digit code to your email</Text>
+      <Text style={[styles.sectionSubtitle, { marginBottom: 24 }]}>We sent a 6-digit code to your email</Text>
       <View style={styles.otpRow}>
         {otp.map((digit, i) => (
           <TextInput
@@ -638,7 +638,7 @@ export default function GetVerifiedScreen({ navigation }) {
       <TouchableOpacity style={styles.primaryButton} onPress={handleVerifyOtp} disabled={verifying}>
         {verifying ? <ActivityIndicator color={colors.white} /> : <Text style={styles.primaryButtonText}>Verify</Text>}
       </TouchableOpacity>
-      <TouchableOpacity style={styles.resendBtn} onPress={() => { setOtp(['', '', '', '']); setOtpSent(false); setOtpError(''); }} disabled={resendTimer > 0}>
+      <TouchableOpacity style={styles.resendBtn} onPress={() => { setOtp(['', '', '', '', '', '']); setOtpSent(false); setOtpError(''); }} disabled={resendTimer > 0}>
         <Text style={[styles.resendText, resendTimer > 0 && { color: colors.textSecondary }]}>
           {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
         </Text>

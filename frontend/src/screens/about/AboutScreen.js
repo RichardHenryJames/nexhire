@@ -462,7 +462,7 @@ export default function AboutScreenNew() {
           >
             <StatItem value="125K+" label="Active Jobs" color={C.primary} C={C} isLg={isLg} />
             {isLg && <View style={{ width: 1, height: 60, backgroundColor: C.border, marginHorizontal: 40 }} />}
-            <StatItem value="1000+" label="Verified Referrers" color={C.accent} C={C} isLg={isLg} />
+            <StatItem value="1000+" label="Referrers" color={C.accent} C={C} isLg={isLg} />
             {isLg && <View style={{ width: 1, height: 60, backgroundColor: C.border, marginHorizontal: 40 }} />}
             <StatItem value="2.5K+" label="Companies" color={C.emerald} C={C} isLg={isLg} />
             {isLg && <View style={{ width: 1, height: 60, backgroundColor: C.border, marginHorizontal: 40 }} />}

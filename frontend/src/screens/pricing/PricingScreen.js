@@ -121,7 +121,7 @@ export default function PricingScreen() {
                 <Text style={styles.pricingLabel}>Open-to-Any Company</Text>
                 <Text style={styles.openPrice}>{fmt(pricing.openToAnyReferralCost)}</Text>
                 <Text style={styles.priceNote}>
-                  Your request is broadcast to verified referrers at every company on the platform.
+                  Your request is broadcast to referrers at every company on the platform.
                 </Text>
 
                 <View style={{ marginTop: 12, gap: 8 }}>

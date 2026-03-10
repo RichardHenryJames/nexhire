@@ -17,9 +17,10 @@ import { EmailService } from './emailService';
  * 7. Backend registration: checks verificationId matches email → sets EmailVerified = 1
  */
 
-// Generate a random 4-digit OTP
+// SECURITY FIX: 6-digit OTP using cryptographically secure random
 const generateOTP = (): string => {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  const crypto = require('crypto');
+  return crypto.randomInt(100000, 999999).toString();
 };
 
 // OTP expiry time in minutes
@@ -69,10 +70,11 @@ export const sendRegistrationEmailOTP = async (email: string): Promise<Registrat
       [normalizedEmail]
     );
     if (existingUser.recordset.length > 0) {
+      // SECURITY FIX: Don't reveal whether email is registered (prevents enumeration)
       return {
-        success: false,
-        message: 'An account with this email already exists. Please sign in instead.',
-        error: 'EMAIL_ALREADY_REGISTERED'
+        success: true,
+        message: 'If this email is not already registered, you will receive a verification code shortly.',
+        data: { emailSent: false } // Signal to frontend without revealing existence
       };
     }
 

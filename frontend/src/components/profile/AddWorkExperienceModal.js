@@ -184,7 +184,7 @@ export default function AddWorkExperienceModal({
   const [useCustomDomain, setUseCustomDomain] = useState(false);
   const [emailDomainValid, setEmailDomainValid] = useState(false);
   const [showOtpInput, setShowOtpInput] = useState(false);
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
@@ -261,7 +261,7 @@ export default function AddWorkExperienceModal({
       setDepartmentSearch('');
       setOrgQuery('');
       setShowOtpInput(false);
-      setOtp(['', '', '', '']);
+      setOtp(['', '', '', '', '', '']);
       setVerificationError('');
       setEmailPrefix('');
       setEmailDomainValid(false);
@@ -384,7 +384,7 @@ export default function AddWorkExperienceModal({
       return;
     }
 
-    setOtp(['', '', '', '']);
+    setOtp(['', '', '', '', '', '']);
     setSendingOtp(true);
     setVerificationError('');
     
@@ -412,7 +412,7 @@ export default function AddWorkExperienceModal({
     newOtp[index] = numericValue.slice(-1);
     setOtp(newOtp);
     setVerificationError('');
-    if (numericValue && index < 3) {
+    if (numericValue && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
   };
@@ -425,8 +425,8 @@ export default function AddWorkExperienceModal({
 
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length !== 4) {
-      setVerificationError('Please enter complete 4-digit OTP');
+    if (otpCode.length !== 6) {
+      setVerificationError('Please enter complete 6-digit OTP');
       return;
     }
 
@@ -773,7 +773,7 @@ export default function AddWorkExperienceModal({
                       )}
                       {showOtpInput && (
                         <View style={styles.otpSection}>
-                          <Text style={styles.otpLabel}>Enter 4-digit verification code</Text>
+                          <Text style={styles.otpLabel}>Enter 6-digit verification code</Text>
                           <View style={styles.otpInputContainer}>
                             {[0, 1, 2, 3].map((index) => (
                               <TextInput
@@ -796,9 +796,9 @@ export default function AddWorkExperienceModal({
                               </Text>
                             </TouchableOpacity>
                             <TouchableOpacity
-                              style={[styles.submitOtpButton, (otp.join('').length !== 4 || verifyingOtp) && styles.submitOtpButtonDisabled]}
+                              style={[styles.submitOtpButton, (otp.join('').length !== 6 || verifyingOtp) && styles.submitOtpButtonDisabled]}
                               onPress={handleVerifyOtp}
-                              disabled={otp.join('').length !== 4 || verifyingOtp}
+                              disabled={otp.join('').length !== 6 || verifyingOtp}
                             >
                               {verifyingOtp ? (
                                 <ActivityIndicator size="small" color={colors.white} />

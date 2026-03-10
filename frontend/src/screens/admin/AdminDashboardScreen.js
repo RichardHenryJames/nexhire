@@ -616,7 +616,7 @@ export default function AdminDashboardScreen() {
         {renderStatCard('Job Seekers', userStats.TotalJobSeekers, 'briefcase', colors.primary)}
         {renderStatCard('Employers', userStats.TotalEmployers, 'business', colors.success)}
         {renderStatCard('Active Users', userStats.ActiveUsers, 'checkmark-circle', colors.accent)}
-        {renderStatCard('Verified Referrers', userStats.VerifiedReferrers, 'shield-checkmark', colors.warning)}
+        {renderStatCard('Referrers', userStats.VerifiedReferrers, 'shield-checkmark', colors.warning)}
       </View>
 
       {/* Referral Stats */}
@@ -1092,8 +1092,8 @@ export default function AdminDashboardScreen() {
                   onPress={(e) => {
                     e.stopPropagation?.();
                     showConfirm({
-                      title: 'Make Verified Referrer',
-                      message: `Make ${userData.FirstName} ${userData.LastName} a verified referrer?\n\nThis will allow them to claim referral requests and earn rewards.`,
+                      title: 'Make Referrer',
+                      message: `Make ${userData.FirstName} ${userData.LastName} a referrer?\n\nThis will allow them to claim referral requests and earn rewards.`,
                       icon: 'shield-checkmark',
                       iconColor: colors.primary,
                       confirmText: 'Make Referrer',
@@ -1372,7 +1372,7 @@ export default function AdminDashboardScreen() {
     return (
     <>
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Companies with Verified Referrers</Text>
+        <Text style={styles.sectionTitle}>Companies with Referrers</Text>
         <Text style={styles.sectionSubtitle}>{companiesWithReferrers.length} companies</Text>
       </View>
       {companiesWithReferrers.map((company, index) => (

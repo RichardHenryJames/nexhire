@@ -82,6 +82,16 @@ export const getConversationMessages = withAuth(async (req: HttpRequest, context
       return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'conversationId is required' } };
     }
 
+    // SECURITY FIX: Verify user is a participant of this conversation
+    const { dbService } = await import('../services/database.service');
+    const memberCheck = await dbService.executeQuery(
+      'SELECT ConversationID FROM Conversations WHERE ConversationID = @param0 AND (User1ID = @param1 OR User2ID = @param1)',
+      [conversationId, user.userId]
+    );
+    if (!memberCheck.recordset || memberCheck.recordset.length === 0) {
+      return { status: 403, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Access denied — you are not a participant of this conversation' } };
+    }
+
     const params = extractQueryParams(req);
     const page = params.page ? parseInt(String(params.page)) : 1;
     const pageSize = params.pageSize ? parseInt(String(params.pageSize)) : 50;
@@ -128,6 +138,16 @@ export const sendMessage = withAuth(async (req: HttpRequest, context: Invocation
 
     if (!conversationId || !content) {
       return { status: 400, headers: getCorsSafe(req), jsonBody: { success: false, error: 'conversationId and content are required' } };
+    }
+
+    // SECURITY FIX: Verify user is a participant of this conversation
+    const { dbService } = await import('../services/database.service');
+    const memberCheck = await dbService.executeQuery(
+      'SELECT ConversationID FROM Conversations WHERE ConversationID = @param0 AND (User1ID = @param1 OR User2ID = @param1)',
+      [conversationId, user.userId]
+    );
+    if (!memberCheck.recordset || memberCheck.recordset.length === 0) {
+      return { status: 403, headers: getCorsSafe(req), jsonBody: { success: false, error: 'Access denied — you are not a participant of this conversation' } };
     }
 
     const message = await MessagingService.sendMessage({

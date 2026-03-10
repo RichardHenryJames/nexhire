@@ -64,7 +64,7 @@ export default function EmployerJobsScreen({ navigation, route }) {
     
     if (!canAccess) {
       // Redirect non-verified job seekers to Home
-      showToast('You need to be a verified referrer to access this page', 'error');
+      showToast('You need to be a referrer to access this page', 'error');
       navigation.replace('Main', {
         screen: 'MainTabs',
         params: { screen: 'Home' }

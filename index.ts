@@ -1461,7 +1461,9 @@ app.http("wallet-debit", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "wallet/debit",
-  handler: withErrorHandling(debitWallet),
+  handler: withAuth(async (req, context, user) => {
+    return await debitWallet(req, context);
+  }), // SECURITY FIX: Require auth for wallet debit
 });
 
 app.http("wallet-withdrawable", {

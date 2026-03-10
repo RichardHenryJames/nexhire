@@ -107,7 +107,7 @@ const getServices = (colors) => [
     id: 'blind-profile-review',
     title: 'Blind Review',
     subtitle: 'Insider feedback on your profile',
-    description: 'Submit your profile anonymously — verified referrers from your target company rate it and tell you if they\'d refer you.',
+    description: 'Submit your profile anonymously — referrers from your target company rate it and tell you if they\'d refer you.',
     icon: 'people',
     gradient: [colors.accentDark, colors.accentLight],
     ready: false,

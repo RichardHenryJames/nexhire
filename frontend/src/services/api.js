@@ -654,7 +654,7 @@ class RefOpenAPI {
   /**
    * Verify OTP during registration (anonymous - no JWT needed)
    * @param {string} email - The email being verified
-   * @param {string} otp - The 4-digit OTP code
+   * @param {string} otp - The 6-digit OTP code
    * @returns {Promise<{success: boolean, data?: {verificationId: string}}>}
    */
   async verifyRegistrationEmailOTP(email, otp) {
@@ -692,7 +692,7 @@ class RefOpenAPI {
   /**
    * Verify OTP sent to company email
    * @param {string} workExperienceId - The work experience ID being verified
-   * @param {string} otp - The 4-digit OTP code
+   * @param {string} otp - The 6-digit OTP code
    */
   async verifyCompanyEmailOTP(workExperienceId, otp) {
     if (!this.token) {

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -127,8 +127,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
   };
 
   const handleVerifyOTP = async () => {
-    if (otpCode.length !== 4) {
-      showToast('Please enter the 4-digit code', 'error');
+    if (otpCode.length !== 6) {
+      showToast('Please enter the 6-digit code', 'error');
       return;
     }
     setOtpLoading(true);
@@ -442,25 +442,25 @@ export default function EmployerAccountScreen({ navigation, route }) {
         {!isGoogleUser && showOtpInput && !emailVerified && (
           <View style={styles.emailVerifyContainer}>
               <View style={styles.otpSection}>
-                <Text style={styles.otpLabel}>Enter the 4-digit code sent to your email</Text>
+                <Text style={styles.otpLabel}>Enter the 6-digit code sent to your email</Text>
                 <View style={styles.otpRow}>
                   <TextInput
                     style={styles.otpInput}
-                    placeholder="0000"
+                    placeholder="000000"
                     placeholderTextColor={colors.gray500}
                     value={otpCode}
-                    onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 4))}
+                    onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 6))}
                     keyboardType="number-pad"
-                    maxLength={4}
+                    maxLength={6}
                     autoFocus={true}
                   />
                   <TouchableOpacity
                     style={[
                       styles.verifyOtpButton,
-                      (otpCode.length !== 4 || otpLoading) && styles.verifyEmailButtonDisabled
+                      (otpCode.length !== 6 || otpLoading) && styles.verifyEmailButtonDisabled
                     ]}
                     onPress={handleVerifyOTP}
-                    disabled={otpCode.length !== 4 || otpLoading}
+                    disabled={otpCode.length !== 6 || otpLoading}
                   >
                     {otpLoading ? (
                       <ActivityIndicator size="small" color={colors.white} />

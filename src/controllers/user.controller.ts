@@ -242,13 +242,28 @@ export const refreshToken = withErrorHandling(async (req: HttpRequest, context: 
         };
     }
 
-    // Get user and generate new tokens
+    // Get user and verify account is still active
     const user = await UserService.findById(payload.userId);
     if (!user) {
         return {
             status: 404,
             jsonBody: errorResponse('User not found', 'Invalid refresh token')
         };
+    }
+
+    // SECURITY FIX: Check if user account is still active
+    if (!user.IsActive) {
+        return {
+            status: 403,
+            jsonBody: errorResponse('Account deactivated', 'Your account has been deactivated')
+        };
+    }
+
+    // SECURITY FIX: Blacklist the old access token if present in Authorization header
+    const authHeader = req.headers.get('authorization');
+    const oldToken = AuthService.extractTokenFromHeader(authHeader || '');
+    if (oldToken) {
+        blacklistToken(oldToken);
     }
 
     const tokens = AuthService.generateAuthTokens(user);

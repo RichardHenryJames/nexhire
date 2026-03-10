@@ -118,11 +118,11 @@ export default function BecomeReferrerScreen({ navigation }) {
   const [emailDomain, setEmailDomain] = useState('');
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState(['', '', '', '']);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [verifying, setVerifying] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [resendTimer, setResendTimer] = useState(0);
-  const otpRefs = [useRef(), useRef(), useRef(), useRef()];
+  const otpRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
   // Success state
   const [showSuccess, setShowSuccess] = useState(false);
@@ -141,7 +141,7 @@ export default function BecomeReferrerScreen({ navigation }) {
       return;
     }
     if (isVerifiedReferrer) {
-      showToast('You are already a verified referrer! 🎉', 'success');
+      showToast('You are already a referrer! 🎉', 'success');
       navigation.goBack();
     }
   }, []);
@@ -364,8 +364,8 @@ export default function BecomeReferrerScreen({ navigation }) {
   // Verify OTP
   const handleVerifyOtp = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length !== 4) {
-      setOtpError('Please enter the 4-digit OTP');
+    if (otpCode.length !== 6) {
+      setOtpError('Please enter the 6-digit OTP');
       return;
     }
 
@@ -379,7 +379,7 @@ export default function BecomeReferrerScreen({ navigation }) {
         setShowSuccess(true);
       } else {
         setOtpError(res.error || 'Invalid OTP. Please try again.');
-        setOtp(['', '', '', '']);
+        setOtp(['', '', '', '', '', '']);
         otpRefs[0].current?.focus();
       }
     } catch (err) {
@@ -396,7 +396,7 @@ export default function BecomeReferrerScreen({ navigation }) {
     setOtp(newOtp);
     setOtpError('');
 
-    if (text && index < 3) {
+    if (text && index < 5) {
       otpRefs[index + 1].current?.focus();
     }
   };
@@ -425,7 +425,7 @@ export default function BecomeReferrerScreen({ navigation }) {
           <View style={styles.heroIconCircle}>
             <Ionicons name="shield-checkmark" size={48} color={colors.primary} />
           </View>
-          <Text style={styles.heroTitle}>Become a Verified Referrer</Text>
+          <Text style={styles.heroTitle}>Become a Referrer</Text>
           <Text style={styles.heroSubtitle}>
             Earn money by referring candidates to your company. Verify your employment in just 2 minutes.
           </Text>
@@ -438,7 +438,7 @@ export default function BecomeReferrerScreen({ navigation }) {
       {[
         { icon: 'cash-outline', color: colors.success, title: 'Earn Per Referral & exciting RefPoints', desc: 'Top referrers earn more than ₹5,000/month!' },
         { icon: 'briefcase-outline', color: colors.pink, title: 'Post jobs for free', desc: 'Post referral jobs at your company at no cost' },
-        { icon: 'ribbon-outline', color: colors.accent, title: 'Verified badge', desc: 'Stand out with a verified referrer badge on your profile' },
+        { icon: 'ribbon-outline', color: colors.accent, title: 'Verified badge', desc: 'Stand out with a referrer badge on your profile' },
         { icon: 'notifications-outline', color: colors.warning, title: 'Get notified instantly', desc: 'Receive alerts when someone needs a referral at your company' },
       ].map((item, idx) => (
         <View key={idx} style={styles.advantageCard}>
@@ -615,7 +615,7 @@ export default function BecomeReferrerScreen({ navigation }) {
           </View>
           <Text style={styles.stepTitle}>Verify your company email</Text>
           <Text style={styles.stepDesc}>
-            Enter your work email address. We'll send a 4-digit OTP to verify you work at {companyName}. <Text style={{ fontWeight: '700' }}>Your email is used once and never stored.</Text>
+            Enter your work email address. We'll send a 6-digit OTP to verify you work at {companyName}. <Text style={{ fontWeight: '700' }}>Your email is used once and never stored.</Text>
           </Text>
         </View>
 
@@ -678,7 +678,7 @@ export default function BecomeReferrerScreen({ navigation }) {
               <Text style={styles.otpSentText}>OTP sent to {fullEmail}</Text>
             </View>
 
-            <Text style={styles.fieldLabel}>Enter 4-digit OTP</Text>
+            <Text style={styles.fieldLabel}>Enter 6-digit OTP</Text>
             <View style={styles.otpRow}>
               {otp.map((digit, idx) => (
                 <TextInput
@@ -701,9 +701,9 @@ export default function BecomeReferrerScreen({ navigation }) {
             ) : null}
 
             <TouchableOpacity
-              style={[styles.primaryButton, (otp.join('').length !== 4 || verifying) && styles.primaryButtonDisabled]}
+              style={[styles.primaryButton, (otp.join('').length !== 6 || verifying) && styles.primaryButtonDisabled]}
               onPress={handleVerifyOtp}
-              disabled={otp.join('').length !== 4 || verifying}
+              disabled={otp.join('').length !== 6 || verifying}
             >
               {verifying ? (
                 <ActivityIndicator size="small" color={colors.white} />
@@ -720,7 +720,7 @@ export default function BecomeReferrerScreen({ navigation }) {
               style={styles.resendButton}
               onPress={() => {
                 setOtpSent(false);
-                setOtp(['', '', '', '']);
+                setOtp(['', '', '', '', '', '']);
                 setOtpError('');
               }}
               disabled={resendTimer > 0}

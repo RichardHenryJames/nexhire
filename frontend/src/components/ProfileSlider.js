@@ -458,7 +458,7 @@ export default function ProfileSlider({ visible, onClose }) {
               )}
               {isVerifiedReferrer && currentWork && (
                 <TouchableOpacity
-                  onPress={() => showToast(`Verified Referrer at ${currentWork.CompanyName || currentWork.companyName || 'Company'}`, 'success', 2000)}
+                  onPress={() => showToast(`Referrer at ${currentWork.CompanyName || currentWork.companyName || 'Company'}`, 'success', 2000)}
                   activeOpacity={0.7}
                   style={{ marginLeft: 6 }}
                 >

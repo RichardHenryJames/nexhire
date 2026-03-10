@@ -11,8 +11,10 @@ import { encrypt, decrypt, maskEmail } from '../utils/encryption';
  * 3. Aadhaar Card — photo upload + selfie, requires admin approval
  */
 
+// SECURITY FIX: 6-digit OTP using cryptographically secure random
 const generateOTP = (): string => {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  const crypto = require('crypto');
+  return crypto.randomInt(100000, 999999).toString();
 };
 
 const OTP_EXPIRY_MINUTES = 10;

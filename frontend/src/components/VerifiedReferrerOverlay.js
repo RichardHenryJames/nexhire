@@ -371,7 +371,7 @@ export default function VerifiedReferrerOverlay({
             ]}
           >
             {/* Title */}
-            <Text style={styles.title}>You're a Verified Referrer! 🎉</Text>
+            <Text style={styles.title}>You're a Referrer! 🎉</Text>
             
             {/* Company Name */}
             <View style={styles.companyBadge}>

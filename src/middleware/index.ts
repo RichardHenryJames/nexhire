@@ -16,10 +16,11 @@ const tokenBlacklist = new Set<string>();
 
 // Cleanup expired tokens from blacklist every hour to prevent memory leak
 setInterval(() => {
-    // We can't decode tokens without verifying, so just clear old entries periodically
-    // Tokens naturally expire anyway, blacklist is just for early revocation
     if (tokenBlacklist.size > 10000) {
-        tokenBlacklist.clear(); // Nuclear cleanup if too many entries
+        // SECURITY FIX: Keep recent 5000 entries instead of clearing all
+        const entries = Array.from(tokenBlacklist);
+        tokenBlacklist.clear();
+        entries.slice(-5000).forEach(t => tokenBlacklist.add(t));
     }
 }, 60 * 60 * 1000);
 
@@ -185,23 +186,33 @@ export const withErrorHandling = (handler: (req: HttpRequest, context: Invocatio
     return async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
         const requestOrigin = req.headers.get('origin');
         const dynamicCorsHeaders = getCorsHeaders(requestOrigin);
+
+        // SECURITY FIX: Security headers on all responses
+        const securityHeaders: Record<string, string> = {
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+            'X-XSS-Protection': '1; mode=block',
+            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+        };
         
         try {
             // Handle preflight CORS requests
             if (req.method === 'OPTIONS') {
                 return {
                     status: 204,
-                    headers: dynamicCorsHeaders
+                    headers: { ...dynamicCorsHeaders, ...securityHeaders }
                 };
             }
             
             const result = await handler(req, context);
             
-            // Add CORS headers to successful responses
+            // Add CORS + security headers to successful responses
             return {
                 ...result,
                 headers: {
                     ...dynamicCorsHeaders,
+                    ...securityHeaders,
                     ...result.headers
                 }
             };
