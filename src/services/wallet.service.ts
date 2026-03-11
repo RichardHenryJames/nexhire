@@ -691,14 +691,14 @@ export class WalletService {
       const balanceBefore = wallet.Balance;
       const balanceAfter = balanceBefore + amount;
 
-      // Update wallet balance
+      // SECURITY FIX: Atomic balance update to prevent race condition
       await dbService.executeQuery(
         `UPDATE Wallets 
-         SET Balance = @param1, 
+         SET Balance = Balance + @param1, 
              UpdatedAt = GETUTCDATE(), 
              LastTransactionAt = GETUTCDATE() 
          WHERE WalletID = @param0`,
-        [wallet.WalletID, balanceAfter]
+        [wallet.WalletID, amount]
       );
 
       // Create transaction record
@@ -1465,20 +1465,19 @@ If you have questions, please contact support.`
       const balanceBefore = hold.Balance;
       const balanceAfter = balanceBefore - hold.Amount;
 
-      // Ensure balance doesn't go negative (shouldn't happen if holds are managed correctly)
-      if (balanceAfter < 0) {
-        throw new ValidationError('Insufficient wallet balance to convert hold');
-      }
-
-      // Update wallet balance (actual deduction)
-      await dbService.executeQuery(
+      // SECURITY FIX: Atomic balance update to prevent race condition
+      const updateResult = await dbService.executeQuery(
         `UPDATE Wallets 
-         SET Balance = @param1, 
+         SET Balance = Balance - @param1, 
              UpdatedAt = GETUTCDATE(), 
              LastTransactionAt = GETUTCDATE() 
-         WHERE WalletID = @param0`,
-        [hold.WalletID, balanceAfter]
+         WHERE WalletID = @param0 AND Balance >= @param1`,
+        [hold.WalletID, hold.Amount]
       );
+
+      if (!updateResult.rowsAffected || updateResult.rowsAffected[0] === 0) {
+        throw new ValidationError('Insufficient wallet balance to convert hold');
+      }
 
       // Create transaction record
       const transactionId = AuthService.generateUniqueId();
@@ -1636,14 +1635,12 @@ If you have questions, please contact support.`
       const walletResult = await dbService.executeQuery(walletQuery, [hold.WalletID]);
       const currentBalance = walletResult.recordset?.[0]?.Balance || 0;
 
-      // Deduct the cancellation fee from wallet balance
+      // SECURITY FIX: Atomic balance update for cancellation fee
       if (actualDeduction > 0) {
         const newBalance = currentBalance - actualDeduction;
-        
-        // Update wallet balance
         await dbService.executeQuery(
-          `UPDATE Wallets SET Balance = @param1, UpdatedAt = GETUTCDATE() WHERE WalletID = @param0`,
-          [hold.WalletID, newBalance]
+          `UPDATE Wallets SET Balance = Balance - @param1, UpdatedAt = GETUTCDATE() WHERE WalletID = @param0 AND Balance >= @param1`,
+          [hold.WalletID, actualDeduction]
         );
         
         // Record the debit transaction for the fee
