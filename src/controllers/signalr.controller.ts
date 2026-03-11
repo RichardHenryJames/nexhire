@@ -1,15 +1,13 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { withAuth } from '../middleware';
+import { withAuth, getCorsHeaders } from '../middleware';
 
 const SIGNALR_CONNECTION_STRING = process.env.SIGNALR_CONNECTION_STRING || '';
 
-// ?? CORS Headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+// SECURITY FIX: Dynamic CORS headers from allowlist (was wildcard *)
+const getCorsSafe = (req: HttpRequest) => ({
+  ...getCorsHeaders(req.headers.get('origin')),
   'Content-Type': 'application/json',
-};
+});
 
 /**
  * SignalR Negotiate Endpoint
@@ -20,7 +18,7 @@ export const signalrNegotiate = withAuth(async (req: HttpRequest, context: Invoc
     if (!SIGNALR_CONNECTION_STRING) {
       return {
         status: 500,
-        headers: corsHeaders,
+        headers: getCorsSafe(req),
         jsonBody: {
           success: false,
           error: 'SignalR not configured'
@@ -67,7 +65,7 @@ export const signalrNegotiate = withAuth(async (req: HttpRequest, context: Invoc
     // Return connection info
     return {
       status: 200,
-      headers: corsHeaders, // ? Add CORS headers
+      headers: getCorsSafe(req), // ? Add CORS headers
       jsonBody: {
         url: `${endpoint}/client/?hub=messaging`,
         accessToken: accessToken,
@@ -78,7 +76,7 @@ export const signalrNegotiate = withAuth(async (req: HttpRequest, context: Invoc
     context.error('SignalR negotiate error:', error);
     return {
       status: 500,
-      headers: corsHeaders, // ? Add CORS headers
+      headers: getCorsSafe(req), // ? Add CORS headers
       jsonBody: {
         success: false,
         error: 'Failed to negotiate SignalR connection'

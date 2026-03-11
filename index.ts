@@ -611,17 +611,26 @@ app.http("applicants-profile", {
 });
 
 // FIXED: Combined Employer Profile Management (GET + PUT in single function)
+// SECURITY FIX: Require auth + verify userId matches token
 app.http("employers-profile", {
   methods: ["GET", "PUT", "OPTIONS"],
   authLevel: "anonymous",
   route: "employers/{userId}/profile",
-  handler: withErrorHandling(async (req, context) => {
+  handler: withAuth(async (req, context, user) => {
     const userId = req.params.userId;
 
     try {
       // Handle OPTIONS for CORS
       if (req.method === "OPTIONS") {
         return { status: 200 };
+      }
+
+      // SECURITY FIX: Verify the requesting user owns this profile
+      if (user.userId !== userId) {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Access denied — you can only access your own profile" },
+        };
       }
 
       // Handle GET - Get employer profile
