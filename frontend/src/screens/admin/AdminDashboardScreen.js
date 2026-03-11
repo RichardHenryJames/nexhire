@@ -1086,7 +1086,7 @@ export default function AdminDashboardScreen() {
             </View>
             {/* Admin Action Buttons */}
             <View style={{ flexDirection: 'row', marginTop: 8, gap: 8 }}>
-              {!userData.IsVerifiedReferrer && userData.UserType !== 'Admin' && (
+              {!userData.IsVerifiedReferrer && userData.UserType !== 'Admin' && userData.HasCurrentWorkExp === 1 && (
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, gap: 4 }}
                   onPress={(e) => {

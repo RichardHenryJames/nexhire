@@ -243,7 +243,12 @@ export const getAdminDashboardUsers = withAuth(async (
         COUNT(DISTINCT rr.RequestID) AS ReferralsGiven,
         (SELECT COUNT(*) FROM ReferralRequests rr2 
          INNER JOIN Applicants a2 ON rr2.ApplicantID = a2.ApplicantID 
-         WHERE a2.UserID = u.UserID) AS ReferralsAsked
+         WHERE a2.UserID = u.UserID) AS ReferralsAsked,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM WorkExperiences we2 
+          INNER JOIN Applicants a3 ON we2.ApplicantID = a3.ApplicantID 
+          WHERE a3.UserID = u.UserID AND we2.IsActive = 1 AND (we2.IsCurrent = 1 OR we2.EndDate IS NULL)
+        ) THEN 1 ELSE 0 END AS HasCurrentWorkExp
       FROM Users u 
       LEFT JOIN Applicants a ON a.UserID = u.UserID
       LEFT JOIN JobApplications ja ON ja.ApplicantID = a.ApplicantID
@@ -655,28 +660,43 @@ export const adminDeleteUser = withAuth(async (
 
     context.log(`Admin ${user.userId} deleting user: ${targetUser.Email} (${targetUser.FirstName} ${targetUser.LastName})`);
 
-    // Delete in FK-safe order (same as delete-users.js script)
+    // Delete in FK-safe order (synced with scripts/delete-users.js — all 36 FK deps)
     const deleteStatements = [
+      // Consent & activity logs
       `DELETE FROM UserConsentLog WHERE UserID = @param0`,
       `DELETE FROM UserActivityLogs WHERE UserID = @param0`,
       `DELETE FROM UserProfileViews WHERE ViewerUserID = @param0 OR ViewedUserID = @param0`,
       `DELETE FROM UserSessions WHERE UserID = @param0`,
+      // Notifications & support
       `DELETE FROM InAppNotifications WHERE UserID = @param0`,
       `DELETE FROM NotificationPreferences WHERE UserID = @param0`,
       `DELETE FROM PushTokens WHERE UserID = @param0`,
+      `DELETE FROM SupportMessages WHERE TicketID IN (SELECT TicketID FROM SupportTickets WHERE UserID = @param0)`,
       `DELETE FROM SupportMessages WHERE SenderID = @param0`,
       `DELETE FROM SupportTickets WHERE UserID = @param0`,
+      `UPDATE SupportTickets SET AdminUserID = NULL WHERE AdminUserID = @param0`,
       `DELETE FROM NotificationQueue WHERE UserID = @param0`,
+      // Email & verification
       `DELETE FROM EmailLogs WHERE UserID = @param0`,
       `DELETE FROM EmailVerificationOTPs WHERE UserID = @param0`,
+      `DELETE FROM UserVerifications WHERE UserID = @param0`,
+      `UPDATE UserVerifications SET ReviewedBy = NULL WHERE ReviewedBy = @param0`,
+      // Promo codes
+      `DELETE FROM PromoCodeUsages WHERE UserID = @param0`,
+      // Wallet & payments
       `DELETE FROM WalletTransactions WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
       `DELETE FROM WalletHolds WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
+      `DELETE FROM WalletHolds WHERE UserID = @param0`,
       `DELETE FROM WalletRechargeOrders WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
+      `DELETE FROM WalletRechargeOrders WHERE UserID = @param0`,
       `DELETE FROM WalletWithdrawals WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @param0)`,
+      `DELETE FROM WalletWithdrawals WHERE UserID = @param0`,
+      `UPDATE WalletWithdrawals SET ProcessedBy = NULL WHERE ProcessedBy = @param0`,
       `DELETE FROM Wallets WHERE UserID = @param0`,
       `DELETE FROM ManualPaymentSubmissions WHERE UserID = @param0`,
       `DELETE FROM PaymentOrders WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
       `DELETE FROM PaymentTransactions WHERE UserID = @param0`,
+      // Referrals
       `DELETE FROM ReferralProofs WHERE ReferrerID = @param0`,
       `DELETE FROM ReferralProofs WHERE RequestID IN (SELECT RequestID FROM ReferralRequests WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
       `DELETE FROM ReferralRequestStatusHistory WHERE RequestID IN (SELECT RequestID FROM ReferralRequests WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
@@ -685,23 +705,44 @@ export const adminDeleteUser = withAuth(async (
       `UPDATE ReferralRequests SET AssignedReferrerID = NULL, Status = 'Pending', ReferredAt = NULL WHERE AssignedReferrerID = @param0`,
       `DELETE FROM ReferrerStats WHERE ReferrerID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
       `DELETE FROM SocialShareClaims WHERE UserID = @param0`,
+      // Applicant profile data
       `DELETE FROM ApplicantProfileViews WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ApplicantProfileViews WHERE ViewedByUserID = @param0`,
       `DELETE FROM ApplicantReferralSubscriptions WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
       `DELETE FROM ApplicantSalaries WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      // Must delete OTPs linked to work experiences BEFORE deleting work experiences
+      `DELETE FROM EmailVerificationOTPs WHERE WorkExperienceID IN (SELECT WorkExperienceID FROM WorkExperiences WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
       `DELETE FROM WorkExperiences WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
       `DELETE FROM ResumeMetadata WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
+      `DELETE FROM ResumeMetadata WHERE UserID = @param0`,
+      // Resume builder
+      `DELETE FROM ResumeBuilderSections WHERE ProjectID IN (SELECT ProjectID FROM ResumeBuilderProjects WHERE UserID = @param0)`,
+      `DELETE FROM ResumeBuilderExports WHERE UserID = @param0`,
+      `DELETE FROM ResumeBuilderProjects WHERE UserID = @param0`,
+      // Salary & services
+      `DELETE FROM SalarySubmissions WHERE UserID = @param0`,
+      `DELETE FROM SalarySpyAccess WHERE UserID = @param0`,
+      `DELETE FROM ServiceInterests WHERE UserID = @param0`,
+      // Jobs & applications
       `DELETE FROM ApplicationAttachments WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
       `DELETE FROM ApplicationTracking WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0))`,
       `DELETE FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
       `DELETE FROM SavedJobs WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
       `DELETE FROM ApplicantResumes WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @param0)`,
       `DELETE FROM Applicants WHERE UserID = @param0`,
+      // Employer data
       `UPDATE Jobs SET PostedByUserID = NULL WHERE PostedByUserID = @param0`,
       `DELETE FROM Employers WHERE UserID = @param0`,
       `UPDATE Organizations SET CreatedBy = NULL, UpdatedBy = NULL WHERE CreatedBy = @param0`,
+      // Messaging
       `DELETE FROM Messages WHERE ConversationID IN (SELECT ConversationID FROM Conversations WHERE User1ID = @param0 OR User2ID = @param0)`,
+      `UPDATE Conversations SET LastMessageSenderID = NULL WHERE LastMessageSenderID = @param0`,
       `DELETE FROM Conversations WHERE User1ID = @param0 OR User2ID = @param0`,
       `DELETE FROM BlockedUsers WHERE BlockerUserID = @param0`,
+      `DELETE FROM BlockedUsers WHERE BlockedUserID = @param0`,
+      // Self-referencing FK
+      `UPDATE Users SET ReferredBy = NULL WHERE ReferredBy = @param0`,
+      // Finally, the user
       `DELETE FROM Users WHERE UserID = @param0`,
     ];
 
@@ -775,6 +816,18 @@ export const adminMakeReferrer = withAuth(async (
     // Check if company is a blocked marketplace
     if (isBlockedMarketplace(targetUser.CurrentCompanyName)) {
       return { status: 400, jsonBody: { success: false, error: `${targetUser.CurrentCompanyName} is a blocked marketplace company. Cannot make referrer.` } };
+    }
+
+    // Verify user has a CURRENT work experience (not just any past work exp)
+    const currentWorkExp = await dbService.executeQuery(
+      `SELECT TOP 1 we.CompanyName 
+       FROM WorkExperiences we 
+       INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID 
+       WHERE a.UserID = @param0 AND we.IsActive = 1 AND (we.IsCurrent = 1 OR we.EndDate IS NULL)`,
+      [userId]
+    );
+    if (!currentWorkExp.recordset || currentWorkExp.recordset.length === 0) {
+      return { status: 400, jsonBody: { success: false, error: 'User must have a current work experience to become a referrer. They have no active current job.' } };
     }
 
     await dbService.executeQuery(

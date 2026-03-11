@@ -141,19 +141,28 @@ async function run() {
                     `DELETE FROM InAppNotifications WHERE UserID = @uid`,
                     `DELETE FROM NotificationPreferences WHERE UserID = @uid`,
                     `DELETE FROM PushTokens WHERE UserID = @uid`,
+                    `DELETE FROM SupportMessages WHERE TicketID IN (SELECT TicketID FROM SupportTickets WHERE UserID = @uid)`,
                     `DELETE FROM SupportMessages WHERE SenderID = @uid`,
                     `DELETE FROM SupportTickets WHERE UserID = @uid`,
-                    `DELETE FROM InAppNotifications WHERE UserID = @uid`,
                     `DELETE FROM NotificationQueue WHERE UserID = @uid`,
                     // Email
                     `DELETE FROM EmailLogs WHERE UserID = @uid`,
                     `DELETE FROM EmailVerificationOTPs WHERE UserID = @uid`,
+                    // User verifications
+                    `DELETE FROM UserVerifications WHERE UserID = @uid`,
+                    `UPDATE UserVerifications SET ReviewedBy = NULL WHERE ReviewedBy = @uid`,
+                    // Promo codes
+                    `DELETE FROM PromoCodeUsages WHERE UserID = @uid`,
                     // DailyJobEmailLogs has no UserID — skip
                     // Wallet & payments
                     `DELETE FROM WalletTransactions WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @uid)`,
                     `DELETE FROM WalletHolds WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @uid)`,
+                    `DELETE FROM WalletHolds WHERE UserID = @uid`,
                     `DELETE FROM WalletRechargeOrders WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @uid)`,
+                    `DELETE FROM WalletRechargeOrders WHERE UserID = @uid`,
                     `DELETE FROM WalletWithdrawals WHERE WalletID IN (SELECT WalletID FROM Wallets WHERE UserID = @uid)`,
+                    `DELETE FROM WalletWithdrawals WHERE UserID = @uid`,
+                    `UPDATE WalletWithdrawals SET ProcessedBy = NULL WHERE ProcessedBy = @uid`,
                     `DELETE FROM Wallets WHERE UserID = @uid`,
                     `DELETE FROM ManualPaymentSubmissions WHERE UserID = @uid`,
                     `DELETE FROM PaymentOrders WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
@@ -175,10 +184,22 @@ async function run() {
                     `DELETE FROM SocialShareClaims WHERE UserID = @uid`,
                     // Applicant profile data
                     `DELETE FROM ApplicantProfileViews WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
+                    `DELETE FROM ApplicantProfileViews WHERE ViewedByUserID = @uid`,
                     `DELETE FROM ApplicantReferralSubscriptions WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM ApplicantSalaries WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
+                    // Must delete OTPs linked to work experiences BEFORE deleting work experiences
+                    `DELETE FROM EmailVerificationOTPs WHERE WorkExperienceID IN (SELECT WorkExperienceID FROM WorkExperiences WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid))`,
                     `DELETE FROM WorkExperiences WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
                     `DELETE FROM ResumeMetadata WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid)`,
+                    `DELETE FROM ResumeMetadata WHERE UserID = @uid`,
+                    // Resume builder
+                    `DELETE FROM ResumeBuilderSections WHERE ProjectID IN (SELECT ProjectID FROM ResumeBuilderProjects WHERE UserID = @uid)`,
+                    `DELETE FROM ResumeBuilderExports WHERE UserID = @uid`,
+                    `DELETE FROM ResumeBuilderProjects WHERE UserID = @uid`,
+                    // Salary & services
+                    `DELETE FROM SalarySubmissions WHERE UserID = @uid`,
+                    `DELETE FROM SalarySpyAccess WHERE UserID = @uid`,
+                    `DELETE FROM ServiceInterests WHERE UserID = @uid`,
                     // Jobs & applications (MUST delete before ApplicantResumes due to FK on ResumeID)
                     `DELETE FROM ApplicationAttachments WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid))`,
                     `DELETE FROM ApplicationTracking WHERE ApplicationID IN (SELECT ApplicationID FROM JobApplications WHERE ApplicantID IN (SELECT ApplicantID FROM Applicants WHERE UserID = @uid))`,
@@ -199,8 +220,15 @@ async function run() {
                     `DELETE FROM Messages WHERE ConversationID IN (SELECT ConversationID FROM Conversations WHERE User1ID = @uid OR User2ID = @uid)`,
                     // SAFE: Delete conversations this user is part of (both sides cleaned up above)
                     `DELETE FROM Conversations WHERE User1ID = @uid OR User2ID = @uid`,
-                    // SAFE: Only delete blocks this user created, NOT blocks other users created against them
+                    // SAFE: Only delete blocks this user created AND blocks against them
                     `DELETE FROM BlockedUsers WHERE BlockerUserID = @uid`,
+                    `DELETE FROM BlockedUsers WHERE BlockedUserID = @uid`,
+                    // SAFE: Nullify admin references on support tickets
+                    `UPDATE SupportTickets SET AdminUserID = NULL WHERE AdminUserID = @uid`,
+                    // SAFE: Nullify LastMessageSenderID on conversations
+                    `UPDATE Conversations SET LastMessageSenderID = NULL WHERE LastMessageSenderID = @uid`,
+                    // SAFE: Nullify referral references from other users (self-referencing FK)
+                    `UPDATE Users SET ReferredBy = NULL WHERE ReferredBy = @uid`,
                     // Finally, the user
                     `DELETE FROM Users WHERE UserID = @uid`,
                 ];
