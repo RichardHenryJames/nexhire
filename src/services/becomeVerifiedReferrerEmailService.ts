@@ -14,6 +14,7 @@
 
 import { dbService } from './database.service';
 import { EmailService } from './emailService';
+import { maskEmail } from '../utils/encryption';
 
 interface UnverifiedUser {
     UserID: string;
@@ -282,7 +283,7 @@ export class BecomeVerifiedReferrerEmailService {
                     const { default: InAppNotificationService } = await import('./inAppNotification.service');
                     await InAppNotificationService.notifyBecomeVerified(user.UserID, user.FirstName, user.CompanyName);
 
-                    console.log(`✅ Email + in-app sent to ${user.Email} (${user.FirstName} @ ${user.CompanyName})`);
+                    console.log(`✅ Email + in-app sent to ${maskEmail(user.Email)} (${user.FirstName} @ ${user.CompanyName})`);
                     
                     // Small delay to avoid rate limiting
                     await new Promise(resolve => setTimeout(resolve, 100));

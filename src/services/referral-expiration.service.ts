@@ -7,6 +7,7 @@
 
 import { dbService } from './database.service';
 import { WalletService } from './wallet.service';
+import { maskEmail } from '../utils/encryption';
 
 export interface ExpirationResult {
   success: boolean;
@@ -89,7 +90,7 @@ export class ReferralExpirationService {
       for (const request of pendingRequests.recordset) {
         try {
           console.log(`\n   Processing RequestID: ${request.RequestID}`);
-          console.log(`      User: ${request.FirstName} ${request.LastName} (${request.Email})`);
+          console.log(`      User: ${request.FirstName?.[0] || '?'}*** (${maskEmail(request.Email)})`);
           console.log(`      Job: ${request.JobTitle} at ${request.CompanyName}`);
           console.log(`      Days old: ${request.DaysOld}`);
 

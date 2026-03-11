@@ -123,10 +123,7 @@ export class UserService {
             else if (validatedData.userType === appConstants.userTypes.JOB_SEEKER) {
                 await this.createApplicantProfileTx(tx, userId);
             }
-            // Handle Admin user registration (no additional profile needed)
-            else if (validatedData.userType === 'Admin') {
-                // Admin user created
-            }
+            // SECURITY FIX: Removed Admin branch — admin accounts are created internally only
 
             await tx.commit();
             
@@ -1836,6 +1833,12 @@ export class UserService {
         
         if (!userType) {
             throw new ValidationError('User type is required');
+        }
+
+        // SECURITY FIX: Only allow JobSeeker and Employer — block Admin registration via Google OAuth
+        const allowedUserTypes = ['JobSeeker', 'Employer'];
+        if (!allowedUserTypes.includes(userType)) {
+            throw new ValidationError(`Invalid user type. Allowed types: ${allowedUserTypes.join(', ')}`);
         }
 
         // Check if user already exists

@@ -413,8 +413,7 @@ export class ApplicantService {
 
                 // Status Fields
                 'isOpenToWork': 'IsOpenToWork',
-                'isFeatured': 'IsFeatured',
-                'featuredUntil': 'FeaturedUntil',
+                // SECURITY FIX: Removed 'isFeatured' and 'featuredUntil' — admin-only fields, prevents self-featuring privilege escalation
                 
                 // Additional Fields
                 'tags': 'Tags'
@@ -452,7 +451,7 @@ export class ApplicantService {
                     }
                     // Boolean fields (convert to bit: 1/0)
                     else if (['immediatelyAvailable', 'willingToRelocate', 'allowRecruitersToContact', 
-                             'hideCurrentCompany', 'hideSalaryDetails', 'openToRefer', 'isOpenToWork', 'isFeatured'].includes(key)) {
+                             'hideCurrentCompany', 'hideSalaryDetails', 'openToRefer', 'isOpenToWork'].includes(key)) {
                         value = (value === true || value === 1 || value === '1' || value === 'true') ? 1 : 0;
                     }
                     // String fields - keep as is, but handle empty strings

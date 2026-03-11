@@ -36,6 +36,8 @@ export const getWorkExperiences = withErrorHandling(async (req: HttpRequest, con
 
 export const getWorkExperienceById = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
   try {
+    // SECURITY FIX: Require authentication for viewing work experiences
+    const user = authenticate(req);
     const workExperienceId = (req as any).params?.workExperienceId;
     if (!workExperienceId) throw new ValidationError('Work experience ID is required');
     const experience = await WorkExperienceService.getWorkExperienceById(workExperienceId);

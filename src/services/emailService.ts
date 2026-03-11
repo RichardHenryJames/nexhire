@@ -8,6 +8,7 @@
 import { EmailClient, EmailMessage } from '@azure/communication-email';
 import sql from 'mssql';
 import { dbService } from './database.service';
+import { maskEmail } from '../utils/encryption';
 
 // Email configuration
 const EMAIL_CONFIG = {
@@ -128,7 +129,7 @@ export class EmailService {
             });
 
             if (success) {
-                console.log(`✅ Email sent successfully to ${recipients.join(', ')}`);
+                console.log(`✅ Email sent successfully to ${recipients.map(maskEmail).join(', ')}`);
                 return { success: true, messageId };
             } else {
                 console.error(`❌ Email send failed: ${result.status}`);
@@ -531,7 +532,7 @@ ${EMAIL_CONFIG.appUrl}
             // Admin email address - check multiple possible env vars
             const adminEmail = process.env.ADMIN_EMAIL || process.env.ADMIN_NOTIFICATION_EMAILS || 'parimalkumar261@gmail.com';
             
-            console.log(`📧 Sending admin notification to: ${adminEmail}`);
+            console.log(`📧 Sending admin notification to: ${maskEmail(adminEmail)}`);
             
             const html = `
 <!DOCTYPE html>

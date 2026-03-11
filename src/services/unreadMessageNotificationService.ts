@@ -8,6 +8,7 @@
 import { dbService } from "./database.service";
 import { EmailService } from "./emailService";
 import { TemplateService } from "./templateService";
+import { maskEmail } from '../utils/encryption';
 
 // Time threshold for sending reminder (in minutes)
 const UNREAD_THRESHOLD_MINUTES = 60; // 1 hour
@@ -247,7 +248,7 @@ export class UnreadMessageNotificationService {
                     });
 
                     result.emailsSent++;
-                    console.log(`✅ Sent unread message reminder to ${latestMessage.ReceiverEmail} (${totalMessageCount} msgs from ${senderCount} senders)`);
+                    console.log(`✅ Sent unread message reminder to ${maskEmail(latestMessage.ReceiverEmail)} (${totalMessageCount} msgs from ${senderCount} senders)`);
 
                     // Mark all messages as reminder sent
                     const messageIds = receiverMessages.map(m => `'${m.MessageID}'`).join(',');

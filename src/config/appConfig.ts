@@ -127,9 +127,9 @@ class ConfigService {
       },
 
       database: {
-        server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
-        name: process.env.DB_NAME || 'refopen-sql-db',
-        user: process.env.DB_USER || 'sqladmin',
+        server: process.env.DB_SERVER || '',  // SECURITY FIX: Removed hardcoded server
+        name: process.env.DB_NAME || '',  // SECURITY FIX: Removed hardcoded database name
+        user: process.env.DB_USER || '',  // SECURITY FIX: Removed hardcoded username
         password: process.env.DB_PASSWORD || '',  // REQUIRED: Set via environment variable
         connectionString: process.env.DB_CONNECTION_STRING || this.buildConnectionString(),
         encrypt: process.env.DB_ENCRYPT !== 'false',
@@ -143,7 +143,7 @@ class ConfigService {
           if (!secret) throw new Error('FATAL: JWT_SECRET environment variable is required');
           return secret;
         })(),
-        accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '7d',
+        accessTokenExpiry: process.env.JWT_ACCESS_TOKEN_EXPIRY || '24h', // SECURITY FIX: Was '7d' — must match config/index.ts
         refreshTokenExpiry: process.env.JWT_REFRESH_TOKEN_EXPIRY || '30d',
         bcryptSaltRounds: parseInt(process.env.BCRYPT_SALT_ROUNDS || '12'),
       },

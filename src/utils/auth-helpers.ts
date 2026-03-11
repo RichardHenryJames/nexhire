@@ -35,6 +35,14 @@ export const refreshToken = async (req: HttpRequest, context: InvocationContext)
             };
         }
 
+        // SECURITY FIX: Check if user account is still active before issuing new tokens
+        if (!user.IsActive) {
+            return {
+                status: 403,
+                jsonBody: errorResponse('Account deactivated', 'Your account has been deactivated. Contact support for assistance.')
+            };
+        }
+
         const tokens = AuthService.generateAuthTokens(user);
         
         return {

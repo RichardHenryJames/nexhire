@@ -9,6 +9,7 @@ import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 import { PromoService } from './promo.service';
 import { WalletService } from './wallet.service';
+import { maskEmail } from '../utils/encryption';
 
 // Admin notification emails - supports comma-separated list from env
 const getAdminEmails = (): string[] => {
@@ -249,7 +250,7 @@ const sendManualPaymentNotification = async (
       referenceId: submissionId
     });
     
-    console.log(`✅ Manual payment notification sent to ${adminEmails.join(', ')} for submission ${submissionId}`);
+    console.log(`✅ Manual payment notification sent to ${adminEmails.map(maskEmail).join(', ')} for submission ${submissionId}`);
   } catch (error) {
     console.error('Error sending manual payment notification:', error);
   }
@@ -542,7 +543,7 @@ export const approveManualPayment = async (
         referenceId: submissionId
       });
 
-      console.log(`✅ Payment approval email sent to ${sub.Email} for submission ${submissionId}`);
+      console.log(`✅ Payment approval email sent to ${maskEmail(sub.Email)} for submission ${submissionId}`);
     } catch (emailError) {
       // Log but don't fail the approval if email fails
       console.error('Error sending payment approval email:', emailError);

@@ -1,8 +1,8 @@
 // Database Configuration
 export const dbConfig = {
-    server: process.env.DB_SERVER || 'refopen-sql-srv.database.windows.net',
-    database: process.env.DB_NAME || 'refopen-sql-db',
-    user: process.env.DB_USER || 'sqladmin',
+    server: process.env.DB_SERVER || '',  // SECURITY FIX: Removed hardcoded server — must be set via env
+    database: process.env.DB_NAME || '',  // SECURITY FIX: Removed hardcoded database name
+    user: process.env.DB_USER || '',  // SECURITY FIX: Removed hardcoded username
     password: process.env.DB_PASSWORD || '',  // REQUIRED: Set via environment variable
     options: {
         encrypt: true,

@@ -10,6 +10,7 @@
 
 import { dbService } from './database.service';
 import { EmailService } from './emailService';
+import { maskEmail } from '../utils/encryption';
 
 interface ExpiringRequest {
     RequestID: string;
@@ -276,7 +277,7 @@ export class ExpiringRequestNudgeService {
                     const success = await this.sendNudgeEmail(request);
                     if (success) {
                         result.emailsSent++;
-                        console.log(`✅ Nudge sent to ${request.SeekerEmail} for "${request.JobTitle}" at ${request.CompanyName} (expires ${new Date(request.ExpiryTime).toISOString()})`);
+                        console.log(`✅ Nudge sent to ${maskEmail(request.SeekerEmail)} for "${request.JobTitle}" at ${request.CompanyName} (expires ${new Date(request.ExpiryTime).toISOString()})`);
                     } else {
                         result.emailsFailed++;
                     }

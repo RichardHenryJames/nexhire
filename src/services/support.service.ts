@@ -7,6 +7,7 @@ import { dbService } from './database.service';
 import { ValidationError, NotFoundError, AuthorizationError } from '../utils/validation';
 import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
+import { maskEmail } from '../utils/encryption';
 
 // Admin notification emails - supports comma-separated list from env
 const getAdminEmails = (): string[] => {
@@ -148,7 +149,7 @@ export class SupportService {
                 referenceId: ticket.TicketID
             });
             
-            console.log(`✅ New ticket notification sent to ${adminEmails.join(', ')} for ticket ${ticket.TicketID}`);
+            console.log(`✅ New ticket notification sent to ${adminEmails.map(maskEmail).join(', ')} for ticket ${ticket.TicketID}`);
         } catch (error) {
             console.error('Error sending new ticket notification:', error);
         }
@@ -595,7 +596,7 @@ export class SupportService {
                 referenceId: ticketId
             });
             
-            console.log(`✅ Admin reply notification sent to ${userEmail} for ticket ${ticketId}`);
+            console.log(`✅ Admin reply notification sent to ${maskEmail(userEmail)} for ticket ${ticketId}`);
         } catch (error) {
             console.error('Error sending admin reply notification:', error);
         }

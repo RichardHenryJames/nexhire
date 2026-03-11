@@ -85,8 +85,7 @@ export const userRegistrationSchema = Joi.object({
     organizationLocation: Joi.when('userType', { is: 'Employer', then: Joi.string().max(200).optional(), otherwise: Joi.optional() }),
     organizationType: Joi.when('userType', { is: 'Employer', then: Joi.string().max(50).optional(), otherwise: Joi.optional() }),
     establishedDate: Joi.when('userType', { is: 'Employer', then: Joi.date().max('now').optional(), otherwise: Joi.optional() }),
-    adminLevel: Joi.when('userType', { is: 'Admin', then: Joi.string().valid('Super', 'Admin', 'Moderator').optional().default('Admin'), otherwise: Joi.optional() }),
-    permissions: Joi.when('userType', { is: 'Admin', then: Joi.array().items(Joi.string()).optional(), otherwise: Joi.optional() }),
+    // SECURITY FIX: Removed adminLevel and permissions fields — admin accounts created internally only
     termsAccepted: Joi.boolean().optional(),
     termsVersion: Joi.string().max(20).optional(),
     privacyPolicyVersion: Joi.string().max(20).optional()

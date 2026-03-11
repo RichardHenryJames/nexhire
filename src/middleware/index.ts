@@ -78,9 +78,15 @@ export const handleError = (error: any, context: InvocationContext): HttpRespons
     
     // CORS headers for error responses - uses dynamic origin validation
     const requestOrigin = error._requestOrigin || null;
+    // SECURITY FIX: Include security headers on ALL error responses (not just success)
     const errorCorsHeaders = {
         'Content-Type': 'application/json',
-        ...getCorsHeaders(requestOrigin)
+        ...getCorsHeaders(requestOrigin),
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
     };
     
     if (error instanceof ValidationError) {
@@ -296,7 +302,12 @@ export const rateLimit = (requestsPerWindow: number = 60, windowMs: number = 600
                     headers: {
                         'Content-Type': 'application/json',
                         'Retry-After': String(retryAfterSec),
-                        ...getCorsHeaders(req.headers.get('origin'))
+                        ...getCorsHeaders(req.headers.get('origin')),
+                        // SECURITY FIX: Include security headers on rate limit responses
+                        'X-Content-Type-Options': 'nosniff',
+                        'X-Frame-Options': 'DENY',
+                        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+                        'Referrer-Policy': 'strict-origin-when-cross-origin',
                     },
                     jsonBody: {
                         success: false,

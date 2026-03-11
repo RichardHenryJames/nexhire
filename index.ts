@@ -2643,6 +2643,26 @@ app.http("scheduler-status", {
   route: "scheduler/status",
   handler: withErrorHandling(async (req, context) => {
     try {
+      // SECURITY FIX: Require admin auth for scheduler status
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return {
+          status: 401,
+          jsonBody: { success: false, error: "Authorization required" },
+        };
+      }
+
+      const token = authHeader.substring(7);
+      const { AuthService } = await import("./src/services/auth.service");
+      const payload = AuthService.verifyToken(token);
+
+      if (payload.userType !== "Admin") {
+        return {
+          status: 403,
+          jsonBody: { success: false, error: "Admin access required" },
+        };
+      }
+
       const { SchedulerService } = await import(
         "./src/services/scheduler.service"
       );
@@ -3168,7 +3188,18 @@ app.http("manual-trigger-daily-email", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "management/trigger-daily-email",
-  handler: async (request: HttpRequest, context: InvocationContext) => {
+  handler: withErrorHandling(async (request: HttpRequest, context: InvocationContext) => {
+    // SECURITY FIX: Require admin authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+    }
+    const { AuthService } = await import('./src/services/auth.service');
+    const payload = AuthService.verifyToken(authHeader.substring(7));
+    if (payload.userType !== 'Admin') {
+      return { status: 403, jsonBody: { success: false, error: 'Admin access required' } };
+    }
+
     const startTime = Date.now();
     const executionId = `manual_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -3241,7 +3272,7 @@ app.http("manual-trigger-daily-email", {
         }
       };
     }
-  }
+  }),
 });
 
 // ========================================================================
@@ -3252,7 +3283,18 @@ app.http("manual-trigger-referrer-email", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "management/trigger-referrer-email",
-  handler: async (request: HttpRequest, context: InvocationContext) => {
+  handler: withErrorHandling(async (request: HttpRequest, context: InvocationContext) => {
+    // SECURITY FIX: Require admin authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+    }
+    const { AuthService } = await import('./src/services/auth.service');
+    const payload = AuthService.verifyToken(authHeader.substring(7));
+    if (payload.userType !== 'Admin') {
+      return { status: 403, jsonBody: { success: false, error: 'Admin access required' } };
+    }
+
     const startTime = Date.now();
     const executionId = `manual_referrer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -3325,7 +3367,7 @@ app.http("manual-trigger-referrer-email", {
         }
       };
     }
-  }
+  }),
 });
 
 // ========================================================================
@@ -3336,7 +3378,18 @@ app.http("manual-trigger-referral-expiration", {
   methods: ["POST"],
   authLevel: "anonymous",
   route: "management/trigger-referral-expiration",
-  handler: async (request: HttpRequest, context: InvocationContext) => {
+  handler: withErrorHandling(async (request: HttpRequest, context: InvocationContext) => {
+    // SECURITY FIX: Require admin authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+    }
+    const { AuthService: AuthSvc } = await import('./src/services/auth.service');
+    const payload = AuthSvc.verifyToken(authHeader.substring(7));
+    if (payload.userType !== 'Admin') {
+      return { status: 403, jsonBody: { success: false, error: 'Admin access required' } };
+    }
+
     const startTime = Date.now();
     const executionId = `manual_expire_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -3414,7 +3467,7 @@ app.http("manual-trigger-referral-expiration", {
         }
       };
     }
-  }
+  }),
 });
 
 // ========================================================================
@@ -3425,7 +3478,18 @@ app.http("triggerBecomeVerifiedEmail", {
   methods: ["POST", "GET"],
   authLevel: "anonymous",
   route: "trigger-become-verified-email",
-  handler: async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+  handler: withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    // SECURITY FIX: Require admin authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { status: 401, jsonBody: { success: false, error: 'Authorization required' } };
+    }
+    const { AuthService: AuthSvc2 } = await import('./src/services/auth.service');
+    const authPayload = AuthSvc2.verifyToken(authHeader.substring(7));
+    if (authPayload.userType !== 'Admin') {
+      return { status: 403, jsonBody: { success: false, error: 'Admin access required' } };
+    }
+
     const startTime = Date.now();
     const executionId = `become_verified_manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const runStartTime = new Date();
@@ -3494,7 +3558,7 @@ app.http("triggerBecomeVerifiedEmail", {
         }
       };
     }
-  }
+  }),
 });
 
 // ========================================================================

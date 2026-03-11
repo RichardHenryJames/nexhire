@@ -13,6 +13,7 @@ import { dbService } from './database.service';
 import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 import { ReferralService } from './referral.service';
+import { maskEmail } from '../utils/encryption';
 
 interface ReferrerForEmail {
     UserID: string;
@@ -360,9 +361,9 @@ export class ReferrerNotificationEmailService {
                     const sendResult = await this.sendReferrerNotificationEmail(referrer);
                     if (sendResult.success && sendResult.jobCount > 0) {
                         result.emailsSent++;
-                        console.log(`✅ Sent to ${referrer.Email} (${sendResult.jobCount} requests)`);
+                        console.log(`✅ Sent to ${maskEmail(referrer.Email)} (${sendResult.jobCount} requests)`);
                     } else if (sendResult.jobCount === 0) {
-                        console.log(`⏭️ Skipped ${referrer.Email} (no open requests)`);
+                        console.log(`⏭️ Skipped ${maskEmail(referrer.Email)} (no open requests)`);
                     } else {
                         result.emailsFailed++;
                     }

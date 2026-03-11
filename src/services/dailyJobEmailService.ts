@@ -10,6 +10,7 @@ import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 import { AIJobRecommendationService } from './ai-job-recommendation.service';
 import { JobService } from './job.service';
+import { maskEmail } from '../utils/encryption';
 
 const APP_URL = process.env.APP_URL || 'https://www.refopen.com';
 
@@ -220,7 +221,7 @@ export class DailyJobEmailService {
             
             // Skip if no jobs found
             if (!jobs || jobs.length === 0) {
-                console.log(`⏭️ Skipping email for ${user.Email} - no jobs found`);
+                console.log(`⏭️ Skipping email for ${maskEmail(user.Email)} - no jobs found`);
                 return { success: false, errorDetail: `No jobs found for user ${user.Email} (UserID: ${user.UserID})` };
             }
             
@@ -362,12 +363,12 @@ export class DailyJobEmailService {
 
             // Check if user has daily job recommendation emails enabled
             if (!user.DailyJobRecommendationEmail) {
-                console.log(`⏭️ Skipping ${user.Email} - DailyJobRecommendationEmail is disabled`);
+                console.log(`⏭️ Skipping ${maskEmail(user.Email)} - DailyJobRecommendationEmail is disabled`);
                 result.errors.push(`User ${user.Email} has DailyJobRecommendationEmail disabled`);
                 return result;
             }
 
-            console.log(`📧 Sending test daily job email to ${user.Email}...`);
+            console.log(`📧 Sending test daily job email to ${maskEmail(user.Email)}...`);
 
             // Get jobs first to check if that's the issue
             const jobs = await this.getTopJobsForUser(user.UserID);
@@ -381,7 +382,7 @@ export class DailyJobEmailService {
             
             if (sendResult.success) {
                 result.emailsSent = 1;
-                console.log(`✅ Test email sent successfully to ${user.Email}`);
+                console.log(`✅ Test email sent successfully to ${maskEmail(user.Email)}`);
             } else {
                 result.emailsFailed = 1;
                 result.errors.push(sendResult.errorDetail || `Email send failed for ${user.Email} (jobs found: ${jobs.length})`);

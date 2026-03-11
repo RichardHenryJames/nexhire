@@ -4,6 +4,7 @@ import { WalletService } from "./wallet.service";
 import { PricingService } from "./pricing.service";
 import { EmailService } from "./emailService";
 import { TemplateService } from "./templateService";
+import { maskEmail } from '../utils/encryption';
 
 // Azure SignalR connection string
 const SIGNALR_CONNECTION_STRING = process.env.SIGNALR_CONNECTION_STRING || "";
@@ -23,10 +24,10 @@ async function getPlatformAdminUserId(): Promise<string | null> {
     );
     if (result.recordset && result.recordset.length > 0) {
       _cachedAdminUserId = result.recordset[0].UserID;
-      console.log(`✅ Platform Admin resolved: ${REFOPEN_ADMIN_EMAIL} → ${_cachedAdminUserId}`);
+      console.log(`✅ Platform Admin resolved: ${maskEmail(REFOPEN_ADMIN_EMAIL)} → ${_cachedAdminUserId}`);
       return _cachedAdminUserId;
     }
-    console.warn(`⚠️ Platform Admin user not found for email: ${REFOPEN_ADMIN_EMAIL}`);
+    console.warn(`⚠️ Platform Admin user not found for email: ${maskEmail(REFOPEN_ADMIN_EMAIL)}`);
     return null;
   } catch (err: any) {
     console.error('Error looking up platform admin:', err.message);
@@ -442,7 +443,7 @@ export class MessagingService {
       
       // Case 1: Admin (refopen@admin.com) sends a message → email the recipient
       if (senderEmail === REFOPEN_ADMIN_EMAIL.toLowerCase()) {
-        console.log(`📧 Admin sent message to ${receiverEmail}, sending email notification...`);
+        console.log(`📧 Admin sent message to ${maskEmail(receiverEmail)}, sending email notification...`);
         
         const template = TemplateService.render('admin_new_message', {
           senderName: 'RefOpen Support',
@@ -457,12 +458,12 @@ export class MessagingService {
           emailType: 'admin_message_to_user'
         });
         
-        console.log(`✅ Admin message notification sent to ${receiverEmail}`);
+        console.log(`✅ Admin message notification sent to ${maskEmail(receiverEmail)}`);
       }
       
       // Case 2: Someone sends a message to admin → email admin notification address
       if (receiverEmail === REFOPEN_ADMIN_EMAIL.toLowerCase()) {
-        console.log(`📧 User ${senderEmail} sent message to admin, notifying ${ADMIN_NOTIFICATION_EMAIL}...`);
+        console.log(`📧 User ${maskEmail(senderEmail)} sent message to admin, notifying ${maskEmail(ADMIN_NOTIFICATION_EMAIL)}...`);
         
         const template = TemplateService.render('admin_new_message', {
           senderName: `${senderName} (${senderEmail})`,
@@ -477,7 +478,7 @@ export class MessagingService {
           emailType: 'user_message_to_admin'
         });
         
-        console.log(`✅ User message notification sent to admin at ${ADMIN_NOTIFICATION_EMAIL}`);
+        console.log(`✅ User message notification sent to admin at ${maskEmail(ADMIN_NOTIFICATION_EMAIL)}`);
       }
     } catch (error: any) {
       console.error('Error sending admin message notification:', error.message);
