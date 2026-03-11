@@ -11,7 +11,7 @@ import { isBlockedMarketplace } from '../data/blocked-marketplaces';
  * 
  * Flow:
  * 1. User submits company email for their current work experience
- * 2. System generates 4-digit OTP and sends to company email
+ * 2. System generates 6-digit OTP and sends to company email
  * 3. User enters OTP to verify
  * 4. On success: WorkExperience.CompanyEmailVerified = true, User.IsVerifiedReferrer = true
  * 5. If user adds new work experience: IsVerifiedReferrer = false (must re-verify)

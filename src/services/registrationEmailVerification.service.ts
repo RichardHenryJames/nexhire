@@ -10,7 +10,7 @@ import { EmailService } from './emailService';
  * Flow:
  * 1. User enters email on registration form
  * 2. Clicks "Verify Email" → POST /auth/email/send-otp (anonymous)
- * 3. System generates 4-digit OTP, stores in EmailVerificationOTPs table, sends email
+ * 3. System generates 6-digit OTP, stores in EmailVerificationOTPs table, sends email
  * 4. User enters OTP → POST /auth/email/verify-otp (anonymous)
  * 5. System verifies OTP, returns verificationId (OTPID)
  * 6. Frontend stores verificationId, sends it with registration payload

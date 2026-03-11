@@ -74,11 +74,11 @@ export const verifyRegistrationOTP = async (
       };
     }
 
-    // Validate OTP format (4 digits)
-    if (!/^\d{4}$/.test(otp)) {
+    // Validate OTP format (6 digits)
+    if (!/^\d{6}$/.test(otp)) {
       return {
         status: 400,
-        jsonBody: { success: false, error: 'OTP must be 4 digits' }
+        jsonBody: { success: false, error: 'OTP must be 6 digits' }
       };
     }
 

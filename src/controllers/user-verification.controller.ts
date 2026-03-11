@@ -32,8 +32,8 @@ export const verifyCollegeEmailOTP = withAuth(async (
   const body = (await request.json()) as { otp?: string };
   const { otp } = body;
 
-  if (!otp || otp.length !== 4) {
-    return { status: 400, jsonBody: { success: false, error: 'Valid 4-digit OTP is required' } };
+  if (!otp || otp.length !== 6) {
+    return { status: 400, jsonBody: { success: false, error: 'Valid 6-digit OTP is required' } };
   }
 
   const result = await UserVerificationService.verifyCollegeEmailOTP(user.userId, otp);
