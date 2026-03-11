@@ -185,6 +185,14 @@ export const getAdminDashboardUsers = withAuth(async (
       whereConditions.push('u.IsVerifiedReferrer = 1');
     } else if (verifiedStatus === 'notVerified') {
       whereConditions.push('(u.IsVerifiedReferrer = 0 OR u.IsVerifiedReferrer IS NULL)');
+    } else if (verifiedStatus === 'eligible') {
+      // Eligible referrers: not yet verified BUT has a current work experience
+      whereConditions.push('(u.IsVerifiedReferrer = 0 OR u.IsVerifiedReferrer IS NULL)');
+      whereConditions.push(`EXISTS (
+        SELECT 1 FROM WorkExperiences we2 
+        INNER JOIN Applicants a3 ON we2.ApplicantID = a3.ApplicantID 
+        WHERE a3.UserID = u.UserID AND we2.IsActive = 1 AND (we2.IsCurrent = 1 OR we2.EndDate IS NULL)
+      )`);
     }
 
     // Account status filter

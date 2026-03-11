@@ -859,7 +859,8 @@ export default function AdminDashboardScreen() {
             options={[
               { value: 'all', label: 'All' },
               { value: 'verified', label: 'Verified' },
-              { value: 'notVerified', label: 'Not Verified' }
+              { value: 'notVerified', label: 'Not Verified' },
+              { value: 'eligible', label: '⭐ Eligible Referrers' }
             ]}
             onChange={(val) => handleFilterChange('verifiedStatus', val)}
           />
