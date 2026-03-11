@@ -775,7 +775,7 @@ export default function AddWorkExperienceModal({
                         <View style={styles.otpSection}>
                           <Text style={styles.otpLabel}>Enter 6-digit verification code</Text>
                           <View style={styles.otpInputContainer}>
-                            {[0, 1, 2, 3].map((index) => (
+                            {[0, 1, 2, 3, 4, 5].map((index) => (
                               <TextInput
                                 key={index}
                                 ref={(ref) => otpInputRefs.current[index] = ref}

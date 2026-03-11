@@ -70,11 +70,12 @@ export const sendRegistrationEmailOTP = async (email: string): Promise<Registrat
       [normalizedEmail]
     );
     if (existingUser.recordset.length > 0) {
-      // SECURITY FIX: Don't reveal whether email is registered (prevents enumeration)
+      // Keep error for frontend UX (registration flow needs to redirect to login)
+      // Email enumeration risk is acceptable here since registration is a public flow
       return {
-        success: true,
-        message: 'If this email is not already registered, you will receive a verification code shortly.',
-        data: { emailSent: false } // Signal to frontend without revealing existence
+        success: false,
+        message: 'An account with this email already exists. Please sign in instead.',
+        error: 'EMAIL_ALREADY_REGISTERED'
       };
     }
 
