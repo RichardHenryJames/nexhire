@@ -101,141 +101,95 @@ export class ApplicantService {
 
             const profile = applicantResult.recordset[0];
 
-            // Compute derived current job fields and total experience from WorkExperiences
-            try {
-                const experiences = await dbService.executeQuery(
-                    `SELECT TOP 1 * FROM WorkExperiences WHERE ApplicantID = @param0 AND (IsActive = 1 OR IsActive IS NULL)
-                     ORDER BY CASE WHEN EndDate IS NULL THEN 1 ELSE 0 END DESC, EndDate DESC, StartDate DESC`,
+            // PERF: Run all independent profile-enrichment queries in parallel
+            // (was 7-8 sequential DB round-trips — now 4 parallel groups)
+            const [workExpData, referralStatsData, salaryData, resumesData] = await Promise.all([
+                // Group 1: Work experience (latest + all dates for total calculation)
+                dbService.executeQuery(
+                    `SELECT
+                        we.WorkExperienceID, we.CompanyName, we.JobTitle, we.Department,
+                        we.EmploymentType, we.StartDate, we.EndDate, we.IsCurrent,
+                        we.Location, we.Country, we.Description, we.Skills,
+                        we.CompanyEmailVerified, we.OrganizationID,
+                        o.Name as OrganizationName, o.LogoURL as OrganizationLogo,
+                        ISNULL(o.Tier, 'Standard') as OrganizationTier
+                     FROM WorkExperiences we
+                     LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
+                     WHERE we.ApplicantID = @param0 AND (we.IsActive = 1 OR we.IsActive IS NULL)
+                     ORDER BY we.IsCurrent DESC, 
+                              CASE WHEN we.EndDate IS NULL THEN 1 ELSE 0 END DESC,
+                              we.EndDate DESC, we.StartDate DESC`,
                     [profile.ApplicantID]
-                );
+                ).catch(e => { console.warn('Could not load work experiences:', e); return { recordset: [] }; }),
 
-                const allExp = await dbService.executeQuery(
-                    `SELECT StartDate, EndDate FROM WorkExperiences WHERE ApplicantID = @param0 AND (IsActive = 1 OR IsActive IS NULL)`,
-                    [profile.ApplicantID]
-                );
-
-                const now = new Date();
-                let totalMonths = 0;
-                if (allExp.recordset) {
-                    for (const row of allExp.recordset) {
-                        const start = new Date(row.StartDate);
-                        const end = row.EndDate ? new Date(row.EndDate) : now;
-                        const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-                        totalMonths += Math.max(0, months);
-                    }
-                }
-
-                // Attach derived fields for display
-                (profile as any).TotalExperienceMonths = profile.TotalExperienceMonths ?? totalMonths;
-                if (experiences.recordset && experiences.recordset.length > 0) {
-                    const latest = experiences.recordset[0];
-                    (profile as any).CurrentJobTitle = latest.JobTitle || profile.CurrentJobTitle;
-                    (profile as any).CurrentOrganizationID = latest.OrganizationID;
-                    if (latest.OrganizationID) {
-                        const org = await dbService.executeQuery('SELECT Name, ISNULL(Tier, \'Standard\') as Tier FROM Organizations WHERE OrganizationID = @param0', [latest.OrganizationID]);
-                        (profile as any).CurrentCompanyName = org.recordset && org.recordset[0] ? org.recordset[0].Name : (latest.CompanyName || profile.CurrentCompanyName);
-                        (profile as any).organizationTier = org.recordset?.[0]?.Tier || 'Standard';
-                    } else {
-                        // Fallback to CompanyName from WorkExperiences or Applicants table
-                        (profile as any).CurrentCompanyName = latest.CompanyName || profile.CurrentCompanyName || null;
-                    }
-                }
-            } catch (e) {
-                console.warn('Could not compute derived work experience fields:', e);
-            }
-
-            // Get referral stats for profile header (AssignedReferrerID = UserID)
-            try {
-                const referralStatsQuery = `
-                    SELECT 
+                // Group 2: Referral stats
+                dbService.executeQuery(
+                    `SELECT 
                         COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 THEN rr.RequestID END) as TotalReferralsMade,
                         COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedReferrals,
                         COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param1 THEN rr.RequestID END) as ReferralRequestsMade,
                         ISNULL(SUM(CASE WHEN rw.ReferrerID = @param1 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
                     FROM ReferralRequests rr
                     LEFT JOIN ReferralRewards rw ON rr.RequestID = rw.RequestID
-                    WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param1)
-                `;
-                const statsResult = await dbService.executeQuery(referralStatsQuery, [userId, profile.ApplicantID]);  // userId for AssignedReferrerID, ApplicantID for seeker
-                
-                if (statsResult.recordset && statsResult.recordset.length > 0) {
-                    const stats = statsResult.recordset[0];
-                    profile.referralStats = {
-                        totalReferralsMade: stats.TotalReferralsMade || 0,
-                        verifiedReferrals: stats.VerifiedReferrals || 0,
-                        referralRequestsMade: stats.ReferralRequestsMade || 0,
-                        totalPointsFromRewards: stats.TotalPointsFromRewards || 0
-                    };
-                }
-            } catch (e) {
-                console.warn('Could not load referral stats:', e);
-                profile.referralStats = {
-                    totalReferralsMade: 0,
-                    verifiedReferrals: 0,
-                    referralRequestsMade: 0,
-                    totalPointsFromRewards: 0
-                };
+                    WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param1)`,
+                    [userId, profile.ApplicantID]
+                ).catch(e => { console.warn('Could not load referral stats:', e); return { recordset: [{}] }; }),
+
+                // Group 3: Salary breakdown
+                this.getApplicantSalaryBreakdown(profile.ApplicantID)
+                    .catch(e => { console.warn('Could not load salary data:', e); return { current: [], expected: [] }; }),
+
+                // Group 4: Resumes
+                this.getApplicantResumes(profile.ApplicantID)
+                    .catch(e => { console.warn('Could not load resumes:', e); return []; }),
+            ]);
+
+            // ── Process work experiences ────────────────────────────
+            const allWorkExp = workExpData.recordset || [];
+            
+            // Compute total months from all experiences
+            const now = new Date();
+            let totalMonths = 0;
+            for (const row of allWorkExp) {
+                const start = new Date(row.StartDate);
+                const end = row.EndDate ? new Date(row.EndDate) : now;
+                const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+                totalMonths += Math.max(0, months);
+            }
+            (profile as any).TotalExperienceMonths = profile.TotalExperienceMonths ?? totalMonths;
+
+            // Derive current job from latest work experience
+            if (allWorkExp.length > 0) {
+                const latest = allWorkExp[0]; // Already sorted by IsCurrent DESC, EndDate DESC
+                (profile as any).CurrentJobTitle = latest.JobTitle || profile.CurrentJobTitle;
+                (profile as any).CurrentOrganizationID = latest.OrganizationID;
+                (profile as any).CurrentCompanyName = latest.OrganizationName || latest.CompanyName || profile.CurrentCompanyName || null;
+                (profile as any).organizationTier = latest.OrganizationTier || 'Standard';
             }
 
-            // Get salary breakdown for this applicant
-            try {
-                const salaryData = await this.getApplicantSalaryBreakdown(profile.ApplicantID);
-                profile.salaryBreakdown = salaryData;
-            } catch (error) {
-                console.warn('Could not load salary data:', error);
-                profile.salaryBreakdown = { current: [], expected: [] };
-            }
+            // Strip CompanyEmail from response and attach
+            profile.workExperiences = allWorkExp.map((we: any) => {
+                const { CompanyEmail, ...rest } = we;
+                return rest;
+            });
 
-            // Get resumes for this applicant
-            try {
-                const resumes = await this.getApplicantResumes(profile.ApplicantID);
-                profile.resumes = resumes;
-                // Set primary resume for backward compatibility
-                const primaryResume = resumes.find(r => r.IsPrimary) || resumes[0];
-                profile.primaryResumeURL = signResumeUrl(primaryResume?.ResumeURL);
-                // Also sign all resume URLs in the array
-                profile.resumes = resumes.map((r: any) => ({ ...r, ResumeURL: signResumeUrl(r.ResumeURL) }));
-            } catch (error) {
-                console.warn('Could not load resumes:', error);
-                profile.resumes = [];
-                profile.primaryResumeURL = null;
-            }
+            // ── Process referral stats ──────────────────────────────
+            const stats = referralStatsData.recordset?.[0] || {};
+            profile.referralStats = {
+                totalReferralsMade: stats.TotalReferralsMade || 0,
+                verifiedReferrals: stats.VerifiedReferrals || 0,
+                referralRequestsMade: stats.ReferralRequestsMade || 0,
+                totalPointsFromRewards: stats.TotalPointsFromRewards || 0,
+            };
 
-            // Get all work experiences for this applicant
-            try {
-                const workExpQuery = `
-                    SELECT 
-                        we.WorkExperienceID,
-                        we.CompanyName,
-                        we.JobTitle,
-                        we.Department,
-                        we.EmploymentType,
-                        we.StartDate,
-                        we.EndDate,
-                        we.IsCurrent,
-                        we.Location,
-                        we.Country,
-                        we.Description,
-                        we.Skills,
-                        we.CompanyEmail,
-                        we.CompanyEmailVerified,
-                        o.Name as OrganizationName,
-                        o.LogoURL as OrganizationLogo
-                    FROM WorkExperiences we
-                    LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
-                    WHERE we.ApplicantID = @param0 AND (we.IsActive = 1 OR we.IsActive IS NULL)
-                    ORDER BY we.IsCurrent DESC, we.EndDate DESC, we.StartDate DESC
-                `;
-                const workExpResult = await dbService.executeQuery(workExpQuery, [profile.ApplicantID]);
-                // Remove CompanyEmail from response - not needed in frontend
-                profile.workExperiences = (workExpResult.recordset || []).map((we: any) => {
-                    const { CompanyEmail, ...rest } = we;
-                    return rest;
-                });
-            } catch (error) {
-                console.warn('Could not load work experiences:', error);
-                profile.workExperiences = [];
-            }
+            // ── Process salary ──────────────────────────────────────
+            profile.salaryBreakdown = salaryData;
+
+            // ── Process resumes ─────────────────────────────────────
+            const resumes = resumesData as any[];
+            profile.resumes = resumes.map((r: any) => ({ ...r, ResumeURL: signResumeUrl(r.ResumeURL) }));
+            const primaryResume = resumes.find((r: any) => r.IsPrimary) || resumes[0];
+            profile.primaryResumeURL = signResumeUrl(primaryResume?.ResumeURL);
             
             // Recalculate and update profile completeness to ensure it's fresh
             try {
@@ -531,12 +485,11 @@ export class ApplicantService {
         return applicantId;
     }
 
-    /** Get available salary components for frontend dropdown */
+    /** Get available salary components for frontend dropdown — delegates to ReferenceRepository (cached, 30 min TTL) */
     static async getSalaryComponents(): Promise<any[]> {
         try {
-            const query = 'SELECT * FROM SalaryComponents WHERE IsActive = 1 ORDER BY ComponentID';
-            const result = await dbService.executeQuery(query, []);
-            return result.recordset || [];
+            const { ReferenceRepository } = await import('../repositories/reference.repository');
+            return ReferenceRepository.getSalaryComponents();
         } catch (error) {
             console.error('Error getting salary components:', error);
             throw error;

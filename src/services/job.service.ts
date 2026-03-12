@@ -1155,11 +1155,10 @@ export class JobService {
         return { jobs: dataResult.recordset || [], total, totalPages };
     }
 
-    // Get currencies (reference data) - unchanged
+    // Get currencies (reference data) — delegates to ReferenceRepository (cached, 30 min TTL)
     static async getCurrencies(): Promise<any[]> {
-        const query = 'SELECT * FROM Currencies WHERE IsActive = 1 ORDER BY Code';
-        const result = await dbService.executeQuery(query);
-        return result.recordset || [];
+        const { ReferenceRepository } = await import('../repositories/reference.repository');
+        return ReferenceRepository.getCurrencies();
     }
 
     // ── Job Locations (cached) ──────────────────────────────────

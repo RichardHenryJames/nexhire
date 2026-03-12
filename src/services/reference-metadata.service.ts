@@ -13,38 +13,12 @@ export interface ReferenceMetadataItem {
 
 export class ReferenceMetadataService {
     /**
-     * Get reference metadata by type
-     * @param refType - Type of reference data (JobRole, Skill, Certification, Industry, Department)
-     * @param category - Optional category filter
-     * @returns Array of reference metadata items
+     * Get reference metadata by type — PERF: cached via ReferenceRepository (10 min TTL)
      */
     static async getReferenceByType(refType: string, category?: string): Promise<ReferenceMetadataItem[]> {
         try {
-            let query = `
-                SELECT 
-                    ReferenceID,
-                    RefType,
-                    Value,
-                    Category,
-                    Description,
-                    IsActive,
-                    CreatedAt,
-                    UpdatedAt
-                FROM ReferenceMetadata
-                WHERE RefType = @param0 AND IsActive = 1
-            `;
-            
-            const params = [refType];
-            
-            if (category) {
-                query += ' AND Category = @param1';
-                params.push(category);
-            }
-            
-            query += ' ORDER BY Value ASC';
-            
-            const result = await dbService.executeQuery<ReferenceMetadataItem>(query, params);
-            return result.recordset || [];
+            const { ReferenceRepository } = await import('../repositories/reference.repository');
+            return await ReferenceRepository.getReferenceByType(refType, category) as ReferenceMetadataItem[];
         } catch (error) {
             console.error(`Error getting reference metadata for type ${refType}:`, error);
             throw new Error(`Failed to fetch reference metadata: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -52,21 +26,12 @@ export class ReferenceMetadataService {
     }
 
     /**
-     * Get all categories for a specific ref type
-     * @param refType - Type of reference data
-     * @returns Array of unique categories
+     * Get all categories for a specific ref type — PERF: cached via ReferenceRepository
      */
     static async getCategoriesByType(refType: string): Promise<string[]> {
         try {
-            const query = `
-                SELECT DISTINCT Category
-                FROM ReferenceMetadata
-                WHERE RefType = @param0 AND IsActive = 1 AND Category IS NOT NULL
-                ORDER BY Category ASC
-            `;
-            
-            const result = await dbService.executeQuery<{ Category: string }>(query, [refType]);
-            return result.recordset?.map(r => r.Category) || [];
+            const { ReferenceRepository } = await import('../repositories/reference.repository');
+            return await ReferenceRepository.getCategoriesByType(refType);
         } catch (error) {
             console.error(`Error getting categories for type ${refType}:`, error);
             throw new Error(`Failed to fetch categories: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -115,18 +80,8 @@ export class ReferenceMetadataService {
      */
     static async getAllReferenceTypes(): Promise<{ RefType: string; Count: number }[]> {
         try {
-            const query = `
-                SELECT 
-                    RefType,
-                    COUNT(*) as Count
-                FROM ReferenceMetadata
-                WHERE IsActive = 1
-                GROUP BY RefType
-                ORDER BY RefType ASC
-            `;
-            
-            const result = await dbService.executeQuery<{ RefType: string; Count: number }>(query, []);
-            return result.recordset || [];
+            const { ReferenceRepository } = await import('../repositories/reference.repository');
+            return await ReferenceRepository.getAllReferenceTypes();
         } catch (error) {
             console.error('Error getting all reference types:', error);
             throw new Error(`Failed to fetch reference types: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -169,38 +124,8 @@ export class ReferenceMetadataService {
      */
     static async getBulkReferenceData(refTypes: string[]): Promise<Record<string, ReferenceMetadataItem[]>> {
         try {
-            if (!refTypes || refTypes.length === 0) {
-                return {};
-            }
-
-            const placeholders = refTypes.map((_, idx) => `@param${idx}`).join(',');
-            const query = `
-                SELECT 
-                    ReferenceID,
-                    RefType,
-                    Value,
-                    Category,
-                    Description,
-                    IsActive,
-                    CreatedAt,
-                    UpdatedAt
-                FROM ReferenceMetadata
-                WHERE RefType IN (${placeholders}) AND IsActive = 1
-                ORDER BY RefType, Value ASC
-            `;
-            
-            const result = await dbService.executeQuery<ReferenceMetadataItem>(query, refTypes);
-            
-            // Group by RefType
-            const grouped: Record<string, ReferenceMetadataItem[]> = {};
-            result.recordset?.forEach(item => {
-                if (!grouped[item.RefType]) {
-                    grouped[item.RefType] = [];
-                }
-                grouped[item.RefType].push(item);
-            });
-            
-            return grouped;
+            const { ReferenceRepository } = await import('../repositories/reference.repository');
+            return await ReferenceRepository.getBulkReferenceData(refTypes) as Record<string, ReferenceMetadataItem[]>;
         } catch (error) {
             console.error('Error getting bulk reference data:', error);
             throw new Error(`Failed to fetch bulk reference data: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -15,32 +15,9 @@ export class JobApplicationService {
     static async applyForJob(applicationData: any, applicantUserId: string): Promise<JobApplication> {
         const validatedData = validateRequest<JobApplicationRequest>(jobApplicationSchema, applicationData);
         
-        // Get applicant ID from user ID - FIXED: Create applicant profile if not exists
-        let applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        let applicantResult = await dbService.executeQuery(applicantQuery, [applicantUserId]);
-        
-        let applicantId: string;
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            // Create applicant profile if it doesn't exist
-            applicantId = AuthService.generateUniqueId();
-            
-            const createApplicantQuery = `
-                INSERT INTO Applicants (
-                    ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
-                    AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                    ImmediatelyAvailable, WillingToRelocate, IsFeatured,
-                    CreatedAt, UpdatedAt
-                ) VALUES (
-                    @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
-                    GETUTCDATE(), GETUTCDATE()
-                )
-            `;
-            
-            await dbService.executeQuery(createApplicantQuery, [applicantId, applicantUserId]);
-        } else {
-            applicantId = applicantResult.recordset[0].ApplicantID;
-        }
+        // Get applicant ID from user ID - creates profile if not exists via UserRepository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.ensureApplicantId(applicantUserId);
         
         // Check if job exists and is published - FIXED: More flexible status check
         const jobQuery = `

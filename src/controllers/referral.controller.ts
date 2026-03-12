@@ -69,16 +69,9 @@ export const purchaseReferralPlan = withErrorHandling(async (req: HttpRequest, c
             throw new ValidationError('Plan ID is required');
         }
 
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const subscription = await ReferralService.purchaseReferralPlan(applicantId, purchaseData);
         
         return {
@@ -104,16 +97,9 @@ export const getCurrentSubscription = withErrorHandling(async (req: HttpRequest,
     try {
         const user = authenticate(req);
         
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const subscription = await ReferralService.getCurrentSubscription(applicantId);
         
         return {
@@ -180,16 +166,9 @@ export const createReferralRequest = withErrorHandling(async (req: HttpRequest, 
             // organizationId and companyName are optional when openToAnyCompany is true
         }
 
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const request = await ReferralService.createReferralRequest(applicantId, requestData);
         
         // Get referral cost from DB for response message
@@ -237,7 +216,8 @@ export const getMyReferralRequests = withErrorHandling(async (req: HttpRequest, 
         const page = Math.max(1, parseInt(String(params.page || '1'), 10) || 1);
         const pageSize = Math.min(100, Math.max(1, parseInt(String(params.pageSize || '20'), 10) || 20));
 
-        // Get applicant ID
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
         const { dbService } = await import('../services/database.service');
 
         // Check if user is Admin - admins see ALL seekers' referral requests
@@ -254,14 +234,7 @@ export const getMyReferralRequests = withErrorHandling(async (req: HttpRequest, 
             };
         }
 
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         
         // Use the service method
         const result = await ReferralService.getMyReferralRequests(applicantId, page, pageSize);
@@ -319,14 +292,8 @@ export const getAvailableRequests = withErrorHandling(async (req: HttpRequest, c
             };
         }
 
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const result = await ReferralService.getAvailableRequests(applicantId, page, pageSize, filters);
         
         return {
@@ -363,16 +330,9 @@ export const claimReferralRequest = withErrorHandling(async (req: HttpRequest, c
             throw new ValidationError('Proof screenshot is required to claim referral');
         }
 
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const request = await ReferralService.submitReferralWithProof(applicantId, user.userId, {
             requestID: requestId,
             proofFileURL: claimData.proofFileURL,
@@ -436,16 +396,9 @@ export const verifyReferralCompletion = withErrorHandling(async (req: HttpReques
             throw new ValidationError('Verification status (verified: true/false) is required');
         }
 
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const request = await ReferralService.verifyReferral(applicantId, {
             requestID: requestId,
             verified: verificationData.verified
@@ -579,16 +532,9 @@ export const getReferralAnalytics = withErrorHandling(async (req: HttpRequest, c
     try {
         const user = authenticate(req);
         
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const analytics = await ReferralService.getReferralAnalytics(applicantId, user.userId);
         
         return {
@@ -614,16 +560,9 @@ export const checkReferralEligibility = withErrorHandling(async (req: HttpReques
     try {
         const user = authenticate(req);
         
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const eligibility = await ReferralService.checkReferralEligibility(applicantId);
         
         return {
@@ -649,16 +588,10 @@ export const getReferrerStats = withErrorHandling(async (req: HttpRequest, conte
     try {
         const user = authenticate(req);
         
-        // Get applicant ID
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
         const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         
         // Get current pending counts from ReferrerStats table
         const statsQuery = `
@@ -695,16 +628,9 @@ export const getReferralPointsHistory = withErrorHandling(async (req: HttpReques
     try {
         const user = authenticate(req);
         
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         const pointsData = await ReferralService.getReferralPointsHistory(applicantId);
         
         return {
@@ -733,13 +659,9 @@ export const cancelReferralRequest = withErrorHandling(async (req: HttpRequest, 
         if (!requestId || !isValidGuid(requestId)) {
             throw new ValidationError('Valid Request ID is required');
         }
+        const { UserRepository } = await import('../repositories/user.repository');
         const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         // Get referral info BEFORE cancelling (for notification)
         const refInfo = await dbService.executeQuery(
             `SELECT rr.AssignedReferrerID, rr.JobTitle, u.FirstName + ' ' + u.LastName as SeekerName
@@ -790,13 +712,8 @@ export const convertReferralToOpen = withErrorHandling(async (req: HttpRequest, 
 
         const body = await req.json() as any;
 
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        if (!applicantResult.recordset?.length) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
 
         const result = await ReferralService.convertToOpen(user.userId, applicantId, requestId, {
             minSalary: body.minSalary,
@@ -826,16 +743,9 @@ export const convertPointsToWallet = withErrorHandling(async (req: HttpRequest, 
     try {
         const user = authenticate(req);
         
-        // Get applicant ID
-        const { dbService } = await import('../services/database.service');
-        const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-        const applicantResult = await dbService.executeQuery(applicantQuery, [user.userId]);
-        
-        if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-
-        const applicantId = applicantResult.recordset[0].ApplicantID;
+        // Get applicant ID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(user.userId);
         
         // Convert points to wallet using the referral service
         const result = await ReferralService.convertPointsToWallet(applicantId, user.userId);

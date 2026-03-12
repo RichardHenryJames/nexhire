@@ -46,18 +46,12 @@ export class ReferralService {
     // ===== REFERRAL PLANS =====
     
     /**
-     * Get all available referral plans
+     * Get all available referral plans — PERF: cached via ReferenceRepository
      */
     static async getReferralPlans(): Promise<ReferralPlan[]> {
         try {
-            const query = `
-                SELECT PlanID, Name, ReferralsPerDay, DurationDays, Price, CreatedAt
-                FROM ReferralPlans
-                ORDER BY Price ASC
-            `;
-            
-            const result = await dbService.executeQuery<ReferralPlan>(query, []);
-            return result.recordset || [];
+            const { ReferenceRepository } = await import('../repositories/reference.repository');
+            return await ReferenceRepository.getReferralPlans() as ReferralPlan[];
         } catch (error) {
             console.error('Error getting referral plans:', error);
             throw error;
@@ -1138,10 +1132,9 @@ export class ReferralService {
             const countResult = await dbService.executeQuery(countQuery, [referrerId]);
             const count = countResult.recordset?.[0]?.VerifiedThisMonth || 0;
 
-            // Resolve UserID → ApplicantID (ReferralRewards.ReferrerID FK → Applicants.ApplicantID)
-            const applicantQuery = `SELECT ApplicantID FROM Applicants WHERE UserID = @param0`;
-            const applicantResult = await dbService.executeQuery(applicantQuery, [referrerId]);
-            const applicantId = applicantResult.recordset?.[0]?.ApplicantID;
+            // Resolve UserID → ApplicantID via repository
+            const { UserRepository } = await import('../repositories/user.repository');
+            const applicantId = await UserRepository.getApplicantId(referrerId);
             if (!applicantId) {
                 console.warn('Milestone check: No ApplicantID found for referrer UserID:', referrerId);
                 return;

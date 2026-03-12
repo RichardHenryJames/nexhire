@@ -85,10 +85,9 @@ export class ReferrerNotificationEmailService {
      * Uses ReferralService.getAvailableRequests for consistency with frontend
      */
     static async getOpenRequestsForReferrer(referrer: ReferrerForEmail): Promise<OpenReferralRequest[]> {
-        // Get ApplicantID from UserID
-        const applicantQuery = `SELECT ApplicantID FROM Applicants WHERE UserID = @param0`;
-        const applicantResult = await dbService.executeQuery(applicantQuery, [referrer.UserID]);
-        const applicantId = applicantResult.recordset?.[0]?.ApplicantID;
+        // Get ApplicantID from UserID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.getApplicantId(referrer.UserID);
         
         if (!applicantId) {
             console.log(`No applicant found for user ${referrer.UserID}`);
@@ -125,10 +124,9 @@ export class ReferrerNotificationEmailService {
      * Uses ReferralService.getAvailableRequests for consistency with frontend
      */
     static async getOpenRequestsCount(referrer: ReferrerForEmail): Promise<number> {
-        // Get ApplicantID from UserID
-        const applicantQuery = `SELECT ApplicantID FROM Applicants WHERE UserID = @param0`;
-        const applicantResult = await dbService.executeQuery(applicantQuery, [referrer.UserID]);
-        const applicantId = applicantResult.recordset?.[0]?.ApplicantID;
+        // Get ApplicantID from UserID via repository
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.getApplicantId(referrer.UserID);
         
         if (!applicantId) {
             return 0;

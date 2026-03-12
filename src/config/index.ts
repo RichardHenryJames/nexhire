@@ -8,11 +8,11 @@ export const dbConfig = {
         encrypt: true,
         trustServerCertificate: false,
         connectTimeout: 60000,
-        requestTimeout: 180000,
+        requestTimeout: 30000,  // PERF: Was 180s (masked slow queries) — now 30s
         pool: {
-            max: 10,
-            min: 0,
-            idleTimeoutMillis: 30000
+            max: 20,   // PERF: Was 10 — Azure SQL supports 30 concurrent; 20 prevents exhaustion
+            min: 2,    // PERF: Was 0 — keep 2 warm connections to avoid cold-connect latency
+            idleTimeoutMillis: 60000  // PERF: Was 30s — Azure Functions idle up to 5 min
         }
     }
 };

@@ -146,7 +146,10 @@ export class AIJobRecommendationService {
     
     // Get work experience
     const workExpQuery = `
-      SELECT * FROM WorkExperiences 
+      SELECT WorkExperienceID, ApplicantID, CompanyName, JobTitle, Department,
+             EmploymentType, StartDate, EndDate, IsCurrent, Location, Country,
+             Description, Skills, OrganizationID
+      FROM WorkExperiences 
       WHERE ApplicantID = @param0
       ORDER BY StartDate DESC
     `;

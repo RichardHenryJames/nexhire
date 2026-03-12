@@ -1,25 +1,11 @@
 import { dbService } from '../services/database.service';
 import { AuthService } from '../services/auth.service';
+import { UserRepository } from '../repositories/user.repository';
 import { PaginationParams } from '../types';
 
 export class SavedJobsService {
   private static async ensureApplicant(userId: string): Promise<string> {
-    const r = await dbService.executeQuery('SELECT ApplicantID FROM Applicants WHERE UserID = @param0', [userId]);
-    if (r.recordset && r.recordset.length) return r.recordset[0].ApplicantID;
-
-    const applicantId = AuthService.generateUniqueId();
-    await dbService.executeQuery(`
-      INSERT INTO Applicants (
-        ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
-        AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-        ImmediatelyAvailable, WillingToRelocate, IsFeatured,
-        CreatedAt, UpdatedAt
-      ) VALUES (
-        @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0,
-        GETUTCDATE(), GETUTCDATE()
-      )
-    `, [applicantId, userId]);
-    return applicantId;
+    return UserRepository.ensureApplicantId(userId);
   }
 
   static async saveJob(userId: string, jobId: string) {

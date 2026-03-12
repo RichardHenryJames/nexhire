@@ -1,4 +1,5 @@
 import { dbService } from '../services/database.service';
+import { ReferenceRepository } from '../repositories/reference.repository';
 import { successResponse } from '../utils/validation';
 
 // Define interfaces for better type safety
@@ -11,7 +12,7 @@ interface University {
     alpha_two_code?: string;
 }
 
-// Get all organizations for registration dropdown - OPTIMIZED
+// Get all organizations for registration dropdown — PERF: Uses ReferenceRepository (cached)
 export const getOrganizations = async (req: any): Promise<any> => {
     try {
         const url = new URL(req.url);
@@ -19,110 +20,20 @@ export const getOrganizations = async (req: any): Promise<any> => {
         const offsetParam = url.searchParams.get('offset');
         const searchParam = url.searchParams.get('search') || '';
         const isFortune500Param = url.searchParams.get('isFortune500');
-        
-        // 🔥 NO DEFAULT LIMIT - Return ALL organizations if not specified
-        // Frontend should specify limit for optimal performance (e.g., limit=50)
+
         const hasLimit = limitParam !== null;
         const limit = hasLimit ? parseInt(limitParam) : null;
         const offset = offsetParam ? parseInt(offsetParam) : 0;
-
-        const queryParams: any[] = [];
-        let paramIndex = 0;
-        
-        // Build optimized query based on filters
         const isFortune500Only = isFortune500Param === 'true' || isFortune500Param === '1';
         const hasSearch = searchParam && searchParam.trim().length > 0;
-        
-        // 🚀 OPTIMIZED QUERY: Use covering index and minimize returned columns
-        let query: string;
-        
-        if (isFortune500Only && !hasSearch) {
-            // FAST PATH: Elite/F500 only, no search - use tier-covering index
-            query = `
-                SELECT 
-                    OrganizationID as id,
-                    Name as name,
-                    LogoURL as logoURL,
-                    Industry as industry,
-                    IsFortune500 as isFortune500,
-                    ISNULL(Tier, 'Standard') as tier
-                FROM Organizations
-                WHERE IsActive = 1 AND IsFortune500 = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
-                ORDER BY Name ASC
-            `;
-        } else if (hasSearch) {
-            // SEARCH PATH: Use name search with covering index
-            query = `
-                SELECT 
-                    OrganizationID as id,
-                    Name as name,
-                    LogoURL as logoURL,
-                    Industry as industry,
-                    IsFortune500 as isFortune500,
-                    ISNULL(Tier, 'Standard') as tier
-                FROM Organizations
-                WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL) AND Name LIKE @param${paramIndex}
-            `;
-            queryParams.push(`%${searchParam}%`);
-            paramIndex++;
-            
-            if (isFortune500Only) {
-                query += ` AND IsFortune500 = 1`;
-            }
-            query += ` ORDER BY CASE WHEN Tier = 'Elite' THEN 0 WHEN Tier = 'Premium' THEN 1 ELSE 2 END, Name ASC`;
-        } else {
-            // DEFAULT PATH: All orgs, use IsActive covering index
-            query = `
-                SELECT 
-                    OrganizationID as id,
-                    Name as name,
-                    LogoURL as logoURL,
-                    Industry as industry,
-                    IsFortune500 as isFortune500,
-                    ISNULL(Tier, 'Standard') as tier
-                FROM Organizations
-                WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
-                ORDER BY CASE WHEN Tier = 'Elite' THEN 0 WHEN Tier = 'Premium' THEN 1 ELSE 2 END, Name ASC
-            `;
-        }
-        
-        // Add pagination only if limit is specified
-        if (hasLimit && limit) {
-            query += `
-                OFFSET @param${paramIndex} ROWS
-                FETCH NEXT @param${paramIndex + 1} ROWS ONLY
-            `;
-            queryParams.push(offset, limit);
-        }
 
-        // Execute query
-        const result = await dbService.executeQuery(query, queryParams);
-        const organizations = result.recordset || [];
-        
-        // 🚀 OPTIMIZATION: Skip count query if we're getting all results (no pagination)
-        let totalCount: number;
-        if (!hasLimit) {
-            // No pagination = we already have the total
-            totalCount = organizations.length;
-        } else {
-            // Get total count for pagination using optimized count
-            let countQuery = `SELECT COUNT(*) as total FROM Organizations WHERE IsActive = 1`;
-            const countParams: any[] = [];
-            let countParamIndex = 0;
-            
-            if (hasSearch) {
-                countQuery += ` AND Name LIKE @param${countParamIndex}`;
-                countParams.push(`%${searchParam}%`);
-                countParamIndex++;
-            }
-            
-            if (isFortune500Only) {
-                countQuery += ` AND IsFortune500 = 1`;
-            }
-            
-            const countResult = await dbService.executeQuery(countQuery, countParams);
-            totalCount = countResult.recordset[0]?.total || 0;
-        }
+        // Delegate to repository (handles caching for non-search/non-paginated requests)
+        const { organizations, totalCount } = await ReferenceRepository.getOrganizations({
+            search: hasSearch ? searchParam : undefined,
+            isFortune500: isFortune500Only,
+            limit: hasLimit ? limit : null,
+            offset,
+        });
 
         // Add "My company is not listed" option (only if not filtering for F500)
         if (!isFortune500Only) {
@@ -142,15 +53,15 @@ export const getOrganizations = async (req: any): Promise<any> => {
                 total: totalCount,
                 offset: offset,
                 limit: limit || totalCount,
-                hasMore: hasLimit && limit ? (offset + limit < totalCount) : false
+                hasMore: hasLimit && limit ? (offset + limit! < totalCount) : false
             }, `${organizations.length - (isFortune500Only ? 0 : 1)} organizations retrieved`)
         };
     } catch (error) {
         console.error('Error getting organizations:', error);
         return {
             status: 500,
-            jsonBody: { 
-                success: false, 
+            jsonBody: {
+                success: false,
                 error: 'Failed to retrieve organizations',
                 message: error instanceof Error ? error.message : 'Unknown error'
             }
@@ -234,22 +145,20 @@ export const getOrganizationById = async (req: any): Promise<any> => {
     }
 };
 
-// Get currencies
+// Get currencies — PERF: cached via ReferenceRepository
 export const getCurrencies = async (req: any): Promise<any> => {
     try {
-        const query = 'SELECT CurrencyID, Code, Symbol, Name FROM Currencies WHERE IsActive = 1 ORDER BY Code';
-        const result = await dbService.executeQuery(query);
-
+        const currencies = await ReferenceRepository.getCurrencies();
         return {
             status: 200,
-            jsonBody: successResponse(result.recordset || [], 'Currencies retrieved successfully')
+            jsonBody: successResponse(currencies, 'Currencies retrieved successfully')
         };
     } catch (error) {
         console.error('Error getting currencies:', error);
         return {
             status: 500,
-            jsonBody: { 
-                success: false, 
+            jsonBody: {
+                success: false,
                 error: 'Failed to retrieve currencies',
                 message: error instanceof Error ? error.message : 'Unknown error'
             }
@@ -257,19 +166,10 @@ export const getCurrencies = async (req: any): Promise<any> => {
     }
 };
 
-// Get industries
+// Get industries — PERF: cached via ReferenceRepository
 export const getIndustries = async (req: any): Promise<any> => {
     try {
-        const query = `
-            SELECT DISTINCT Industry as name
-            FROM Organizations 
-            WHERE IsActive = 1 AND Industry IS NOT NULL AND Industry != ''
-            ORDER BY Industry ASC
-        `;
-        
-        const result = await dbService.executeQuery(query);
-        const industries = (result.recordset || []).map(row => row.name);
-
+        const industries = await ReferenceRepository.getIndustries();
         return {
             status: 200,
             jsonBody: successResponse(industries, 'Industries retrieved successfully')
@@ -278,8 +178,8 @@ export const getIndustries = async (req: any): Promise<any> => {
         console.error('Error getting industries:', error);
         return {
             status: 500,
-            jsonBody: { 
-                success: false, 
+            jsonBody: {
+                success: false,
                 error: 'Failed to retrieve industries',
                 message: error instanceof Error ? error.message : 'Unknown error'
             }

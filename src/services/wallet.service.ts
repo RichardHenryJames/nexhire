@@ -460,7 +460,8 @@ export class WalletService {
           wt.PaymentReference,
           wt.Description,
           wt.Status,
-          wt.CreatedAt
+          wt.CreatedAt,
+          COUNT(*) OVER() as _TotalCount
         FROM WalletTransactions wt
         INNER JOIN Currencies c ON wt.CurrencyID = c.CurrencyID
         ${whereClause}
@@ -469,19 +470,15 @@ export class WalletService {
         FETCH NEXT ${pageSize} ROWS ONLY
       `;
 
-      const countQuery = `
-        SELECT COUNT(*) as Total 
-        FROM WalletTransactions wt 
-        ${whereClause}
-      `;
-
       const result = await dbService.executeQuery(query, params);
-      const countResult = await dbService.executeQuery(countQuery, params);
-      
-      const total = countResult.recordset[0]?.Total || 0;
+      const rows = result.recordset || [];
+      const total = rows[0]?._TotalCount || 0;
+
+      // Strip _TotalCount from each row
+      const transactions = rows.map(({ _TotalCount, ...rest }: any) => rest);
 
       return {
-        transactions: result.recordset || [],
+        transactions,
         currentBalance: wallet.Balance,
         currencyCode: wallet.CurrencyCode,
         total,
@@ -516,7 +513,8 @@ export class WalletService {
           wro.CreatedAt,
           wro.PaidAt,
           wro.ExpiresAt,
-          wro.ErrorMessage
+          wro.ErrorMessage,
+          COUNT(*) OVER() as _TotalCount
         FROM WalletRechargeOrders wro
         INNER JOIN Currencies c ON wro.CurrencyID = c.CurrencyID
         WHERE wro.UserID = @param0
@@ -525,19 +523,13 @@ export class WalletService {
         FETCH NEXT ${pageSize} ROWS ONLY
       `;
 
-      const countQuery = `
-        SELECT COUNT(*) as Total 
-        FROM WalletRechargeOrders 
-        WHERE UserID = @param0
-      `;
-
       const result = await dbService.executeQuery(query, [userId]);
-      const countResult = await dbService.executeQuery(countQuery, [userId]);
-      
-      const total = countResult.recordset[0]?.Total || 0;
+      const rows = result.recordset || [];
+      const total = rows[0]?._TotalCount || 0;
+      const orders = rows.map(({ _TotalCount, ...rest }: any) => rest);
 
       return {
-        orders: result.recordset || [],
+        orders,
         total,
         page,
         pageSize,

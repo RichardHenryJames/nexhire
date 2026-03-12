@@ -52,11 +52,8 @@ export class RazorpayService {
       }
 
       // Fetch applicantId (PaymentOrders table expects ApplicantID not UserID)
-      const applicantRes = await dbService.executeQuery('SELECT ApplicantID FROM Applicants WHERE UserID = @param0', [userId]);
-      if (!applicantRes.recordset || applicantRes.recordset.length === 0) {
-        throw new NotFoundError('Applicant profile not found');
-      }
-      const applicantId = applicantRes.recordset[0].ApplicantID;
+      const { UserRepository } = await import('../repositories/user.repository');
+      const applicantId = await UserRepository.requireApplicantId(userId);
 
       const razorpay = getRazorpayClient();
 
@@ -164,11 +161,8 @@ export class RazorpayService {
 
       // Step 2: Verify order exists and belongs to user
       // Map user to applicant
-      const applicantRes = await dbService.executeQuery('SELECT ApplicantID FROM Applicants WHERE UserID = @param0', [userId]);
-      if (!applicantRes.recordset || applicantRes.recordset.length === 0) {
-        throw new NotFoundError('Applicant profile not found');
-      }
-      const applicantId = applicantRes.recordset[0].ApplicantID;
+      const { UserRepository } = await import('../repositories/user.repository');
+      const applicantId = await UserRepository.requireApplicantId(userId);
 
       const orderQuery = `
         SELECT OrderID, PlanID, Amount, Status, PaymentReference 

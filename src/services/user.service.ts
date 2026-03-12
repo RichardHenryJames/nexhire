@@ -86,7 +86,13 @@ export class UserService {
                     @param10, @param11, @param12, @param13
                 );
                 
-                SELECT * FROM Users WHERE UserID = @param0;
+                SELECT UserID, Email, UserType, FirstName, LastName, Phone,
+                       ProfilePictureURL, DateOfBirth, Gender, EmailVerified, PhoneVerified,
+                       LastLoginAt, LastActive, ProfileVisibility, CreatedAt, UpdatedAt,
+                       IsActive, TwoFactorEnabled, LoginAttempts, IsVerifiedReferrer, IsVerifiedUser,
+                       GoogleId, LoginMethod, ReferredBy, WalletBonusGiven,
+                       TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion
+                FROM Users WHERE UserID = @param0;
             `;
 
             const userParameters = [
@@ -392,20 +398,16 @@ export class UserService {
         };
     }
 
-    // Find user by email
+    // ── User lookups delegate to UserRepository (single source of truth) ──
+
     static async findByEmail(email: string): Promise<User | null> {
-        const query = 'SELECT * FROM Users WHERE Email = @param0 AND IsActive = 1';
-        const result = await dbService.executeQuery<User>(query, [email]);
-        
-        return result.recordset && result.recordset.length > 0 ? result.recordset[0] : null;
+        const { UserRepository } = await import('../repositories/user.repository');
+        return UserRepository.findByEmail(email);
     }
 
-    // Find user by ID
     static async findById(userId: string): Promise<User | null> {
-        const query = 'SELECT * FROM Users WHERE UserID = @param0 AND IsActive = 1';
-        const result = await dbService.executeQuery<User>(query, [userId]);
-        
-        return result.recordset && result.recordset.length > 0 ? result.recordset[0] : null;
+        const { UserRepository } = await import('../repositories/user.repository');
+        return UserRepository.findById(userId);
     }
 
     // Update user profile - FIXED: Handle camelCase to PascalCase mapping
@@ -454,12 +456,15 @@ export class UserService {
 
         const values = Object.values(mappedUpdateData);
 
+        const { UserRepository } = await import('../repositories/user.repository');
+        const safeColumns = UserRepository.SAFE_COLUMNS;
+
         const query = `
             UPDATE Users 
             SET ${updateFields}, UpdatedAt = GETUTCDATE()
             WHERE UserID = @param0;
             
-            SELECT * FROM Users WHERE UserID = @param0;
+            SELECT ${safeColumns} FROM Users WHERE UserID = @param0;
         `;
 
         const parameters = [userId, ...values];
@@ -717,11 +722,8 @@ export class UserService {
         if (!user) throw new NotFoundError('User not found');
         if (user.UserType !== appConstants.userTypes.JOB_SEEKER) throw new ValidationError('Only job seekers can update education data');
 
-        const applicantRes = await dbService.executeQuery('SELECT ApplicantID FROM Applicants WHERE UserID = @param0', [userId]);
-        if (!applicantRes.recordset || applicantRes.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-        const applicantId = applicantRes.recordset[0].ApplicantID;
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(userId);
         const institutionName = educationData.institution || educationData.college?.name || '';
         const degreeType = educationData.degreeType || educationData.highestEducation || '';
         const fieldOfStudy = educationData.fieldOfStudy || '';
@@ -739,11 +741,8 @@ export class UserService {
         if (!user) throw new NotFoundError('User not found');
         if (user.UserType !== appConstants.userTypes.JOB_SEEKER) throw new ValidationError('Only job seekers can update work experience data');
 
-        const applicantRes = await dbService.executeQuery('SELECT ApplicantID FROM Applicants WHERE UserID = @param0', [userId]);
-        if (!applicantRes.recordset || applicantRes.recordset.length === 0) {
-            throw new NotFoundError('Applicant profile not found');
-        }
-        const applicantId = applicantRes.recordset[0].ApplicantID;
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(userId);
 
         const hasExperienceDetails = workExperienceData.companyName || workExperienceData.organizationId || workExperienceData.jobTitle || workExperienceData.startDate;
         if (hasExperienceDetails) {
@@ -786,9 +785,8 @@ export class UserService {
         if (!user) throw new NotFoundError('User not found');
         if (user.UserType !== appConstants.userTypes.JOB_SEEKER) throw new ValidationError('Only job seekers can update job preferences data');
 
-        const applicantRes = await dbService.executeQuery('SELECT ApplicantID FROM Applicants WHERE UserID = @param0', [userId]);
-        if (!applicantRes.recordset?.length) throw new NotFoundError('Applicant profile not found');
-        const applicantId = applicantRes.recordset[0].ApplicantID;
+        const { UserRepository } = await import('../repositories/user.repository');
+        const applicantId = await UserRepository.requireApplicantId(userId);
 
         const updateFields: string[] = [];
         const params: any[] = [applicantId];
@@ -809,31 +807,29 @@ export class UserService {
     // ENHANCED: Comprehensive job seeker stats
     private static async getEnhancedJobSeekerStats(userId: string): Promise<any> {
         try {
-            // Get applicant ID
-            const applicantQuery = 'SELECT ApplicantID FROM Applicants WHERE UserID = @param0';
-            const applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
+            // Get applicant ID via repository
+            const { UserRepository } = await import('../repositories/user.repository');
+            const applicantId = await UserRepository.getApplicantId(userId);
             
-            if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            if (!applicantId) {
                 return this.getBasicJobSeekerStats(userId);
             }
-            
-            const applicantId = applicantResult.recordset[0].ApplicantID;
 
-            // Fetch IsVerifiedReferrer from Users table
-            const userFlagsResult = await dbService.executeQuery(`
-                SELECT IsVerifiedReferrer FROM Users WHERE UserID = @param0
-            `, [userId]);
+            // PERF: Fetch flags in parallel (independent queries)
+            const [userFlagsResult, currentWorkExpResult] = await Promise.all([
+                dbService.executeQuery(`
+                    SELECT IsVerifiedReferrer FROM Users WHERE UserID = @param0
+                `, [userId]),
+                dbService.executeQuery(`
+                    SELECT TOP 1 CompanyEmailVerified 
+                    FROM WorkExperiences 
+                    WHERE ApplicantID = @param0 
+                      AND IsActive = 1 
+                      AND (IsCurrent = 1 OR EndDate IS NULL)
+                    ORDER BY StartDate DESC
+                `, [applicantId]),
+            ]);
             const isVerifiedReferrer = userFlagsResult.recordset?.[0]?.IsVerifiedReferrer || false;
-
-            // Check if current work experience is verified (for showing "Become Verified Referrer" button)
-            const currentWorkExpResult = await dbService.executeQuery(`
-                SELECT TOP 1 CompanyEmailVerified 
-                FROM WorkExperiences 
-                WHERE ApplicantID = @param0 
-                  AND IsActive = 1 
-                  AND (IsCurrent = 1 OR EndDate IS NULL)
-                ORDER BY StartDate DESC
-            `, [applicantId]);
             const isCurrentJobVerified = currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === true || 
                                          currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === 1;
 
@@ -927,17 +923,13 @@ export class UserService {
             const result = await dbService.executeQuery(statsQuery, [userId]);
             const baseStats = result.recordset[0] || {};
 
-            // Get referral statistics
-            const referralStats = await this.getReferralStats(applicantId, userId);
-            
-            // Get resume statistics
-            const resumeStats = await this.getResumeStats(applicantId);
-
-            // Get recent applications breakdown
-            const recentActivityStats = await this.getRecentActivityStats(userId);
-            
-            // Get skills and preferences info
-            const profileInsights = await this.getProfileInsights(applicantId);
+            // PERF: Fetch all supplemental stats in parallel (independent queries)
+            const [referralStats, resumeStats, recentActivityStats, profileInsights] = await Promise.all([
+                this.getReferralStats(applicantId, userId),
+                this.getResumeStats(applicantId),
+                this.getRecentActivityStats(userId),
+                this.getProfileInsights(applicantId),
+            ]);
 
             // Get draft jobs count for verified referrers
             let draftJobs = 0;
@@ -1896,7 +1888,13 @@ export class UserService {
                     @param13, @param14, @param15, @param16
                 );
                 
-                SELECT * FROM Users WHERE UserID = @param0;
+                SELECT UserID, Email, UserType, FirstName, LastName, Phone,
+                       ProfilePictureURL, DateOfBirth, Gender, EmailVerified, PhoneVerified,
+                       LastLoginAt, LastActive, ProfileVisibility, CreatedAt, UpdatedAt,
+                       IsActive, TwoFactorEnabled, LoginAttempts, IsVerifiedReferrer, IsVerifiedUser,
+                       GoogleId, LoginMethod, ReferredBy, WalletBonusGiven,
+                       TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion
+                FROM Users WHERE UserID = @param0;
             `;
 
             const userParameters = [
