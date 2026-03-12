@@ -409,28 +409,29 @@ export const verifyReferralCompletion = withErrorHandling(async (req: HttpReques
             try {
                 const { InAppNotificationService } = await import('../services/inAppNotification.service');
                 const { dbService: db } = await import('../services/database.service');
+                const { PricingService } = await import('../services/pricing.service');
                 const info = await db.executeQuery(
                     `SELECT rr.AssignedReferrerID, a.UserID as SeekerUserID, rr.JobTitle,
                      o.Name as CompanyName, u.FirstName + ' ' + u.LastName as SeekerName,
                      ru.FirstName + ' ' + ru.LastName as ReferrerName,
-                     (SELECT TOP 1 wt.Amount FROM WalletTransactions wt 
-                      INNER JOIN Wallets w ON wt.WalletID = w.WalletID 
-                      WHERE w.UserID = rr.AssignedReferrerID 
-                      AND wt.Source = 'REFERRAL_EARNINGS' 
-                      AND wt.Description LIKE '%' + CAST(rr.RequestID AS NVARCHAR(50)) + '%'
-                      ORDER BY wt.CreatedAt DESC) as RewardAmount
+                     ISNULL(o.Tier, ISNULL(jo.Tier, 'Standard')) as OrgTier
                      FROM ReferralRequests rr
                      LEFT JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                      LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
+                     LEFT JOIN Jobs j ON rr.JobID = j.JobID
+                     LEFT JOIN Organizations jo ON j.OrganizationID = jo.OrganizationID
                      LEFT JOIN Users u ON u.UserID = a.UserID
                      LEFT JOIN Users ru ON ru.UserID = rr.AssignedReferrerID
                      WHERE rr.RequestID = @param0`, [requestId]
                 );
                 const row = info.recordset[0];
                 if (row && verificationData.verified) {
+                    // Get the actual payout amount from pricing (same source as the service uses)
+                    const tier = (row.OrgTier || 'Standard') as 'Standard' | 'Premium' | 'Elite';
+                    const rewardAmount = await PricingService.getReferrerPayoutByTier(tier);
                     // Notify referrer: earned money
                     await InAppNotificationService.notifyReferralVerified(
-                        row.AssignedReferrerID, row.SeekerName, row.JobTitle, row.RewardAmount || 0, requestId
+                        row.AssignedReferrerID, row.SeekerName, row.JobTitle, rewardAmount, requestId
                     );
                     // Notify seeker: referral complete
                     await InAppNotificationService.notifyReferralComplete(

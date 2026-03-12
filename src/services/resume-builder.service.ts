@@ -141,7 +141,7 @@ export class ResumeBuilderService {
   static async getTemplateById(templateId: number): Promise<any> {
     const result = await dbService.executeQuery(
       `SELECT TemplateID, Name, Slug, Description, Category, ThumbnailURL,
-              HtmlTemplate, CssStyles, DefaultConfig, IsActive, IsPremium, SortOrder,
+              HtmlTemplate, CssTemplate, DefaultConfig, IsActive, IsPremium, SortOrder,
               CreatedAt, UpdatedAt
        FROM ResumeBuilderTemplates WHERE TemplateID = @param0`,
       [templateId]
@@ -161,7 +161,7 @@ export class ResumeBuilderService {
    */
   static async generateTemplatePreview(slug: string): Promise<string | null> {
     const result = await dbService.executeQuery(
-      `SELECT TemplateID, Name, Slug, HtmlTemplate, CssStyles, DefaultConfig, IsActive
+      `SELECT TemplateID, Name, Slug, HtmlTemplate, CssTemplate, DefaultConfig, IsActive
        FROM ResumeBuilderTemplates WHERE Slug = @param0 AND IsActive = 1`,
       [slug]
     );
@@ -282,7 +282,7 @@ export class ResumeBuilderService {
 
     // Fetch sections
     const sections = await dbService.executeQuery(`
-      SELECT SectionID, ProjectID, SectionType, Title, Content, SortOrder, IsVisible, CreatedAt, UpdatedAt
+      SELECT SectionID, ProjectID, SectionType, SectionTitle, Content, SortOrder, IsVisible, CreatedAt, UpdatedAt
       FROM ResumeBuilderSections
       WHERE ProjectID = @param0
       ORDER BY SortOrder ASC
