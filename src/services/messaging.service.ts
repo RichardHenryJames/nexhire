@@ -178,6 +178,8 @@ export class MessagingService {
 
     const userInfo = await dbService.executeQuery(userInfoQuery, [otherUserId]);
 
+    const otherUser = userInfo.recordset?.[0];
+
     return {
       ConversationID: newConversation.ConversationID,
       User1ID: newConversation.User1ID,
@@ -188,10 +190,10 @@ export class MessagingService {
       UpdatedAt: newConversation.UpdatedAt,
       IsArchived: false,
       IsMuted: false,
-      OtherUserID: userInfo.recordset[0].UserID,
-      OtherUserName: userInfo.recordset[0].Name,
-      OtherUserProfilePic: userInfo.recordset[0].ProfilePictureURL,
-      OtherUserType: userInfo.recordset[0].UserType,
+      OtherUserID: otherUser?.UserID || otherUserId,
+      OtherUserName: otherUser?.Name || 'Unknown User',
+      OtherUserProfilePic: otherUser?.ProfilePictureURL || null,
+      OtherUserType: otherUser?.UserType || 'JobSeeker',
     };
   }
 

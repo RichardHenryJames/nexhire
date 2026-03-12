@@ -562,9 +562,6 @@ export class WalletService {
         throw new InsufficientBalanceError('Insufficient wallet balance');
       }
 
-      const balanceBefore = wallet.Balance;
-      const balanceAfter = balanceBefore - amount;
-
       // SECURITY FIX: Atomic balance update with WHERE clause to prevent race condition
       const updateResult = await dbService.executeQuery(
         `UPDATE Wallets 
@@ -580,7 +577,14 @@ export class WalletService {
         throw new InsufficientBalanceError('Insufficient wallet balance (concurrent transaction)');
       }
 
-      // Create transaction record
+      // Read actual balance AFTER atomic update for accurate ledger
+      const updatedWallet = await dbService.executeQuery(
+        'SELECT Balance FROM Wallets WHERE WalletID = @param0', [wallet.WalletID]
+      );
+      const balanceAfter = updatedWallet.recordset?.[0]?.Balance ?? (wallet.Balance - amount);
+      const balanceBefore = balanceAfter + amount;
+
+      // Create transaction record with accurate post-update balances
       const transactionId = AuthService.generateUniqueId();
       await dbService.executeQuery(
         `INSERT INTO WalletTransactions (
@@ -680,8 +684,6 @@ export class WalletService {
       }
 
       const wallet = await this.getOrCreateWallet(userId);
-      const balanceBefore = wallet.Balance;
-      const balanceAfter = balanceBefore + amount;
 
       // SECURITY FIX: Atomic balance update to prevent race condition
       await dbService.executeQuery(
@@ -693,7 +695,14 @@ export class WalletService {
         [wallet.WalletID, amount]
       );
 
-      // Create transaction record
+      // Read actual balance AFTER atomic update for accurate ledger
+      const updatedWallet = await dbService.executeQuery(
+        'SELECT Balance FROM Wallets WHERE WalletID = @param0', [wallet.WalletID]
+      );
+      const balanceAfter = updatedWallet.recordset?.[0]?.Balance ?? (wallet.Balance + amount);
+      const balanceBefore = balanceAfter - amount;
+
+      // Create transaction record with accurate post-update balances
       const transactionId = AuthService.generateUniqueId();
       await dbService.executeQuery(
         `INSERT INTO WalletTransactions (

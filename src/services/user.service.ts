@@ -389,11 +389,11 @@ export class UserService {
         // Generate tokens
         const tokens = AuthService.generateAuthTokens(user);
 
-        // Remove password from response
-        const { Password, ...userWithoutPassword } = user;
+        // Remove sensitive fields from response
+        const { Password, PasswordResetToken, PasswordResetExpires, AccountLockoutEnd, GoogleAccessToken, ...userWithoutSensitive } = user;
 
         return {
-            user: userWithoutPassword,
+            user: userWithoutSensitive,
             tokens
         };
     }

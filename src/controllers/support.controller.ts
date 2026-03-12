@@ -528,8 +528,9 @@ export const refundReferral = withAuth(async (
         }
 
         if (refundAmount <= 0) {
-            // Use default pricing as fallback
-            refundAmount = 49; // Default referral cost
+            // Use dynamic pricing as fallback
+            const { PricingService } = await import('../services/pricing.service');
+            refundAmount = await PricingService.getReferralCost();
         }
 
         // Credit refund to seeker's wallet

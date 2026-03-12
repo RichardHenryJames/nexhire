@@ -363,8 +363,11 @@ export const getMyReferralCode = async (request: HttpRequest, context: Invocatio
         const statsResult = await dbService.executeQuery(statsQuery, [userId]);
         const stats = statsResult.recordset[0] || {};
 
-        // Calculate total bonus earned (₹50 per referral)
-        const totalBonusEarned = (stats.TotalReferrals || 0) * 50;
+        // Calculate total bonus earned using actual pricing
+        const { PricingService } = await import('../services/pricing.service');
+        const referralSignupBonus = await PricingService.getSetting('REFERRAL_SIGNUP_BONUS');
+        const welcomeBonus = await PricingService.getSetting('WELCOME_BONUS');
+        const totalBonusEarned = (stats.TotalReferrals || 0) * referralSignupBonus;
 
         return {
             status: 200,
@@ -381,9 +384,11 @@ export const getMyReferralCode = async (request: HttpRequest, context: Invocatio
                         totalBonusEarned
                     },
                     bonusInfo: {
-                        newUserBonus: 100,
-                        referralBonus: 50,
-                        description: "Invite friends and both get ₹50 when they sign up!"
+                        newUserBonus: welcomeBonus,
+                        referralBonus: referralSignupBonus,
+                        description: referralSignupBonus > 0 
+                            ? `Invite friends and both get ₹${referralSignupBonus} when they sign up!`
+                            : 'Invite friends to join RefOpen!'
                     }
                 },
                 message: 'Referral code retrieved successfully'

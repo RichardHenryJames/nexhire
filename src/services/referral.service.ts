@@ -1666,10 +1666,14 @@ export class ReferralService {
                     console.warn(`Hold conversion skipped (may already be converted):`, holdErr?.message);
                 }
 
-                // Award points
-                await this.awardReferralPoints(referrerId, childId, 50, 'proof_submission');
+                // Award points (from PricingSettings for dynamic adjustment)
+                const proofPoints = await PricingService.getSetting('MILESTONE_5_BONUS') || 50;
+                await this.awardReferralPoints(referrerId, childId, proofPoints, 'proof_submission');
                 const hoursFromReq = (new Date(referredAt).getTime() - new Date(requestedAt).getTime()) / (1000 * 60 * 60);
-                if (hoursFromReq <= 24) await this.awardReferralPoints(referrerId, childId, 25, 'quick_response_bonus');
+                if (hoursFromReq <= 24) {
+                    const quickBonus = Math.round(proofPoints / 2) || 25;
+                    await this.awardReferralPoints(referrerId, childId, quickBonus, 'quick_response_bonus');
+                }
                 await this.updateReferrerStats(referrerId);
 
                 // Notify seeker (fire-and-forget)
@@ -1803,8 +1807,8 @@ export class ReferralService {
                 console.warn('Non-critical: Failed to send referral claimed email:', err);
             }
             
-            // Award points for proof submission with quick response bonus
-            let baseProofPoints = 50; // Base points for submitting proof
+            // Award points for proof submission with quick response bonus (from PricingSettings)
+            let baseProofPoints = await PricingService.getSetting('MILESTONE_5_BONUS') || 50;
             
             // Award base proof submission points first
             await this.awardReferralPoints(referrerId, dto.requestID, baseProofPoints, 'proof_submission');
@@ -1815,7 +1819,7 @@ export class ReferralService {
             const hoursFromRequest = (completedTime.getTime() - requestedTime.getTime()) / (1000 * 60 * 60);
             
             if (hoursFromRequest <= 24) {
-                const quickBonusPoints = 25; // Quick response bonus
+                const quickBonusPoints = Math.round(baseProofPoints / 2) || 25;
                 await this.awardReferralPoints(referrerId, dto.requestID, quickBonusPoints, 'quick_response_bonus');
             }
             
@@ -1958,9 +1962,7 @@ export class ReferralService {
             );
             
             // ✅ HOLD-BASED PAYMENT: Tiered cancellation fees based on time since request
-            // < 1 hour: ₹0 (grace period — builds trust, reduces support tickets)
-            // 1-24 hours: ₹10 (request was visible to referrers, may have been viewed)
-            // > 24 hours: ₹20 (referrer likely claimed & started working)
+            // Fees loaded from PricingSettings for dynamic adjustment
             const hoursElapsed = request.RequestedAt 
                 ? (Date.now() - new Date(request.RequestedAt).getTime()) / (1000 * 60 * 60)
                 : 999; // Fallback: treat missing timestamp as old request
