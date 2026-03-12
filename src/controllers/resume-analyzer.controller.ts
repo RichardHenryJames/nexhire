@@ -163,11 +163,10 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
     const isFreeTier = usageCount < freeUses;
 
     if (!isFreeTier) {
-      // Must pay — check balance and debit
+      // Check balance first (don't debit yet — debit only after successful analysis)
       try {
-        await WalletService.debitWallet(userId, costPerUse, 'Resume_Analysis', `Resume analysis (use #${usageCount + 1})`);
-      } catch (walletErr: any) {
-        if (walletErr.message?.includes('Insufficient')) {
+        const wallet = await WalletService.getOrCreateWallet(userId);
+        if (wallet.Balance < costPerUse) {
           return {
             status: 402,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -180,6 +179,7 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
             }
           };
         }
+      } catch (walletErr: any) {
         throw walletErr;
       }
     }
@@ -333,6 +333,17 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
     
     context.log(`Analysis complete. Match score: ${result.matchScore}%`);
     
+    // Debit wallet AFTER successful analysis (not before — prevents charging for failures)
+    if (!isFreeTier) {
+      try {
+        await WalletService.debitWallet(userId, costPerUse, 'Resume_Analysis', `Resume analysis (use #${usageCount + 1})`);
+      } catch (debitErr: any) {
+        // Analysis succeeded but payment failed — log but still return results
+        // (user already saw the results, better to lose ₹29 than break UX)
+        context.error('Post-analysis wallet debit failed (non-critical):', debitErr.message);
+      }
+    }
+
     return {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

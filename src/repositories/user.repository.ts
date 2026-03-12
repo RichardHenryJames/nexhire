@@ -28,14 +28,15 @@ const USER_SAFE_COLUMNS = `
     TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion
 `.replace(/\n/g, ' ');
 
-/** Includes Password + AccountLockoutEnd — only for auth flows */
+/** Includes Password + AccountLockoutEnd + PasswordReset fields — only for auth flows */
 const USER_AUTH_COLUMNS = `
     UserID, Email, Password, UserType, FirstName, LastName, Phone,
     ProfilePictureURL, DateOfBirth, Gender, EmailVerified, PhoneVerified,
     LastLoginAt, LastActive, ProfileVisibility, CreatedAt, UpdatedAt,
     IsActive, TwoFactorEnabled, LoginAttempts, AccountLockoutEnd,
     IsVerifiedReferrer, IsVerifiedUser, GoogleId, LoginMethod, ReferredBy, WalletBonusGiven,
-    TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion
+    TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion,
+    PasswordResetToken, PasswordResetExpires
 `.replace(/\n/g, ' ');
 
 /** Columns returned after INSERT (no password — it was just created) */
