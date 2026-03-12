@@ -154,11 +154,9 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
       PricingService.getAIResumeAnalysisCost(),
     ]);
 
-    // Count how many times this user has used the analyzer
+    // Count how many times this user has used the analyzer (from ResumeMetadata — reliable source)
     const usageResult = await dbService.executeQuery(
-      `SELECT COUNT(*) AS cnt FROM WalletTransactions wt
-       INNER JOIN Wallets w ON wt.WalletID = w.WalletID
-       WHERE w.UserID = @param0 AND wt.Source = 'Resume_Analysis'`,
+      `SELECT COUNT(*) AS cnt FROM ResumeMetadata WHERE UserID = @param0`,
       [userId]
     );
     const usageCount = usageResult.recordset?.[0]?.cnt || 0;
@@ -184,22 +182,9 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
         }
         throw walletErr;
       }
-    } else {
-      // Free use — record a ₹0 transaction for counting purposes
-      try {
-        const wallet = await WalletService.getOrCreateWallet(userId);
-        const { AuthService } = await import('../services/auth.service');
-        const txnId = AuthService.generateUniqueId();
-        await dbService.executeQuery(
-          `INSERT INTO WalletTransactions (TransactionID, WalletID, TransactionType, Amount, BalanceBefore, BalanceAfter, CurrencyID, Source, Description, Status)
-           VALUES (@param0, @param1, 'Debit', 0, @param2, @param2, @param3, 'Resume_Analysis', @param4, 'Completed')`,
-          [txnId, wallet.WalletID, wallet.Balance, wallet.CurrencyID, `Free resume analysis (${usageCount + 1}/${freeUses})`]
-        );
-      } catch (e) {
-        // Non-critical — analysis should still proceed even if tracking fails
-        context.log('Failed to record free analysis usage:', e);
-      }
     }
+    // No need to record ₹0 transaction — ResumeMetadata is created later in the flow
+    // and serves as the reliable counter for free-use tracking
 
     context.log(`Resume analyzer: user ${userId}, use #${usageCount + 1}, free=${isFreeTier}`);
     
