@@ -502,7 +502,7 @@ const createStyles = (colors, responsive = {}) => {
     jobsGrid: {
       ...(Platform.OS === 'web' && !isMobile ? {
         display: 'grid',
-        gridTemplateColumns: isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(2, 1fr)',
         gap: 16,
       } : {}),
     },

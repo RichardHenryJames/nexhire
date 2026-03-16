@@ -728,16 +728,15 @@ export class JobService {
             fetched = scored.slice(offset, offset + pageSizeNum + 1);
         } else {
             // No title scoring needed — keep fast SQL-only pagination
-            // IDEAL ORDERING (like Naukri/LinkedIn):
-            // 1. Preference score (workplace=4pts, job type=2pts, location=2pts, company size=1pt)
-            // 2. Workplace type as tiebreaker (Remote > Hybrid > Onsite)
-            // 3. Recency (PublishedAt)
-            const tierOrderSql = `CASE WHEN o.Tier = 'Elite' THEN 0 WHEN o.Tier = 'Premium' THEN 1 ELSE 2 END`;
+            // Uses pre-computed indexed columns for O(1) sort:
+            //   j.CountryRank (0=India, 1=Other) — indexed in IX_Jobs_SortRank
+            //   j.TierRank (0=Elite, 1=Premium, 2=Standard) — indexed in IX_Jobs_SortRank
+            // This avoids CASE WHEN on every row and enables index-assisted ORDER BY
             const orderPrefix = skipPersonalization
-                ? `${tierOrderSql}, ${workplaceOrderSql}, `
+                ? `j.CountryRank, j.TierRank, ${workplaceOrderSql}, `
                 : (hasSearchText
-                    ? `${tierOrderSql}, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
-                    : `${tierOrderSql}, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
+                    ? `j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
+                    : `j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
 
             const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
             dataQuery += ` ORDER BY ${orderPrefix}${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
@@ -1324,14 +1323,13 @@ export class JobService {
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 fetched = scored.slice(offset, offset + pageSizeNum + 1);
             } else {
-                // Default: boost India jobs first (most users are Indian), then by date
-                // Country column is in IX_Jobs_Optimized_GetSearch covering index
-                const indiaBoostSql = `CASE WHEN j.Country IN ('IN', 'India', 'india') THEN 0 ELSE 1 END`;
+                // Default: boost India jobs first using pre-computed indexed column j.CountryRank
+                // CountryRank (0=India, 1=Other) is indexed in IX_Jobs_SortRank
                 const orderPrefix = skipPersonalization
-                    ? `${indiaBoostSql}, ` // No personalization — just India first, then newest
+                    ? `j.CountryRank, ` // No personalization — just India first, then newest
                     : (hasSearchText
-                        ? `${indiaBoostSql}, ${preferenceScoreSql} DESC, `
-                        : `${indiaBoostSql}, ${preferenceScoreSql} DESC, `);
+                        ? `j.CountryRank, ${preferenceScoreSql} DESC, `
+                        : `j.CountryRank, ${preferenceScoreSql} DESC, `);
 
                 const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
                 dataQuery += ` ORDER BY ${orderPrefix}j.PublishedAt DESC, j.JobID DESC 

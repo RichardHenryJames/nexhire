@@ -176,7 +176,7 @@ export const createStyles = (colors, responsive = {}) => {
   jobsGrid: {
     ...(Platform.OS === 'web' && !isMobile ? {
       display: 'grid',
-      gridTemplateColumns: isTablet ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+      gridTemplateColumns: 'repeat(2, 1fr)',
       gap: isDesktop ? 20 : 16,
     } : {
       flexDirection: 'row',
@@ -187,7 +187,7 @@ export const createStyles = (colors, responsive = {}) => {
   jobCardWrapper: {
     marginBottom: 0,
     ...(Platform.OS !== 'web' && !isMobile ? {
-      width: isTablet ? '50%' : '33.33%',
+      width: isTablet ? '50%' : '50%',
       paddingHorizontal: 8,
       marginBottom: 0,
     } : {}),

@@ -347,12 +347,12 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
     // Interpolate between CUM[hr] and CUM[hr+1] based on minutes
     const cumNow = (hr > 0 ? CUM[hr - 1] : 0) + HOURLY_RATE[hr] * (min / 60);
     const cumFraction = cumNow / DAY_TOTAL; // 0.0 at midnight → 1.0 at end of day
-    const dailyRefTarget = 50 + (hash(2) % 60); // 50–109 total referrals by end of day
-    const refNow = Math.max(2, Math.round(dailyRefTarget * cumFraction));
+    const dailyRefTarget = 150 + (hash(2) % 200); // 150–349 total referrals by end of day
+    const refNow = Math.max(5, Math.round(dailyRefTarget * cumFraction));
 
     return {
       active:    Math.max(10, Math.round(baseActive + 140 * timeMul + jitter)),  // ~10 at 3am, ~180 at 1pm
-      referrals: refNow,                                                          // ~2 at midnight → 50–109 by 11pm, always ↑
+      referrals: refNow,                                                          // ~5 at midnight → 150–349 by 11pm, always ↑
       resumesAnalyzed: Math.max(6, Math.round((300 + (hash(3) % 200)) * cumFraction)), // ~6 at midnight → 300–499 by end of day, always ↑
       resumesCreated: Math.max(3, Math.round((120 + (hash(4) % 80)) * cumFraction)),   // ~3 at midnight → 120–199 by end of day, always ↑
       linkedinOptimized: Math.max(2, Math.round((80 + (hash(5) % 60)) * cumFraction)), // ~2 at midnight → 80–139 by end of day, always ↑

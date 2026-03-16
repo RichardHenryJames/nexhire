@@ -926,6 +926,9 @@ BEGIN
         FeaturedUntil DATETIMEOFFSET NULL,
         IsArchived BIT NULL DEFAULT ((0)),
         ViewsCount INT NULL DEFAULT ((0)),
+        AIEnriched BIT NOT NULL DEFAULT ((0)),
+        TierRank TINYINT NOT NULL DEFAULT ((2)),
+        CountryRank AS (CASE WHEN Country IN ('IN', 'India', 'india') THEN CAST(0 AS TINYINT) ELSE CAST(1 AS TINYINT) END) PERSISTED,
         CONSTRAINT PK__Jobs__056690E255ABE776 PRIMARY KEY (JobID)
     );
     PRINT 'Created table Jobs';
@@ -1029,6 +1032,68 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_WorkplaceTypeID_Status_PublishedAt')
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Jobs_WorkplaceTypeID_Status_PublishedAt ON Jobs(OrganizationID, Title, JobTypeID, WorkplaceTypeID, Status, PublishedAt);
+END
+GO
+
+-- Sort rank index for fast job listing (India-first, Tier-based, recency)
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_Jobs_SortRank')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_Jobs_SortRank 
+    ON Jobs(CountryRank ASC, TierRank ASC, PublishedAt DESC)
+    INCLUDE (Title, OrganizationID, Location, Country, Department, ExperienceMin, ExperienceMax, 
+             JobTypeID, WorkplaceTypeID, IsRemote, Status, IsArchived, Tags, AIEnriched, ViewsCount, ApplicationDeadline)
+    WHERE Status = 'Published' AND IsArchived = 0;
+END
+GO
+
+-- Trigger: Auto-set TierRank from Organization.Tier on INSERT/UPDATE
+IF NOT EXISTS (SELECT * FROM sys.triggers WHERE name = 'TR_Jobs_SetTierRank')
+BEGIN
+    EXEC('
+    CREATE TRIGGER TR_Jobs_SetTierRank ON Jobs
+    AFTER INSERT, UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        IF UPDATE(OrganizationID) OR NOT EXISTS (SELECT 1 FROM deleted)
+        BEGIN
+            UPDATE j SET j.TierRank = CASE 
+                WHEN o.Tier = ''Elite'' THEN 0 
+                WHEN o.Tier = ''Premium'' THEN 1 
+                ELSE 2 
+            END
+            FROM Jobs j
+            JOIN inserted i ON j.JobID = i.JobID
+            JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+            WHERE j.TierRank != CASE WHEN o.Tier=''Elite'' THEN 0 WHEN o.Tier=''Premium'' THEN 1 ELSE 2 END
+               OR j.TierRank IS NULL;
+        END
+    END');
+END
+GO
+
+-- Trigger: Cascade Org tier changes to all jobs' TierRank
+IF NOT EXISTS (SELECT * FROM sys.triggers WHERE name = 'TR_Organizations_CascadeTierRank')
+BEGIN
+    EXEC('
+    CREATE TRIGGER TR_Organizations_CascadeTierRank ON Organizations
+    AFTER UPDATE
+    AS
+    BEGIN
+        SET NOCOUNT ON;
+        IF UPDATE(Tier)
+        BEGIN
+            UPDATE j SET j.TierRank = CASE 
+                WHEN i.Tier = ''Elite'' THEN 0 
+                WHEN i.Tier = ''Premium'' THEN 1 
+                ELSE 2 
+            END
+            FROM Jobs j
+            JOIN inserted i ON j.OrganizationID = i.OrganizationID
+            JOIN deleted d ON i.OrganizationID = d.OrganizationID
+            WHERE i.Tier != d.Tier;
+        END
+    END');
 END
 GO
 

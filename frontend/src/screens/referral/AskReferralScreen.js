@@ -68,6 +68,56 @@ export default function AskReferralScreen({ navigation, route }) {
   const rotationTimeoutRef = useRef(null);
   const tickTimeoutRef = useRef(null);
 
+  // Daily-seeded referral count — matches EngagementHub's cumulative curve
+  const dailyRefCount = useMemo(() => {
+    const d = new Date();
+    const daySeed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const hash = Math.abs(Math.floor(Math.sin(daySeed * 2) * 10000));
+    const hr = d.getHours();
+    const min = d.getMinutes();
+    const HOURLY_RATE = [.3,.2,.2,.1,.1,.2,.5,1.2,2.0,3.0,3.8,4.2,4.5,4.3,4.0,3.5,3.0,2.5,2.0,1.5,1.0,.7,.5,.4];
+    const CUM = HOURLY_RATE.reduce((acc, v) => { acc.push((acc.length ? acc[acc.length - 1] : 0) + v); return acc; }, []);
+    const DAY_TOTAL = CUM[CUM.length - 1];
+    const cumNow = (hr > 0 ? CUM[hr - 1] : 0) + HOURLY_RATE[hr] * (min / 60);
+    const dailyTarget = 150 + (hash % 200); // 150–349
+    return Math.max(5, Math.round(dailyTarget * (cumNow / DAY_TOTAL)));
+  }, []);
+
+  // Referrers online — time-of-day curve, 1000-20000 range, refreshes every 2 min
+  const [referrersOnline, setReferrersOnline] = useState(() => {
+    const d = new Date();
+    const daySeed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    const hash = Math.abs(Math.floor(Math.sin(daySeed * 6) * 10000));
+    const hr = d.getHours();
+    const min = d.getMinutes();
+    const TOD = [.08,.06,.05,.04,.04,.06,.12,.25,.45,.65,.82,.95,1.0,.98,.95,.88,.78,.65,.50,.38,.28,.20,.14,.10];
+    const curMul = TOD[hr];
+    const nxtMul = TOD[(hr + 1) % 24];
+    const timeMul = curMul + (nxtMul - curMul) * (min / 60);
+    const slot = Math.floor((hr * 60 + min) / 2);
+    const jitter = (Math.abs(Math.floor(Math.sin((daySeed + slot) * 11) * 100)) % 201) - 100;
+    const base = 3000 + (hash % 5000); // 3000-7999 base
+    return Math.max(1000, Math.round(base + 13000 * timeMul + jitter)); // ~1000 at 3am, ~20000 at 1pm
+  });
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const d = new Date();
+      const daySeed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+      const hash = Math.abs(Math.floor(Math.sin(daySeed * 6) * 10000));
+      const hr = d.getHours();
+      const min = d.getMinutes();
+      const TOD = [.08,.06,.05,.04,.04,.06,.12,.25,.45,.65,.82,.95,1.0,.98,.95,.88,.78,.65,.50,.38,.28,.20,.14,.10];
+      const curMul = TOD[hr];
+      const nxtMul = TOD[(hr + 1) % 24];
+      const timeMul = curMul + (nxtMul - curMul) * (min / 60);
+      const slot = Math.floor((hr * 60 + min) / 2);
+      const jitter = (Math.abs(Math.floor(Math.sin((daySeed + slot) * 11) * 100)) % 201) - 100;
+      const base = 3000 + (hash % 5000);
+      setReferrersOnline(Math.max(1000, Math.round(base + 13000 * timeMul + jitter)));
+    }, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ─── Mode Selection (Open to Any = DEFAULT / flagship) ─────────────
   const [openToAnyCompany, setOpenToAnyCompany] = useState(true);
 
@@ -202,7 +252,7 @@ export default function AskReferralScreen({ navigation, route }) {
       setFortune500Companies(rotationCompanies);
     }
 
-    const getRandomDelayMs = () => Math.floor(Math.random() * 9000) + 1000;
+    const getRandomDelayMs = () => Math.floor(Math.random() * 3000) + 3000; // 3-6s
 
     const scheduleNextRotation = () => {
       if (rotationTimeoutRef.current) clearTimeout(rotationTimeoutRef.current);
@@ -613,6 +663,63 @@ export default function AskReferralScreen({ navigation, route }) {
           {/* ── Ad ──────────────────────────────────────────────── */}
           <AdCard variant="referral" />
 
+          {/* ── Live Social Proof — Fortune 500 Ticker ────────────── */}
+          {fortune500Companies.length > 0 && (
+            <View style={{ marginHorizontal: 16, marginBottom: 8 }}>
+              {/* Live counter */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 5, gap: 5 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
+                <Text style={{ fontSize: 11, color: colors.success, fontWeight: typography.weights.bold }}>
+                  {referrersOnline.toLocaleString('en-IN')}
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>referrers online</Text>
+                <Text style={{ fontSize: 10, color: colors.textMuted }}>·</Text>
+                <Text style={{ fontSize: 11, color: colors.primary, fontWeight: typography.weights.bold }}>
+                  {dailyRefCount}
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>referrals today</Text>
+              </View>
+
+              {/* Ticker — company rotation */}
+              <Animated.View
+                style={[styles.socialProofBar, { opacity: fadeAnim, marginHorizontal: 0, marginBottom: 0 }]}
+              >
+                <View style={styles.socialProofContent}>
+                  <View style={styles.socialProofLogoBox}>
+                    <CachedImage
+                      source={{
+                        uri: fortune500Companies[currentCompanyIndex]?.logoURL,
+                      }}
+                      style={styles.socialProofLogo}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.socialProofText}>
+                      Someone just got referred at
+                    </Text>
+                    <Text style={styles.socialProofCompany}>
+                      {fortune500Companies[currentCompanyIndex]?.name}
+                    </Text>
+                  </View>
+                  <View style={styles.socialProofRight}>
+                    {showRotationTick && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color={colors.success}
+                      />
+                    )}
+                    <View style={styles.liveBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveText}>LIVE</Text>
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+            </View>
+          )}
+
           {/* ═══════════════════════════════════════════════════════
               SECTION 1 — MODE SELECTOR (The Hero)
               Two prominent cards: flagship "Open to Any" vs "Specific"
@@ -807,46 +914,6 @@ export default function AskReferralScreen({ navigation, route }) {
             {/* Close desktop cards row wrapper */}
             </View>
           </View>
-
-          {/* ── Live Social Proof — Fortune 500 Ticker ────────────── */}
-          {fortune500Companies.length > 0 && (
-            <Animated.View
-              style={[styles.socialProofBar, { opacity: fadeAnim }]}
-            >
-              <View style={styles.socialProofContent}>
-                <View style={styles.socialProofLogoBox}>
-                  <CachedImage
-                    source={{
-                      uri: fortune500Companies[currentCompanyIndex]?.logoURL,
-                    }}
-                    style={styles.socialProofLogo}
-                    resizeMode="contain"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.socialProofText}>
-                    Referral submitted for
-                  </Text>
-                  <Text style={styles.socialProofCompany}>
-                    {fortune500Companies[currentCompanyIndex]?.name}
-                  </Text>
-                </View>
-                <View style={styles.socialProofRight}>
-                  {showRotationTick && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color={colors.success}
-                    />
-                  )}
-                  <View style={styles.liveBadge}>
-                    <View style={styles.liveDot} />
-                    <Text style={styles.liveText}>LIVE</Text>
-                  </View>
-                </View>
-              </View>
-            </Animated.View>
-          )}
 
           {/* ═══════════════════════════════════════════════════════
               SECTION 2 — SMART FORM (Progressive Disclosure)
