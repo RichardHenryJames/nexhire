@@ -701,6 +701,16 @@ export default function AskReferralScreen({ navigation, route }) {
 
                 <View style={styles.modePriceBox}>
                   <Text
+                    style={{
+                      fontSize: 12,
+                      color: colors.textMuted,
+                      textDecorationLine: 'line-through',
+                      fontWeight: typography.weights.medium,
+                    }}
+                  >
+                    ₹499
+                  </Text>
+                  <Text
                     style={[
                       styles.modePriceAmount,
                       openToAnyCompany && { color: colors.primary },
@@ -708,7 +718,9 @@ export default function AskReferralScreen({ navigation, route }) {
                   >
                     ₹{pricing.openToAnyReferralCost}
                   </Text>
-                  <Text style={styles.modePriceLabel}>one-time</Text>
+                  <View style={{ backgroundColor: colors.error + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 2 }}>
+                    <Text style={{ fontSize: 9, fontWeight: typography.weights.bold, color: colors.error, letterSpacing: 0.3 }}>LIMITED TIME</Text>
+                  </View>
                 </View>
               </View>
 
