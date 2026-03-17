@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
   Linking,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
@@ -40,6 +41,41 @@ export default function ReferralScreen({ navigation }) {
   const [openRequests, setOpenRequests] = useState([]);
   const [closedRequests, setClosedRequests] = useState([]);
   const [stats, setStats] = useState({ pendingCount: 0 });
+  const [showExpiredSection, setShowExpiredSection] = useState(false);
+
+  // Swipe gesture to switch tabs
+  const SWIPE_TABS = ['open', 'closed'];
+  const swipeStartX = useRef(0);
+  const swipeStartY = useRef(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const animateTabSwitch = (direction) => {
+    slideAnim.setValue(direction * 40);
+    Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+  };
+
+  const switchTab = (newTab) => {
+    const oldIdx = SWIPE_TABS.indexOf(activeTab);
+    const newIdx = SWIPE_TABS.indexOf(newTab);
+    if (oldIdx !== newIdx) {
+      animateTabSwitch(newIdx > oldIdx ? 1 : -1);
+      setActiveTab(newTab);
+    }
+  };
+
+  const handleSwipeStart = (e) => {
+    swipeStartX.current = e.nativeEvent.pageX;
+    swipeStartY.current = e.nativeEvent.pageY;
+  };
+  const handleSwipeEnd = (e) => {
+    const dx = e.nativeEvent.pageX - swipeStartX.current;
+    const dy = e.nativeEvent.pageY - swipeStartY.current;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const idx = SWIPE_TABS.indexOf(activeTab);
+      if (dx < 0 && idx < SWIPE_TABS.length - 1) switchTab(SWIPE_TABS[idx + 1]);
+      if (dx > 0 && idx > 0) switchTab(SWIPE_TABS[idx - 1]);
+    }
+  };
 
   // Proof upload modal state
   const [showProofModal, setShowProofModal] = useState(false);
@@ -404,12 +440,13 @@ export default function ReferralScreen({ navigation }) {
     const avatarColor = getAvatarColor(applicantName);
 
     const isOpenTab = activeTab === 'open';
-    const isExpiredOrRefunded = ['Expired', 'Refunded'].includes(request.Status);
+    const isInactive = ['Expired', 'Refunded'].includes(request.Status) || 
+      (!isOpenTab && ['Completed', 'ProofUploaded'].includes(request.Status) && !request.ProofFileURL);
     
     return (
       <TouchableOpacity 
         key={request.RequestID} 
-        style={[styles.requestCard, isExpiredOrRefunded && { opacity: 0.5 }]}
+        style={[styles.requestCard, isInactive && { opacity: 0.5 }]}
         activeOpacity={isOpenTab ? 0.7 : 1}
         disabled={!isOpenTab}
         onPress={() => isOpenTab ? handleViewRequest(request) : undefined}
@@ -472,24 +509,22 @@ export default function ReferralScreen({ navigation }) {
               {/* Spacer */}
               <View style={{ flex: 1 }} />
 
-              {/* Closed tab: View Proof + Remind Seeker (only for pending verification — not Verified/Expired/Refunded) */}
-              {activeTab === 'closed' && ['ProofUploaded', 'Completed', 'Unverified'].includes(request.Status) && (
+              {/* Closed tab: View Proof + Remind Seeker (only when proof exists and seeker hasn't verified) */}
+              {activeTab === 'closed' && ['ProofUploaded', 'Completed', 'Unverified'].includes(request.Status) && request.ProofFileURL && (
                 <>
-                  {request.ProofFileURL && (
-                    <TouchableOpacity 
-                      style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
-                      onPress={() => {
-                        if (Platform.OS === 'web') {
-                          window.open(request.ProofFileURL, '_blank');
-                        } else {
-                          Linking.openURL(request.ProofFileURL);
-                        }
-                      }}
-                    >
-                      <Ionicons name="eye" size={14} color={colors.white} />
-                      <Text style={styles.viewRequestText}>View Proof</Text>
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity 
+                    style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
+                    onPress={() => {
+                      if (Platform.OS === 'web') {
+                        window.open(request.ProofFileURL, '_blank');
+                      } else {
+                        Linking.openURL(request.ProofFileURL);
+                      }
+                    }}
+                  >
+                    <Ionicons name="eye" size={14} color={colors.white} />
+                    <Text style={styles.viewRequestText}>View Proof</Text>
+                  </TouchableOpacity>
                   {request.ApplicantUserID && (
                     <TouchableOpacity 
                       style={[styles.viewRequestBtn, { backgroundColor: colors.primary }]}
@@ -554,6 +589,8 @@ export default function ReferralScreen({ navigation }) {
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
+          onTouchStart={handleSwipeStart}
+          onTouchEnd={handleSwipeEnd}
         >
           {renderVerificationPrompt()}
         </ScrollView>
@@ -567,6 +604,8 @@ export default function ReferralScreen({ navigation }) {
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
       >
         {requestsToMe.length === 0 ? (
           <View style={styles.emptyState}>
@@ -574,6 +613,32 @@ export default function ReferralScreen({ navigation }) {
             <Text style={styles.emptyTitle}>{emptyTitle}</Text>
             <Text style={styles.emptyText}>{emptyMessage}</Text>
           </View>
+        ) : activeTab === 'closed' ? (
+          // Closed tab: split into active-closed (top) and expired/refunded (collapsed bottom)
+          (() => {
+            const activeClosed = requestsToMe.filter(r => !['Expired', 'Refunded'].includes(r.Status));
+            const expiredItems = requestsToMe.filter(r => ['Expired', 'Refunded'].includes(r.Status));
+            return (
+              <>
+                {activeClosed.map(renderRequestToMeCard)}
+                {expiredItems.length > 0 && (
+                  <>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginTop: 8, gap: 6 }}
+                      onPress={() => setShowExpiredSection(!showExpiredSection)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name={showExpiredSection ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                      <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>
+                        {showExpiredSection ? 'Hide' : 'Show'} expired ({expiredItems.length})
+                      </Text>
+                    </TouchableOpacity>
+                    {showExpiredSection && expiredItems.map(renderRequestToMeCard)}
+                  </>
+                )}
+              </>
+            );
+          })()
         ) : (
           requestsToMe.map(renderRequestToMeCard)
         )}
@@ -648,27 +713,29 @@ export default function ReferralScreen({ navigation }) {
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'open' && styles.activeTab]}
-            onPress={() => setActiveTab('open')}
+            onPress={() => switchTab('open')}
           >
             <Text style={[styles.tabText, activeTab === 'open' && styles.activeTabText]}>
-              Open{openRequests.length > 0 ? ` (${openRequests.length})` : ''}
+              Open
             </Text>
             {activeTab === 'open' && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'closed' && styles.activeTab]}
-            onPress={() => setActiveTab('closed')}
+            onPress={() => switchTab('closed')}
           >
             <Text style={[styles.tabText, activeTab === 'closed' && styles.activeTabText]}>
-              Closed{closedRequests.length > 0 ? ` (${closedRequests.length})` : ''}
+              Closed
             </Text>
             {activeTab === 'closed' && <View style={[styles.tabIndicator, { backgroundColor: colors.textSecondary }]} />}
           </TouchableOpacity>
         </View>
 
         {/* Tab Content */}
-        {renderTabContent()}
+        <Animated.View style={{ flex: 1, transform: [{ translateX: slideAnim }] }}>
+          {renderTabContent()}
+        </Animated.View>
 
         {/* View Referral Request Modal with enhanced flow */}
         <ViewReferralRequestModal

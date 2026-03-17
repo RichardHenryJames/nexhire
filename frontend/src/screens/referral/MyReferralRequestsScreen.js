@@ -12,6 +12,7 @@ import {
   Modal,
   Image,
   Platform,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -42,6 +43,41 @@ export default function MyReferralRequestsScreen({ route }) {
   const [showProofViewer, setShowProofViewer] = useState(false);
   const [viewingProof, setViewingProof] = useState(null);
   const [activeTab, setActiveTab] = useState(route?.params?.initialTab || 'action'); // 'action' | 'progress' | 'closed'
+  const [showExpiredSection, setShowExpiredSection] = useState(false);
+
+  // Swipe gesture to switch tabs
+  const TABS = ['action', 'progress', 'closed'];
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const animateTabSwitch = (direction) => {
+    slideAnim.setValue(direction * 40);
+    Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
+  };
+
+  const switchTab = (newTab) => {
+    const oldIdx = TABS.indexOf(activeTab);
+    const newIdx = TABS.indexOf(newTab);
+    if (oldIdx !== newIdx) {
+      animateTabSwitch(newIdx > oldIdx ? 1 : -1);
+      setActiveTab(newTab);
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.nativeEvent.pageX;
+    touchStartY.current = e.nativeEvent.pageY;
+  };
+  const handleTouchEnd = (e) => {
+    const dx = e.nativeEvent.pageX - touchStartX.current;
+    const dy = e.nativeEvent.pageY - touchStartY.current;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const idx = TABS.indexOf(activeTab);
+      if (dx < 0 && idx < TABS.length - 1) switchTab(TABS[idx + 1]);
+      if (dx > 0 && idx > 0) switchTab(TABS[idx - 1]);
+    }
+  };
 
   const [verifyTarget, setVerifyTarget] = useState(null);
 
@@ -511,14 +547,27 @@ export default function MyReferralRequestsScreen({ route }) {
         {/* Verify button — only when there's something to verify */}
         {(request.Status === 'Completed' || request.Status === 'ProofUploaded') &&
          (!request.OpenToAnyCompany || (request.PendingVerificationCount || 0) > 0) && (
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.success + '10', borderWidth: 1, borderColor: colors.success + '30', alignSelf: 'flex-end' }}
-            onPress={(e) => { e.stopPropagation?.(); handleVerifyReferral(request.RequestID); }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
-            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.success }}>Verify Referral</Text>
-          </TouchableOpacity>
+          request.OpenToAnyCompany ? (
+            // Open-to-any: guide user to go inside to verify individual referrals
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.primary + '10', borderWidth: 1, borderColor: colors.primary + '30', alignSelf: 'flex-end' }}
+            >
+              <Ionicons name="arrow-forward-circle-outline" size={16} color={colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                {request.PendingVerificationCount} referral{request.PendingVerificationCount > 1 ? 's' : ''} to verify — tap to review
+              </Text>
+            </View>
+          ) : (
+            // Targeted: verify directly
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.success + '10', borderWidth: 1, borderColor: colors.success + '30', alignSelf: 'flex-end' }}
+              onPress={(e) => { e.stopPropagation?.(); handleVerifyReferral(request.RequestID); }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.success }}>Verify Referral</Text>
+            </TouchableOpacity>
+          )
         )}
       </TouchableOpacity>
     );
@@ -539,20 +588,21 @@ export default function MyReferralRequestsScreen({ route }) {
               <TouchableOpacity
                 key={tab.key}
                 style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-                onPress={() => setActiveTab(tab.key)}
+                onPress={() => switchTab(tab.key)}
                 activeOpacity={0.7}
               >
                 <Text style={[
                   styles.tabText,
                   activeTab === tab.key && { color: tab.color, fontWeight: '700' },
                 ]}>
-                  {tab.label}{tab.count > 0 ? ` (${tab.count})` : ''}
+                  {tab.label}
                 </Text>
                 {activeTab === tab.key && <View style={[styles.tabIndicator, { backgroundColor: tab.color }]} />}
               </TouchableOpacity>
             ))}
           </View>
         )}
+        <Animated.View style={{ flex: 1, transform: [{ translateX: slideAnim }] }}>
         <ScrollView
           style={styles.content}
           refreshControl={
@@ -560,6 +610,8 @@ export default function MyReferralRequestsScreen({ route }) {
           }
           onScroll={onScrollNearEnd}
           scrollEventThrottle={16}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -591,7 +643,35 @@ export default function MyReferralRequestsScreen({ route }) {
           </View>
         ) : (
           <>
-          {filteredRequests.map(renderMyRequestCard)}
+          {activeTab === 'closed' ? (
+            // Closed tab: split into active-closed (top) and expired/cancelled (collapsed bottom)
+            (() => {
+              const activeClosed = filteredRequests.filter(r => !['Expired', 'Refunded', 'Cancelled'].includes(r.Status));
+              const expiredItems = filteredRequests.filter(r => ['Expired', 'Refunded', 'Cancelled'].includes(r.Status));
+              return (
+                <>
+                  {activeClosed.map(renderMyRequestCard)}
+                  {expiredItems.length > 0 && (
+                    <>
+                      <TouchableOpacity
+                        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, marginTop: 8, gap: 6 }}
+                        onPress={() => setShowExpiredSection(!showExpiredSection)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name={showExpiredSection ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>
+                          {showExpiredSection ? 'Hide' : 'Show'} expired & cancelled ({expiredItems.length})
+                        </Text>
+                      </TouchableOpacity>
+                      {showExpiredSection && expiredItems.map(renderMyRequestCard)}
+                    </>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            filteredRequests.map(renderMyRequestCard)
+          )}
           {loadingMore && (
             <View style={{ paddingVertical: 20, alignItems: 'center' }}>
               <ActivityIndicator size="small" color={colors.primary} />
@@ -604,6 +684,7 @@ export default function MyReferralRequestsScreen({ route }) {
           </>
         )}
       </ScrollView>
+      </Animated.View>
       </View>
 
       {showProofViewer && viewingProof && (
