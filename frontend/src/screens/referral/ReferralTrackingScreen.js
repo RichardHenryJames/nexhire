@@ -42,7 +42,7 @@ export default function ReferralTrackingScreen() {
   const isDesktopWeb = Platform.OS === 'web' && responsive.isDesktop;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
-  const { requestId, request: initialRequest } = route.params || {};
+  const { requestId, request: initialRequest, fromTab } = route.params || {};
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,7 +69,9 @@ export default function ReferralTrackingScreen() {
   const [childReferrals, setChildReferrals] = useState([]);
   const [verifyChildTarget, setVerifyChildTarget] = useState(null); // { requestId, child }
 
-  const canWithdraw = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(currentStatus);
+  // Only allow withdrawal if no referrer has acted on it yet
+  // Block if: status is Completed/ProofUploaded, or if any children exist (open-to-any with referrals)
+  const canWithdraw = ['Pending', 'NotifiedToReferrers'].includes(currentStatus) && childReferrals.length === 0;
 
   // --- Message referrer button commented out ---
   // const handleMessageReferrer = async () => {
@@ -714,7 +716,7 @@ export default function ReferralTrackingScreen() {
     <View style={styles.container}>
       <SubScreenHeader 
         title="Referral Tracking" 
-        directBack="MyReferralRequests"
+        onBack={() => navigation.navigate('MyReferralRequests', { initialTab: fromTab || 'action' })}
         rightContent={isDesktopWeb && canWithdraw ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity

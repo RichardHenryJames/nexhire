@@ -1064,6 +1064,7 @@ export class ReferralService {
                     ur.Email as ReferrerEmail,
                     ar.ResumeLabel,
                     (SELECT COUNT(*) FROM ReferralRequests child WHERE child.ParentRequestID = rr.RequestID AND child.Status NOT IN ('Cancelled', 'Expired')) as ChildReferralCount,
+                    (SELECT COUNT(*) FROM ReferralRequests child WHERE child.ParentRequestID = rr.RequestID AND child.Status IN ('Completed', 'ProofUploaded')) as PendingVerificationCount,
                     rp.FileURL as ProofFileURL,
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription,
@@ -1529,11 +1530,15 @@ export class ReferralService {
      */
     static async submitReferralWithProof(referrerId: string, userId: string, dto: SubmitReferralWithProofDto): Promise<ReferralRequest> {
         try {
-            // Check if request is available - allow Pending OR Claimed (by same user for continue flow)
+            // Check if request is available
+            // Open-to-any parents stay at Completed but remain claimable by new referrers
             const requestQuery = `
                 SELECT RequestID, Status, JobID, ExtJobID, OrganizationID, ApplicantID, RequestedAt, AssignedReferrerID, OpenToAnyCompany, ParentRequestID, JobTitle
                 FROM ReferralRequests
-                WHERE RequestID = @param0 AND Status IN ('Pending', 'Claimed', 'Viewed', 'NotifiedToReferrers')
+                WHERE RequestID = @param0 AND (
+                    Status IN ('Pending', 'Claimed', 'Viewed', 'NotifiedToReferrers')
+                    OR (Status = 'Completed' AND OpenToAnyCompany = 1 AND ParentRequestID IS NULL)
+                )
             `;
             const requestResult = await dbService.executeQuery(requestQuery, [dto.requestID]);
             
@@ -1691,7 +1696,15 @@ export class ReferralService {
                     }
                 } catch {}
 
-                // Parent stays open — return the child
+                // Update parent status to Completed (seeker sees it in Action Needed tab)
+                try {
+                    await dbService.executeQuery(
+                        `UPDATE ReferralRequests SET Status = 'Completed' WHERE RequestID = @param0 AND Status IN ('Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed')`,
+                        [dto.requestID]
+                    );
+                } catch {}
+
+                // Return the child
                 return await this.getReferralRequestById(childId);
             }
             
@@ -1949,10 +1962,19 @@ export class ReferralService {
             }
             const request = result.recordset[0];
             
-            // Allow cancellation for any open status (not just Pending)
-            const cancellableStatuses = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
+            // Only allow cancellation if no referrer has acted on it
+            const cancellableStatuses = ['Pending', 'NotifiedToReferrers'];
             if (!cancellableStatuses.includes(request.Status)) {
-                throw new ValidationError(`Cannot cancel request with status '${request.Status}'. Only open requests can be cancelled.`);
+                throw new ValidationError(`Cannot cancel request with status '${request.Status}'. Only pending requests can be cancelled.`);
+            }
+
+            // Block cancellation if any children exist (open-to-any with active referrals)
+            const childCheck = await dbService.executeQuery(
+                `SELECT COUNT(*) as cnt FROM ReferralRequests WHERE ParentRequestID = @param0 AND Status NOT IN ('Cancelled', 'Expired')`,
+                [requestId]
+            );
+            if (childCheck.recordset?.[0]?.cnt > 0) {
+                throw new ValidationError('Cannot cancel — referrals are already in progress for this request.');
             }
             
             // Mark as cancelled
@@ -2138,8 +2160,13 @@ export class ReferralService {
                 const isOpenParent = openCheckResult.recordset?.[0]?.OpenToAnyCompany && !openCheckResult.recordset?.[0]?.ParentRequestID;
 
                 if (isOpenParent && (status === 'Viewed' || status === 'Claimed' || status === 'Completed' || status === 'ProofUploaded')) {
-                    // Open-to-any parent: only log to history, don't update parent status
-                    // The child spawn in submitReferralWithProof handles the actual state
+                    // Open-to-any parent: mark as Claimed once any referrer interacts
+                    if (currentStatus === 'Pending' || currentStatus === 'NotifiedToReferrers' || currentStatus === 'Viewed') {
+                        await dbService.executeQuery(
+                            `UPDATE ReferralRequests SET Status = 'Claimed' WHERE RequestID = @param0`,
+                            [requestId]
+                        );
+                    }
                 } else if (status === 'Claimed' && actorType === 'referrer' && actorId) {
                     await dbService.executeQuery(
                         `UPDATE ReferralRequests SET Status = @param0, AssignedReferrerID = @param1, ReferredAt = GETUTCDATE() WHERE RequestID = @param2`,

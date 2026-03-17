@@ -404,11 +404,12 @@ export default function ReferralScreen({ navigation }) {
     const avatarColor = getAvatarColor(applicantName);
 
     const isOpenTab = activeTab === 'open';
+    const isExpiredOrRefunded = ['Expired', 'Refunded'].includes(request.Status);
     
     return (
       <TouchableOpacity 
         key={request.RequestID} 
-        style={styles.requestCard}
+        style={[styles.requestCard, isExpiredOrRefunded && { opacity: 0.5 }]}
         activeOpacity={isOpenTab ? 0.7 : 1}
         disabled={!isOpenTab}
         onPress={() => isOpenTab ? handleViewRequest(request) : undefined}
@@ -471,21 +472,39 @@ export default function ReferralScreen({ navigation }) {
               {/* Spacer */}
               <View style={{ flex: 1 }} />
 
-              {/* View Proof Button - Closed tab */}
-              {activeTab === 'closed' && request.ProofFileURL && (
-                <TouchableOpacity 
-                  style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
-                  onPress={() => {
-                    if (Platform.OS === 'web') {
-                      window.open(request.ProofFileURL, '_blank');
-                    } else {
-                      Linking.openURL(request.ProofFileURL);
-                    }
-                  }}
-                >
-                  <Ionicons name="eye" size={14} color={colors.white} />
-                  <Text style={styles.viewRequestText}>View Proof</Text>
-                </TouchableOpacity>
+              {/* Closed tab: View Proof + Remind Seeker (only for pending verification — not Verified/Expired/Refunded) */}
+              {activeTab === 'closed' && ['ProofUploaded', 'Completed', 'Unverified'].includes(request.Status) && (
+                <>
+                  {request.ProofFileURL && (
+                    <TouchableOpacity 
+                      style={[styles.viewRequestBtn, { backgroundColor: colors.success }]}
+                      onPress={() => {
+                        if (Platform.OS === 'web') {
+                          window.open(request.ProofFileURL, '_blank');
+                        } else {
+                          Linking.openURL(request.ProofFileURL);
+                        }
+                      }}
+                    >
+                      <Ionicons name="eye" size={14} color={colors.white} />
+                      <Text style={styles.viewRequestText}>View Proof</Text>
+                    </TouchableOpacity>
+                  )}
+                  {request.ApplicantUserID && (
+                    <TouchableOpacity 
+                      style={[styles.viewRequestBtn, { backgroundColor: colors.primary }]}
+                      onPress={() => handleMessageSeeker(request)}
+                      disabled={messagingUserId === request.ApplicantUserID}
+                    >
+                      {messagingUserId === request.ApplicantUserID ? (
+                        <ActivityIndicator size={12} color={colors.white} />
+                      ) : (
+                        <Ionicons name="chatbubble-outline" size={14} color={colors.white} />
+                      )}
+                      <Text style={styles.viewRequestText}>Remind Seeker</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
               )}
             </View>
           </View>
@@ -631,28 +650,20 @@ export default function ReferralScreen({ navigation }) {
             style={[styles.tab, activeTab === 'open' && styles.activeTab]}
             onPress={() => setActiveTab('open')}
           >
-            <Ionicons 
-              name="folder-open-outline" 
-              size={18} 
-              color={activeTab === 'open' ? colors.primary : colors.gray500} 
-            />
             <Text style={[styles.tabText, activeTab === 'open' && styles.activeTabText]}>
-              Open
+              Open{openRequests.length > 0 ? ` (${openRequests.length})` : ''}
             </Text>
+            {activeTab === 'open' && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
           
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'closed' && styles.activeTab]}
             onPress={() => setActiveTab('closed')}
           >
-            <Ionicons 
-              name="checkmark-done-outline" 
-              size={18} 
-              color={activeTab === 'closed' ? colors.primary : colors.gray500} 
-            />
             <Text style={[styles.tabText, activeTab === 'closed' && styles.activeTabText]}>
-              Closed ({closedRequests.length})
+              Closed{closedRequests.length > 0 ? ` (${closedRequests.length})` : ''}
             </Text>
+            {activeTab === 'closed' && <View style={[styles.tabIndicator, { backgroundColor: colors.textSecondary }]} />}
           </TouchableOpacity>
         </View>
 
@@ -798,32 +809,35 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   // Open/Closed Tabs
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
-    paddingHorizontal: 8,
+    paddingHorizontal: 16,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    gap: 8,
+    position: 'relative',
   },
-  activeTab: {
-    borderBottomWidth: 3,
-    borderBottomColor: colors.primary,
-  },
+  activeTab: {},
   tabText: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.gray500,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   activeTabText: {
     color: colors.primary,
-    fontWeight: typography.weights.bold,
+    fontWeight: '700',
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    right: 16,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.primary,
   },
   tabNavigation: {
     flexDirection: 'row',

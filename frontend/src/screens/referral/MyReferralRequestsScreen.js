@@ -25,7 +25,7 @@ import useWebInfiniteScroll from '../../hooks/useWebInfiniteScroll';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 
-export default function MyReferralRequestsScreen() {
+export default function MyReferralRequestsScreen({ route }) {
   const { user } = useAuth();
   const { colors } = useTheme();
   const navigation = useNavigation();
@@ -41,7 +41,7 @@ export default function MyReferralRequestsScreen() {
 
   const [showProofViewer, setShowProofViewer] = useState(false);
   const [viewingProof, setViewingProof] = useState(null);
-  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'history'
+  const [activeTab, setActiveTab] = useState(route?.params?.initialTab || 'action'); // 'action' | 'progress' | 'closed'
 
   const [verifyTarget, setVerifyTarget] = useState(null);
 
@@ -74,6 +74,25 @@ export default function MyReferralRequestsScreen() {
       setLoading(false);
     }
   };
+
+  // Auto-select the best tab on first load (only if no initialTab was passed)
+  const hasAutoSelected = useRef(false);
+  useEffect(() => {
+    if (loading || hasAutoSelected.current || myRequests.length === 0) return;
+    if (route?.params?.initialTab) { hasAutoSelected.current = true; return; }
+    hasAutoSelected.current = true;
+    // Match the same logic as actionRequests filter
+    const ACTION_CHECK = ['ProofUploaded', 'Completed'];
+    const hasAction = myRequests.some(r =>
+      (ACTION_CHECK.includes(r.Status) && !r.OpenToAnyCompany) ||
+      (ACTION_CHECK.includes(r.Status) && r.OpenToAnyCompany && (r.PendingVerificationCount || 0) > 0)
+    );
+    if (hasAction) {
+      setActiveTab('action');
+    } else {
+      setActiveTab('progress');
+    }
+  }, [loading, myRequests]);
 
   // Load more referral requests (next page)
   const loadMoreRequests = useCallback(async () => {
@@ -141,12 +160,36 @@ export default function MyReferralRequestsScreen() {
     setRefreshing(false);
   };
 
-  // Split requests into Active vs History
-  // Completed stays in Active because seeker needs to verify/dispute
-  const ACTIVE_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed', 'ProofUploaded', 'Completed'];
-  const activeRequests = useMemo(() => myRequests.filter(r => ACTIVE_STATUSES.includes(r.Status)), [myRequests]);
-  const historyRequests = useMemo(() => myRequests.filter(r => !ACTIVE_STATUSES.includes(r.Status)), [myRequests]);
-  const filteredRequests = activeTab === 'active' ? activeRequests : historyRequests;
+  // Split requests into 3 categories: Action Needed / In Progress / Closed
+  const ACTION_STATUSES = ['ProofUploaded', 'Completed']; // Seeker needs to verify
+  const IN_PROGRESS_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
+  const CLOSED_STATUSES = ['Verified', 'Unverified', 'Refunded', 'Cancelled', 'Expired'];
+
+  const actionRequests = useMemo(() => myRequests.filter(r => {
+    // Completed/ProofUploaded with pending verification children (open-to-any)
+    if (ACTION_STATUSES.includes(r.Status) && r.OpenToAnyCompany && r.PendingVerificationCount > 0) return true;
+    // Completed/ProofUploaded for targeted (non open-to-any) requests
+    if (ACTION_STATUSES.includes(r.Status) && !r.OpenToAnyCompany) return true;
+    return false;
+  }), [myRequests]);
+
+  const progressRequests = useMemo(() => myRequests.filter(r => {
+    if (IN_PROGRESS_STATUSES.includes(r.Status)) return true;
+    // Open-to-any Completed but all children already verified — nothing to do, but not truly closed
+    // Open-to-any Completed but all children already verified → closed
+    return false;
+  }), [myRequests]);
+
+  const closedRequests = useMemo(() => myRequests.filter(r => {
+    if (CLOSED_STATUSES.includes(r.Status)) return true;
+    // Open-to-any Completed with no pending verifications → all done
+    if (r.OpenToAnyCompany && ACTION_STATUSES.includes(r.Status) && (r.PendingVerificationCount || 0) === 0) return true;
+    return false;
+  }), [myRequests]);
+
+  const filteredRequests = activeTab === 'action' ? actionRequests 
+    : activeTab === 'progress' ? progressRequests 
+    : closedRequests;
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Unknown date';
@@ -240,30 +283,43 @@ export default function MyReferralRequestsScreen() {
     }
   };
 
-  const getStatusLabel = (status) => {
+  const getStatusLabel = (status, request) => {
+    // Open-to-any: show dynamic label based on child activity
+    if (request?.OpenToAnyCompany && IN_PROGRESS_STATUSES.includes(status)) {
+      if (request.ChildReferralCount > 0) {
+        return `${request.ChildReferralCount} referral${request.ChildReferralCount > 1 ? 's' : ''} in progress`;
+      }
+      return 'Searching across companies';
+    }
+
+    // Open-to-any Completed with all children verified
+    if (request?.OpenToAnyCompany && status === 'Completed' && (request.PendingVerificationCount || 0) === 0) {
+      return 'All referrals verified';
+    }
+
     switch (status) {
       case 'Pending':
-        return 'Waiting for referrer';
+        return 'Searching for referrer';
       case 'NotifiedToReferrers':
-        return 'Broadcasted';
+        return 'Referrers notified';
       case 'Viewed':
-        return 'Viewed by referrer';
+        return 'Seen by referrer';
       case 'Claimed':
-        return 'Being referred';
+        return 'Referrer working on it';
       case 'ProofUploaded':
-        return 'Referral submitted';
+        return 'Verify referral';
       case 'Completed':
-        return 'Completed';
+        return 'Verify referral';
       case 'Verified':
-        return 'Verified';
+        return 'Referral confirmed ✓';
       case 'Unverified':
-        return 'Unverified';
+        return 'Under review';
       case 'Refunded':
-        return 'Refunded ✓';
+        return 'Refunded to wallet';
       case 'Cancelled':
-        return 'Cancelled';
+        return 'Cancelled by you';
       case 'Expired':
-        return 'Expired (no referrer)';
+        return 'No referrer found';
       default:
         return status;
     }
@@ -314,7 +370,8 @@ export default function MyReferralRequestsScreen() {
   const handleViewTracking = (request) => {
     navigation.navigate('ReferralTracking', { 
       requestId: request.RequestID,
-      request: request
+      request: request,
+      fromTab: activeTab,
     });
   };
 
@@ -349,11 +406,12 @@ export default function MyReferralRequestsScreen() {
     const companyName = request.OpenToAnyCompany ? 'Any Company' : (request.CompanyName || 'Company');
     const companyColor = getCompanyColor(companyName);
     const isOpenToAny = !!request.OpenToAnyCompany;
+    const isExpiredOrRefunded = ['Expired', 'Refunded', 'Cancelled'].includes(request.Status);
 
     return (
       <TouchableOpacity
         key={request.RequestID}
-        style={styles.requestCard}
+        style={[styles.requestCard, isExpiredOrRefunded && { opacity: 0.5 }]}
         onPress={() => handleViewTracking(request)}
         activeOpacity={0.7}
       >
@@ -450,8 +508,9 @@ export default function MyReferralRequestsScreen() {
           </View>
         </View>
 
-        {/* Verify button for Completed requests */}
-        {request.Status === 'Completed' && (
+        {/* Verify button — only when there's something to verify */}
+        {(request.Status === 'Completed' || request.Status === 'ProofUploaded') &&
+         (!request.OpenToAnyCompany || (request.PendingVerificationCount || 0) > 0) && (
           <TouchableOpacity
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.success + '10', borderWidth: 1, borderColor: colors.success + '30', alignSelf: 'flex-end' }}
             onPress={(e) => { e.stopPropagation?.(); handleVerifyReferral(request.RequestID); }}
@@ -469,29 +528,29 @@ export default function MyReferralRequestsScreen() {
     <View style={styles.container}>
       <SubScreenHeader title="My Referral Requests" directBack="Home" />
       <View style={styles.innerContainer}>
-        {/* Active / History Tabs */}
+        {/* Tabs */}
         {!loading && myRequests.length > 0 && (
           <View style={styles.tabBar}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'active' && styles.tabActive]}
-              onPress={() => setActiveTab('active')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="time-outline" size={16} color={activeTab === 'active' ? colors.white : colors.primary} />
-              <Text style={[styles.tabText, activeTab === 'active' && styles.tabTextActive]}>
-                Active{activeRequests.length > 0 ? ` (${activeRequests.length})` : ''}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'history' && styles.tabActive]}
-              onPress={() => setActiveTab('history')}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="archive-outline" size={16} color={activeTab === 'history' ? colors.white : colors.textSecondary} />
-              <Text style={[styles.tabText, activeTab === 'history' && styles.tabTextActive]}>
-                History{historyRequests.length > 0 ? ` (${historyRequests.length})` : ''}
-              </Text>
-            </TouchableOpacity>
+            {[
+              { key: 'action', label: 'Action', count: actionRequests.length, color: actionRequests.length > 0 ? colors.error : colors.primary },
+              { key: 'progress', label: 'In Progress', count: progressRequests.length, color: colors.primary },
+              { key: 'closed', label: 'Closed', count: closedRequests.length, color: colors.textSecondary },
+            ].map(tab => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+                onPress={() => setActiveTab(tab.key)}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.tabText,
+                  activeTab === tab.key && { color: tab.color, fontWeight: '700' },
+                ]}>
+                  {tab.label}{tab.count > 0 ? ` (${tab.count})` : ''}
+                </Text>
+                {activeTab === tab.key && <View style={[styles.tabIndicator, { backgroundColor: tab.color }]} />}
+              </TouchableOpacity>
+            ))}
           </View>
         )}
         <ScrollView
@@ -518,14 +577,16 @@ export default function MyReferralRequestsScreen() {
           </View>
         ) : filteredRequests.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name={activeTab === 'active' ? 'checkmark-circle-outline' : 'archive-outline'} size={64} color={colors.gray400} />
+            <Ionicons name={activeTab === 'action' ? 'checkmark-circle-outline' : activeTab === 'progress' ? 'hourglass-outline' : 'archive-outline'} size={64} color={colors.gray400} />
             <Text style={styles.emptyTitle}>
-              {activeTab === 'active' ? 'No Active Requests' : 'No History Yet'}
+              {activeTab === 'action' ? 'All caught up! ✅' : activeTab === 'progress' ? 'No requests in progress' : 'No closed requests'}
             </Text>
             <Text style={styles.emptyText}>
-              {activeTab === 'active'
-                ? 'All your referral requests have been resolved.'
-                : 'Completed, expired, or cancelled requests will appear here.'}
+              {activeTab === 'action'
+                ? 'No referrals need your attention right now.'
+                : activeTab === 'progress'
+                ? 'Your active referral requests will appear here.'
+                : 'Verified, expired, or cancelled requests will appear here.'}
             </Text>
           </View>
         ) : (
@@ -607,26 +668,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 4,
-    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 12,
+    position: 'relative',
   },
-  tabActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
+  tabActive: {},
   tabText: {
     fontSize: 13,
     fontWeight: '600',
@@ -634,6 +686,14 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   tabTextActive: {
     color: colors.white,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    right: 16,
+    height: 3,
+    borderRadius: 1.5,
   },
   loadingContainer: {
     flex: 1,
