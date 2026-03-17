@@ -2679,7 +2679,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
 
     try {
       const existingJobs = await this.getExistingExternalJobIds();
-      console.log(`📊 Found ${existingJobs.size} existing external jobs in database`);
+      const existingFingerprints = await this.getExistingJobFingerprints();
+      console.log(`📊 Found ${existingJobs.size} existing external jobs, ${existingFingerprints.size} job fingerprints in database`);
 
       // ⚡ OPTIMIZATION: Scrape all sources in PARALLEL instead of sequential
       const scrapingPromises: Promise<{ source: string; jobs: ScrapedJob[] }>[] = [];
@@ -2765,7 +2766,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       console.log(`🎉 Total jobs scraped: ${allScrapedJobs.length} from all sources`);
 
       // Enhanced filtering
-      const filteredJobs = this.filterJobs(allScrapedJobs, existingJobs);
+      const filteredJobs = this.filterJobs(allScrapedJobs, existingJobs, existingFingerprints);
       console.log(`🔍 Jobs after filtering: ${filteredJobs.length} (removed ${allScrapedJobs.length - filteredJobs.length} duplicates)`);
 
       const jobsToInsert = filteredJobs.slice(0, this.config.maxJobsPerRun);
@@ -2852,11 +2853,41 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return new Set(result.recordset.map((row: any) => row.ExternalJobID));
   }
 
+  /**
+   * Get existing job fingerprints (Title + OrgName normalized) for content-based dedup.
+   * Prevents the same job from being inserted with different ExternalJobIDs.
+   */
+  private static async getExistingJobFingerprints(): Promise<Set<string>> {
+    const query = `
+      SELECT LOWER(RTRIM(j.Title)) + '||' + LOWER(RTRIM(o.Name)) + '||' + ISNULL(LOWER(RTRIM(j.Location)), '') as fingerprint
+      FROM Jobs j
+      JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+      WHERE j.Status = 'Published' AND j.IsArchived = 0
+        AND j.CreatedAt >= DATEADD(day, -60, GETUTCDATE())
+    `;
+    const result = await dbService.executeQuery(query);
+    return new Set(result.recordset.map((row: any) => row.fingerprint));
+  }
+
   // Enhanced job filtering with better quality checks
-  private static filterJobs(jobs: ScrapedJob[], existingIds: Set<string>): ScrapedJob[] {
+  private static filterJobs(jobs: ScrapedJob[], existingIds: Set<string>, existingFingerprints?: Set<string>): ScrapedJob[] {
+    const seenInBatch = new Set<string>(); // In-batch dedup
     return jobs.filter(job => {
-      // Skip duplicates
+      // Skip duplicates by ExternalJobID
       if (existingIds.has(job.externalJobId)) return false;
+
+      // Content-based dedup: skip if same Title+Company+Location already exists in DB or in this batch
+      const fingerprint = `${job.title.toLowerCase().trim()}||${job.company.toLowerCase().trim()}||${(job.location || '').toLowerCase().trim()}`;
+      if (existingFingerprints?.has(fingerprint)) {
+        console.log(`\u26a0\ufe0f  Content duplicate skipped: "${job.title}" @ ${job.company} (different ExternalJobID but same job)`);
+        return false;
+      }
+      if (seenInBatch.has(fingerprint)) {
+        console.log(`\u26a0\ufe0f  In-batch duplicate skipped: "${job.title}" @ ${job.company}`);
+        return false;
+      }
+      seenInBatch.add(fingerprint);
+      if (existingFingerprints) existingFingerprints.add(fingerprint); // Prevent further dupes in this run
 
       // Company blacklist filtering (case-insensitive)
       const normalizedCompany = job.company.toLowerCase().trim();
