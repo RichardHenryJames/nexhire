@@ -310,34 +310,32 @@ CRITICAL RULES:
 - For benefits: ${isWellKnown ? 'Include company-specific benefits if known (e.g., Google\'s free meals, Netflix\'s unlimited PTO)' : 'Use ONLY generic/common benefits like "Competitive salary", "Health insurance", "Professional development opportunities". Do NOT make up specific perks.'}
 - For tags/skills: Only include technologies and skills genuinely relevant to this specific role. Do NOT add trendy buzzwords (e.g., don\'t add "AI/ML" to a marketing role)
 - Responsibilities should use strong action verbs and be specific to the role
+- IMPORTANT: Do NOT include any labels like "SECTION 1", "SECTION 2", "DESCRIPTION:", "RESPONSIBILITIES:", "BENEFITS:", "TAGS:" in your output. Just write the content directly.
 
-OUTPUT FORMAT — Return EXACTLY these 4 sections separated by "---SECTION---":
+OUTPUT FORMAT — Return EXACTLY these 4 sections separated by the delimiter "---SECTION---":
 
-SECTION 1 — DESCRIPTION (the main job description, 1500-2500 chars):
-A 2-3 sentence company intro, then 2-3 sentence role summary, then "Requirements:" with 5-8 bullet points.
-Use "• " for bullets. No markdown. No headers with # or **.
+First section (the main job description as PARAGRAPHS, 1500-2500 chars):
+Write 2-3 sentences about the company, then 2-3 sentences about the role, then a paragraph about requirements.
+This MUST be flowing paragraph text, NOT bullet points. Write it like a professional job posting on LinkedIn.
+Use "• " bullets ONLY for the requirements list at the end.
 
 ---SECTION---
 
-SECTION 2 — RESPONSIBILITIES (newline-separated list, 6-10 items):
+Second section (responsibilities as a newline-separated list, 6-10 items):
 Each responsibility on its own line, starting with an action verb. No bullets, no numbers, just plain text lines.
-Example:
-Design and implement scalable microservices architecture
-Collaborate with cross-functional teams to define product requirements
 
 ---SECTION---
 
-SECTION 3 — BENEFITS (newline-separated list, 4-8 items):
-Each benefit on its own line. Plain text, no bullets.
+Third section (benefits as a newline-separated list, 4-8 items):
+Each benefit on its own line. Plain text, no bullets, no labels.
 ${isWellKnown ? 'Include company-specific benefits if you know them.' : 'Keep generic: Competitive salary, Health insurance, Learning & development, Flexible work arrangements, etc.'}
 
 ---SECTION---
 
-SECTION 4 — TAGS (comma-separated skills/technologies, 5-12 items):
-Relevant technical skills, tools, and domain expertise for this role.
-Example: Python, AWS, Microservices, REST APIs, SQL, Docker
+Fourth section (comma-separated skills/technologies, 5-12 items):
+Just the skills separated by commas. Example: Python, AWS, Microservices, REST APIs, SQL, Docker
 
-Return ONLY the 4 sections. No other text.`;
+Return ONLY the content for each section separated by ---SECTION---. No labels, no headers, no "Section 1" text.`;
   }
 
   /**
@@ -355,51 +353,49 @@ Return ONLY the 4 sections. No other text.`;
       tags: '',
     };
 
+    // Aggressively strip ALL section labels that AI might include
+    const stripSectionLabels = (text: string): string => {
+      return text
+        // Remove "SECTION X — LABEL:" or "SECTION X - LABEL" or "SECTION X: LABEL"
+        .replace(/^SECTION\s*\d+\s*[—–\-:]+\s*[A-Z ]+[:\s]*/gim, '')
+        // Remove standalone labels like "DESCRIPTION:", "RESPONSIBILITIES:", "BENEFITS:", "TAGS:"
+        .replace(/^(DESCRIPTION|RESPONSIBILITIES|KEY RESPONSIBILITIES|BENEFITS|BENEFITS OFFERED|TAGS|SKILLS|SKILLS & TECHNOLOGIES)[:\s]*/gim, '')
+        // Remove "First section", "Second section" etc.
+        .replace(/^(First|Second|Third|Fourth)\s+section[:\s]*/gim, '')
+        .trim();
+    };
+
     // Section 1 — Description (always present)
     if (sections[0]) {
-      result.description = sections[0]
-        .replace(/^SECTION\s*\d+[^:]*:\s*/i, '') // Remove "SECTION 1 — DESCRIPTION:" prefix
-        .replace(/^(Description|DESCRIPTION)[:\s]*/i, '')
-        .trim();
+      result.description = stripSectionLabels(sections[0]);
     }
 
     // Section 2 — Responsibilities
     if (sections[1]) {
-      const respText = sections[1]
-        .replace(/^SECTION\s*\d+[^:]*:\s*/i, '')
-        .replace(/^(Responsibilities|RESPONSIBILITIES|Key Responsibilities)[:\s]*/i, '')
-        .trim();
-      // Convert to newline-separated list (remove bullets/numbers if AI added them)
+      const respText = stripSectionLabels(sections[1]);
       result.responsibilities = respText
         .split('\n')
-        .map(line => line.replace(/^[•\-*\d.]+\s*/, '').trim())
+        .map(line => line.replace(/^[\u2022\-*]\s+/, '').replace(/^\d{1,2}[.):]\s+/, '').trim())
         .filter(line => line.length > 10)
         .join('\n');
     }
 
     // Section 3 — Benefits
     if (sections[2]) {
-      const benText = sections[2]
-        .replace(/^SECTION\s*\d+[^:]*:\s*/i, '')
-        .replace(/^(Benefits|BENEFITS|Benefits Offered)[:\s]*/i, '')
-        .trim();
+      const benText = stripSectionLabels(sections[2]);
       result.benefits = benText
         .split('\n')
-        .map(line => line.replace(/^[•\-*\d.]+\s*/, '').trim())
+        .map(line => line.replace(/^[\u2022\-*]\s+/, '').replace(/^\d{1,2}[.):]\s+/, '').trim())
         .filter(line => line.length > 5)
         .join('\n');
     }
 
     // Section 4 — Tags
     if (sections[3]) {
-      const tagsText = sections[3]
-        .replace(/^SECTION\s*\d+[^:]*:\s*/i, '')
-        .replace(/^(Tags|TAGS|Skills)[:\s]*/i, '')
-        .trim();
-      // Clean up tags: remove bullets, normalize commas
+      const tagsText = stripSectionLabels(sections[3]);
       result.tags = tagsText
         .split(/[,\n]/)
-        .map(t => t.replace(/^[•\-*\d.]+\s*/, '').trim())
+        .map(t => t.replace(/^[\u2022\-*]\s+/, '').replace(/^\d{1,2}[.):]\s+/, '').trim())
         .filter(t => t.length > 1 && t.length < 50)
         .slice(0, 12)
         .join(', ');
@@ -407,7 +403,7 @@ Return ONLY the 4 sections. No other text.`;
 
     // Fallback: if sections didn't parse, put everything in description
     if (!result.description && cleaned.length >= 200) {
-      result.description = cleaned;
+      result.description = stripSectionLabels(cleaned);
     }
 
     return result;
