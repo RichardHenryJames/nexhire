@@ -47,36 +47,38 @@ interface ScrapingResult {
 }
 
 export class JobScraperService {
-  // 🚀 OPTIMIZED CONFIG - Fits within 10-min Azure Consumption timeout
-  // Runs twice daily (2 AM + 2 PM UTC), so each run scrapes a manageable batch
+  // 🚀 OPTIMIZED CONFIG - Balanced for volume + 10-min Azure timeout
+  // Runs 4x daily, each run scrapes a large batch with content-based dedup
   private static config = {
     enabled: true,
-    maxJobsPerRun: 300, // ⬇️ Reduced from 1000 — fits 10-min timeout with delays
+    maxJobsPerRun: 600, // ⬆️ Increased — more terms + countries need higher cap
     sources: {
       remoteok: { 
         enabled: true, 
-        maxJobs: 50, // ⬇️ Reduced from 200
-        rateLimit: 1000 // ⬇️ Reduced from 2000 (1s between requests)
+        maxJobs: 150,
+        rateLimit: 1000
       },
       adzuna: { 
         enabled: true, 
-        maxJobsPerConfig: 25, // ⬇️ Reduced from 50 — fewer per country
-        maxTotalJobs: 200, // ⬇️ Reduced from 400
-        rateLimit: 1500 // ⬇️ Reduced from 3000
+        maxJobsPerConfig: 50, // Adzuna allows up to 50
+        maxTotalJobs: 800, // ⬆️ Increased — more terms + countries
+        maxPages: 2, // 2 pages per country/term combo (balance speed vs volume)
+        rateLimit: 1500
       },
       weworkremotely: { 
         enabled: true, 
-        maxJobsPerCategory: 10, // ⬇️ Reduced from 25
-        rateLimit: 1000 // ⬇️ Reduced from 1500
+        maxJobsPerCategory: 20, // ⬆️ Increased from 10
+        rateLimit: 1000
       },
       hackernews: { 
         enabled: true, 
-        maxJobs: 20, // ⬇️ Reduced from 30
-        rateLimit: 800 // ⬇️ Reduced from 1000
+        maxJobs: 50, // ⬆️ Increased from 20
+        rateLimit: 800
       }
     },
-    excludeKeywords: ['adult', 'gambling', 'crypto scam', 'mlm', 'pyramid'],
-    excludeCompanies: ['Turing'] // Company blacklist - jobs from these companies will be skipped
+    excludeKeywords: ['adult', 'gambling', 'crypto scam', 'mlm', 'pyramid', 'work from home typing', 'earn money online', 'part time home based'],
+    // Company blacklist is centralized in src/data/blocked-marketplaces.ts (single source of truth)
+    excludeCompanies: [] as string[],
   };
 
   // 🎭 ENHANCED USER AGENTS - MORE REALISTIC PATTERNS
@@ -374,11 +376,51 @@ export class JobScraperService {
       const { appId, appKey } = apiKeys;
       let totalProcessed = 0;
       
-      // 🎯 OPTIMIZED: Focus on top 2 search terms for speed
-      const prioritySearchTerms = ['software engineer', 'developer'];
-      
-      // 🎯 OPTIMIZED: Focus on high-priority countries only (US, India)
-      const priorityConfigs = this.adzunaConfigs.filter(c => c.priority === 'high');
+      // 🎯 COMPREHENSIVE: All major job categories defined here
+      // Each run ROTATES through a subset to stay within API rate limits
+      // 4 runs/day × 8 terms/run for high = all 32 terms covered every day
+      const allSearchTerms = [
+        // Core Engineering (high demand for freshers & experienced)
+        'software engineer', 'developer', 'full stack developer', 'frontend developer', 'backend developer',
+        'mobile developer', 'java developer', 'python developer', 'react developer', 'node js developer',
+        // Infrastructure & DevOps
+        'data engineer', 'devops engineer', 'cloud engineer', 'site reliability engineer', 'platform engineer',
+        // Data & AI (very high fresher demand)
+        'data scientist', 'data analyst', 'machine learning engineer', 'artificial intelligence',
+        // QA & Security
+        'qa engineer', 'automation tester', 'cybersecurity analyst',
+        // Product & Design
+        'product manager', 'ui ux designer', 'graphic designer', 'business analyst',
+        // Management
+        'engineering manager', 'project manager', 'scrum master',
+        // Non-tech (expanding user base)
+        'financial analyst', 'marketing manager', 'human resources', 'content writer',
+        // Fresher-specific high-demand roles
+        'trainee', 'graduate engineer', 'associate software engineer', 'junior developer',
+      ];
+
+      // 🔄 ROTATION: Use hour-of-day to pick which terms to use this run
+      // This ensures all terms get coverage across 4 daily runs without hitting rate limits
+      const currentHour = new Date().getUTCHours();
+      const rotationIndex = Math.floor(currentHour / 6); // 0-3 based on which 6-hr block
+      const termsPerRunHigh = 8; // 8 terms per high-priority country per run
+      const termsPerRunMedium = 4; // 4 terms per medium-priority country per run
+
+      const getRotatedTerms = (count: number) => {
+        const start = (rotationIndex * count) % allSearchTerms.length;
+        const terms: string[] = [];
+        for (let j = 0; j < count; j++) {
+          terms.push(allSearchTerms[(start + j) % allSearchTerms.length]);
+        }
+        return terms;
+      };
+
+      const termsHigh = getRotatedTerms(termsPerRunHigh);
+      const termsMedium = getRotatedTerms(termsPerRunMedium);
+      console.log(`🔄 Adzuna rotation ${rotationIndex}: High=[${termsHigh.slice(0,3).join(', ')}...], Medium=[${termsMedium.join(', ')}]`);
+
+      // 🎯 Include high + medium priority countries (US, India, Canada, UK, Australia, Singapore)
+      const priorityConfigs = this.adzunaConfigs.filter(c => c.priority === 'high' || c.priority === 'medium');
       
       for (const config of priorityConfigs) {
         if (totalProcessed >= this.config.sources.adzuna.maxTotalJobs) {
@@ -386,13 +428,18 @@ export class JobScraperService {
           break;
         }
 
-        const searchTermsToUse = config.priority === 'high' ? 2 : 1;
+        // High-priority countries get more terms, medium gets fewer
+        const termsForCountry = config.priority === 'high' ? termsHigh : termsMedium;
+        const searchTermsToUse = termsForCountry.length;
         
         for (let i = 0; i < searchTermsToUse && totalProcessed < this.config.sources.adzuna.maxTotalJobs; i++) {
-          const searchTerm = prioritySearchTerms[i % prioritySearchTerms.length];
+          const searchTerm = termsForCountry[i % termsForCountry.length];
           
+          // 🆕 PAGINATION: Fetch multiple pages per country/term
+          const maxPages = (this.config.sources.adzuna as any).maxPages || 1;
+          for (let page = 1; page <= maxPages && totalProcessed < this.config.sources.adzuna.maxTotalJobs; page++) {
           try {
-            const apiUrl = `https://api.adzuna.com/v1/api/jobs/${config.country}/search/1`;
+            const apiUrl = `https://api.adzuna.com/v1/api/jobs/${config.country}/search/${page}`;
             const params = {
               app_id: appId,
               app_key: appKey,
@@ -401,7 +448,7 @@ export class JobScraperService {
               sort_by: 'date',
             };
 
-            console.log(`🔍 Adzuna: ${config.country.toUpperCase()}/${searchTerm}`);
+            console.log(`🔍 Adzuna: ${config.country.toUpperCase()}/${searchTerm} (page ${page})`);
             
             const response = await this.makeStealthRequest(apiUrl, { 
               params,
@@ -466,6 +513,7 @@ export class JobScraperService {
               return jobs;  // Return what we have instead of waiting
             }
           }
+          } // end page loop
         }
       }
       
@@ -491,6 +539,10 @@ export class JobScraperService {
         { category: 'programming', url: 'https://weworkremotely.com/categories/remote-programming-jobs.rss' },
         { category: 'product', url: 'https://weworkremotely.com/categories/remote-product-jobs.rss' },
         { category: 'design', url: 'https://weworkremotely.com/categories/remote-design-jobs.rss' },
+        { category: 'devops-sysadmin', url: 'https://weworkremotely.com/categories/remote-devops-sysadmin-jobs.rss' },
+        { category: 'customer-support', url: 'https://weworkremotely.com/categories/remote-customer-support-jobs.rss' },
+        { category: 'sales-marketing', url: 'https://weworkremotely.com/categories/remote-sales-marketing-jobs.rss' },
+        { category: 'management-finance', url: 'https://weworkremotely.com/categories/remote-management-finance-jobs.rss' },
       ];
       
       for (const feed of rssFeeds) {
@@ -2889,17 +2941,9 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       seenInBatch.add(fingerprint);
       if (existingFingerprints) existingFingerprints.add(fingerprint); // Prevent further dupes in this run
 
-      // Company blacklist filtering (case-insensitive)
-      const normalizedCompany = job.company.toLowerCase().trim();
-      const isBlacklisted = this.config.excludeCompanies.some(blacklistedCompany => {
-        const normalizedBlacklisted = blacklistedCompany.toLowerCase().trim();
-        // Exact match or company name contains blacklisted name
-        return normalizedCompany === normalizedBlacklisted || 
-               normalizedCompany.includes(normalizedBlacklisted);
-      });
-      
-      if (isBlacklisted) {
-        console.log(`⛔ Skipping job from blacklisted company: ${job.company} - "${job.title}"`);
+      // Company blacklist — single source of truth in src/data/blocked-marketplaces.ts
+      const { isBlockedMarketplace } = require('../data/blocked-marketplaces');
+      if (isBlockedMarketplace(job.company)) {
         return false;
       }
 

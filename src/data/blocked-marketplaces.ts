@@ -71,6 +71,34 @@ export const BLOCKED_MARKETPLACE_COMPANIES = [
   'dice',
   'ladders',
   'snagajob',
+
+  // ── Staffing agencies (repost client jobs with hidden company) ──
+  'harnham',
+  'talentify',
+  'jobot',
+  'cybercoders',
+  'staffing technologies',
+  'teksystems',
+  'insight global',
+  'robert half',
+  'randstad',
+  'adecco',
+  'kelly services',
+  'kforce',
+  'apex systems',
+
+  // ── Indian mass-recruiters (low-quality/duplicate listings) ──
+  'quess corp',
+  'teamlease',
+  'genius consultants',
+
+  // ── Placeholder / fake names ────────────────────────
+  'confidential',
+  'undisclosed',
+  'anonymous',
+  'test company',
+  'demo company',
+  'sample corp',
 ];
 
 /**

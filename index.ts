@@ -3896,7 +3896,7 @@ app.http("admin-update-career-application", {
 // ========================================================================
 
 app.timer("jobScraperTimer", {
-  schedule: "0 0 2,14 * * *", // Twice daily: 2:00 AM UTC (7:30 AM IST) + 2:00 PM UTC (7:30 PM IST)
+  schedule: "0 0 2,8,14,20 * * *", // 4x daily: 2 AM, 8 AM, 2 PM, 8 PM UTC
   handler: async (myTimer: Timer, context: InvocationContext) => {
     // Skip scraping on dev/staging — only run on production
     const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
