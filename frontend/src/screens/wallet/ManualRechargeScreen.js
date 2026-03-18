@@ -180,8 +180,12 @@ const ManualRechargeScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const { pricing } = usePricing();
   const { isMobile } = useResponsive();
-  const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState({
+    minAmount: 100,
+    maxAmount: 50000,
+    processingTime: '1 business day',
+  });
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [showFaqModal, setShowFaqModal] = useState(false);
   const [showQrFullscreen, setShowQrFullscreen] = useState(false);
@@ -218,7 +222,6 @@ const ManualRechargeScreen = ({ navigation, route }) => {
 
   const loadData = async () => {
     try {
-      setLoading(true);
       const [settingsRes, packsRes] = await Promise.all([
         refopenAPI.getManualPaymentSettings(),
         refopenAPI.getBonusPacks(),
@@ -238,8 +241,6 @@ const ManualRechargeScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

@@ -66,9 +66,13 @@ const BonusPercentBadge = ({ percent }) => {
 
 const SubmitPaymentScreen = ({ navigation }) => {
   const { colors } = useTheme();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState({
+    minAmount: 100,
+    maxAmount: 50000,
+    processingTime: '1 business day',
+  });
   const [submissions, setSubmissions] = useState([]);
 
   // Packs & Promo
@@ -91,7 +95,7 @@ const SubmitPaymentScreen = ({ navigation }) => {
 
   const loadData = async () => {
     try {
-      setLoading(true);
+      // Load all data in parallel without blocking the UI
       const [settingsRes, submissionsRes, packsRes] = await Promise.all([
         refopenAPI.getManualPaymentSettings(),
         refopenAPI.getMyManualPaymentSubmissions(),
@@ -102,8 +106,6 @@ const SubmitPaymentScreen = ({ navigation }) => {
       if (packsRes?.success) setBonusPacks(packsRes.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
     }
   };
 

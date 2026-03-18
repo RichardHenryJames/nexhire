@@ -2885,14 +2885,25 @@ if (!resumeId) {
   // ========================================
 
   /**
-   * Get active bonus packs for wallet recharge
+   * Get active bonus packs for wallet recharge (cached 5 min)
    */
+  _bonusPacksCache = null;
+  _bonusPacksCacheTime = 0;
   async getBonusPacks() {
     try {
-      return await this.apiCall('/wallet/bonus-packs');
+      const now = Date.now();
+      if (this._bonusPacksCache && now - this._bonusPacksCacheTime < 300000) {
+        return this._bonusPacksCache;
+      }
+      const result = await this.apiCall('/wallet/bonus-packs');
+      if (result?.success) {
+        this._bonusPacksCache = result;
+        this._bonusPacksCacheTime = now;
+      }
+      return result;
     } catch (error) {
       console.error('Failed to get bonus packs:', error);
-      return { success: false, data: [] };
+      return this._bonusPacksCache || { success: false, data: [] };
     }
   }
 
@@ -2928,29 +2939,30 @@ if (!resumeId) {
   }
 
   /**
-   * Get manual payment settings (bank/UPI details)
+   * Get manual payment settings (bank/UPI details) — cached 5 min
    */
+  _paymentSettingsCache = null;
+  _paymentSettingsCacheTime = 0;
   async getManualPaymentSettings() {
     try {
-      return await this.apiCall('/manual-payment/settings');
+      const now = Date.now();
+      if (this._paymentSettingsCache && now - this._paymentSettingsCacheTime < 300000) {
+        return this._paymentSettingsCache;
+      }
+      const result = await this.apiCall('/manual-payment/settings');
+      if (result?.success) {
+        this._paymentSettingsCache = result;
+        this._paymentSettingsCacheTime = now;
+      }
+      return result;
     } catch (error) {
       console.error('Failed to get manual payment settings:', error);
-      // Return default settings if API fails
-      return {
+      return this._paymentSettingsCache || {
         success: true,
         data: {
-          upiId: 'refopen@ybl',
-          upiName: 'RefOpen Technologies',
-          bankName: 'HDFC Bank',
-          bankAccountName: 'RefOpen Technologies Pvt Ltd',
-          bankAccountNumber: '50200012345678',
-          bankIfsc: 'HDFC0001234',
-          bankBranch: 'Mumbai Main Branch',
           minAmount: 100,
           maxAmount: 50000,
           processingTime: '1 business day',
-          supportContact: 'Contact Support via Help & Support',
-          supportPhone: ''
         }
       };
     }
