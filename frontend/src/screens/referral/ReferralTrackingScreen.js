@@ -69,8 +69,9 @@ export default function ReferralTrackingScreen() {
   const [childReferrals, setChildReferrals] = useState([]);
   const [verifyChildTarget, setVerifyChildTarget] = useState(null); // { requestId, child }
 
-  // Only allow withdrawal if no referrer has acted on it yet
-  const canWithdraw = ['Pending', 'NotifiedToReferrers'].includes(currentStatus) && childReferrals.length === 0;
+  // Allow withdrawal if no proof has been submitted yet and no active children
+  const activeChildren = childReferrals.filter(c => !['Cancelled', 'Expired'].includes(c.Status));
+  const canWithdraw = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(currentStatus) && activeChildren.length === 0;
   
   // Allow converting to open for any in-progress non-open request
   const canConvertToOpen = !request?.OpenToAnyCompany && ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(currentStatus);

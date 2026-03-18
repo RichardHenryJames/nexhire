@@ -371,12 +371,13 @@ export default function MyReferralRequestsScreen({ route }) {
         onPress={() => handleViewTracking(request)}
         activeOpacity={0.7}
       >
+        {/* Main row: Logo + Info + Chevron */}
         <View style={styles.requestHeader}>
           {/* Company Logo */}
           <View style={styles.logoContainer}>
             {isOpenToAny ? (
-              <View style={[styles.logoPlaceholder, { backgroundColor: colors.primary + '20' }]}>
-                <Ionicons name="globe-outline" size={20} color={colors.primary} />
+              <View style={[styles.logoPlaceholder, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="globe-outline" size={22} color={colors.primary} />
               </View>
             ) : request.OrganizationLogo ? (
               <Image
@@ -391,90 +392,71 @@ export default function MyReferralRequestsScreen({ route }) {
             )}
           </View>
 
+          {/* Info */}
           <View style={styles.requestInfo}>
-            <Text style={styles.companyNamePrimary} numberOfLines={1}>
+            <Text style={styles.jobTitlePrimary} numberOfLines={1}>
+              {request.JobTitle || 'Job Title'}
+            </Text>
+            <Text style={styles.companyNameSecondary} numberOfLines={1}>
               {companyName}
             </Text>
+            <Text style={styles.timeAgo}>
+              {getRelativeTime(request.RequestedAt)}
+            </Text>
+          </View>
 
-            <View style={styles.forJobRow}>
-              <Text style={styles.forJobText}>for </Text>
-              <Text style={styles.jobTitleBold} numberOfLines={1}>
-                {request.JobTitle || 'Job Title'}
-              </Text>
-            </View>
+          {/* Chevron */}
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
+        </View>
 
-            <View style={styles.metaRow}>
-              <Text style={styles.timeAgo}>
-                {getRelativeTime(request.RequestedAt)}
-              </Text>
-            </View>
-
-            {/* CTA for expiring non-open requests */}
+        {/* Contextual badges */}
+        {(isExpiringSoon(request) || (request.ChildReferralCount > 0) || (request.OpenToAnyCompany && request.MinSalary)) && (
+          <View style={styles.badgeRow}>
             {isExpiringSoon(request) && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                <Ionicons name="flash-outline" size={13} color={colors.warning} />
-                <Text style={{ fontSize: 11, color: colors.warning, fontWeight: '600' }}>
-                  No referrer yet? Tap to convert to Open →
+              <View style={[styles.badge, { backgroundColor: colors.warning + '15' }]}>
+                <Ionicons name="flash" size={12} color={colors.warning} />
+                <Text style={[styles.badgeText, { color: colors.warning }]}>Convert to Open</Text>
+              </View>
+            )}
+            {request.ChildReferralCount > 0 && (
+              <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
+                <Ionicons name="checkmark-circle" size={12} color={colors.success} />
+                <Text style={[styles.badgeText, { color: colors.success }]}>
+                  {request.ChildReferralCount} referral{request.ChildReferralCount > 1 ? 's' : ''}
                 </Text>
               </View>
             )}
-
             {request.OpenToAnyCompany && request.MinSalary ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <Ionicons name="cash-outline" size={12} color={colors.success} style={{ marginRight: 4 }} />
-                <Text style={{ color: colors.success, fontSize: 12, fontWeight: '500' }}>
+              <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
+                <Ionicons name="cash-outline" size={12} color={colors.success} />
+                <Text style={[styles.badgeText, { color: colors.success }]}>
                   Min {request.SalaryCurrency === 'USD' ? '$' : '₹'}{request.MinSalary?.toLocaleString()}{request.SalaryPeriod === 'Annual' ? '/yr' : '/mo'}
                 </Text>
               </View>
             ) : null}
-
-            {/* Child referral count badge */}
-            {request.ChildReferralCount > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.success }}>
-                  {request.ChildReferralCount} referral{request.ChildReferralCount > 1 ? 's' : ''} received
-                </Text>
-              </View>
-            )}
           </View>
+        )}
 
-          {/* Status icon - top right */}
-          <View
-            style={[styles.statusIconBtn, { backgroundColor: getStatusColor(request.Status) + '18' }]}
-          >
-            <Ionicons
-              name={getStatusIcon(request.Status)}
-              size={16}
-              color={getStatusColor(request.Status)}
-            />
-          </View>
-        </View>
-
-        {/* Action hint — only when there's something to verify */}
+        {/* Action hint — verify referral */}
         {(request.Status === 'Completed' || request.Status === 'ProofUploaded') &&
          (!request.OpenToAnyCompany || (request.PendingVerificationCount || 0) > 0) && (
           request.OpenToAnyCompany ? (
-            // Open-to-any: guide user to go inside to verify individual referrals
-            <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.warning + '12', alignSelf: 'flex-end' }}
-            >
-              <Ionicons name="alert-circle" size={15} color={colors.warning} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>
+            <View style={styles.actionHint}>
+              <Ionicons name="alert-circle" size={14} color={colors.warning} />
+              <Text style={styles.actionHintText}>
                 {request.PendingVerificationCount} referral{request.PendingVerificationCount > 1 ? 's' : ''} to verify
               </Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.warning} />
+              <Ionicons name="chevron-forward" size={13} color={colors.warning} />
             </View>
           ) : (
-            // Targeted: verify directly
             <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.warning + '12', alignSelf: 'flex-end' }}
+              style={styles.actionHint}
               onPress={(e) => { e.stopPropagation?.(); handleVerifyReferral(request.RequestID); }}
               activeOpacity={0.7}
             >
-              <Ionicons name="alert-circle" size={15} color={colors.warning} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>Verify Referral</Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.warning} />
+              <Ionicons name="alert-circle" size={14} color={colors.warning} />
+              <Text style={styles.actionHintText}>Verify Referral</Text>
+              <Ionicons name="chevron-forward" size={13} color={colors.warning} />
             </TouchableOpacity>
           )
         )}
@@ -717,96 +699,89 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
 
   requestCard: {
     backgroundColor: colors.surface,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray200 || colors.border,
+    borderRadius: 14,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   requestHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 12,
   },
-  statusIconBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  logoContainer: {
-    marginTop: 2,
-  },
+  logoContainer: {},
   companyLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: colors.gray100,
   },
   logoPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoInitials: {
-    fontSize: 15,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.white,
   },
   requestInfo: {
     flex: 1,
+    gap: 2,
   },
-  companyNamePrimary: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+  jobTitlePrimary: {
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 4,
   },
-  forJobRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    marginBottom: 4,
-    gap: 4,
-  },
-  forJobText: {
-    fontSize: typography.sizes.sm,
+  companyNameSecondary: {
+    fontSize: 13,
     color: colors.textSecondary,
-  },
-  jobTitleBold: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.bold,
-    color: colors.primary,
-    flexShrink: 1,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    gap: 6,
-  },
-  jobTypePill: {
-    fontSize: typography.sizes.xs,
-    fontWeight: typography.weights.semibold,
-  },
-  metaDot: {
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
+    fontWeight: '500',
   },
   timeAgo: {
-    fontSize: typography.sizes.xs,
+    fontSize: 12,
     color: colors.textMuted,
   },
-  bottomRow: {
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+    marginLeft: 56,
+  },
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    marginTop: 6,
-    marginLeft: 52,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  actionHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: colors.warning + '12',
+    alignSelf: 'flex-end',
+  },
+  actionHintText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.warning,
   },
   statusPill: {
     flexDirection: 'row',

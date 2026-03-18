@@ -1967,8 +1967,8 @@ export class ReferralService {
             }
             const request = result.recordset[0];
             
-            // Only allow cancellation if no referrer has acted on it
-            const cancellableStatuses = ['Pending', 'NotifiedToReferrers'];
+            // Allow cancellation if no proof has been submitted yet
+            const cancellableStatuses = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
             if (!cancellableStatuses.includes(request.Status)) {
                 throw new ValidationError(`Cannot cancel request with status '${request.Status}'. Only pending requests can be cancelled.`);
             }
