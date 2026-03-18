@@ -22,7 +22,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import VerifyReferralModal from '../../components/modals/VerifyReferralModal';
 import useResponsive from '../../hooks/useResponsive';
-import useWebInfiniteScroll from '../../hooks/useWebInfiniteScroll';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 
@@ -35,10 +34,7 @@ export default function MyReferralRequestsScreen({ route }) {
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [myRequests, setMyRequests] = useState([]);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 10, hasMore: true });
-  const isLoadingMoreRef = useRef(false);
 
   const [showProofViewer, setShowProofViewer] = useState(false);
   const [viewingProof, setViewingProof] = useState(null);
@@ -87,21 +83,16 @@ export default function MyReferralRequestsScreen({ route }) {
     }, [user])
   );
 
+  // Load ALL requests in one call (no pagination — max ~50 per user)
   const loadMyRequests = async () => {
     if (!user) return;
-
     setLoading(true);
     try {
-      const result = await refopenAPI.getMyReferralRequests(1, pagination.pageSize);
+      const result = await refopenAPI.getMyReferralRequests(1, 500);
       if (result.success) {
-        const requests = result.data?.requests || [];
-        setMyRequests(requests);
-        const total = result.data?.total || result.total || 0;
-        const hasMore = requests.length === pagination.pageSize && requests.length < total;
-        setPagination(prev => ({ ...prev, page: 1, hasMore }));
+        setMyRequests(result.data?.requests || []);
       } else {
         setMyRequests([]);
-        setPagination(prev => ({ ...prev, hasMore: false }));
       }
     } catch (error) {
       console.error('Error loading my referral requests:', error);
@@ -117,87 +108,22 @@ export default function MyReferralRequestsScreen({ route }) {
     if (loading || hasAutoSelected.current || myRequests.length === 0) return;
     if (route?.params?.initialTab) { hasAutoSelected.current = true; return; }
     hasAutoSelected.current = true;
-    // Match the same logic as actionRequests filter
     const ACTION_CHECK = ['ProofUploaded', 'Completed'];
     const hasAction = myRequests.some(r =>
       (ACTION_CHECK.includes(r.Status) && !r.OpenToAnyCompany) ||
       (ACTION_CHECK.includes(r.Status) && r.OpenToAnyCompany && (r.PendingVerificationCount || 0) > 0)
     );
-    if (hasAction) {
-      setActiveTab('action');
-    } else {
-      setActiveTab('progress');
-    }
+    setActiveTab(hasAction ? 'action' : 'progress');
   }, [loading, myRequests]);
-
-  // Load more referral requests (next page)
-  const loadMoreRequests = useCallback(async () => {
-    if (loading || loadingMore || !pagination.hasMore) return;
-    if (isLoadingMoreRef.current) return;
-
-    const nextPage = pagination.page + 1;
-    try {
-      isLoadingMoreRef.current = true;
-      setLoadingMore(true);
-      const result = await refopenAPI.getMyReferralRequests(nextPage, pagination.pageSize);
-      if (result.success) {
-        const newRequests = result.data?.requests || [];
-        if (newRequests.length > 0) {
-          setMyRequests(prev => [...prev, ...newRequests]);
-        }
-        const hasMore = newRequests.length === pagination.pageSize;
-        setPagination(prev => ({ ...prev, page: nextPage, hasMore }));
-      }
-    } catch (error) {
-      console.error('Error loading more referral requests:', error);
-    } finally {
-      setLoadingMore(false);
-      isLoadingMoreRef.current = false;
-    }
-  }, [loading, loadingMore, pagination]);
-
-  // Infinite scroll handler
-  const onScrollNearEnd = useCallback((e) => {
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent || {};
-    if (!contentOffset || !contentSize || !layoutMeasurement) return;
-    if (loading || loadingMore || !pagination.hasMore) return;
-    const threshold = 160;
-    const isNearEnd = contentOffset.y + layoutMeasurement.height >= contentSize.height - threshold;
-    if (isNearEnd) {
-      loadMoreRequests();
-    }
-  }, [loading, loadingMore, pagination.hasMore, loadMoreRequests]);
-
-  // Web infinite scroll: IntersectionObserver watches sentinel at bottom of list
-  const webSentinelRef = useWebInfiniteScroll({
-    loading,
-    loadingMore,
-    hasMore: pagination.hasMore,
-    loadMore: loadMoreRequests,
-  });
-
-  // Auto-load more if content doesn't fill the viewport after initial load
-  useEffect(() => {
-    if (!loading && !loadingMore && pagination.hasMore && myRequests.length > 0 && myRequests.length <= pagination.pageSize) {
-      // Small delay to let layout settle
-      const timer = setTimeout(() => {
-        if (pagination.hasMore && !isLoadingMoreRef.current) {
-          loadMoreRequests();
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, myRequests.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setPagination(prev => ({ ...prev, page: 1, hasMore: true }));
     await loadMyRequests();
     setRefreshing(false);
   };
 
   // Split requests into 3 categories: Action Needed / In Progress / Closed
-  const ACTION_STATUSES = ['ProofUploaded', 'Completed']; // Seeker needs to verify
+  const ACTION_STATUSES = ['ProofUploaded', 'Completed'];
   const IN_PROGRESS_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
   const CLOSED_STATUSES = ['Verified', 'Unverified', 'Refunded', 'Cancelled', 'Expired'];
 
@@ -608,8 +534,7 @@ export default function MyReferralRequestsScreen({ route }) {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
-          onScroll={onScrollNearEnd}
-          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -671,15 +596,6 @@ export default function MyReferralRequestsScreen({ route }) {
             })()
           ) : (
             filteredRequests.map(renderMyRequestCard)
-          )}
-          {loadingMore && (
-            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-              <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={{ marginTop: 8, color: colors.textSecondary, fontSize: 14 }}>Loading more requests...</Text>
-            </View>
-          )}
-          {Platform.OS === 'web' && pagination.hasMore && (
-            <View ref={webSentinelRef} style={{ height: 1, width: '100%' }} />
           )}
           </>
         )}
