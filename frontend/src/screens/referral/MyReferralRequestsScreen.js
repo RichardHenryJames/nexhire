@@ -153,38 +153,32 @@ export default function MyReferralRequestsScreen({ route }) {
     : activeTab === 'progress' ? progressRequests 
     : closedRequests;
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Unknown date';
-
+  // Relative time helper: "2 hours ago", "3 days ago", etc.
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return '';
+    const now = new Date();
     const date = new Date(dateString);
-    const dateOptions = {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    };
-    const timeOptions = {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    };
-
-    return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
   };
 
-  // Calculate remaining time from ExpiryTime
-  const getExpiryInfo = (request) => {
-    if (!['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(request.Status)) return null;
+  // Check if request is expiring soon (within 3 days) and has no referrer yet — show CTA to convert to open
+  const isExpiringSoon = (request) => {
+    if (!['Pending', 'NotifiedToReferrers', 'Viewed'].includes(request.Status)) return false;
+    if (request.OpenToAnyCompany) return false; // Already open — no action possible
     const expiryDate = request.ExpiryTime 
       ? new Date(request.ExpiryTime) 
-      : new Date(new Date(request.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000); // fallback 14 days
-    const now = new Date();
-    const diffMs = expiryDate - now;
-    if (diffMs <= 0) return { text: 'Expiring soon', color: colors.error };
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    if (diffDays > 3) return null; // Only show when 3 days or less remain
-    if (diffDays >= 1) return { text: `${diffDays}d ${diffHours}h left`, color: colors.warning };
-    return { text: `${diffHours}h left`, color: colors.error };
+      : new Date(new Date(request.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+    const diffMs = expiryDate - new Date();
+    return diffMs > 0 && diffMs <= 3 * 24 * 60 * 60 * 1000; // within 3 days
   };
 
   const getStatusColor = (status) => {
@@ -410,33 +404,20 @@ export default function MyReferralRequestsScreen({ route }) {
             </View>
 
             <View style={styles.metaRow}>
-              {isInternalJob && (
-                <>
-                  <Text style={[styles.jobTypePill, { color: colors.primary }]}>Internal</Text>
-                  <Text style={styles.metaDot}>•</Text>
-                </>
-              )}
-              {isExternalJob && (
-                <>
-                  <Text style={[styles.jobTypePill, { color: colors.accent }]}>External</Text>
-                  <Text style={styles.metaDot}>•</Text>
-                </>
-              )}
               <Text style={styles.timeAgo}>
-                {formatDate(request.RequestedAt)}
+                {getRelativeTime(request.RequestedAt)}
               </Text>
-              {(() => {
-                const expiry = getExpiryInfo(request);
-                if (!expiry) return null;
-                return (
-                  <>
-                    <Text style={styles.metaDot}>•</Text>
-                    <Ionicons name="timer-outline" size={12} color={expiry.color} />
-                    <Text style={{ fontSize: 11, color: expiry.color, fontWeight: '600', marginLeft: 2 }}>{expiry.text}</Text>
-                  </>
-                );
-              })()}
             </View>
+
+            {/* CTA for expiring non-open requests */}
+            {isExpiringSoon(request) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                <Ionicons name="flash-outline" size={13} color={colors.warning} />
+                <Text style={{ fontSize: 11, color: colors.warning, fontWeight: '600' }}>
+                  No referrer yet? Tap to convert to Open →
+                </Text>
+              </View>
+            )}
 
             {request.OpenToAnyCompany && request.MinSalary ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
@@ -470,28 +451,30 @@ export default function MyReferralRequestsScreen({ route }) {
           </View>
         </View>
 
-        {/* Verify button — only when there's something to verify */}
+        {/* Action hint — only when there's something to verify */}
         {(request.Status === 'Completed' || request.Status === 'ProofUploaded') &&
          (!request.OpenToAnyCompany || (request.PendingVerificationCount || 0) > 0) && (
           request.OpenToAnyCompany ? (
             // Open-to-any: guide user to go inside to verify individual referrals
             <View
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.primary + '10', borderWidth: 1, borderColor: colors.primary + '30', alignSelf: 'flex-end' }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.warning + '12', alignSelf: 'flex-end' }}
             >
-              <Ionicons name="arrow-forward-circle-outline" size={16} color={colors.primary} />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
-                {request.PendingVerificationCount} referral{request.PendingVerificationCount > 1 ? 's' : ''} to verify — tap to review
+              <Ionicons name="alert-circle" size={15} color={colors.warning} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>
+                {request.PendingVerificationCount} referral{request.PendingVerificationCount > 1 ? 's' : ''} to verify
               </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.warning} />
             </View>
           ) : (
             // Targeted: verify directly
             <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.success + '10', borderWidth: 1, borderColor: colors.success + '30', alignSelf: 'flex-end' }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: colors.warning + '12', alignSelf: 'flex-end' }}
               onPress={(e) => { e.stopPropagation?.(); handleVerifyReferral(request.RequestID); }}
               activeOpacity={0.7}
             >
-              <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.success }}>Verify Referral</Text>
+              <Ionicons name="alert-circle" size={15} color={colors.warning} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>Verify Referral</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.warning} />
             </TouchableOpacity>
           )
         )}

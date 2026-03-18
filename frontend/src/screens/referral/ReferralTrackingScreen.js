@@ -70,8 +70,10 @@ export default function ReferralTrackingScreen() {
   const [verifyChildTarget, setVerifyChildTarget] = useState(null); // { requestId, child }
 
   // Only allow withdrawal if no referrer has acted on it yet
-  // Block if: status is Completed/ProofUploaded, or if any children exist (open-to-any with referrals)
   const canWithdraw = ['Pending', 'NotifiedToReferrers'].includes(currentStatus) && childReferrals.length === 0;
+  
+  // Allow converting to open for any in-progress non-open request
+  const canConvertToOpen = !request?.OpenToAnyCompany && ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(currentStatus);
 
   // --- Message referrer button commented out ---
   // const handleMessageReferrer = async () => {
@@ -717,17 +719,19 @@ export default function ReferralTrackingScreen() {
       <SubScreenHeader 
         title="Referral Tracking" 
         onBack={() => navigation.navigate('MyReferralRequests', { initialTab: fromTab || 'action' })}
-        rightContent={isDesktopWeb && canWithdraw ? (
+        rightContent={isDesktopWeb && (canWithdraw || canConvertToOpen) ? (
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              style={[styles.withdrawActionBtn, { paddingVertical: 6, paddingHorizontal: 12 }]}
-              onPress={() => setShowWithdrawConfirm(true)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close-circle-outline" size={15} color={colors.white} />
-              <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Withdraw</Text>
-            </TouchableOpacity>
-            {!request?.OpenToAnyCompany && (
+            {canWithdraw && (
+              <TouchableOpacity
+                style={[styles.withdrawActionBtn, { paddingVertical: 6, paddingHorizontal: 12 }]}
+                onPress={() => setShowWithdrawConfirm(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle-outline" size={15} color={colors.white} />
+                <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Withdraw</Text>
+              </TouchableOpacity>
+            )}
+            {canConvertToOpen && (
               <TouchableOpacity
                 style={[styles.convertOpenBtn, { paddingVertical: 6, paddingHorizontal: 12 }]}
                 onPress={() => setShowConvertModal(true)}
@@ -742,17 +746,19 @@ export default function ReferralTrackingScreen() {
       />
 
       {/* Action buttons bar below header — mobile only */}
-      {!isDesktopWeb && canWithdraw && (
+      {!isDesktopWeb && (canWithdraw || canConvertToOpen) && (
         <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.withdrawActionBtn}
-            onPress={() => setShowWithdrawConfirm(true)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="close-circle-outline" size={18} color={colors.white} />
-            <Text style={styles.actionBtnText}>Withdraw</Text>
-          </TouchableOpacity>
-          {!request?.OpenToAnyCompany && (
+          {canWithdraw && (
+            <TouchableOpacity
+              style={styles.withdrawActionBtn}
+              onPress={() => setShowWithdrawConfirm(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close-circle-outline" size={18} color={colors.white} />
+              <Text style={styles.actionBtnText}>Withdraw</Text>
+            </TouchableOpacity>
+          )}
+          {canConvertToOpen && (
             <TouchableOpacity
               style={styles.convertOpenBtn}
               onPress={() => setShowConvertModal(true)}

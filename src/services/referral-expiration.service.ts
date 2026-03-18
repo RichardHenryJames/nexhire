@@ -63,8 +63,8 @@ export class ReferralExpirationService {
             ELSE o2.Name
           END as CompanyName
         FROM ReferralRequests rr
-        INNER JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
-        INNER JOIN Users u ON a.UserID = u.UserID
+        LEFT JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
+        LEFT JOIN Users u ON a.UserID = u.UserID
         LEFT JOIN Jobs j ON rr.JobID = j.JobID
         LEFT JOIN Organizations o1 ON j.OrganizationID = o1.OrganizationID
         LEFT JOIN Organizations o2 ON rr.OrganizationID = o2.OrganizationID
