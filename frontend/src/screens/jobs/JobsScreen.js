@@ -592,22 +592,18 @@ export default function JobsScreen({ navigation, route }) {
       }, 500); // Small delay to ensure screen is loaded
     }
 
-    // 🔧 NEW: Remove applied job from jobs list and refresh data
+    // 🔧 Mark applied job in the list (keep it visible with "Applied" badge)
     if (appliedJobId) {
-      // Remove from current jobs list immediately
-      setJobs(prev => {
-        const filtered = prev.filter(j => (j.JobID || j.id) !== appliedJobId);
-        return filtered;
-      });
-
-      // Add to applied IDs
+      // Mark as applied locally (JobCard will show "Applied" badge)
       setAppliedIds(prev => new Set([...prev, appliedJobId]));
 
-      // Trigger a full refresh to get updated data after a short delay
-      setTimeout(() => {
-        triggerReload(); // This will refresh the jobs list
-        refreshApplicationsData(); // This will refresh applications
-      }, 1000);
+      // Also update the HasApplied flag on the job object for consistency
+      setJobs(prev => prev.map(j => 
+        (j.JobID || j.id) === appliedJobId ? { ...j, HasApplied: 1 } : j
+      ));
+
+      // Refresh applications count
+      refreshApplicationsData();
     }
   }, [successMessage, appliedJobId, triggerReload, refreshApplicationsData]);
 
@@ -912,6 +908,15 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
               }
               
        setJobs(list);
+       // ✅ Seed appliedIds from HasApplied flag returned by API
+       const apiAppliedIds = list.filter(j => j.HasApplied === 1).map(j => j.JobID || j.id);
+       if (apiAppliedIds.length > 0) {
+         setAppliedIds(prev => {
+           const next = new Set(prev);
+           apiAppliedIds.forEach(id => next.add(id));
+           return next;
+         });
+       }
        // ⚡ Cache the initial unfiltered job list for instant next render
        if (!debouncedQuery && !isFiltersDirty(filters) && !filterF500) {
          setCache(CACHE_KEYS.JOBS_LIST, list);
@@ -1002,6 +1007,15 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     if (result.success) {
         const list = Array.isArray(result.data) ? result.data : [];
         setJobs(prev => [...prev, ...list]);
+        // ✅ Seed appliedIds from HasApplied flag for paginated results
+        const apiAppliedIds = list.filter(j => j.HasApplied === 1).map(j => j.JobID || j.id);
+        if (apiAppliedIds.length > 0) {
+          setAppliedIds(prev => {
+            const next = new Set(prev);
+            apiAppliedIds.forEach(id => next.add(id));
+            return next;
+          });
+        }
 
         const meta = result.meta || {};
         setPagination(prev => {
@@ -1173,8 +1187,13 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   // Add this helper (was missing, caused ReferenceError in browser)
   const removeSavedJobLocally = useCallback((jobId) => {
     if (!jobId) return;
-    setSavedIds(prev => { const next = new Set(prev ?? new Set()); next.delete(jobId); return next; });
-    setSavedCount(c => Math.max((c || 0) - 1, 0));
+    setSavedIds(prev => {
+      const next = new Set(prev ?? new Set());
+      if (!next.has(jobId)) return prev; // not saved — no-op
+      next.delete(jobId);
+      setSavedCount(c => Math.max((c || 0) - 1, 0));
+      return next;
+    });
   }, []);
 
   // Build summary string
@@ -1305,6 +1324,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       const isReferred = referredJobIds.has(jobKey);
       const isSaved = savedIds.has(jobKey);
       const isReferralRequesting = referralRequestingIds.has(jobKey); // NEW
+      const isApplied = job.HasApplied === 1 || appliedIds.has(jobKey);
 
       // Add job card - responsive width for grid layout
       elements.push(
@@ -1321,13 +1341,14 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 navigation.navigate('JobDetails', { jobId: job.JobID });
               }
             }}
-            onApply={() => handleApply(job)}
+            onApply={isApplied ? null : () => handleApply(job)}
             onAskReferral={isReferred || isReferralRequesting ? null : () => handleAskReferral(job)}
             onSave={() => handleSave(job)}
             onUnsave={() => handleUnsave(job)}
             savedContext={false}
             isReferred={isReferred}
             isSaved={isSaved}
+            isApplied={isApplied}
             isReferralRequesting={isReferralRequesting}
             currentUserId={user?.UserID}
           />
@@ -1488,19 +1509,14 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           setAppliedCount(c => (Number(c) || 0) + 1);
           // Always remove from saved locally (backend auto-removes later)
             removeSavedJobLocally(id);
-          setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+          // Mark as applied in list (show "Applied" badge instead of removing)
+          setJobs(prev => prev.map(j => (j.JobID || j.id) === id ? { ...j, HasApplied: 1 } : j));
           showToast('Application submitted successfully', 'success');
           invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
 
           // 🔧 FIXED: Reload primary resume after successful application
           primaryResumeLoadedRef.current = false; // Reset the loaded flag
           await loadPrimaryResume(); // Reload primary resume
-
-          // Only refresh applied count (lightweight)
-          try {
-            const appliedRes = await refopenAPI.getMyApplications(1, 1);
-            if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
-          } catch {}
         } else {
           showToast('Failed to submit application. Please try again.', 'error');
         }
@@ -1524,13 +1540,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
         setAppliedCount(c => (Number(c) || 0) + 1);
         removeSavedJobLocally(id); // ensure removal if it was saved
-        setJobs(prev => prev.filter(j => (j.JobID || j.id) !== id));
+        // Mark as applied in list (show "Applied" badge instead of removing)
+        setJobs(prev => prev.map(j => (j.JobID || j.id) === id ? { ...j, HasApplied: 1 } : j));
         showToast('Application submitted', 'success');
         invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
-        try {
-          const appliedRes = await refopenAPI.getMyApplications(1, 1);
-          if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
-        } catch {}
       } else {
         showToast('Failed to submit application. Please try again.', 'error');
       }
@@ -1971,7 +1984,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       {/* Job List Container with FAB */}
       <View style={{ flex: 1 }}>
         {/* Floating Action Button - Expandable */}
-        <View style={styles.fabContainerTop}>
+        <View style={styles.fabContainerTop} pointerEvents="box-none">
           {/* Main FAB Toggle - at top */}
           <TouchableOpacity
             style={[styles.fab, styles.fabMain]}
@@ -1989,7 +2002,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           </TouchableOpacity>
 
           {/* Child FAB 1: Saved Jobs */}
-          <Animated.View style={{
+          <Animated.View pointerEvents={fabOpen ? 'auto' : 'none'} style={{
             opacity: fabAnim,
             transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }, { scale: fabAnim }],
           }}>
@@ -2009,7 +2022,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           </Animated.View>
 
           {/* Child FAB 2: Applications */}
-          <Animated.View style={{
+          <Animated.View pointerEvents={fabOpen ? 'auto' : 'none'} style={{
             opacity: fabAnim,
             transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-15, 0] }) }, { scale: fabAnim }],
           }}>
@@ -2029,7 +2042,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           </Animated.View>
 
           {/* Child FAB 3: Referral Requests */}
-          <Animated.View style={{
+          <Animated.View pointerEvents={fabOpen ? 'auto' : 'none'} style={{
             opacity: fabAnim,
             transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: fabAnim }],
           }}>

@@ -74,6 +74,7 @@ export class AIJobRecommendationService {
         page: 1,
         pageSize: limit,
         excludeUserApplications: userId,
+        excludeAppliedJobs: true, // Internal service: exclude applied jobs (no HasApplied flag)
         ...filters
       };
       

@@ -201,7 +201,8 @@ export class JobService {
      */
     private static buildJobFilters(
         filters: any,
-        excludeUserApplications?: string
+        excludeUserApplications?: string,
+        options?: { excludeAppliedJobs?: boolean }
     ): { whereClause: string; queryParams: any[]; paramIndex: number } {
         const f = filters;
         let whereClause = "WHERE j.Status = 'Published'";
@@ -254,7 +255,9 @@ export class JobService {
         }
 
         // User-specific filtering to exclude applied jobs ONLY (not saved jobs)
-        if (excludeUserApplications) {
+        // Only exclude when explicitly requested (internal services like email/AI)
+        // User-facing APIs use LEFT JOIN + HasApplied flag instead
+        if (excludeUserApplications && options?.excludeAppliedJobs) {
             whereClause += ` AND NOT EXISTS (
                 SELECT 1 FROM JobApplications ja
                 INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
@@ -520,7 +523,7 @@ export class JobService {
 
     // Get all jobs with filtering and pagination (page-based only) - OPTIMIZED for performance
     static async getJobs(params: PaginationParams & QueryParams & any): Promise<{ jobs: Job[]; hasMore: boolean; nextCursor: any | null }> {
-        const { page, pageSize, excludeUserApplications } = params;
+        const { page, pageSize, excludeUserApplications, excludeAppliedJobs } = params;
         let { sortBy = 'PublishedAt', sortOrder = 'desc', search, filters } = params as any;
         const f = { ...(filters || {}), ...params } as any;
 
@@ -537,7 +540,9 @@ export class JobService {
         const normalizedOrder = (sortOrder || 'desc').toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
         // 🚀 Use shared filter builder to avoid duplication
-        let { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
+        // excludeAppliedJobs=true: internal services (email/AI) keep old NOT EXISTS behavior
+        // excludeAppliedJobs=falsy: user-facing API returns HasApplied flag via LEFT JOIN
+        let { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications, { excludeAppliedJobs: !!excludeAppliedJobs });
         let paramIndex = currentParamIndex;
 
         // NOTE: We intentionally do not run COUNT(*) for perf.
@@ -614,6 +619,24 @@ export class JobService {
         // Workplace type ordering: Remote (444) > Hybrid (442) > Onsite (443)
         const workplaceOrderSql = `CASE j.WorkplaceTypeID WHEN 444 THEN 1 WHEN 442 THEN 2 WHEN 443 THEN 3 ELSE 4 END`;
 
+        // HasApplied: For user-facing APIs (no excludeAppliedJobs), add LEFT JOIN to flag applied jobs
+        const includeHasApplied = !!excludeUserApplications && !excludeAppliedJobs;
+        let hasAppliedJoin = '';
+        let hasAppliedColumn = '';
+        if (includeHasApplied) {
+            hasAppliedJoin = `
+            LEFT JOIN (
+                SELECT ja.JobID
+                FROM JobApplications ja
+                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+                WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6
+            ) ua ON ua.JobID = j.JobID`;
+            hasAppliedColumn = `,
+                CASE WHEN ua.JobID IS NOT NULL THEN 1 ELSE 0 END AS HasApplied`;
+            dataParams.push(excludeUserApplications);
+            paramIndex++;
+        }
+
         // 🚀 OPTIMIZATION: Select ONLY columns needed for JobCard display (removed unused columns)
         // When useRoleTitleScore: skip CTEs, include o.Size for JS-side preference scoring
         let dataQuery: string;
@@ -633,11 +656,11 @@ export class JobService {
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
                 ISNULL(o.Size, '') as OrganizationSize,
-                ISNULL(o.Tier, 'Standard') as OrganizationTier
+                ISNULL(o.Tier, 'Standard') as OrganizationTier${hasAppliedColumn}
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+            LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'${hasAppliedJoin}
             ${whereClause}
         `;
         } else {
@@ -652,11 +675,11 @@ export class JobService {
                 wt.Value as WorkplaceTypeName,
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
-                ISNULL(o.Tier, 'Standard') as OrganizationTier
+                ISNULL(o.Tier, 'Standard') as OrganizationTier${hasAppliedColumn}
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
             INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+            LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'${hasAppliedJoin}
             ${whereClause}
         `;
         }
@@ -1221,11 +1244,13 @@ export class JobService {
      */
     static async searchJobs(searchParams: any): Promise<{ jobs: Job[]; hasMore: boolean; nextCursor: any | null }> {
         try {
-            const { page = 1, pageSize = 20, excludeUserApplications, ...rest } = searchParams || {};
+            const { page = 1, pageSize = 20, excludeUserApplications, excludeAppliedJobs, ...rest } = searchParams || {};
             const f = { ...rest } as any;
             
             // 🚀 Use shared filter builder to avoid duplication
-            const { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications);
+            // excludeAppliedJobs=true: internal services keep old NOT EXISTS behavior
+            // excludeAppliedJobs=falsy: user-facing API returns HasApplied flag via LEFT JOIN
+            const { whereClause, queryParams, paramIndex: currentParamIndex } = this.buildJobFilters(f, excludeUserApplications, { excludeAppliedJobs: !!excludeAppliedJobs });
             let paramIndex = currentParamIndex;
 
             // NOTE: We intentionally do not run COUNT(*) for perf.
@@ -1269,6 +1294,24 @@ export class JobService {
             const hasRoleTitle = combinedTitles.length > 0;
             const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
+            // HasApplied: For user-facing APIs (no excludeAppliedJobs), add LEFT JOIN to flag applied jobs
+            const includeHasApplied = !!excludeUserApplications && !excludeAppliedJobs;
+            let hasAppliedJoin = '';
+            let hasAppliedColumn = '';
+            if (includeHasApplied) {
+                hasAppliedJoin = `
+                LEFT JOIN (
+                    SELECT ja.JobID
+                    FROM JobApplications ja
+                    INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
+                    WHERE a.UserID = @param${paramIndex} AND ja.StatusID != 6
+                ) ua ON ua.JobID = j.JobID`;
+                hasAppliedColumn = `,
+                    CASE WHEN ua.JobID IS NOT NULL THEN 1 ELSE 0 END AS HasApplied`;
+                dataParams.push(excludeUserApplications);
+                paramIndex++;
+            }
+
             // 🚀 OPTIMIZATION: Select ONLY columns needed for JobCard display (removed unused columns)
             const dataStartTime = Date.now();
             let dataQuery = `${personalizationCtes}
@@ -1282,12 +1325,12 @@ export class JobService {
                     wt.Value as WorkplaceTypeName,
                     o.Name as OrganizationName,
                     ISNULL(o.LogoURL, '') as OrganizationLogo,
-                    ISNULL(o.Tier, 'Standard') as OrganizationTier
+                    ISNULL(o.Tier, 'Standard') as OrganizationTier${hasAppliedColumn}
                     ${useRoleTitleScore ? `, ${preferenceScoreSql} AS _prefScore` : ''}
                 FROM Jobs j
                 INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
                 INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'${hasAppliedJoin}
                 ${whereClause}
             `;
 

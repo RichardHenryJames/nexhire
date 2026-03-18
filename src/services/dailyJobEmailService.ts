@@ -104,7 +104,8 @@ export class DailyJobEmailService {
                 sortBy: 'PublishedAt',
                 sortOrder: 'desc',
                 status: 'Published',
-                excludeUserApplications: userId  // This enables personalization!
+                excludeUserApplications: userId,  // This enables personalization!
+                excludeAppliedJobs: true  // Internal service: exclude applied jobs (no HasApplied flag)
             });
 
             // Map to JobForEmail format

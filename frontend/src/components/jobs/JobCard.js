@@ -43,6 +43,8 @@ const JobCard = ({
   currentUserId = null,
   // Desktop mode for enhanced card styling
   isDesktop = false,
+  // ✅ NEW: Show "Applied" badge instead of Apply button
+  isApplied = false,
 }) => {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors, isDesktop), [colors, isDesktop]);
@@ -231,12 +233,19 @@ const JobCard = ({
             </View>
           )}
 
-          {/* Apply button - only show if not hidden and NOT a referrer-posted job */}
-          {!hideApply && !isReferrerPosted && onApply && (
-            <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-              <Ionicons name="paper-plane-outline" size={14} color={colors.primary} />
-              <Text style={styles.applyText}>Apply</Text>
-            </TouchableOpacity>
+          {/* Apply button - show Applied badge if already applied, otherwise show Apply button */}
+          {!hideApply && !isReferrerPosted && (
+            isApplied ? (
+              <View style={styles.appliedPill} accessibilityRole="text">
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Text style={styles.appliedText}>Applied</Text>
+              </View>
+            ) : onApply ? (
+              <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
+                <Ionicons name="paper-plane-outline" size={14} color={colors.primary} />
+                <Text style={styles.applyText}>Apply</Text>
+              </TouchableOpacity>
+            ) : null
           )}
         </View>
       )}
@@ -455,6 +464,17 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
     borderColor: colors.primary,
   },
   applyText: { color: colors.primary, marginLeft: 4, fontWeight: '700', fontSize: isDesktop ? 12 : 11 },
+  appliedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: isDesktop ? 6 : 5,
+    paddingHorizontal: isDesktop ? 10 : 8,
+    borderRadius: 6,
+    backgroundColor: colors.success + '15',
+    borderWidth: 1,
+    borderColor: colors.success,
+  },
+  appliedText: { color: colors.success, marginLeft: 4, fontWeight: '700', fontSize: isDesktop ? 12 : 11 },
 });
 
 export default React.memo(JobCard);
