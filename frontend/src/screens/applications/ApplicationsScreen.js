@@ -150,7 +150,9 @@ export default function ApplicationsScreen({ navigation }) {
       const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
       
       if (referralRes?.success && referralRes.data?.requests) {
-        const activeRequests = referralRes.data.requests.filter(r => r.Status !== 'Cancelled' && r.Status !== 'Expired');
+        const activeRequests = referralRes.data.requests.filter(r => 
+          !['Cancelled', 'Expired', 'Verified', 'Unverified', 'Refunded'].includes(r.Status)
+        );
         const ids = new Set(activeRequests.map(r => r.JobID));
         setReferredJobIds(ids);
       }
@@ -875,7 +877,7 @@ export default function ApplicationsScreen({ navigation }) {
           try {
             const existing = await refopenAPI.getMyReferralRequests(1, 100);
             if (existing.success && existing.data?.requests) {
-              const already = existing.data.requests.some(r => r.JobID === jobId && r.Status !== 'Cancelled' && r.Status !== 'Expired');
+              const already = existing.data.requests.some(r => r.JobID === jobId && !['Cancelled', 'Expired', 'Refunded'].includes(r.Status));
               if (already) {
                 showToast('Already requested a referral for this job', 'info');
                 return;

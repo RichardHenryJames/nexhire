@@ -76,7 +76,9 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       try {
         const referralRes = await refopenAPI.getMyReferralRequests(1, 500);
         if (referralRes?.success && referralRes.data?.requests) {
-          const activeRequests = referralRes.data.requests.filter(r => r.Status !== 'Cancelled' && r.Status !== 'Expired');
+          const activeRequests = referralRes.data.requests.filter(r => 
+            !['Cancelled', 'Expired', 'Verified', 'Unverified', 'Refunded'].includes(r.Status)
+          );
           const ids = new Set(activeRequests.map(r => r.JobID));
           setReferredJobIds(ids);
         }
