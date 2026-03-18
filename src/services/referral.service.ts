@@ -1698,10 +1698,15 @@ export class ReferralService {
 
                 // Update parent status to Completed (seeker sees it in Action Needed tab)
                 try {
-                    await dbService.executeQuery(
+                    const parentUpdate = await dbService.executeQuery(
                         `UPDATE ReferralRequests SET Status = 'Completed' WHERE RequestID = @param0 AND Status IN ('Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed')`,
                         [dto.requestID]
                     );
+                    // Log Completed on parent history so timeline shows "Referral Completed"
+                    if ((parentUpdate.rowsAffected?.[0] || 0) > 0) {
+                        const orgName = referrerOrgId ? (await dbService.executeQuery(`SELECT Name FROM Organizations WHERE OrganizationID = @param0`, [referrerOrgId])).recordset?.[0]?.Name : 'a company';
+                        await this.logStatusChange(dto.requestID, 'Completed', userId, 'referrer', orgName ? `${orgName} Employee` : 'Referrer', `Referral received from ${orgName || 'a company'}`);
+                    }
                 } catch {}
 
                 // Return the child

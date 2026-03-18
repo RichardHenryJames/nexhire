@@ -522,11 +522,11 @@ export default function ReferralTrackingScreen() {
                   )}
                   {child.Status === 'Completed' && (
                     <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, backgroundColor: colors.success + '10', borderWidth: 1, borderColor: colors.success + '30' }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, backgroundColor: colors.warning + '12' }}
                       onPress={() => setVerifyChildTarget({ requestId: child.RequestID, child })}
                     >
-                      <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.success }}>Verify</Text>
+                      <Ionicons name="alert-circle" size={14} color={colors.warning} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>Verify</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -637,8 +637,9 @@ export default function ReferralTrackingScreen() {
             });
           }
 
-          // For resolved requests, only show final outcome entries (not intermediate steps)
-          const resolvedStatuses = ['Completed', 'Verified', 'Unverified', 'Cancelled', 'Expired', 'Refunded'];
+          // For truly resolved requests, only show final outcome entries
+          // Completed = referral done but not verified yet → show full history
+          const resolvedStatuses = ['Verified', 'Unverified', 'Cancelled', 'Expired', 'Refunded'];
           const finalEntryStatuses = ['Completed', 'Verified', 'Unverified', 'Cancelled', 'Expired', 'Refunded'];
           const finalList = resolvedStatuses.includes(currentStatus) 
             ? collapsed.filter(item => finalEntryStatuses.includes(item.status))
