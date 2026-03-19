@@ -397,6 +397,8 @@ export class JobScraperService {
         'financial analyst', 'marketing manager', 'human resources', 'content writer',
         // Fresher-specific high-demand roles
         'trainee', 'graduate engineer', 'associate software engineer', 'junior developer',
+        // Internships (actively scraped for fresher users)
+        'internship', 'intern', 'summer intern',
       ];
 
       // 🔄 ROTATION: Use hour-of-day to pick which terms to use this run
@@ -492,7 +494,7 @@ export class JobScraperService {
                 description: job.description ? job.description.substring(0, 3000) : `${job.title} position at ${job.company.display_name}`,
                 salaryMin: job.salary_min ? Math.round(job.salary_min) : undefined,
                 salaryMax: job.salary_max ? Math.round(job.salary_max) : undefined,
-                jobType: this.mapJobType(job.contract_type),
+                jobType: this.mapJobType(job.contract_type, job.title),
                 workplaceType: this.detectWorkplaceType(job.location?.display_name, job.title, job.description),
                 applicationUrl: job.redirect_url,
                 postedDate: postedDate,
@@ -2547,14 +2549,20 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return expiryDate.toISOString();
   }
 
-  private static mapJobType(contractType?: string): string {
-    if (!contractType) return 'Full-time';
+  private static mapJobType(contractType?: string, title?: string): string {
+    if (contractType) {
+      const type = contractType.toLowerCase();
+      if (type.includes('part') || type.includes('part-time')) return 'Part-time';
+      if (type.includes('contract') || type.includes('contractor')) return 'Contract';
+      if (type.includes('intern')) return 'Internship';
+      if (type.includes('freelance') || type.includes('temporary')) return 'Freelance';
+    }
     
-    const type = contractType.toLowerCase();
-    if (type.includes('part') || type.includes('part-time')) return 'Part-time';
-    if (type.includes('contract') || type.includes('contractor')) return 'Contract';
-    if (type.includes('intern')) return 'Internship';
-    if (type.includes('freelance') || type.includes('temporary')) return 'Freelance';
+    // Also check title for internship when contract_type is null/missing
+    if (title) {
+      const titleLower = title.toLowerCase();
+      if (titleLower.includes('intern') || titleLower.includes('internship')) return 'Internship';
+    }
     
     return 'Full-time';
   }

@@ -301,53 +301,107 @@ export default function JobsLandingScreen({ navigation, route }) {
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* Search bar */}
-      <View style={[styles.searchBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Ionicons name="search" size={18} color={colors.gray400} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search jobs, companies, skills..."
-          placeholderTextColor={colors.gray400}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color={colors.gray400} />
-          </TouchableOpacity>
-        )}
+      {/* Search bar + filter icon */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <View style={[styles.searchBar, { flex: 1, backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Ionicons name="search" size={18} color={colors.gray400} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search jobs, companies, skills..."
+            placeholderTextColor={colors.gray400}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={colors.gray400} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => openFilterChip(null)}
+        >
+          <Ionicons name="options-outline" size={22} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      {/* Quick filter chips — open filter dropdown on JobsScreen */}
+      {/* Quick filter chips — focused, direct action */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}>
+        {/* AI Jobs */}
+        <TouchableOpacity
+          style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
+          onPress={handleAIJobsPress}
+        >
+          <Text style={[styles.chipText, { color: colors.text }]}>AI Jobs</Text>
+          <Ionicons name="bulb-outline" size={14} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {/* Experience — direct navigate */}
         {[
-          { label: 'AI Jobs', icon: 'bulb-outline', action: 'ai' },
-          { label: 'JobType', icon: 'chevron-down', filterSection: 'jobType' },
-          { label: 'Workplace', icon: 'chevron-down', filterSection: 'workMode' },
-          { label: 'Location', icon: 'chevron-down', filterSection: 'location' },
-          { label: 'Freshness', icon: 'chevron-down', filterSection: 'postedBy' },
-          { label: 'Company', icon: 'chevron-down', filterSection: 'company' },
-          { label: 'Referrer Jobs', icon: 'people-outline', action: 'referrer' },
-        ].map(chip => (
+          { label: 'Fresher', min: 0, max: 1 },
+          { label: 'Entry Level', min: 0, max: 2 },
+          { label: 'Mid Level', min: 3, max: 5 },
+        ].map(lvl => (
           <TouchableOpacity
-            key={chip.label}
+            key={lvl.label}
             style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
-            onPress={() => {
-              if (chip.action === 'ai') {
-                handleAIJobsPress();
-              } else if (chip.action === 'referrer') {
-                navigation.navigate('JobsList', { screenTitle: 'Referrer Jobs' });
-              } else {
-                openFilterChip(chip.filterSection);
-              }
-            }}
+            onPress={() => navigation.navigate('JobsList', {
+              screenTitle: `${lvl.label} Jobs`,
+              appliedFilters: { experienceMin: lvl.min, experienceMax: lvl.max },
+            })}
           >
-            <Text style={[styles.chipText, { color: colors.text }]}>{chip.label}</Text>
-            <Ionicons name={chip.icon} size={14} color={colors.textSecondary} />
+            <Text style={[styles.chipText, { color: colors.text }]}>{lvl.label}</Text>
           </TouchableOpacity>
         ))}
+
+        {/* Remote */}
+        {(() => {
+          const remoteWt = workplaceTypes.find(wt => wt.Type === 'Remote');
+          if (!remoteWt) return null;
+          return (
+            <TouchableOpacity
+              style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
+              onPress={() => navigation.navigate('JobsList', {
+                screenTitle: 'Remote Jobs',
+                appliedFilters: { workplaceTypeIds: [remoteWt.WorkplaceTypeID] },
+              })}
+            >
+              <Text style={[styles.chipText, { color: colors.text }]}>Remote</Text>
+            </TouchableOpacity>
+          );
+        })()}
+
+        {/* Last 24h */}
+        <TouchableOpacity
+          style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
+          onPress={() => navigation.navigate('JobsList', {
+            screenTitle: 'Latest Jobs',
+            appliedFilters: { postedWithinDays: 1 },
+          })}
+        >
+          <Text style={[styles.chipText, { color: colors.text }]}>Last 24h</Text>
+        </TouchableOpacity>
+
+        {/* Location — opens modal */}
+        <TouchableOpacity
+          style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
+          onPress={() => openFilterChip('location')}
+        >
+          <Text style={[styles.chipText, { color: colors.text }]}>Location</Text>
+          <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {/* More — opens full filter modal */}
+        <TouchableOpacity
+          style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
+          onPress={() => openFilterChip(null)}
+        >
+          <Ionicons name="options-outline" size={14} color={colors.textSecondary} />
+          <Text style={[styles.chipText, { color: colors.text }]}>More</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {renderSection('Recommended for You', 'sparkles-outline', recommendedJobs, { recommended: true }, loading)}

@@ -314,35 +314,77 @@ default:
         );
 
   case 'experience':
+        const experienceLevels = [
+          { label: '\ud83c\udf93 Fresher / Intern', min: 0, max: 1 },
+          { label: 'Entry Level (0-2 yrs)', min: 0, max: 2 },
+          { label: 'Mid Level (3-5 yrs)', min: 3, max: 5 },
+          { label: 'Senior (6-10 yrs)', min: 6, max: 10 },
+          { label: 'Lead / Staff (10+ yrs)', min: 10, max: '' },
+        ];
+        const isLevelSelected = (lvl) => {
+          return filters.experienceMin === lvl.min && filters.experienceMax === lvl.max;
+        };
         return (
-  <View style={styles.rightContent}>
-            <Text style={styles.rightTitle}>Experience</Text>
-      <View style={styles.rangeContainer}>
-        <View style={styles.rangeInput}>
-     <Text style={styles.rangeLabel}>Min (years)</Text>
-  <TextInput
-            style={styles.rangeTextInput}
-       placeholder="0"
-      value={filters.experienceMin?.toString() || ''}
-      onChangeText={(t) => onFiltersChange({ ...filters, experienceMin: t ? parseInt(t) : '' })}
-      keyboardType="numeric"
-      placeholderTextColor={colors.gray400}
-       />
-      </View>
-         <Text style={styles.rangeSeparator}>-</Text>
-       <View style={styles.rangeInput}>
-     <Text style={styles.rangeLabel}>Max (years)</Text>
-         <TextInput
-        style={styles.rangeTextInput}
-           placeholder="10+"
-   value={filters.experienceMax?.toString() || ''}
-         onChangeText={(t) => onFiltersChange({ ...filters, experienceMax: t ? parseInt(t) : '' })}
-            keyboardType="numeric"
-        placeholderTextColor={colors.gray400}
-                />
-  </View>
+          <View style={styles.rightContent}>
+            <Text style={styles.rightTitle}>Experience Level</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12 }}>Select your career stage</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {experienceLevels.map((lvl) => {
+                const selected = isLevelSelected(lvl);
+                return (
+                  <TouchableOpacity
+                    key={lvl.label}
+                    style={[
+                      styles.optionItem,
+                      { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1.5,
+                        borderColor: selected ? colors.primary : colors.border,
+                        backgroundColor: selected ? colors.primary + '15' : 'transparent' },
+                    ]}
+                    onPress={() => {
+                      if (selected) {
+                        onFiltersChange({ ...filters, experienceMin: '', experienceMax: '' });
+                      } else {
+                        onFiltersChange({ ...filters, experienceMin: lvl.min, experienceMax: lvl.max });
+                      }
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: selected ? '700' : '500',
+                      color: selected ? colors.primary : colors.text }}>
+                      {lvl.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-   </View>
+            <View style={{ marginTop: 20, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 16 }}>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>Or enter custom range</Text>
+              <View style={styles.rangeContainer}>
+                <View style={styles.rangeInput}>
+                  <Text style={styles.rangeLabel}>Min (years)</Text>
+                  <TextInput
+                    style={styles.rangeTextInput}
+                    placeholder="0"
+                    value={filters.experienceMin?.toString() || ''}
+                    onChangeText={(t) => onFiltersChange({ ...filters, experienceMin: t ? parseInt(t) : '' })}
+                    keyboardType="numeric"
+                    placeholderTextColor={colors.gray400}
+                  />
+                </View>
+                <Text style={styles.rangeSeparator}>-</Text>
+                <View style={styles.rangeInput}>
+                  <Text style={styles.rangeLabel}>Max (years)</Text>
+                  <TextInput
+                    style={styles.rangeTextInput}
+                    placeholder="10+"
+                    value={filters.experienceMax?.toString() || ''}
+                    onChangeText={(t) => onFiltersChange({ ...filters, experienceMax: t ? parseInt(t) : '' })}
+                    keyboardType="numeric"
+                    placeholderTextColor={colors.gray400}
+                  />
+                </View>
+              </View>
+            </View>
+          </View>
         );
 
       case 'salary':

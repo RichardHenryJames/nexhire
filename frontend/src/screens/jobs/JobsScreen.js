@@ -519,6 +519,21 @@ export default function JobsScreen({ navigation, route }) {
     return names.length ? names.slice(0, 2).join('/') + (names.length > 2 ? ` +${names.length - 2}` : '') : 'Workplace';
   }, [filters.workplaceTypeIds, workplaceTypes]);
 
+  const quickExperienceLabel = useMemo(() => {
+    const min = filters.experienceMin;
+    const max = filters.experienceMax;
+    if (min === '' && max === '' || min === undefined && max === undefined || min == null && max == null) return 'Experience';
+    if (min === 0 && max === 1) return 'Fresher';
+    if (min === 0 && max === 2) return 'Entry Level';
+    if (min === 3 && max === 5) return 'Mid Level';
+    if (min === 6 && max === 10) return 'Senior';
+    if (min === 10 && (max === '' || max === undefined || max === null)) return 'Lead / Staff';
+    if (min && max) return `${min}-${max} yrs`;
+    if (min) return `${min}+ yrs`;
+    if (max) return `0-${max} yrs`;
+    return 'Experience';
+  }, [filters.experienceMin, filters.experienceMax]);
+
   const quickCompanyLabel = useMemo(() => {
     const orgIds = filters.organizationIds || [];
     if (!orgIds.length) return 'Company';
@@ -1713,6 +1728,56 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             </TouchableOpacity>
           </View>
         </View>
+        {/* Quick filter chips for desktop split-pane */}
+        {!filterF500 && (
+          <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
+              {[
+                { label: 'Fresher', active: filters.experienceMin === 0 && filters.experienceMax === 1, onPress: () => {
+                  const a = filters.experienceMin === 0 && filters.experienceMax === 1;
+                  setFilters(prev => ({ ...prev, experienceMin: a ? '' : 0, experienceMax: a ? '' : 1 }));
+                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
+                }},
+                { label: 'Entry Level', active: filters.experienceMin === 0 && filters.experienceMax === 2, onPress: () => {
+                  const a = filters.experienceMin === 0 && filters.experienceMax === 2;
+                  setFilters(prev => ({ ...prev, experienceMin: a ? '' : 0, experienceMax: a ? '' : 2 }));
+                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
+                }},
+                { label: 'Mid Level', active: filters.experienceMin === 3 && filters.experienceMax === 5, onPress: () => {
+                  const a = filters.experienceMin === 3 && filters.experienceMax === 5;
+                  setFilters(prev => ({ ...prev, experienceMin: a ? '' : 3, experienceMax: a ? '' : 5 }));
+                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
+                }},
+              ].concat(
+                workplaceTypes.find(wt => wt.Type === 'Remote') ? [{
+                  label: 'Remote',
+                  active: (filters.workplaceTypeIds || []).some(x => String(x) === String(workplaceTypes.find(wt => wt.Type === 'Remote').WorkplaceTypeID)),
+                  onPress: () => { onQuickToggleWorkplace(workplaceTypes.find(wt => wt.Type === 'Remote').WorkplaceTypeID); }
+                }] : []
+              ).concat([{
+                label: 'Last 24h',
+                active: filters.postedWithinDays === 1,
+                onPress: () => {
+                  setFilters(prev => ({ ...prev, postedWithinDays: prev.postedWithinDays === 1 ? null : 1 }));
+                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
+                }
+              }]).map(chip => (
+                <TouchableOpacity
+                  key={chip.label}
+                  style={[styles.quickFilterDropdown, chip.active && styles.quickFilterActive]}
+                  onPress={chip.onPress}
+                >
+                  <Text style={[styles.quickFilterText, chip.active && styles.quickFilterActiveText]}>{chip.label}</Text>
+                </TouchableOpacity>
+              ))}
+              {isFiltersDirty(filters) && (
+                <TouchableOpacity style={styles.clearAllButton} onPress={clearAllFilters}>
+                  <Text style={styles.clearAllText}>Clear All</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        )}
         <View style={{ flex: 1, flexDirection: 'row', maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
           {/* Left: Job list */}
           <View style={{ width: 400, borderRightWidth: 1, borderRightColor: colors.border }}>
@@ -1828,7 +1893,15 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     <View style={styles.container}>
       {/* Stack screen mode or Fortune 500 Mode: SubScreenHeader with back button */}
       {(isStackScreen || filterF500) ? (
-        <SubScreenHeader title={screenTitle || (filterF500 ? "Jobs by Top MNCs" : "Browse Jobs")} directBack="Jobs" />
+        <SubScreenHeader 
+          title={screenTitle || (filterF500 ? "Jobs by Top MNCs" : "Browse Jobs")} 
+          directBack="Jobs"
+          rightContent={
+            <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
+              <Ionicons name="options-outline" size={22} color={colors.primary} />
+            </TouchableOpacity>
+          }
+        />
       ) : (
         <TabHeader
           navigation={navigation}
@@ -1873,51 +1946,83 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         />
       )}
 
-      {/* Quick Filters Row — only in normal mode */}
+      {/* Quick Filters Row — direct toggle chips */}
       {!filterF500 && (
           <View style={styles.quickFiltersContainer}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+                {/* AI Jobs — action chip */}
                 <View style={styles.quickFilterItem}>
-                  <TouchableOpacity
-                    style={styles.quickFilterDropdown}
-                    onPress={handleSearchWithAI}
-                  >
-                    <Text style={styles.quickFilterText}>
-                      AI Jobs
-                    </Text>
-                    <Ionicons
-                      name={'bulb-outline'}
-                      size={14}
-                      color={colors.textSecondary}
-                    />
+                  <TouchableOpacity style={styles.quickFilterDropdown} onPress={handleSearchWithAI}>
+                    <Text style={styles.quickFilterText}>AI Jobs</Text>
+                    <Ionicons name="bulb-outline" size={14} color={colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.quickFilterItem}>
-                  <TouchableOpacity
-                    style={[styles.quickFilterDropdown, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActive]}
-                    onPress={() => openFilters('jobType')}
-                  >
-                    <Text style={[styles.quickFilterText, (filters.jobTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                      {quickJobTypeLabel}
-                    </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.jobTypeIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                {/* Experience — direct toggle (single-select) */}
+                {[
+                  { label: 'Fresher', min: 0, max: 1 },
+                  { label: 'Entry Level', min: 0, max: 2 },
+                  { label: 'Mid Level', min: 3, max: 5 },
+                ].map(lvl => {
+                  const active = filters.experienceMin === lvl.min && filters.experienceMax === lvl.max;
+                  return (
+                    <View key={lvl.label} style={styles.quickFilterItem}>
+                      <TouchableOpacity
+                        style={[styles.quickFilterDropdown, active && styles.quickFilterActive]}
+                        onPress={() => {
+                          if (active) {
+                            setFilters(prev => ({ ...prev, experienceMin: '', experienceMax: '' }));
+                          } else {
+                            setFilters(prev => ({ ...prev, experienceMin: lvl.min, experienceMax: lvl.max }));
+                          }
+                          setPagination(p => ({ ...p, page: 1 }));
+                          triggerReload();
+                        }}
+                      >
+                        <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>{lvl.label}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
 
-                <View style={styles.quickFilterItem}>
-                  <TouchableOpacity
-                    style={[styles.quickFilterDropdown, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActive]}
-                    onPress={() => openFilters('workMode')}
-                  >
-                    <Text style={[styles.quickFilterText, (filters.workplaceTypeIds || []).length > 0 && styles.quickFilterActiveText]}>
-                      {quickWorkplaceLabel}
-                    </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.workplaceTypeIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
+                {/* Remote — direct toggle (find Remote workplace type) */}
+                {(() => {
+                  const remoteWt = workplaceTypes.find(wt => wt.Type === 'Remote');
+                  if (!remoteWt) return null;
+                  const active = (filters.workplaceTypeIds || []).some(x => String(x) === String(remoteWt.WorkplaceTypeID));
+                  return (
+                    <View style={styles.quickFilterItem}>
+                      <TouchableOpacity
+                        style={[styles.quickFilterDropdown, active && styles.quickFilterActive]}
+                        onPress={() => { onQuickToggleWorkplace(remoteWt.WorkplaceTypeID); }}
+                      >
+                        <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Remote</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
 
+                {/* Last 24h — direct toggle */}
+                {(() => {
+                  const active = filters.postedWithinDays === 1;
+                  return (
+                    <View style={styles.quickFilterItem}>
+                      <TouchableOpacity
+                        style={[styles.quickFilterDropdown, active && styles.quickFilterActive]}
+                        onPress={() => {
+                          setFilters(prev => ({ ...prev, postedWithinDays: active ? null : 1 }));
+                          setPagination(p => ({ ...p, page: 1 }));
+                          triggerReload();
+                        }}
+                      >
+                        <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Last 24h</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
+
+                {/* Location — opens modal */}
                 <View style={styles.quickFilterItem}>
                   <TouchableOpacity
                     style={[styles.quickFilterDropdown, (filters.locations || []).length > 0 && styles.quickFilterActive]}
@@ -1930,44 +2035,14 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                   </TouchableOpacity>
                 </View>
 
+                {/* More Filters — opens full FilterModal */}
                 <View style={styles.quickFilterItem}>
                   <TouchableOpacity
-                    style={[styles.quickFilterDropdown, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActive : null]}
-                    onPress={() => openFilters('postedBy')}
+                    style={styles.quickFilterDropdown}
+                    onPress={() => openFilters()}
                   >
-                    <Text style={[styles.quickFilterText, (filters.postedWithinDays || quickPostedWithin) ? styles.quickFilterActiveText : null]}>
-                      {quickPostedWithin ? (quickPostedWithin === 1 ? 'Last 24h' : quickPostedWithin === 7 ? 'Last 7 days' : 'Last 30 days') : 'Freshness'}
-                    </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.postedWithinDays || quickPostedWithin) ? colors.primaryDark : colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.quickFilterItem}>
-                  <TouchableOpacity
-                    style={[styles.quickFilterDropdown, (filters.organizationIds || []).length > 0 && styles.quickFilterActive]}
-                    onPress={() => openFilters('company')}
-                  >
-                    <Text style={[styles.quickFilterText, (filters.organizationIds || []).length > 0 && styles.quickFilterActiveText]}>
-                      {quickCompanyLabel}
-                    </Text>
-                    <Ionicons name="chevron-down" size={14} color={(filters.organizationIds || []).length > 0 ? colors.primaryDark : colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.quickFilterItem}>
-                  <TouchableOpacity
-                    style={[styles.quickFilterDropdown, filters.postedByType === 2 && styles.quickFilterActive]}
-                    onPress={() => {
-                      const newValue = filters.postedByType === 2 ? null : 2;
-                      setFilters(prev => ({ ...prev, postedByType: newValue }));
-                      setPagination(p => ({ ...p, page: 1 }));
-                      triggerReload();
-                    }}
-                  >
-                    <Ionicons name="people" size={14} color={filters.postedByType === 2 ? colors.primaryDark : colors.textSecondary} style={{ marginRight: 4 }} />
-                    <Text style={[styles.quickFilterText, filters.postedByType === 2 && styles.quickFilterActiveText]}>
-                      Referrer Jobs
-                    </Text>
+                    <Ionicons name="options-outline" size={14} color={colors.textSecondary} />
+                    <Text style={styles.quickFilterText}>More</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
