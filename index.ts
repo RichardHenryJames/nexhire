@@ -3090,7 +3090,7 @@ app.timer("jobArchivalTimer", {
     const runStartTime = new Date();
 
     try {
-      context.log("\nStarting job archival process (jobs older than 60 days, batch 500, max 10 batches)...\n");
+      context.log("\nStarting job archival process (jobs older than 30 days, batch 500, max 10 batches)...\n");
 
       // Import and initialize archive service
       const { JobArchiveService } = await import("./src/services/job-archive.service");
@@ -3098,8 +3098,8 @@ app.timer("jobArchivalTimer", {
       // Initialize archive logs table if needed
       await JobArchiveService.initializeArchiveLogs();
 
-      // Archive jobs older than 60 days, 500 per batch, max 10 batches
-      const daysOld = 60;
+      // Archive jobs older than 30 days, 500 per batch, max 10 batches
+      const daysOld = 30;
       const result = await JobArchiveService.archiveOldJobs(daysOld, 500);
 
       const runEndTime = new Date();
