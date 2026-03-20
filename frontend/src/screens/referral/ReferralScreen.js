@@ -542,6 +542,11 @@ export default function ReferralScreen({ navigation }) {
             </View>
           </View>
 
+          {/* Chevron — only on open tab (cards are clickable) */}
+          {isOpenTab && (
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
+          )}
+
           {/* Verified Badge */}
           {request.Status === 'Verified' && (
             <View style={styles.verifiedBadgeCorner}>
@@ -962,7 +967,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   tabContent: {
     flex: 1,
-    padding: 12,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   tabDescription: {
     fontSize: typography.sizes.sm,
@@ -1002,38 +1008,35 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   requestCard: {
     backgroundColor: colors.surface,
-    padding: 12,
+    padding: 16,
     marginBottom: 10,
-    borderRadius: 10,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
+    marginHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   requestHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 12,
   },
-  avatarContainer: {
-    marginRight: 12,
-  },
+  avatarContainer: {},
   personAvatar: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: colors.gray100,
   },
   personAvatarPlaceholder: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitials: {
-    fontSize: 18,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.white,
   },
   logoContainer: {
@@ -1058,13 +1061,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   requestInfo: {
     flex: 1,
-    marginRight: 8,
+    gap: 2,
   },
   applicantNamePrimary: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 2,
   },
   wantsReferralRow: {
     flexDirection: 'row',
@@ -1074,8 +1076,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 4,
   },
   wantsReferralText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 13,
     color: colors.textSecondary,
+    fontWeight: '500',
   },
   jobTitleBold: {
     fontSize: typography.sizes.sm,
@@ -1099,7 +1102,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textMuted,
   },
   timeAgo: {
-    fontSize: typography.sizes.xs,
+    fontSize: 12,
     color: colors.textMuted,
   },
   quickActionsRow: {

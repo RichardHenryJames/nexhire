@@ -821,12 +821,7 @@ const [dashboardData, setDashboardData] = useState(() => {
                         </Text>
                         <Text style={{ fontSize: 11, color: colors.gray500, marginTop: 2 }} numberOfLines={1}>{req.CompanyName || ''}</Text>
                       </View>
-                      <TouchableOpacity
-                        style={{ backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 }}
-                        onPress={() => navigation.navigate('Referral')}
-                      >
-                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>View</Text>
-                      </TouchableOpacity>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                     </View>
                   </TouchableOpacity>
                 );
@@ -879,7 +874,7 @@ const [dashboardData, setDashboardData] = useState(() => {
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                       {isOTA ? (
-                        <View style={[styles.refLogo, { backgroundColor: colors.primary + '20' }]}>
+                        <View style={[styles.refLogo, { backgroundColor: colors.primary + '15' }]}>
                           <Ionicons name="globe-outline" size={20} color={colors.primary} />
                         </View>
                       ) : req.OrganizationLogo ? (
@@ -889,15 +884,26 @@ const [dashboardData, setDashboardData] = useState(() => {
                           <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{initials}</Text>
                         </View>
                       )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>{companyName}</Text>
-                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }} numberOfLines={1}>
-                          for <Text style={{ fontWeight: '600', color: colors.text }}>{req.JobTitle || 'Job Title'}</Text>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }} numberOfLines={1}>
+                          {req.JobTitle || 'Job Title'}
+                        </Text>
+                        <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '500' }} numberOfLines={1}>
+                          {companyName}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                          {(() => {
+                            const diff = Date.now() - new Date(req.RequestedAt).getTime();
+                            const mins = Math.floor(diff / 60000);
+                            if (mins < 60) return `${mins}m ago`;
+                            const hrs = Math.floor(mins / 60);
+                            if (hrs < 24) return `${hrs}h ago`;
+                            const days = Math.floor(hrs / 24);
+                            return `${days}d ago`;
+                          })()}
                         </Text>
                       </View>
-                      <View style={[styles.refStatusIcon, { backgroundColor: si.color + '18' }]}>
-                        <Ionicons name={si.icon} size={16} color={si.color} />
-                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
                     </View>
                   </TouchableOpacity>
                 );
@@ -1662,15 +1668,15 @@ sectionLoaderText: {
     paddingRight: isMobile ? 16 : 24,
   },
   refCard: {
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 8,
+    padding: 16,
+    borderRadius: 14,
+    marginBottom: 10,
     borderWidth: 1,
   },
   refLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.gray200,

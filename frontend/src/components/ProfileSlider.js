@@ -99,9 +99,11 @@ export default function ProfileSlider({ visible, onClose }) {
             if (res.success && res.data) {
               const requests = Array.isArray(res.data) ? res.data : (res.data.requests || []);
               // Only count active/open requests (not expired, completed, etc.)
+              // OpenToAnyCompany parents in Completed state are still claimable
               const active = requests.filter(r => 
                 r.Status === 'NotifiedToReferrers' || r.Status === 'Viewed' || 
-                r.Status === 'Pending' || r.Status === 'Claimed'
+                r.Status === 'Pending' || r.Status === 'Claimed' ||
+                (r.OpenToAnyCompany && r.Status === 'Completed')
               );
               setPendingReferralCount(active.length);
             }
