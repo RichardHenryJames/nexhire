@@ -410,30 +410,12 @@ export default function MyReferralRequestsScreen({ route }) {
         </View>
 
         {/* Contextual badges */}
-        {(isExpiringSoon(request) || (request.ChildReferralCount > 0) || (request.OpenToAnyCompany && request.MinSalary)) && (
+        {isExpiringSoon(request) && (
           <View style={styles.badgeRow}>
-            {isExpiringSoon(request) && (
-              <View style={[styles.badge, { backgroundColor: colors.warning + '15' }]}>
-                <Ionicons name="flash" size={12} color={colors.warning} />
-                <Text style={[styles.badgeText, { color: colors.warning }]}>Convert to Open</Text>
-              </View>
-            )}
-            {request.ChildReferralCount > 0 && (
-              <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
-                <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-                <Text style={[styles.badgeText, { color: colors.success }]}>
-                  {request.ChildReferralCount} referral{request.ChildReferralCount > 1 ? 's' : ''}
-                </Text>
-              </View>
-            )}
-            {request.OpenToAnyCompany && request.MinSalary ? (
-              <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
-                <Ionicons name="cash-outline" size={12} color={colors.success} />
-                <Text style={[styles.badgeText, { color: colors.success }]}>
-                  Min {request.SalaryCurrency === 'USD' ? '$' : '₹'}{request.MinSalary?.toLocaleString()}{request.SalaryPeriod === 'Annual' ? '/yr' : '/mo'}
-                </Text>
-              </View>
-            ) : null}
+            <View style={[styles.badge, { backgroundColor: colors.warning + '15' }]}>
+              <Ionicons name="flash" size={12} color={colors.warning} />
+              <Text style={[styles.badgeText, { color: colors.warning }]}>Convert to Open</Text>
+            </View>
           </View>
         )}
 

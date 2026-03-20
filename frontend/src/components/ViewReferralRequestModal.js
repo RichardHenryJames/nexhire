@@ -324,6 +324,19 @@ export default function ViewReferralRequestModal({
           }}>
             {/* Top: Candidate info row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, paddingBottom: 12, gap: 12 }}>
+              <TouchableOpacity
+                activeOpacity={referralRequest?.ApplicantUserID ? 0.7 : 1}
+                disabled={!referralRequest?.ApplicantUserID}
+                onPress={() => {
+                  if (referralRequest?.ApplicantUserID) {
+                    onClose();
+                    navigation.navigate('ViewProfile', {
+                      userId: referralRequest.ApplicantUserID,
+                      userName: applicantName,
+                    });
+                  }
+                }}
+              >
               {referralRequest?.ApplicantProfilePictureURL ? (
                 <Image 
                   source={{ uri: referralRequest.ApplicantProfilePictureURL }} 
@@ -336,6 +349,7 @@ export default function ViewReferralRequestModal({
                   </Text>
                 </View>
               )}
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }} numberOfLines={1}>{applicantName}</Text>
                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>

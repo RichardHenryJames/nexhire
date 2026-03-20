@@ -457,19 +457,12 @@ export default function ReferralScreen({ navigation }) {
         onPress={() => isOpenTab ? handleViewRequest(request) : undefined}
       >
         <View style={styles.requestHeader}>
-          {/* Person Avatar - Clickable to open profile */}
+          {/* Person Avatar - Clickable to open referral detail (same as card tap) */}
           <TouchableOpacity 
             style={styles.avatarContainer}
-            activeOpacity={applicantUserId ? 0.7 : 1}
-            disabled={!applicantUserId}
-            onPress={() =>
-              applicantUserId
-                ? navigation.navigate('ViewProfile', {
-                    userId: applicantUserId,
-                    userName: applicantName,
-                  })
-                : undefined
-            }
+            activeOpacity={isOpenTab ? 0.7 : 1}
+            disabled={!isOpenTab}
+            onPress={() => isOpenTab ? handleViewRequest(request) : undefined}
           >
             {applicantPhotoUrl ? (
               <CachedImage
