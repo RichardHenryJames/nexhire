@@ -5,7 +5,7 @@
  * stored in the InAppNotifications table.
  */
 
-import { dbService } from './database.service';
+import { NotificationRepository } from '../repositories/notification.repository';
 
 // Notification types
 export type InAppNotificationType =
@@ -60,30 +60,18 @@ export class InAppNotificationService {
    */
   static async create(params: CreateNotificationParams): Promise<string> {
     try {
-      const result = await dbService.executeQuery(`
-        INSERT INTO InAppNotifications (
-          UserID, Title, Body, Icon, ImageURL, ActionURL, ActionLabel,
-          NotificationType, ReferenceID, ExpiresAt
-        )
-        OUTPUT INSERTED.NotificationID
-        VALUES (
-          @param0, @param1, @param2, @param3, @param4, @param5, @param6,
-          @param7, @param8, @param9
-        )
-      `, [
-        params.userId,
-        params.title,
-        params.body,
-        params.icon || null,
-        params.imageUrl || null,
-        params.actionUrl || null,
-        params.actionLabel || null,
-        params.notificationType,
-        params.referenceId || null,
-        params.expiresAt || null
-      ]);
-
-      return result.recordset[0]?.NotificationID;
+      return await NotificationRepository.insert({
+        userId: params.userId,
+        title: params.title,
+        body: params.body,
+        icon: params.icon || null,
+        imageUrl: params.imageUrl || null,
+        actionUrl: params.actionUrl || null,
+        actionLabel: params.actionLabel || null,
+        notificationType: params.notificationType,
+        referenceId: params.referenceId || null,
+        expiresAt: params.expiresAt || null
+      });
     } catch (error: any) {
       console.error('❌ Failed to create in-app notification:', error);
       throw error;
@@ -108,43 +96,15 @@ export class InAppNotificationService {
     const page = filters.page || 1;
     const pageSize = Math.min(filters.pageSize || 20, 50);
     const offset = (page - 1) * pageSize;
+    const unreadOnly = !!filters.unreadOnly;
 
-    let whereClause = 'WHERE n.UserID = @param0 AND (n.ExpiresAt IS NULL OR n.ExpiresAt > GETUTCDATE())';
-    if (filters.unreadOnly) {
-      whereClause += ' AND n.IsRead = 0';
-    }
-
-    const result = await dbService.executeQuery(`
-      SELECT 
-        n.NotificationID,
-        n.Title,
-        n.Body,
-        n.Icon,
-        n.ImageURL,
-        n.ActionURL,
-        n.ActionLabel,
-        n.IsRead,
-        n.ReadAt,
-        n.NotificationType,
-        n.ReferenceID,
-        n.CreatedAt
-      FROM InAppNotifications n
-      ${whereClause}
-      ORDER BY n.CreatedAt DESC
-      OFFSET @param1 ROWS FETCH NEXT @param2 ROWS ONLY
-    `, [userId, offset, pageSize]);
-
-    // Get total count
-    const countResult = await dbService.executeQuery(`
-      SELECT COUNT(*) as total
-      FROM InAppNotifications n
-      ${whereClause}
-    `, [userId]);
-
-    const total = countResult.recordset[0]?.total || 0;
+    const [notifications, total] = await Promise.all([
+      NotificationRepository.findByUser(userId, offset, pageSize, unreadOnly),
+      NotificationRepository.countByUser(userId, unreadOnly)
+    ]);
 
     return {
-      notifications: result.recordset,
+      notifications,
       total,
       page,
       pageSize,
@@ -156,66 +116,35 @@ export class InAppNotificationService {
    * Get unread notification count
    */
   static async getUnreadCount(userId: string): Promise<number> {
-    const result = await dbService.executeQuery(`
-      SELECT COUNT(*) as count
-      FROM InAppNotifications
-      WHERE UserID = @param0 
-        AND IsRead = 0
-        AND (ExpiresAt IS NULL OR ExpiresAt > GETUTCDATE())
-    `, [userId]);
-
-    return result.recordset[0]?.count || 0;
+    return NotificationRepository.countUnread(userId);
   }
 
   /**
    * Mark a single notification as read
    */
   static async markAsRead(notificationId: string, userId: string): Promise<boolean> {
-    const result = await dbService.executeQuery(`
-      UPDATE InAppNotifications
-      SET IsRead = 1, ReadAt = GETUTCDATE()
-      WHERE NotificationID = @param0 AND UserID = @param1
-    `, [notificationId, userId]);
-
-    return (result.rowsAffected?.[0] ?? 0) > 0;
+    return NotificationRepository.markRead(notificationId, userId);
   }
 
   /**
    * Mark all notifications as read for a user
    */
   static async markAllAsRead(userId: string): Promise<number> {
-    const result = await dbService.executeQuery(`
-      UPDATE InAppNotifications
-      SET IsRead = 1, ReadAt = GETUTCDATE()
-      WHERE UserID = @param0 AND IsRead = 0
-    `, [userId]);
-
-    return result.rowsAffected?.[0] ?? 0;
+    return NotificationRepository.markAllRead(userId);
   }
 
   /**
    * Delete a single notification for a user
    */
   static async deleteNotification(notificationId: string, userId: string): Promise<boolean> {
-    const result = await dbService.executeQuery(`
-      DELETE FROM InAppNotifications
-      WHERE NotificationID = @param0 AND UserID = @param1
-    `, [notificationId, userId]);
-
-    return (result.rowsAffected?.[0] ?? 0) > 0;
+    return NotificationRepository.deleteOne(notificationId, userId);
   }
 
   /**
    * Delete old notifications (cleanup, called by timer)
    */
   static async cleanupOldNotifications(daysOld: number = 30): Promise<number> {
-    const result = await dbService.executeQuery(`
-      DELETE FROM InAppNotifications
-      WHERE CreatedAt < DATEADD(DAY, -@param0, GETUTCDATE())
-        AND IsRead = 1
-    `, [daysOld]);
-
-    return result.rowsAffected?.[0] ?? 0;
+    return NotificationRepository.deleteOlderThan(daysOld);
   }
 
   // ========================================
@@ -227,34 +156,19 @@ export class InAppNotificationService {
 
     try {
       // Check for an existing unread notification for the same conversation
-      const existing = await dbService.executeQuery(`
-        SELECT NotificationID, Title
-        FROM InAppNotifications
-        WHERE UserID = @param0
-          AND NotificationType = 'message_received'
-          AND ReferenceID = @param1
-          AND IsRead = 0
-        ORDER BY CreatedAt DESC
-        OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY
-      `, [receiverUserId, conversationId]);
+      const existing = await NotificationRepository.findUnreadByConversation(receiverUserId, conversationId);
 
-      if (existing.recordset.length > 0) {
+      if (existing) {
         // Collapse: update the existing notification with incremented count
-        const existingTitle = existing.recordset[0].Title as string;
-        const countMatch = existingTitle.match(/^💬 (\d+) new messages from/);
+        const countMatch = existing.Title.match(/^💬 (\d+) new messages from/);
         const currentCount = countMatch ? parseInt(countMatch[1], 10) : 1;
         const newCount = currentCount + 1;
 
-        await dbService.executeQuery(`
-          UPDATE InAppNotifications
-          SET Title = @param2,
-              CreatedAt = GETUTCDATE()
-          WHERE NotificationID = @param0 AND UserID = @param1
-        `, [
-          existing.recordset[0].NotificationID,
+        await NotificationRepository.updateTitleAndBump(
+          existing.NotificationID,
           receiverUserId,
           `💬 ${newCount} new messages from ${senderName}`
-        ]);
+        );
         return;
       }
     } catch (err: any) {

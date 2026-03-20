@@ -1,4 +1,5 @@
 import { dbService } from '../services/database.service';
+import { JobRepository } from '../repositories/job.repository';
 import { AuthService } from '../services/auth.service';
 import { Job, PaginationParams, QueryParams, JobCreateRequest } from '../types';
 import {
@@ -41,37 +42,8 @@ export class JobService {
             };
         }
 
-        const query = `
-            SELECT TOP 1
-                a.PreferredJobTypes AS preferredJobTypes,
-                a.PreferredWorkTypes AS preferredWorkTypes,
-                a.PreferredLocations AS preferredLocations,
-                a.PreferredCompanySize AS preferredCompanySize,
-                ISNULL(a.TotalExperienceMonths, 0) AS totalExperienceMonths,
-                a.GraduationYear AS graduationYear,
-                CAST(a.PreferredRoles AS NVARCHAR(MAX)) AS preferredRoles,
-                a.CurrentJobTitle AS currentJobTitle,
-                (
-                    SELECT TOP 1 we.JobTitle
-                    FROM WorkExperiences we
-                    WHERE we.ApplicantID = a.ApplicantID
-                      AND (we.IsActive = 1 OR we.IsActive IS NULL)
-                    ORDER BY
-                      CASE WHEN we.EndDate IS NULL THEN 1 ELSE 0 END DESC,
-                      we.EndDate DESC,
-                      we.StartDate DESC
-                ) AS latestJobTitle,
-                (
-                    SELECT COUNT(*) 
-                    FROM WorkExperiences we2 
-                    WHERE we2.ApplicantID = a.ApplicantID
-                ) AS workExperienceCount
-            FROM Applicants a
-            WHERE a.UserID = @param0;
-        `;
-
-        const result = await dbService.executeQuery(query, [userId]);
-        const row = result.recordset?.[0];
+        const result = await JobRepository.getApplicantPersonalization(userId);
+        const row = result;
         
         // User is fresher if:
         // 1. No work experience OR total experience < 12 months
@@ -416,10 +388,9 @@ export class JobService {
                 if (lower === 'hybrid') return 'Hybrid';
                 return rawWorkplaceType;
             })();
-            const wtQuery = 'SELECT ReferenceID FROM ReferenceMetadata WHERE RefType = @param0 AND Value = @param1';
-            const wtResult = await dbService.executeQuery(wtQuery, ['WorkplaceType', workplaceTypeNormalized]);
-            if (wtResult.recordset && wtResult.recordset.length > 0) {
-                workplaceTypeId = wtResult.recordset[0].ReferenceID;
+            const wtResult = await JobRepository.resolveWorkplaceTypeId(workplaceTypeNormalized);
+            if (wtResult) {
+                workplaceTypeId = wtResult;
             }
         }
         // ExternalJobID (NOT NULL): prefix to distinguish manually posted jobs
@@ -490,28 +461,16 @@ export class JobService {
         // CurrentApplications default 0
         add('CurrentApplications', 0);
 
-        // 4. Build parameter placeholders
-        const placeholders = fields.map((_, i) => `@param${i}`);
-        const insertQuery = `
-            INSERT INTO Jobs (${fields.join(', ')})
-            VALUES (${placeholders.join(', ')});
-            SELECT j.*, jt.Value as JobTypeName, o.Name as OrganizationName, ISNULL(o.Tier, 'Standard') as OrganizationTier
-            FROM Jobs j
-            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            WHERE j.JobID = @param0;
-        `;
-
         // Debug logging
         console.log('📝 Job INSERT - Fields:', fields);
         console.log('📝 Job INSERT - Values count:', values.length);
 
         try {
-            const result = await dbService.executeQuery<Job>(insertQuery, values);
-            if (!result.recordset || result.recordset.length === 0) {
+            const job = await JobRepository.insertJob(fields, values);
+            if (!job) {
                 throw new Error('Failed to create job');
             }
-            return result.recordset[0];
+            return job;
         } catch (err: any) {
             // Provide clearer diagnostics for schema mismatch
             if (err?.message?.includes('Invalid column name')) {
@@ -781,37 +740,10 @@ export class JobService {
     // Get job by ID - ENHANCED: Search SQL first, then archived jobs in blob storage
     static async getJobById(jobId: string): Promise<Job | null> {
         // First, try to get from SQL database
-        const query = `
-            SELECT
-                j.*,
-                jt.Value as JobTypeName,
-                o.Name as OrganizationName,
-                o.LogoURL as OrganizationLogo,
-                o.LinkedInProfile as OrganizationLinkedIn,
-                o.Website as OrganizationWebsite,
-                o.Description as OrganizationDescription,
-                o.IsFortune500 as OrganizationIsFortune500,
-                ISNULL(o.Tier, 'Standard') as OrganizationTier,
-                o.Industry as OrganizationIndustry,
-                c.Symbol as CurrencySymbol,
-                CASE
-                    WHEN j.PostedByUserID IS NOT NULL AND j.PostedByType = 2 THEN 'Verified Referrer'
-                    WHEN j.PostedByUserID IS NOT NULL THEN u.FirstName + ' ' + u.LastName
-                    WHEN j.PostedByType = 0 THEN 'RefOpen Job Board'
-                    ELSE 'External Recruiter'
-                END as PostedByName
-            FROM Jobs j
-            INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-            INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-            LEFT JOIN Users u ON j.PostedByUserID = u.UserID
-            LEFT JOIN Currencies c ON j.CurrencyID = c.CurrencyID
-            WHERE j.JobID = @param0
-        `;
-
-        const result = await dbService.executeQuery<Job>(query, [jobId]);
+        const job = await JobRepository.findJobById(jobId);
         
-        if (result.recordset && result.recordset.length > 0) {
-            return result.recordset[0];
+        if (job) {
+            return job;
         }
 
         // If not found in SQL, search in archived jobs (blob storage)
@@ -845,14 +777,9 @@ export class JobService {
 
         // Check if user has permission (job owner or employer in same organization)
         if (existingJob.PostedByUserID !== userId) {
-            // Check if user is an employer in the same organization
-            const permissionQuery = `
-                SELECT 1 FROM Employers e
-                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
-            `;
-            const permissionResult = await dbService.executeQuery(permissionQuery, [userId, existingJob.OrganizationID]);
+            const hasPermission = await JobRepository.checkEmployerPermission(userId, Number(existingJob.OrganizationID));
 
-            if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
+            if (!hasPermission) {
                 throw new ValidationError('Insufficient permissions to update this job');
             }
         }
@@ -880,14 +807,7 @@ export class JobService {
             .filter(key => allowedFields.includes(key))
             .map(key => updateData[key]);
 
-        const query = `
-            UPDATE Jobs
-            SET ${updateFields}, UpdatedAt = GETUTCDATE()
-            WHERE JobID = @param0;
-        `;
-
-        const parameters = [jobId, ...values];
-        await dbService.executeQuery(query, parameters);
+        await JobRepository.updateJob(jobId, updateFields, values);
 
         // Return updated job
         const updatedJob = await this.getJobById(jobId);
@@ -911,14 +831,9 @@ export class JobService {
 
         // Check permissions - user must be the one who posted the job OR an employer at that org
         if (job.PostedByUserID !== userId) {
-            // Check if user is an employer at the same organization
-            const permissionQuery = `
-                SELECT 1 FROM Employers e
-                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
-            `;
-            const permissionResult = await dbService.executeQuery(permissionQuery, [userId, job.OrganizationID]);
+            const hasPermission = await JobRepository.checkEmployerPermission(userId, Number(job.OrganizationID));
 
-            if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
+            if (!hasPermission) {
                 throw new ValidationError('Insufficient permissions to publish this job');
             }
         }
@@ -939,19 +854,7 @@ export class JobService {
         }
 
         // Update job status to Published
-        const query = `
-            UPDATE Jobs
-            SET Status = 'Published',
-                PublishedAt = GETUTCDATE(),
-                UpdatedAt = GETUTCDATE(),
-                ExpiresAt = CASE
-                    WHEN ApplicationDeadline IS NOT NULL THEN ApplicationDeadline
-                    ELSE DATEADD(DAY, 30, GETUTCDATE())
-                END
-            WHERE JobID = @param0
-        `;
-
-        await dbService.executeQuery(query, [jobId]);
+        await JobRepository.publishJob(jobId);
 
         // Deduct fee after successful publish (only if fee is configured and not referrer-posted)
         if (shouldChargeFee) {
@@ -964,15 +867,7 @@ export class JobService {
                 );
             } catch (error) {
                 try {
-                    await dbService.executeQuery(
-                        `UPDATE Jobs
-                         SET Status = 'Draft',
-                             PublishedAt = NULL,
-                             ExpiresAt = NULL,
-                             UpdatedAt = GETUTCDATE()
-                         WHERE JobID = @param0`,
-                        [jobId]
-                    );
+                    await JobRepository.revertToDraft(jobId);
                 } catch (revertError) {
                     console.error('Failed to revert job after wallet debit failure:', revertError);
                 }
@@ -997,24 +892,14 @@ export class JobService {
 
         // Check permissions
         if (job.PostedByUserID !== userId) {
-            const permissionQuery = `
-                SELECT 1 FROM Employers e
-                WHERE e.UserID = @param0 AND e.OrganizationID = @param1 AND 1 = 1
-            `;
-            const permissionResult = await dbService.executeQuery(permissionQuery, [userId, job.OrganizationID]);
+            const hasPermission = await JobRepository.checkEmployerPermission(userId, Number(job.OrganizationID));
 
-            if (!permissionResult.recordset || permissionResult.recordset.length === 0) {
+            if (!hasPermission) {
                 throw new ValidationError('Insufficient permissions to close this job');
             }
         }
 
-        const query = `
-            UPDATE Jobs
-            SET Status = 'Closed', UpdatedAt = GETUTCDATE()
-            WHERE JobID = @param0
-        `;
-
-        await dbService.executeQuery(query, [jobId]);
+        await JobRepository.closeJob(jobId);
     }
 
     // Delete job - unchanged
@@ -1029,16 +914,13 @@ export class JobService {
             throw new ValidationError('Only job owner can delete the job');
         }
 
-        // Check if job has applications
-        const applicationQuery = 'SELECT COUNT(*) as count FROM JobApplications WHERE JobID = @param0';
-        const applicationResult = await dbService.executeQuery(applicationQuery, [jobId]);
+        const applicationCount = await JobRepository.countApplications(jobId);
 
-        if (applicationResult.recordset[0].count > 0) {
+        if (applicationCount > 0) {
             throw new ValidationError('Cannot delete job with existing applications');
         }
 
-        const query = 'DELETE FROM Jobs WHERE JobID = @param0';
-        await dbService.executeQuery(query, [jobId]);
+        await JobRepository.deleteJob(jobId);
     }
 
     // Get jobs by organization - minor search optimization
@@ -1197,16 +1079,7 @@ export class JobService {
             return this._locationCache.data;
         }
 
-        const query = `
-            SELECT Location, COUNT(*) AS JobCount
-            FROM Jobs
-            WHERE Status = 'Published' AND Location IS NOT NULL AND Location != ''
-            GROUP BY Location
-            HAVING COUNT(*) >= 5
-            ORDER BY COUNT(*) DESC
-        `;
-        const result = await dbService.executeQuery(query);
-        const rows = result.recordset || [];
+        const rows = await JobRepository.getLocationCounts();
 
         // Extract clean city names from "City, State" format
         const cityMap = new Map<string, number>();

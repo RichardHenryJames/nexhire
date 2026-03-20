@@ -3,7 +3,7 @@
  * Handles support ticket operations
  */
 
-import { dbService } from './database.service';
+import { SupportRepository } from '../repositories/support.repository';
 import { ValidationError, NotFoundError, AuthorizationError } from '../utils/validation';
 import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
@@ -65,34 +65,9 @@ export class SupportService {
     static async createTicket(input: CreateTicketInput): Promise<SupportTicket> {
         const { userId, category, subject, message, contactEmail } = input;
         
-        const query = `
-            INSERT INTO SupportTickets (UserID, Category, Subject, Message, ContactEmail, Status, Priority)
-            OUTPUT 
-                INSERTED.TicketID,
-                INSERTED.UserID,
-                INSERTED.Category,
-                INSERTED.Subject,
-                INSERTED.Message,
-                INSERTED.Status,
-                INSERTED.Priority,
-                INSERTED.AdminResponse,
-                INSERTED.AdminUserID,
-                INSERTED.ContactEmail,
-                INSERTED.CreatedAt,
-                INSERTED.UpdatedAt,
-                INSERTED.ResolvedAt
-            VALUES (@param0, @param1, @param2, @param3, @param4, 'Open', 'Medium')
-        `;
-        
-        const result = await dbService.executeQuery(query, [
-            userId,
-            category,
-            subject,
-            message,
-            contactEmail || null
-        ]);
-        
-        const ticket = result.recordset[0];
+        const ticket = await SupportRepository.insertTicket(
+            userId, category, subject, message, contactEmail || null
+        );
         
         // Send email notification to admin
         this.sendNewTicketNotification(ticket, contactEmail).catch(err => {
@@ -108,9 +83,7 @@ export class SupportService {
     private static async sendNewTicketNotification(ticket: SupportTicket, contactEmail?: string): Promise<void> {
         try {
             // Get user details
-            const userQuery = `SELECT FirstName, LastName, Email FROM Users WHERE UserID = @param0`;
-            const userResult = await dbService.executeQuery(userQuery, [ticket.UserID]);
-            const user = userResult.recordset[0];
+            const user = await SupportRepository.getUserBasic(ticket.UserID);
             
             const userName = user ? `${user.FirstName} ${user.LastName}` : 'Unknown User';
             const userEmail = contactEmail || user?.Email || 'Not provided';
@@ -161,57 +134,14 @@ export class SupportService {
     static async getUserTickets(userId: string, filters: TicketFilters): Promise<{ tickets: SupportTicket[], total: number, page: number, limit: number }> {
         const offset = (filters.page - 1) * filters.limit;
         
-        // Get total count
-        let countQuery = `
-            SELECT COUNT(*) AS Total 
-            FROM SupportTickets st 
-            WHERE st.UserID = @param0 AND st.IsDeleted = 0
-        `;
-        const countParams: any[] = [userId];
-        
-        if (filters.status) {
-            countQuery += ' AND st.Status = @param1';
-            countParams.push(filters.status);
-        }
-        
-        const countResult = await dbService.executeQuery(countQuery, countParams);
-        
-        // Get tickets
-        let ticketsQuery = `
-            SELECT 
-                st.TicketID,
-                st.UserID,
-                st.Category,
-                st.Subject,
-                st.Message,
-                st.Status,
-                st.Priority,
-                st.AdminResponse,
-                st.AdminUserID,
-                st.ContactEmail,
-                st.CreatedAt,
-                st.UpdatedAt,
-                st.ResolvedAt,
-                adminUser.FirstName + ' ' + adminUser.LastName AS AdminName
-            FROM SupportTickets st
-            LEFT JOIN Users adminUser ON st.AdminUserID = adminUser.UserID
-            WHERE st.UserID = @param0 AND st.IsDeleted = 0
-        `;
-        const ticketParams: any[] = [userId];
-        
-        if (filters.status) {
-            ticketsQuery += ' AND st.Status = @param1';
-            ticketParams.push(filters.status);
-        }
-        
-        ticketsQuery += ` ORDER BY st.CreatedAt DESC OFFSET @param${ticketParams.length} ROWS FETCH NEXT @param${ticketParams.length + 1} ROWS ONLY`;
-        ticketParams.push(offset, filters.limit);
-        
-        const result = await dbService.executeQuery(ticketsQuery, ticketParams);
+        const [total, tickets] = await Promise.all([
+            SupportRepository.countUserTickets(userId, filters.status),
+            SupportRepository.findUserTickets(userId, offset, filters.limit, filters.status)
+        ]);
         
         return {
-            tickets: result.recordset,
-            total: countResult.recordset[0].Total,
+            tickets,
+            total,
             page: filters.page,
             limit: filters.limit
         };
@@ -221,33 +151,7 @@ export class SupportService {
      * Get a specific ticket by ID
      */
     static async getTicketById(ticketId: string, userId: string, isAdmin: boolean): Promise<SupportTicket | null> {
-        const query = `
-            SELECT 
-                st.TicketID,
-                st.UserID,
-                st.Category,
-                st.Subject,
-                st.Message,
-                st.Status,
-                st.Priority,
-                st.AdminResponse,
-                st.AdminUserID,
-                st.ContactEmail,
-                st.CreatedAt,
-                st.UpdatedAt,
-                st.ResolvedAt,
-                u.FirstName + ' ' + u.LastName AS UserName,
-                u.Email AS UserEmail,
-                adminUser.FirstName + ' ' + adminUser.LastName AS AdminName
-            FROM SupportTickets st
-            JOIN Users u ON st.UserID = u.UserID
-            LEFT JOIN Users adminUser ON st.AdminUserID = adminUser.UserID
-            WHERE st.TicketID = @param0 AND st.IsDeleted = 0
-        `;
-        
-        const result = await dbService.executeQuery(query, [ticketId]);
-        
-        const ticket = result.recordset[0];
+        const ticket = await SupportRepository.findTicketById(ticketId);
         
         if (!ticket) {
             return null;
@@ -294,36 +198,13 @@ export class SupportService {
             paramIndex++;
         }
         
-        // Add ticketId as the last parameter
-        params.push(ticketId);
+        const ticket = await SupportRepository.updateTicket(ticketId, updates, params);
         
-        const query = `
-            UPDATE SupportTickets
-            SET ${updates.join(', ')}
-            OUTPUT 
-                INSERTED.TicketID,
-                INSERTED.UserID,
-                INSERTED.Category,
-                INSERTED.Subject,
-                INSERTED.Message,
-                INSERTED.Status,
-                INSERTED.Priority,
-                INSERTED.AdminResponse,
-                INSERTED.AdminUserID,
-                INSERTED.ContactEmail,
-                INSERTED.CreatedAt,
-                INSERTED.UpdatedAt,
-                INSERTED.ResolvedAt
-            WHERE TicketID = @param${paramIndex} AND IsDeleted = 0
-        `;
-        
-        const result = await dbService.executeQuery(query, params);
-        
-        if (result.recordset.length === 0) {
+        if (!ticket) {
             throw new NotFoundError('Ticket not found');
         }
         
-        return result.recordset[0];
+        return ticket;
     }
     
     /**
@@ -331,101 +212,16 @@ export class SupportService {
      */
     static async getAllTickets(filters: TicketFilters): Promise<{ tickets: SupportTicket[], total: number, page: number, limit: number }> {
         const offset = (filters.page - 1) * filters.limit;
+        const filterParams = { status: filters.status, category: filters.category, priority: filters.priority };
         
-        // Build count query with dynamic conditions
-        let countQuery = `
-            SELECT COUNT(*) AS Total 
-            FROM SupportTickets st 
-            WHERE st.IsDeleted = 0
-        `;
-        const countParams: any[] = [];
-        let countParamIndex = 0;
-        
-        if (filters.status) {
-            countQuery += ` AND st.Status = @param${countParamIndex}`;
-            countParams.push(filters.status);
-            countParamIndex++;
-        }
-        if (filters.category) {
-            countQuery += ` AND st.Category = @param${countParamIndex}`;
-            countParams.push(filters.category);
-            countParamIndex++;
-        }
-        if (filters.priority) {
-            countQuery += ` AND st.Priority = @param${countParamIndex}`;
-            countParams.push(filters.priority);
-            countParamIndex++;
-        }
-        
-        const countResult = await dbService.executeQuery(countQuery, countParams);
-        
-        // Build tickets query with dynamic conditions
-        let ticketsQuery = `
-            SELECT 
-                st.TicketID,
-                st.UserID,
-                st.Category,
-                st.Subject,
-                st.Message,
-                st.Status,
-                st.Priority,
-                st.AdminResponse,
-                st.AdminUserID,
-                st.ContactEmail,
-                st.CreatedAt,
-                st.UpdatedAt,
-                st.ResolvedAt,
-                u.FirstName + ' ' + u.LastName AS UserName,
-                u.Email AS UserEmail,
-                adminUser.FirstName + ' ' + adminUser.LastName AS AdminName
-            FROM SupportTickets st
-            JOIN Users u ON st.UserID = u.UserID
-            LEFT JOIN Users adminUser ON st.AdminUserID = adminUser.UserID
-            WHERE st.IsDeleted = 0
-        `;
-        const ticketParams: any[] = [];
-        let ticketParamIndex = 0;
-        
-        if (filters.status) {
-            ticketsQuery += ` AND st.Status = @param${ticketParamIndex}`;
-            ticketParams.push(filters.status);
-            ticketParamIndex++;
-        }
-        if (filters.category) {
-            ticketsQuery += ` AND st.Category = @param${ticketParamIndex}`;
-            ticketParams.push(filters.category);
-            ticketParamIndex++;
-        }
-        if (filters.priority) {
-            ticketsQuery += ` AND st.Priority = @param${ticketParamIndex}`;
-            ticketParams.push(filters.priority);
-            ticketParamIndex++;
-        }
-        
-        ticketsQuery += `
-            ORDER BY 
-                CASE st.Status 
-                    WHEN 'Open' THEN 1 
-                    WHEN 'InProgress' THEN 2 
-                    WHEN 'Resolved' THEN 3 
-                    WHEN 'Closed' THEN 4 
-                END,
-                CASE st.Priority 
-                    WHEN 'Urgent' THEN 1 
-                    WHEN 'High' THEN 2 
-                    WHEN 'Medium' THEN 3 
-                    WHEN 'Low' THEN 4 
-                END,
-                st.CreatedAt DESC
-            OFFSET @param${ticketParamIndex} ROWS FETCH NEXT @param${ticketParamIndex + 1} ROWS ONLY
-        `;
-        ticketParams.push(offset, filters.limit);
-        
-        const result = await dbService.executeQuery(ticketsQuery, ticketParams);
+        const [total, tickets] = await Promise.all([
+            SupportRepository.countAllTickets(filterParams),
+            SupportRepository.findAllTickets(offset, filters.limit, filterParams)
+        ]);
         
         return {
-            tickets: result.recordset,
-            total: countResult.recordset[0].Total,
+            tickets,
+            total,
             page: filters.page,
             limit: filters.limit
         };
@@ -435,39 +231,14 @@ export class SupportService {
      * Get ticket statistics (Admin only)
      */
     static async getTicketStats(): Promise<any> {
-        const statsQuery = `
-            SELECT 
-                COUNT(*) AS TotalTickets,
-                SUM(CASE WHEN Status = 'Open' THEN 1 ELSE 0 END) AS OpenTickets,
-                SUM(CASE WHEN Status = 'InProgress' THEN 1 ELSE 0 END) AS InProgressTickets,
-                SUM(CASE WHEN Status = 'Resolved' THEN 1 ELSE 0 END) AS ResolvedTickets,
-                SUM(CASE WHEN Status = 'Closed' THEN 1 ELSE 0 END) AS ClosedTickets,
-                SUM(CASE WHEN Priority = 'Urgent' AND Status IN ('Open', 'InProgress') THEN 1 ELSE 0 END) AS UrgentPending,
-                SUM(CASE WHEN Priority = 'High' AND Status IN ('Open', 'InProgress') THEN 1 ELSE 0 END) AS HighPriorityPending,
-                SUM(CASE WHEN CreatedAt >= DATEADD(day, -1, GETUTCDATE()) THEN 1 ELSE 0 END) AS Last24Hours,
-                SUM(CASE WHEN CreatedAt >= DATEADD(day, -7, GETUTCDATE()) THEN 1 ELSE 0 END) AS Last7Days
-            FROM SupportTickets
-            WHERE IsDeleted = 0
-        `;
-        
-        const result = await dbService.executeQuery(statsQuery, []);
-        
-        // Get category breakdown
-        const categoryQuery = `
-            SELECT 
-                Category,
-                COUNT(*) AS Count
-            FROM SupportTickets
-            WHERE IsDeleted = 0 AND Status IN ('Open', 'InProgress')
-            GROUP BY Category
-            ORDER BY Count DESC
-        `;
-        
-        const categoryResult = await dbService.executeQuery(categoryQuery, []);
+        const [stats, categoryBreakdown] = await Promise.all([
+            SupportRepository.getStats(),
+            SupportRepository.getCategoryBreakdown()
+        ]);
         
         return {
-            ...result.recordset[0],
-            categoryBreakdown: categoryResult.recordset
+            ...stats,
+            categoryBreakdown
         };
     }
 
@@ -476,14 +247,11 @@ export class SupportService {
      */
     static async addMessage(ticketId: string, senderId: string, senderType: 'User' | 'Admin', message: string): Promise<any> {
         // Verify ticket exists and user has access
-        const ticketQuery = `SELECT TicketID, UserID, Status FROM SupportTickets WHERE TicketID = @param0 AND IsDeleted = 0`;
-        const ticketResult = await dbService.executeQuery(ticketQuery, [ticketId]);
+        const ticket = await SupportRepository.findTicketBasic(ticketId);
         
-        if (ticketResult.recordset.length === 0) {
+        if (!ticket) {
             throw new NotFoundError('Ticket not found');
         }
-        
-        const ticket = ticketResult.recordset[0];
         
         // Users can only message their own tickets
         if (senderType === 'User' && ticket.UserID !== senderId) {
@@ -496,41 +264,10 @@ export class SupportService {
         }
         
         // Insert the message
-        const insertQuery = `
-            INSERT INTO SupportMessages (TicketID, SenderID, SenderType, Message)
-            OUTPUT 
-                INSERTED.MessageID,
-                INSERTED.TicketID,
-                INSERTED.SenderID,
-                INSERTED.SenderType,
-                INSERTED.Message,
-                INSERTED.CreatedAt
-            VALUES (@param0, @param1, @param2, @param3)
-        `;
-        
-        const result = await dbService.executeQuery(insertQuery, [ticketId, senderId, senderType, message]);
+        const insertedMessage = await SupportRepository.insertMessage(ticketId, senderId, senderType, message);
         
         // Update ticket status and timestamps
-        let updateQuery = `UPDATE SupportTickets SET UpdatedAt = GETUTCDATE()`;
-        const updateParams: any[] = [];
-        let paramIndex = 0;
-        
-        if (senderType === 'Admin') {
-            // Admin replied - set to InProgress if Open, update AdminResponse for legacy
-            updateQuery += `, AdminResponse = @param${paramIndex}, AdminUserID = @param${paramIndex + 1}`;
-            updateParams.push(message, senderId);
-            paramIndex += 2;
-            
-            updateQuery += `, Status = CASE WHEN Status = 'Open' THEN 'InProgress' ELSE Status END`;
-        } else {
-            // User replied - reopen if resolved (so admin sees it needs attention)
-            updateQuery += `, Status = CASE WHEN Status = 'Resolved' THEN 'Open' ELSE Status END`;
-        }
-        
-        updateQuery += ` WHERE TicketID = @param${paramIndex}`;
-        updateParams.push(ticketId);
-        
-        await dbService.executeQuery(updateQuery, updateParams);
+        await SupportRepository.updateTicketAfterMessage(ticketId, senderType, senderId, message);
         
         // Send email notification to user when admin replies
         if (senderType === 'Admin') {
@@ -539,7 +276,7 @@ export class SupportService {
             });
         }
         
-        return result.recordset[0];
+        return insertedMessage;
     }
 
     /**
@@ -548,27 +285,13 @@ export class SupportService {
     private static async sendAdminReplyNotification(ticketId: string, adminMessage: string): Promise<void> {
         try {
             // Get ticket and user details
-            const query = `
-                SELECT 
-                    st.TicketID,
-                    st.Subject,
-                    st.Status,
-                    st.ContactEmail,
-                    u.FirstName,
-                    u.LastName,
-                    u.Email
-                FROM SupportTickets st
-                JOIN Users u ON st.UserID = u.UserID
-                WHERE st.TicketID = @param0 AND st.IsDeleted = 0
-            `;
-            const result = await dbService.executeQuery(query, [ticketId]);
+            const ticket = await SupportRepository.getTicketWithUser(ticketId);
             
-            if (result.recordset.length === 0) {
+            if (!ticket) {
                 console.warn('Ticket not found for notification:', ticketId);
                 return;
             }
             
-            const ticket = result.recordset[0];
             const userName = `${ticket.FirstName} ${ticket.LastName}`;
             const userEmail = ticket.ContactEmail || ticket.Email;
             
@@ -607,37 +330,18 @@ export class SupportService {
      */
     static async getMessages(ticketId: string, userId: string, isAdmin: boolean): Promise<any[]> {
         // Verify access
-        const ticketQuery = `SELECT TicketID, UserID FROM SupportTickets WHERE TicketID = @param0 AND IsDeleted = 0`;
-        const ticketResult = await dbService.executeQuery(ticketQuery, [ticketId]);
+        const ticket = await SupportRepository.findTicketBasic(ticketId);
         
-        if (ticketResult.recordset.length === 0) {
+        if (!ticket) {
             throw new NotFoundError('Ticket not found');
         }
-        
-        const ticket = ticketResult.recordset[0];
         
         // Users can only view their own ticket messages
         if (!isAdmin && ticket.UserID !== userId) {
             throw new AuthorizationError('You do not have permission to view this ticket');
         }
         
-        const messagesQuery = `
-            SELECT 
-                sm.MessageID,
-                sm.TicketID,
-                sm.SenderID,
-                sm.SenderType,
-                sm.Message,
-                sm.CreatedAt,
-                u.FirstName + ' ' + u.LastName AS SenderName
-            FROM SupportMessages sm
-            JOIN Users u ON sm.SenderID = u.UserID
-            WHERE sm.TicketID = @param0 AND sm.IsDeleted = 0
-            ORDER BY sm.CreatedAt ASC
-        `;
-        
-        const result = await dbService.executeQuery(messagesQuery, [ticketId]);
-        return result.recordset;
+        return SupportRepository.findMessagesByTicket(ticketId);
     }
 
     /**
@@ -645,14 +349,11 @@ export class SupportService {
      */
     static async closeTicket(ticketId: string, userId: string, isAdmin: boolean): Promise<SupportTicket> {
         // Verify ticket exists
-        const ticketQuery = `SELECT TicketID, UserID, Status FROM SupportTickets WHERE TicketID = @param0 AND IsDeleted = 0`;
-        const ticketResult = await dbService.executeQuery(ticketQuery, [ticketId]);
+        const ticket = await SupportRepository.findTicketBasic(ticketId);
         
-        if (ticketResult.recordset.length === 0) {
+        if (!ticket) {
             throw new NotFoundError('Ticket not found');
         }
-        
-        const ticket = ticketResult.recordset[0];
         
         // Users can only close their own tickets
         if (!isAdmin && ticket.UserID !== userId) {
@@ -663,27 +364,6 @@ export class SupportService {
             throw new ValidationError('Ticket is already closed');
         }
         
-        const updateQuery = `
-            UPDATE SupportTickets
-            SET Status = 'Closed', UpdatedAt = GETUTCDATE(), ResolvedAt = GETUTCDATE()
-            OUTPUT 
-                INSERTED.TicketID,
-                INSERTED.UserID,
-                INSERTED.Category,
-                INSERTED.Subject,
-                INSERTED.Message,
-                INSERTED.Status,
-                INSERTED.Priority,
-                INSERTED.AdminResponse,
-                INSERTED.AdminUserID,
-                INSERTED.ContactEmail,
-                INSERTED.CreatedAt,
-                INSERTED.UpdatedAt,
-                INSERTED.ResolvedAt
-            WHERE TicketID = @param0
-        `;
-        
-        const result = await dbService.executeQuery(updateQuery, [ticketId]);
-        return result.recordset[0];
+        return SupportRepository.closeTicket(ticketId);
     }
 }

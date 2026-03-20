@@ -1,4 +1,5 @@
 import { dbService } from '../services/database.service';
+import { UserServiceRepository } from '../repositories/user-service.repository';
 import { AuthService } from '../services/auth.service';
 import { User, UserRegistrationRequest, UserLoginRequest } from '../types';
 import { 
@@ -35,18 +36,10 @@ export class UserService {
         // Validate and lookup referral code if provided
         let referrerId: string | null = null;
         if (userData.referralCode && userData.referralCode.trim().length > 0) {
-            // Find user by referral code (UserID prefix)
-            const referrerQuery = `
-                SELECT UserID, Email, FirstName, LastName 
-                FROM Users 
-                WHERE CAST(UserID AS NVARCHAR(50)) LIKE @param0 
-                AND IsActive = 1
-            `;
+            const referrer = await UserServiceRepository.findByReferralCode(userData.referralCode.trim() + '-%');
             
-            const referrerResult = await dbService.executeQuery(referrerQuery, [userData.referralCode.trim() + '-%']);
-            
-            if (referrerResult.recordset && referrerResult.recordset.length > 0) {
-                referrerId = referrerResult.recordset[0].UserID;
+            if (referrer) {
+                referrerId = referrer.UserID;
             }
         }
         
@@ -181,18 +174,7 @@ export class UserService {
             
             // Create NotificationPreferences with all flags enabled by default
             try {
-                await dbService.executeQuery(`
-                    INSERT INTO NotificationPreferences (
-                        UserID, EmailEnabled, PushEnabled, InAppEnabled,
-                        ReferralRequestEmail, ReferralRequestPush,
-                        ReferralClaimedEmail, ReferralClaimedPush,
-                        ReferralVerifiedEmail, ReferralVerifiedPush,
-                        JobApplicationEmail, MessageReceivedEmail, MessageReceivedPush,
-                        WeeklyDigestEnabled, DailyJobRecommendationEmail, ReferrerNotificationEmail, MarketingEmail
-                    ) VALUES (
-                        @param0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-                    )
-                `, [userId]);
+                await UserServiceRepository.createDefaultNotificationPrefs(userId);
             } catch (prefError) {
                 // Log but don't fail registration if notification preferences creation fails
                 console.error('Error creating notification preferences (registration still successful):', prefError);
@@ -653,13 +635,8 @@ export class UserService {
         // Hash new password
         const hashedPassword = await AuthService.hashPassword(newPassword);
 
-        // Update password
-        await dbService.executeQuery(`
-            UPDATE Users 
-            SET Password = @param1, 
-                UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0
-        `, [user.UserID, hashedPassword]);
+        // Update password and set LoginMethod to 'Both'
+        await UserServiceRepository.setPasswordForGoogleUser(user.UserID, hashedPassword);
 
         return { 
             success: true, 
@@ -1944,12 +1921,7 @@ export class UserService {
             // Log consent to audit table after successful commit
             if (termsAccepted) {
                 try {
-                    await dbService.executeQuery(`
-                        INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
-                        VALUES (@param0, 'TERMS', @param1, GETUTCDATE(), @param3, @param4);
-                        INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
-                        VALUES (@param0, 'PRIVACY_POLICY', @param2, GETUTCDATE(), @param3, @param4);
-                    `, [userId, termsVersion, privacyPolicyVersion, requestMeta?.ipAddress || null, requestMeta?.userAgent || null]);
+                    await UserServiceRepository.logConsent(userId, termsVersion, privacyPolicyVersion, requestMeta?.ipAddress || null, requestMeta?.userAgent || null);
                 } catch (consentLogError) {
                     console.error('Error logging consent (registration still successful):', consentLogError);
                 }
@@ -1989,18 +1961,7 @@ export class UserService {
 
             // Create NotificationPreferences with all flags enabled by default
             try {
-                await dbService.executeQuery(`
-                    INSERT INTO NotificationPreferences (
-                        UserID, EmailEnabled, PushEnabled, InAppEnabled,
-                        ReferralRequestEmail, ReferralRequestPush,
-                        ReferralClaimedEmail, ReferralClaimedPush,
-                        ReferralVerifiedEmail, ReferralVerifiedPush,
-                        JobApplicationEmail, MessageReceivedEmail, MessageReceivedPush,
-                        WeeklyDigestEnabled, DailyJobRecommendationEmail, ReferrerNotificationEmail, MarketingEmail
-                    ) VALUES (
-                        @param0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
-                    )
-                `, [userId]);
+                await UserServiceRepository.createDefaultNotificationPrefs(userId);
             } catch (prefError) {
                 // Log but don't fail registration if notification preferences creation fails
                 console.error('Error creating notification preferences (registration still successful):', prefError);
@@ -2103,24 +2064,11 @@ export class UserService {
         const privacyPolicyVersion = data.privacyPolicyVersion || appConstants.legal.PRIVACY_POLICY_VERSION;
 
         // Update Users table with new consent timestamps and versions
-        await dbService.executeQuery(`
-            UPDATE Users 
-            SET TermsAcceptedAt = GETUTCDATE(), 
-                TermsVersion = @param1,
-                PrivacyPolicyAcceptedAt = GETUTCDATE(), 
-                PrivacyPolicyVersion = @param2,
-                UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0
-        `, [userId, termsVersion, privacyPolicyVersion]);
+        await UserServiceRepository.updateTermsAcceptance(userId, termsVersion, privacyPolicyVersion);
 
         // Log to consent audit table
         try {
-            await dbService.executeQuery(`
-                INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
-                VALUES (@param0, 'TERMS', @param1, GETUTCDATE(), @param3, @param4);
-                INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
-                VALUES (@param0, 'PRIVACY_POLICY', @param2, GETUTCDATE(), @param3, @param4);
-            `, [userId, termsVersion, privacyPolicyVersion, requestMeta?.ipAddress || null, requestMeta?.userAgent || null]);
+            await UserServiceRepository.logConsent(userId, termsVersion, privacyPolicyVersion, requestMeta?.ipAddress || null, requestMeta?.userAgent || null);
         } catch (consentLogError) {
             console.error('Error logging consent update (accept still successful):', consentLogError);
         }

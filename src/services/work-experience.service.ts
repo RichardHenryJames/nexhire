@@ -1,4 +1,4 @@
-import { dbService } from './database.service';
+import { WorkExperienceRepository } from '../repositories/work-experience.repository';
 import { AuthService } from './auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
 import { resetVerificationOnNewJob } from './companyEmailVerification.service';
@@ -27,33 +27,11 @@ export interface WorkExperienceInput {
 
 export class WorkExperienceService {
   static async getWorkExperiencesByApplicant(applicantId: string): Promise<any[]> {
-    const query = `
-            SELECT 
-                we.*, 
-                o.Name AS OrganizationName,
-                o.LogoURL AS LogoURL
-            FROM WorkExperiences we
-            LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
-            WHERE we.ApplicantID = @param0 AND (we.IsActive = 1 OR we.IsActive IS NULL)
-            ORDER BY 
-                CASE WHEN we.EndDate IS NULL THEN 1 ELSE 0 END DESC,
-                we.EndDate DESC,
-                we.StartDate DESC`;
-    const result = await dbService.executeQuery(query, [applicantId]);
-    return result.recordset || [];
+    return WorkExperienceRepository.findByApplicant(applicantId);
   }
 
   static async getWorkExperienceById(workExperienceId: string): Promise<any | null> {
-    const query = `
-            SELECT 
-                we.*, 
-                o.Name AS OrganizationName,
-                o.LogoURL AS LogoURL
-            FROM WorkExperiences we
-            LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
-            WHERE we.WorkExperienceID = @param0`;
-    const result = await dbService.executeQuery(query, [workExperienceId]);
-    return result.recordset && result.recordset.length > 0 ? result.recordset[0] : null;
+    return WorkExperienceRepository.findById(workExperienceId);
   }
 
   static async createWorkExperience(applicantId: string, data: WorkExperienceInput): Promise<any> {
@@ -78,30 +56,18 @@ export class WorkExperienceService {
     const canContact = data.canContact ? (data.canContact === true || data.canContact === 1 ? 1 : 0) : 0;
 
     // Minimal insert first
-    const insertQuery = `
-            INSERT INTO WorkExperiences (
-                WorkExperienceID, ApplicantID, OrganizationID, JobTitle, 
-                StartDate, EndDate, SalaryFrequency, ManagerName, ManagerContact,
-                CanContact, VerificationStatus, CreatedAt, UpdatedAt, IsActive
-            ) VALUES (
-                @param0, @param1, @param2, @param3,
-                @param4, @param5, @param6, @param7, @param8,
-                @param9, 0, GETUTCDATE(), GETUTCDATE(), 1
-            );
-        `;
-
-    await dbService.executeQuery(insertQuery, [
+    await WorkExperienceRepository.insert({
       id,
       applicantId,
       organizationId,
-      data.jobTitle,
-      newStartDate,
+      jobTitle: data.jobTitle,
+      startDate: newStartDate,
       endDate,
-      data.salaryFrequency || null,
-      data.managerName || null,
-      data.managerContact || null,
+      salaryFrequency: data.salaryFrequency || null,
+      managerName: data.managerName || null,
+      managerContact: data.managerContact || null,
       canContact
-    ]);
+    });
 
     // Optional extended fields update (idempotent)
     const extendedUpdates: string[] = [];
@@ -131,20 +97,15 @@ export class WorkExperienceService {
     if (extendedUpdates.length > 0) {
       extendedUpdates.push('UpdatedAt = GETUTCDATE()');
       const updateQuery = `UPDATE WorkExperiences SET ${extendedUpdates.join(', ')} WHERE WorkExperienceID = @param0`;
-      await dbService.executeQuery(updateQuery, params);
+      await WorkExperienceRepository.dynamicUpdate(updateQuery, params);
     }
 
     // Also save professional summary to Applicants.Summary if provided
-    // This ensures the summary from registration appears in the profile
     if (data.description) {
       try {
-  await dbService.executeQuery(
-          `UPDATE Applicants SET Summary = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
-          [applicantId, data.description]
-        );
+        await WorkExperienceRepository.updateApplicantSummary(applicantId, data.description);
       } catch (error) {
         console.warn('Failed to update Applicants.Summary:', error);
-    // Don't throw - this is a supplementary operation
       }
     }
 
@@ -159,13 +120,9 @@ export class WorkExperienceService {
     // Reset verified referrer status if new current job is added (user must re-verify)
     if (isNewCurrent) {
       try {
-        // Get UserId from ApplicantID
-        const userResult = await dbService.executeQuery(
-          'SELECT UserID FROM Applicants WHERE ApplicantID = @param0',
-          [applicantId]
-        );
-        if (userResult.recordset && userResult.recordset.length > 0) {
-          await resetVerificationOnNewJob(userResult.recordset[0].UserID);
+        const userId = await WorkExperienceRepository.getUserIdByApplicant(applicantId);
+        if (userId) {
+          await resetVerificationOnNewJob(userId);
         }
       } catch (e) {
         console.warn('Failed to reset verified referrer status:', (e as any)?.message);
@@ -242,7 +199,7 @@ export class WorkExperienceService {
     const query = `
             UPDATE WorkExperiences SET ${updates.join(', ')} WHERE WorkExperienceID = @param0
         `;
-    await dbService.executeQuery(query, params);
+    await WorkExperienceRepository.dynamicUpdate(query, params);
 
     await this.updateApplicantDerivedFields(existing.ApplicantID);
     try {
@@ -261,12 +218,9 @@ export class WorkExperienceService {
     
     if (isBeingSetToCurrent || (wasCurrentBefore && orgActuallyChanged)) {
       try {
-        const userResult = await dbService.executeQuery(
-          'SELECT UserID FROM Applicants WHERE ApplicantID = @param0',
-          [existing.ApplicantID]
-        );
-        if (userResult.recordset && userResult.recordset.length > 0) {
-          await resetVerificationOnNewJob(userResult.recordset[0].UserID);
+        const userId = await WorkExperienceRepository.getUserIdByApplicant(existing.ApplicantID);
+        if (userId) {
+          await resetVerificationOnNewJob(userId);
         }
       } catch (e) {
         console.warn('Failed to reset verified referrer status:', (e as any)?.message);
@@ -282,49 +236,22 @@ export class WorkExperienceService {
 
     // Check if this work experience was verified and if we need to decrement org count
     if (existing.CompanyEmailVerified && existing.OrganizationID) {
-      // Get user info to check if they have other verified work experiences for same org
-      const userResult = await dbService.executeQuery(`
-        SELECT a.UserID, a.ApplicantID
-        FROM Applicants a
-        WHERE a.ApplicantID = @param0
-      `, [existing.ApplicantID]);
+      const userId = await WorkExperienceRepository.getUserIdByApplicant(existing.ApplicantID);
 
-      if (userResult.recordset && userResult.recordset.length > 0) {
-        const userId = userResult.recordset[0].UserID;
-        
-        // Check if user has other verified work experiences for same organization
-        const otherVerifiedResult = await dbService.executeQuery(`
-          SELECT COUNT(*) as OtherVerifiedCount
-          FROM WorkExperiences we
-          INNER JOIN Applicants a ON we.ApplicantID = a.ApplicantID
-          WHERE a.UserID = @param0
-            AND we.OrganizationID = @param1
-            AND we.CompanyEmailVerified = 1
-            AND we.IsActive = 1
-            AND we.WorkExperienceID != @param2
-        `, [userId, existing.OrganizationID, workExperienceId]);
+      if (userId) {
+        const otherCount = await WorkExperienceRepository.countOtherVerified(
+          userId, existing.OrganizationID, workExperienceId
+        );
 
-        const hasOtherVerified = otherVerifiedResult.recordset[0]?.OtherVerifiedCount > 0;
-
-        // Only decrement if user has no other verified entries for this organization
-        if (!hasOtherVerified) {
-          await dbService.executeQuery(`
-            UPDATE Organizations
-            SET VerifiedReferrersCount = CASE 
-                WHEN ISNULL(VerifiedReferrersCount, 0) > 0 THEN VerifiedReferrersCount - 1 
-                ELSE 0 
-            END,
-            UpdatedAt = GETUTCDATE()
-            WHERE OrganizationID = @param0
-          `, [existing.OrganizationID]);
+        if (otherCount === 0) {
+          await WorkExperienceRepository.decrementOrgVerifiedCount(existing.OrganizationID);
           console.log(`Decremented VerifiedReferrersCount for OrganizationID ${existing.OrganizationID}`);
         }
       }
     }
 
     // Hard delete - permanently remove from database
-    const query = `DELETE FROM WorkExperiences WHERE WorkExperienceID = @param0`;
-    await dbService.executeQuery(query, [workExperienceId]);
+    await WorkExperienceRepository.deleteById(workExperienceId);
     await this.updateApplicantDerivedFields(existing.ApplicantID);
     // Recalculate profile completeness (centralized)
     try {
@@ -350,19 +277,11 @@ export class WorkExperienceService {
     if (!name) return null;
 
     // Try to find by name
-    let result = await dbService.executeQuery('SELECT OrganizationID FROM Organizations WHERE Name = @param0', [name]);
-    if (result.recordset && result.recordset.length > 0) {
-      return result.recordset[0].OrganizationID;
-    }
+    const existingOrgId = await WorkExperienceRepository.findOrgByName(name);
+    if (existingOrgId) return existingOrgId;
+
     // Create minimal organization row (uses IDENTITY int key) - marked as user-created
-    const insertQuery = `
-            INSERT INTO Organizations (Name, IsUserCreated, CreatedAt, UpdatedAt, IsActive)
-            VALUES (@param0, 1, GETUTCDATE(), GETUTCDATE(), 1);
-            SELECT SCOPE_IDENTITY() AS OrganizationID;
-        `;
-    result = await dbService.executeQuery(insertQuery, [name]);
-    const orgId = result.recordset && result.recordset.length > 0 ? parseInt(result.recordset[0].OrganizationID) : null;
-    return orgId;
+    return await WorkExperienceRepository.createOrg(name);
   }
 
   static async updateApplicantDerivedFields(applicantId: string): Promise<void> {
@@ -380,13 +299,7 @@ export class WorkExperienceService {
       currentOrganizationId = latest.OrganizationID || null;
 
       if (currentOrganizationId) {
-        const orgRes = await dbService.executeQuery(
-          'SELECT Name FROM Organizations WHERE OrganizationID = @param0',
-          [currentOrganizationId]
-        );
-        currentCompanyName = orgRes.recordset && orgRes.recordset[0]
-          ? orgRes.recordset[0].Name
-          : null;
+        currentCompanyName = await WorkExperienceRepository.getOrgName(currentOrganizationId);
       }
 
       const now = new Date();
@@ -400,11 +313,7 @@ export class WorkExperienceService {
 
     // Helper to check if a column exists on Applicants table
     const columnExists = async (columnName: string): Promise<boolean> => {
-      const result = await dbService.executeQuery(
-        `SELECT 1 AS ok FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Applicants' AND COLUMN_NAME = @param0`,
-        [columnName]
-      );
-      return !!(result.recordset && result.recordset.length > 0);
+      return WorkExperienceRepository.columnExistsOnApplicants(columnName);
     };
 
     // Build update dynamically based on schema
@@ -443,13 +352,10 @@ export class WorkExperienceService {
         WHERE ApplicantID = @param0
       `;
 
-      await dbService.executeQuery(query, params);
+      await WorkExperienceRepository.dynamicUpdate(query, params);
     } catch (err) {
       // Fallback: Just touch UpdatedAt to avoid hard failure if schema differs
-      await dbService.executeQuery(
-        `UPDATE Applicants SET UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
-        [applicantId]
-      );
+      await WorkExperienceRepository.touchApplicant(applicantId);
     }
   }
 
@@ -464,29 +370,14 @@ export class WorkExperienceService {
     excludeWorkExperienceId?: string
   ): Promise<void> {
     try {
-      // Find all current work experiences (excluding the one being updated)
-      let currentExpQuery = `
-        SELECT WorkExperienceID, StartDate, JobTitle, OrganizationID, CompanyName
-        FROM WorkExperiences 
-        WHERE ApplicantID = @param0 
-        AND IsCurrent = 1 
-        AND (IsActive = 1 OR IsActive IS NULL)
-      `;
-      const queryParams = [applicantId];
+      const currentExperiences = await WorkExperienceRepository.findCurrentForManagement(applicantId, excludeWorkExperienceId);
       
-      if (excludeWorkExperienceId) {
-        currentExpQuery += ` AND WorkExperienceID != @param1`;
-        queryParams.push(excludeWorkExperienceId);
-      }
-      
-      const currentExperiences = await dbService.executeQuery(currentExpQuery, queryParams);
-      
-      if (!currentExperiences.recordset || currentExperiences.recordset.length === 0) {
+      if (!currentExperiences.length) {
         return; // No existing current work experiences - proceed with new current
       }
       
       // Process each existing current work experience
-      for (const existingExp of currentExperiences.recordset) {
+      for (const existingExp of currentExperiences) {
         const existingStartDate = new Date(existingExp.StartDate);
         
         // Only update if new start date is GREATER than existing start date
@@ -495,16 +386,7 @@ export class WorkExperienceService {
           const newEndDate = new Date(newStartDate);
           newEndDate.setDate(newEndDate.getDate() - 1);
           
-          const updateQuery = `
-            UPDATE WorkExperiences 
-            SET 
-              EndDate = @param1,
-              IsCurrent = 0,
-              UpdatedAt = GETUTCDATE()
-            WHERE WorkExperienceID = @param0
-          `;
-          
-          await dbService.executeQuery(updateQuery, [existingExp.WorkExperienceID, newEndDate]);
+          await WorkExperienceRepository.markNotCurrent(existingExp.WorkExperienceID, newEndDate);
         }
         // If new start date is NOT greater, keep existing as current
       }
@@ -520,28 +402,10 @@ export class WorkExperienceService {
    */
   static async getCurrentWorkExperienceStatus(applicantId: string): Promise<any> {
     try {
-      const query = `
-        SELECT 
-          WorkExperienceID,
-          JobTitle,
-          CompanyName,
-          StartDate,
-          EndDate,
-          IsCurrent,
-          CASE WHEN OrganizationID IS NOT NULL THEN 
-            (SELECT Name FROM Organizations WHERE OrganizationID = we.OrganizationID)
-          ELSE CompanyName END as ResolvedCompanyName
-        FROM WorkExperiences we
-        WHERE ApplicantID = @param0 
-        AND IsCurrent = 1
-        AND (IsActive = 1 OR IsActive IS NULL)
-        ORDER BY StartDate DESC
-      `;
-      
-      const result = await dbService.executeQuery(query, [applicantId]);
+      const currentExperiences = await WorkExperienceRepository.findCurrentByApplicant(applicantId);
       return {
-        currentCount: result.recordset?.length || 0,
-        currentExperiences: result.recordset || []
+        currentCount: currentExperiences.length,
+        currentExperiences
       };
     } catch (error) {
       console.error('Error getting current work experience status:', error);

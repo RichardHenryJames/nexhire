@@ -1,4 +1,4 @@
-import { dbService } from '../services/database.service';
+import { ProfileRepository } from '../repositories/profile.repository';
 import { AuthService } from '../services/auth.service';
 import { ValidationError, NotFoundError } from '../utils/validation';
 import { decrypt, maskEmail } from '../utils/encryption';
@@ -61,79 +61,35 @@ export class ApplicantService {
     static async getApplicantProfile(userId: string): Promise<any> {
         try {
             // Check if user exists and is a job seeker
-            const userQuery = 'SELECT UserID, UserType FROM Users WHERE UserID = @param0 AND IsActive = 1';
-            const userResult = await dbService.executeQuery(userQuery, [userId]);
+            const user = await ProfileRepository.findActiveUser(userId);
             
-            if (!userResult.recordset || userResult.recordset.length === 0) {
+            if (!user) {
                 throw new NotFoundError('User not found');
             }
             
             // Get or create applicant profile with salary data
-            let applicantQuery = `
-                SELECT 
-                    a.*,
-                    u.FirstName,
-                    u.LastName,
-                    u.Email,
-                    u.Phone,
-                    u.ProfilePictureURL,
-                    u.IsVerifiedReferrer,
-                    u.IsVerifiedUser,
-                    ISNULL(a.ReferralPoints, 0) as ReferralPoints
-                FROM Applicants a
-                INNER JOIN Users u ON a.UserID = u.UserID
-                WHERE a.UserID = @param0
-            `;
-            
-            let applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
+            let profile = await ProfileRepository.findApplicantProfile(userId);
             
             // If no applicant profile exists, create one
-            if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            if (!profile) {
                 await this.createApplicantProfile(userId);
-                
-                // Retry query after creation
-                applicantResult = await dbService.executeQuery(applicantQuery, [userId]);
+                profile = await ProfileRepository.findApplicantProfile(userId);
             }
             
-            if (!applicantResult.recordset || applicantResult.recordset.length === 0) {
+            if (!profile) {
                 throw new Error('Failed to create or retrieve applicant profile');
             }
-
-            const profile = applicantResult.recordset[0];
 
             // PERF: Run all independent profile-enrichment queries in parallel
             // (was 7-8 sequential DB round-trips — now 4 parallel groups)
             const [workExpData, referralStatsData, salaryData, resumesData] = await Promise.all([
-                // Group 1: Work experience (latest + all dates for total calculation)
-                dbService.executeQuery(
-                    `SELECT
-                        we.WorkExperienceID, we.CompanyName, we.JobTitle, we.Department,
-                        we.EmploymentType, we.StartDate, we.EndDate, we.IsCurrent,
-                        we.Location, we.Country, we.Description, we.Skills,
-                        we.CompanyEmailVerified, we.OrganizationID,
-                        o.Name as OrganizationName, o.LogoURL as OrganizationLogo,
-                        ISNULL(o.Tier, 'Standard') as OrganizationTier
-                     FROM WorkExperiences we
-                     LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
-                     WHERE we.ApplicantID = @param0 AND (we.IsActive = 1 OR we.IsActive IS NULL)
-                     ORDER BY we.IsCurrent DESC, 
-                              CASE WHEN we.EndDate IS NULL THEN 1 ELSE 0 END DESC,
-                              we.EndDate DESC, we.StartDate DESC`,
-                    [profile.ApplicantID]
-                ).catch(e => { console.warn('Could not load work experiences:', e); return { recordset: [] }; }),
+                // Group 1: Work experience
+                ProfileRepository.findWorkExperiences(profile.ApplicantID)
+                    .catch(e => { console.warn('Could not load work experiences:', e); return []; }),
 
                 // Group 2: Referral stats
-                dbService.executeQuery(
-                    `SELECT 
-                        COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 THEN rr.RequestID END) as TotalReferralsMade,
-                        COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedReferrals,
-                        COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param1 THEN rr.RequestID END) as ReferralRequestsMade,
-                        ISNULL(SUM(CASE WHEN rw.ReferrerID = @param1 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
-                    FROM ReferralRequests rr
-                    LEFT JOIN ReferralRewards rw ON rr.RequestID = rw.RequestID
-                    WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param1)`,
-                    [userId, profile.ApplicantID]
-                ).catch(e => { console.warn('Could not load referral stats:', e); return { recordset: [{}] }; }),
+                ProfileRepository.getReferralStats(userId, profile.ApplicantID)
+                    .catch(e => { console.warn('Could not load referral stats:', e); return {}; }),
 
                 // Group 3: Salary breakdown
                 this.getApplicantSalaryBreakdown(profile.ApplicantID)
@@ -145,7 +101,7 @@ export class ApplicantService {
             ]);
 
             // ── Process work experiences ────────────────────────────
-            const allWorkExp = workExpData.recordset || [];
+            const allWorkExp = workExpData as any[];
             
             // Compute total months from all experiences
             const now = new Date();
@@ -174,7 +130,7 @@ export class ApplicantService {
             });
 
             // ── Process referral stats ──────────────────────────────
-            const stats = referralStatsData.recordset?.[0] || {};
+            const stats = referralStatsData as any;
             profile.referralStats = {
                 totalReferralsMade: stats.TotalReferralsMade || 0,
                 verifiedReferrals: stats.VerifiedReferrals || 0,
@@ -210,27 +166,13 @@ export class ApplicantService {
     /** Get salary breakdown (current and expected) for an applicant */
     static async getApplicantSalaryBreakdown(applicantId: string): Promise<SalaryBreakdown> {
         try {
-            const query = `
-                SELECT 
-                    aps.*,
-                    sc.ComponentName,
-                    sc.ComponentType,
-                    c.Code as CurrencyCode,
-                    c.Symbol as CurrencySymbol
-                FROM ApplicantSalaries aps
-                INNER JOIN SalaryComponents sc ON aps.ComponentID = sc.ComponentID
-                INNER JOIN Currencies c ON aps.CurrencyID = c.CurrencyID
-                WHERE aps.ApplicantID = @param0
-                ORDER BY aps.SalaryContext, sc.ComponentID
-            `;
-            
-            const result = await dbService.executeQuery(query, [applicantId]);
+            const rows = await ProfileRepository.findSalaryBreakdown(applicantId);
             
             const current: SalaryComponent[] = [];
             const expected: SalaryComponent[] = [];
             
-            if (result.recordset) {
-                result.recordset.forEach((row: any) => {
+            if (rows.length > 0) {
+                rows.forEach((row: any) => {
                     const component: SalaryComponent = {
                         ComponentID: row.ComponentID,
                         ComponentName: row.ComponentName,
@@ -260,41 +202,34 @@ export class ApplicantService {
     static async updateApplicantSalaryBreakdown(applicantId: string, salaryData: SalaryBreakdown): Promise<void> {
         try {
             // Delete existing salary records for this applicant
-            await dbService.executeQuery(
-                'DELETE FROM ApplicantSalaries WHERE ApplicantID = @param0',
-                [applicantId]
-            );
+            await ProfileRepository.deleteSalaries(applicantId);
             
             // Insert current salary components
             for (const component of salaryData.current) {
                 const salaryId = AuthService.generateUniqueId();
-                await dbService.executeQuery(`
-                    INSERT INTO ApplicantSalaries (
-                        ApplicantSalaryID, ApplicantID, ComponentID, Amount, 
-                        CurrencyID, Frequency, SalaryContext, Notes,
-                        CreatedAt, UpdatedAt
-                    ) VALUES (
-                        @param0, @param1, @param2, @param3, @param4, @param5, 
-                        'Current', @param6, GETUTCDATE(), GETUTCDATE()
-                    )
-                `, [salaryId, applicantId, component.ComponentID, component.Amount, 
-                    component.CurrencyID, component.Frequency || 'Yearly', component.Notes || '']);
+                await ProfileRepository.insertSalary({
+                    salaryId, applicantId,
+                    componentId: component.ComponentID,
+                    amount: component.Amount,
+                    currencyId: component.CurrencyID,
+                    frequency: component.Frequency || 'Yearly',
+                    context: 'Current',
+                    notes: component.Notes || ''
+                });
             }
             
             // Insert expected salary components
             for (const component of salaryData.expected) {
                 const salaryId = AuthService.generateUniqueId();
-                await dbService.executeQuery(`
-                    INSERT INTO ApplicantSalaries (
-                        ApplicantSalaryID, ApplicantID, ComponentID, Amount, 
-                        CurrencyID, Frequency, SalaryContext, Notes,
-                        CreatedAt, UpdatedAt
-                    ) VALUES (
-                        @param0, @param1, @param2, @param3, @param4, @param5, 
-                        'Expected', @param6, GETUTCDATE(), GETUTCDATE()
-                    )
-                `, [salaryId, applicantId, component.ComponentID, component.Amount, 
-                    component.CurrencyID, component.Frequency || 'Yearly', component.Notes || '']);
+                await ProfileRepository.insertSalary({
+                    salaryId, applicantId,
+                    componentId: component.ComponentID,
+                    amount: component.Amount,
+                    currencyId: component.CurrencyID,
+                    frequency: component.Frequency || 'Yearly',
+                    context: 'Expected',
+                    notes: component.Notes || ''
+                });
             }
         } catch (error) {
             console.error('Error updating salary breakdown:', error);
@@ -445,7 +380,7 @@ export class ApplicantService {
                     WHERE ApplicantID = @param0
                 `;
 
-                await dbService.executeQuery(updateQuery, parameters);
+                await ProfileRepository.updateApplicant(updateQuery, parameters);
             }
 
             // Return updated profile with salary breakdown
@@ -459,29 +394,7 @@ export class ApplicantService {
     // Create new applicant profile
     private static async createApplicantProfile(userId: string): Promise<string> {
         const applicantId = AuthService.generateUniqueId();
-        
-        const query = `
-            INSERT INTO Applicants (
-                ApplicantID, 
-                UserID, 
-                ProfileCompleteness, 
-                IsOpenToWork,
-                AllowRecruitersToContact, 
-                HideCurrentCompany, 
-                HideSalaryDetails,
-                ImmediatelyAvailable, 
-                WillingToRelocate, 
-                IsFeatured,
-                OpenToRefer,
-                CreatedAt,
-                UpdatedAt
-            ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0, 1,
-                GETUTCDATE(), GETUTCDATE()
-            )
-        `;
-        
-        await dbService.executeQuery(query, [applicantId, userId]);
+        await ProfileRepository.insertApplicant(applicantId, userId);
         return applicantId;
     }
 
@@ -499,23 +412,8 @@ export class ApplicantService {
     /** Get all resumes for an applicant (excludes soft-deleted) */
     static async getApplicantResumes(applicantId: string): Promise<any[]> {
         try {
-            const query = `
-                SELECT 
-                    ResumeID,
-                    ResumeLabel,
-                    ResumeURL,
-                    IsPrimary,
-                    IsDeleted,
-                    DeletedAt,
-                    CreatedAt,
-                    UpdatedAt
-                FROM ApplicantResumes 
-                WHERE ApplicantID = @param0 AND (IsDeleted =0 OR IsDeleted IS NULL)
-                ORDER BY IsPrimary DESC, CreatedAt DESC
-            `;
-            const result = await dbService.executeQuery(query, [applicantId]);
-            // SECURITY: Sign URLs for private blob access
-            return (result.recordset || []).map((r: any) => ({ ...r, ResumeURL: signResumeUrl(r.ResumeURL) }));
+            const resumes = await ProfileRepository.findResumes(applicantId);
+            return resumes.map((r: any) => ({ ...r, ResumeURL: signResumeUrl(r.ResumeURL) }));
         } catch (error) {
             console.error('Error getting applicant resumes:', error);
             throw error;
@@ -525,21 +423,7 @@ export class ApplicantService {
     /** Get resume for historical viewing (includes soft-deleted for application history) */
     static async getResumeForViewing(resumeId: string): Promise<any | null> {
         try {
-            const query = `
-                SELECT 
-                    ResumeID,
-                    ResumeLabel,
-                    ResumeURL,
-                    IsPrimary,
-                    IsDeleted,
-                    DeletedAt,
-                    CreatedAt,
-                    UpdatedAt
-                FROM ApplicantResumes 
-                WHERE ResumeID = @param0
-            `;
-            const result = await dbService.executeQuery(query, [resumeId]);
-            const resume = result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
+            const resume = await ProfileRepository.findResumeById(resumeId);
             // SECURITY: Sign URL for private blob access
             if (resume?.ResumeURL) resume.ResumeURL = signResumeUrl(resume.ResumeURL);
             return resume;
@@ -552,20 +436,7 @@ export class ApplicantService {
     /** Get primary resume for an applicant */
     static async getPrimaryResume(applicantId: string): Promise<any | null> {
         try {
-            const query = `
-                SELECT TOP 1
-                    ResumeID,
-                    ResumeLabel,
-                    ResumeURL,
-                    IsPrimary,
-                    CreatedAt,
-                    UpdatedAt
-                FROM ApplicantResumes 
-                WHERE ApplicantID = @param0 AND IsPrimary =1 AND (IsDeleted =0 OR IsDeleted IS NULL)
-                ORDER BY CreatedAt DESC
-            `;
-            const result = await dbService.executeQuery(query, [applicantId]);
-            const resume = result.recordset && result.recordset.length >0 ? result.recordset[0] : null;
+            const resume = await ProfileRepository.findPrimaryResume(applicantId);
             // SECURITY: Sign URL for private blob access
             if (resume?.ResumeURL) resume.ResumeURL = signResumeUrl(resume.ResumeURL);
             return resume;
@@ -582,74 +453,42 @@ export class ApplicantService {
 
             // If this is being set as primary, unset other primary resumes
             if (resumeData.isPrimary) {
-                await dbService.executeQuery(
-                    'UPDATE ApplicantResumes SET IsPrimary = 0 WHERE ApplicantID = @param0',
-                    [applicantId]
-                );
+                await ProfileRepository.clearPrimaryResumes(applicantId);
             }
 
             // Check resume limit (max 3 resumes per applicant)
-            const countQuery = 'SELECT COUNT(*) as ResumeCount FROM ApplicantResumes WHERE ApplicantID = @param0';
-            const countResult = await dbService.executeQuery(countQuery, [applicantId]);
-            const currentCount = countResult.recordset[0]?.ResumeCount || 0;
+            const currentCount = await ProfileRepository.countResumes(applicantId);
 
             if (currentCount >= 3) {
-                // Get the oldest non-primary resume details before deleting
-                const oldestResumeQuery = `
-                    SELECT TOP 1 ResumeID, ResumeURL FROM ApplicantResumes 
-                    WHERE ApplicantID = @param0 AND IsPrimary = 0
-                    ORDER BY CreatedAt ASC
-                `;
-                const oldestResult = await dbService.executeQuery(oldestResumeQuery, [applicantId]);
+                const oldestResume = await ProfileRepository.findOldestNonPrimary(applicantId);
                 
-                if (oldestResult.recordset && oldestResult.recordset.length > 0) {
-                    const oldestResume = oldestResult.recordset[0];
-                    
-                    // Delete from database first
-                    await dbService.executeQuery(
-                        'DELETE FROM ApplicantResumes WHERE ResumeID = @param0',
-                        [oldestResume.ResumeID]
-                    );
+                if (oldestResume) {
+                    await ProfileRepository.deleteResume(oldestResume.ResumeID);
                     
                     // Delete file from storage too
                     try {
                         const { ResumeStorageService } = await import('../services/resume-upload.service');
                         const storageService = new ResumeStorageService();
-                        
-                        // Extract userId from applicantId (need to get from Users table)
-                        const userQuery = 'SELECT UserID FROM Applicants WHERE ApplicantID = @param0';
-                        const userResult = await dbService.executeQuery(userQuery, [applicantId]);
-                        const userId = userResult.recordset[0]?.UserID;
+                        const userId = await ProfileRepository.getUserIdFromApplicant(applicantId);
                         
                         if (userId && oldestResume.ResumeURL) {
                             await storageService.deleteOldResume(userId, oldestResume.ResumeURL);
                         }
                     } catch (storageError) {
                         console.warn('Failed to delete old resume from storage:', storageError);
-                        // Continue - database cleanup succeeded
                     }
                 }
             }
 
             // Insert new resume
-            const insertQuery = `
-                INSERT INTO ApplicantResumes (
-                    ResumeID, ApplicantID, ResumeLabel, ResumeURL, 
-                    IsPrimary, ParsedResumeText, CreatedAt, UpdatedAt
-                ) VALUES (
-                    @param0, @param1, @param2, @param3, @param4, @param5,
-                    GETUTCDATE(), GETUTCDATE()
-                )
-            `;
-
-            await dbService.executeQuery(insertQuery, [
+            await ProfileRepository.insertResume({
                 resumeId,
                 applicantId,
-                resumeData.resumeLabel,
-                resumeData.resumeURL,
-                resumeData.isPrimary ? 1 : 0,
-                resumeData.parsedResumeText?.trim() || null
-            ]);
+                label: resumeData.resumeLabel,
+                url: resumeData.resumeURL,
+                isPrimary: resumeData.isPrimary ? 1 : 0,
+                parsedText: resumeData.parsedResumeText?.trim() || null
+            });
 
             return resumeId;
         } catch (error) {
@@ -662,20 +501,16 @@ export class ApplicantService {
     static async deleteApplicantResume(applicantId: string, resumeId: string): Promise<{ success: boolean; softDelete: boolean; message: string; applicationCount?: number; referralCount?: number; }> {
         try {
             // Verify resume exists
-            const resumeQuery = `SELECT IsPrimary, IsDeleted, ResumeURL FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1`;
-            const resumeResult = await dbService.executeQuery(resumeQuery, [resumeId, applicantId]);
-            if (!resumeResult.recordset || resumeResult.recordset.length ===0) {
+            const resumeResult = await ProfileRepository.findResumeForDelete(resumeId, applicantId);
+            if (!resumeResult) {
                 throw new NotFoundError('Resume not found');
             }
-            const resume = resumeResult.recordset[0];
+            const resume = resumeResult;
             if (resume.IsDeleted) {
                 throw new ValidationError('Resume has already been deleted');
             }
 
-            // Active (non-deleted) resume counts
-            const activeResumesQuery = `SELECT COUNT(*) as Total, SUM(CAST(IsPrimary as INT)) as PrimaryCount FROM ApplicantResumes WHERE ApplicantID = @param0 AND (IsDeleted =0 OR IsDeleted IS NULL)`;
-            const activeResumesResult = await dbService.executeQuery(activeResumesQuery, [applicantId]);
-            const { Total, PrimaryCount } = activeResumesResult.recordset[0];
+            const { Total, PrimaryCount } = await ProfileRepository.getActiveResumeCounts(applicantId);
             if (Total <=1) {
                 throw new ValidationError('Cannot delete the last resume. Upload a new resume first.');
             }
@@ -684,21 +519,11 @@ export class ApplicantService {
             }
 
             // Check usage
-            const usageQuery = `
-            SELECT 
-                (SELECT COUNT(*) FROM JobApplications WHERE ResumeID = @param0) as ApplicationCount,
-                (SELECT COUNT(*) FROM ReferralRequests WHERE ResumeID = @param0) as ReferralCount
-            `;
-            const usageResult = await dbService.executeQuery(usageQuery, [resumeId]);
-            const { ApplicationCount, ReferralCount } = usageResult.recordset[0];
-            const isUsed = ApplicationCount >0 || ReferralCount >0;
+            const { ApplicationCount, ReferralCount } = await ProfileRepository.getResumeUsage(resumeId);
+            const isUsed = ApplicationCount > 0 || ReferralCount > 0;
 
             if (isUsed) {
-                // Soft delete
-                await dbService.executeQuery(
-                    `UPDATE ApplicantResumes SET IsDeleted =1, DeletedAt = GETUTCDATE(), UpdatedAt = GETUTCDATE() WHERE ResumeID = @param0 AND ApplicantID = @param1`,
-                    [resumeId, applicantId]
-                );
+                await ProfileRepository.softDeleteResume(resumeId, applicantId);
                 return {
                     success: true,
                     softDelete: true,
@@ -709,10 +534,7 @@ export class ApplicantService {
             }
 
             // Hard delete
-            await dbService.executeQuery(
-                'DELETE FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1',
-                [resumeId, applicantId]
-            );
+            await ProfileRepository.hardDeleteResume(resumeId, applicantId);
 
             return { success: true, softDelete: false, message: 'Resume permanently deleted.' };
         } catch (error) {
@@ -724,16 +546,15 @@ export class ApplicantService {
     /** Set a resume as primary (cannot set deleted resume as primary) */
     static async setPrimaryResume(applicantId: string, resumeId: string): Promise<void> {
         try {
-            const resumeQuery = 'SELECT ResumeID, IsDeleted FROM ApplicantResumes WHERE ResumeID = @param0 AND ApplicantID = @param1';
-            const resumeResult = await dbService.executeQuery(resumeQuery, [resumeId, applicantId]);
-            if (!resumeResult.recordset || resumeResult.recordset.length ===0) {
+            const resumeResult = await ProfileRepository.findResumeForDelete(resumeId, applicantId);
+            if (!resumeResult) {
                 throw new NotFoundError('Resume not found');
             }
-            if (resumeResult.recordset[0].IsDeleted) {
+            if (resumeResult.IsDeleted) {
                 throw new ValidationError('Cannot set a deleted resume as primary');
             }
-            await dbService.executeQuery('UPDATE ApplicantResumes SET IsPrimary =0 WHERE ApplicantID = @param0', [applicantId]);
-            await dbService.executeQuery('UPDATE ApplicantResumes SET IsPrimary =1, UpdatedAt = GETUTCDATE() WHERE ResumeID = @param0', [resumeId]);
+            await ProfileRepository.clearPrimaryResumes(applicantId);
+            await ProfileRepository.setPrimary(resumeId);
         } catch (error) {
             console.error('Error setting primary resume:', error);
             throw error;
@@ -748,13 +569,7 @@ export class ApplicantService {
      */
     static async updateLastJobAppliedAt(userId: string): Promise<void> {
         try {
-            const query = `
-                UPDATE Applicants 
-                SET LastJobAppliedAt = GETUTCDATE(), UpdatedAt = GETUTCDATE()
-                WHERE UserID = @param0
-            `;
-            
-            await dbService.executeQuery(query, [userId]);
+            await ProfileRepository.touchLastJobApplied(userId);
         } catch (error) {
             console.error('Error updating LastJobAppliedAt:', error);
             // Don't throw - this is non-critical
@@ -796,13 +611,7 @@ export class ApplicantService {
             // Ensure score is between 0-100
             searchScore = Math.max(0, Math.min(100, searchScore));
             
-            const query = `
-                UPDATE Applicants 
-                SET SearchScore = @param1, UpdatedAt = GETUTCDATE()
-                WHERE UserID = @param0
-            `;
-            
-            await dbService.executeQuery(query, [userId, searchScore]);
+            await ProfileRepository.updateSearchScore(userId, searchScore);
         } catch (error) {
             console.error('Error calculating search score:', error);
             // Don't throw - this is non-critical
@@ -814,39 +623,13 @@ export class EmployerService {
     // Get employer profile by user ID
     static async getEmployerProfile(userId: string): Promise<any> {
         try {
-            const query = `
-                SELECT 
-                    e.EmployerID,
-                    e.UserID,
-                    e.OrganizationID,
-                    e.Role,
-                    e.IsVerified,
-                    e.JoinedAt,
-                    o.Name as OrganizationName,
-                    o.Industry as OrganizationIndustry,
-                    o.Size as OrganizationSize,
-                    o.Headquarters as OrganizationHeadquarters,
-                    o.Website as OrganizationWebsite,
-                    o.Description as OrganizationDescription,
-                    o.LogoURL as OrganizationLogoURL,
-                    u.FirstName,
-                    u.LastName,
-                    u.Email,
-                    u.Phone,
-                    u.ProfilePictureURL
-                FROM Employers e
-                INNER JOIN Organizations o ON e.OrganizationID = o.OrganizationID
-                INNER JOIN Users u ON e.UserID = u.UserID
-                WHERE e.UserID = @param0
-            `;
+            const profile = await ProfileRepository.findEmployerProfile(userId);
             
-            const result = await dbService.executeQuery(query, [userId]);
-            
-            if (!result.recordset || result.recordset.length === 0) {
+            if (!profile) {
                 throw new NotFoundError('Employer profile not found');
             }
             
-            return result.recordset[0];
+            return profile;
         } catch (error) {
             console.error('Error getting employer profile:', error);
             throw error;
@@ -857,19 +640,13 @@ export class EmployerService {
     static async updateEmployerProfile(userId: string, profileData: ProfileData): Promise<any> {
         try {
             // Get employer and organization IDs
-            const employerQuery = `
-                SELECT e.EmployerID, e.OrganizationID 
-                FROM Employers e 
-                WHERE e.UserID = @param0
-            `;
+            const ids = await ProfileRepository.findEmployerIds(userId);
             
-            const employerResult = await dbService.executeQuery(employerQuery, [userId]);
-            
-            if (!employerResult.recordset || employerResult.recordset.length === 0) {
+            if (!ids) {
                 throw new NotFoundError('Employer profile not found');
             }
             
-            const { EmployerID: employerId, OrganizationID: organizationId } = employerResult.recordset[0];
+            const { EmployerID: employerId, OrganizationID: organizationId } = ids;
 
             // Update employer fields (only Role is user-updatable in Employers table)
             const employerFields: EmployerFieldMapping = {
@@ -922,7 +699,7 @@ export class EmployerService {
                     SET ${employerUpdates.join(', ')}
                     WHERE EmployerID = @param0
                 `;
-                await dbService.executeQuery(employerUpdateQuery, employerParams);
+                await ProfileRepository.updateEmployer(employerUpdateQuery, employerParams);
             }
 
             if (orgUpdates.length > 0) {
@@ -932,7 +709,7 @@ export class EmployerService {
                     SET ${orgUpdates.join(', ')}
                     WHERE OrganizationID = @param0
                 `;
-                await dbService.executeQuery(orgUpdateQuery, orgParams);
+                await ProfileRepository.updateOrganization(orgUpdateQuery, orgParams);
             }
 
             // Return updated profile

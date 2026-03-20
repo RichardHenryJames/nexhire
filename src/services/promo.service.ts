@@ -3,7 +3,7 @@
  * Handles validation and application of promotional codes for wallet recharges
  */
 
-import { dbService } from './database.service';
+import { PromoRepository } from '../repositories/promo.repository';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface PromoValidationResult {
@@ -33,18 +33,11 @@ export class PromoService {
       const normalizedCode = code.trim().toUpperCase();
 
       // Fetch promo code details
-      const result = await dbService.executeQuery(`
-        SELECT CodeID, Code, Type, Value, MinRechargeAmount, MaxBonusAmount,
-               MaxUses, CurrentUses, PerUserLimit, ExpiresAt, IsActive, Description
-        FROM PromoCodes
-        WHERE Code = @param0
-      `, [normalizedCode]);
+      const promo = await PromoRepository.findByCode(normalizedCode);
 
-      if (!result.recordset || result.recordset.length === 0) {
+      if (!promo) {
         return { valid: false, message: 'Invalid promo code' };
       }
-
-      const promo = result.recordset[0];
 
       // Check if active
       if (!promo.IsActive) {
@@ -62,13 +55,7 @@ export class PromoService {
       }
 
       // Check per-user usage limit
-      const userUsageResult = await dbService.executeQuery(`
-        SELECT COUNT(*) as UsageCount
-        FROM PromoCodeUsages
-        WHERE CodeID = @param0 AND UserID = @param1
-      `, [promo.CodeID, userId]);
-
-      const userUsages = userUsageResult.recordset[0]?.UsageCount || 0;
+      const userUsages = await PromoRepository.countUserUsage(promo.CodeID, userId);
       if (userUsages >= promo.PerUserLimit) {
         return { valid: false, message: 'You have already used this promo code' };
       }
@@ -131,25 +118,14 @@ export class PromoService {
       const normalizedCode = code.trim().toUpperCase();
 
       // Get CodeID
-      const result = await dbService.executeQuery(`
-        SELECT CodeID FROM PromoCodes WHERE Code = @param0
-      `, [normalizedCode]);
-
-      if (!result.recordset || result.recordset.length === 0) return false;
-
-      const codeId = result.recordset[0].CodeID;
+      const codeId = await PromoRepository.getCodeId(normalizedCode);
+      if (!codeId) return false;
 
       // Record usage
-      await dbService.executeQuery(`
-        INSERT INTO PromoCodeUsages (UsageID, CodeID, UserID, RechargeAmount, BonusGiven, UsedAt)
-        VALUES (@param0, @param1, @param2, @param3, @param4, GETUTCDATE())
-      `, [uuidv4(), codeId, userId, rechargeAmount, bonusGiven]);
+      await PromoRepository.insertUsage(uuidv4(), codeId, userId, rechargeAmount, bonusGiven);
 
       // Increment global counter
-      await dbService.executeQuery(`
-        UPDATE PromoCodes SET CurrentUses = CurrentUses + 1, UpdatedAt = GETUTCDATE()
-        WHERE CodeID = @param0
-      `, [codeId]);
+      await PromoRepository.incrementUsage(codeId);
 
       return true;
     } catch (error) {
@@ -164,24 +140,7 @@ export class PromoService {
   static async getPromoCodesForUser(userId: string): Promise<any[]> {
     try {
       // 1. Fetch all active, non-expired promo codes
-      const codesResult = await dbService.executeQuery(`
-        SELECT pc.CodeID, pc.Code, pc.Type, pc.Value, pc.MinRechargeAmount, pc.MaxBonusAmount,
-               pc.MaxUses, pc.CurrentUses, pc.PerUserLimit, pc.ExpiresAt, pc.Description,
-               ISNULL(pu.UserUsages, 0) AS UserUsages
-        FROM PromoCodes pc
-        LEFT JOIN (
-          SELECT CodeID, COUNT(*) AS UserUsages
-          FROM PromoCodeUsages
-          WHERE UserID = @param0
-          GROUP BY CodeID
-        ) pu ON pc.CodeID = pu.CodeID
-        WHERE pc.IsActive = 1
-          AND (pc.ExpiresAt IS NULL OR pc.ExpiresAt > GETUTCDATE())
-          AND (pc.MaxUses IS NULL OR pc.CurrentUses < pc.MaxUses)
-        ORDER BY pc.Code
-      `, [userId]);
-
-      const codes = codesResult.recordset || [];
+      const codes = await PromoRepository.findAllActiveWithUsage(userId);
 
       // 2. Determine eligibility for each code using shared helper
       const results: any[] = [];
@@ -246,29 +205,16 @@ export class PromoService {
       }
 
       // Fetch user profile
-      const profileResult = await dbService.executeQuery(`
-        SELECT a.GraduationYear, a.Institution, a.TotalExperienceMonths
-        FROM Users u
-        LEFT JOIN Applicants a ON u.UserID = a.UserID
-        WHERE u.UserID = @param0
-      `, [userId]);
-      const profile = profileResult.recordset?.[0] || {};
+      const profile = await PromoRepository.getUserProfile(userId);
 
       const currentYear = new Date().getFullYear();
       const gradYear = profile.GraduationYear ? parseInt(profile.GraduationYear, 10) : null;
 
       // Check work experience
-      const workResult = await dbService.executeQuery(`
-        SELECT 
-          COUNT(*) AS TotalWork,
-          SUM(CASE WHEN w.IsCurrent = 1 OR w.EndDate IS NULL THEN 1 ELSE 0 END) AS CurrentWork
-        FROM WorkExperiences w
-        INNER JOIN Applicants a ON w.ApplicantID = a.ApplicantID
-        WHERE a.UserID = @param0
-      `, [userId]);
+      const workCounts = await PromoRepository.getUserWorkCounts(userId);
 
-      const hasAnyWork = (workResult.recordset?.[0]?.TotalWork || 0) > 0;
-      const hasCurrentWork = (workResult.recordset?.[0]?.CurrentWork || 0) > 0;
+      const hasAnyWork = (workCounts.TotalWork || 0) > 0;
+      const hasCurrentWork = (workCounts.CurrentWork || 0) > 0;
 
       switch (normalizedCode) {
         case 'FRESHER':
@@ -310,15 +256,7 @@ export class PromoService {
    */
   static async getBonusPacks(): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(`
-        SELECT PackID, Name, PayAmount, GetAmount, BonusAmount, BonusPercent,
-               ReferralsWorth, Badge, SortOrder
-        FROM WalletBonusPacks
-        WHERE IsActive = 1
-        ORDER BY SortOrder ASC
-      `, []);
-
-      return result.recordset || [];
+      return await PromoRepository.getActiveBonusPacks();
     } catch (error) {
       console.error('Error fetching bonus packs:', error);
       return [];
@@ -331,13 +269,7 @@ export class PromoService {
    */
   static async findMatchingPack(amount: number): Promise<any | null> {
     try {
-      const result = await dbService.executeQuery(`
-        SELECT PackID, Name, PayAmount, GetAmount, BonusAmount, BonusPercent, ReferralsWorth, Badge
-        FROM WalletBonusPacks
-        WHERE IsActive = 1 AND PayAmount = @param0
-      `, [amount]);
-
-      return result.recordset?.[0] || null;
+      return await PromoRepository.findPackByAmount(amount);
     } catch (error) {
       console.error('Error finding matching pack:', error);
       return null;

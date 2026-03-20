@@ -5,7 +5,7 @@
 
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { dbService } from './database.service';
+import { WalletRepository } from '../repositories/wallet.repository';
 import { AuthService } from './auth.service';
 import { PricingService } from './pricing.service';
 import { EmailService } from './emailService';
@@ -53,30 +53,13 @@ export class WalletService {
   static async getOrCreateWallet(userId: string): Promise<Wallet> {
     try {
       // Try to get existing wallet first
-      const walletQuery = `
-        SELECT 
-          w.WalletID, w.UserID, w.Balance, w.CurrencyID, 
-          c.Code as CurrencyCode, w.Status, w.CreatedAt, 
-          w.UpdatedAt, w.LastTransactionAt
-        FROM Wallets w
-        INNER JOIN Currencies c ON w.CurrencyID = c.CurrencyID
-        WHERE w.UserID = @param0
-      `;
-      
-      const result = await dbService.executeQuery(walletQuery, [userId]);
-      
-      if (result.recordset && result.recordset.length > 0) {
-        return result.recordset[0];
-      }
+      const existing = await WalletRepository.findByUserId(userId);
+      if (existing) return existing;
       
       // Create new wallet — use try/catch for race condition (duplicate key)
       const walletId = AuthService.generateUniqueId();
       try {
-        const createQuery = `
-          INSERT INTO Wallets (WalletID, UserID, Balance, CurrencyID, Status)
-          VALUES (@param0, @param1, 0.00, 4, 'Active');
-        `;
-        await dbService.executeQuery(createQuery, [walletId, userId]);
+        await WalletRepository.insert(walletId, userId);
       } catch (insertError: any) {
         // If duplicate key error, wallet was created by another concurrent request — just fetch it
         if (insertError.number === 2601 || insertError.number === 2627) {
@@ -87,11 +70,11 @@ export class WalletService {
       }
 
       // Fetch and return the wallet (whether we just created it or it already existed)
-      const fetchResult = await dbService.executeQuery(walletQuery, [userId]);
-      if (!fetchResult.recordset || fetchResult.recordset.length === 0) {
+      const wallet = await WalletRepository.findByUserId(userId);
+      if (!wallet) {
         throw new Error('Failed to create or fetch wallet');
       }
-      return fetchResult.recordset[0];
+      return wallet;
     } catch (error) {
       console.error('Error getting/creating wallet:', error);
       throw error;
@@ -134,14 +117,11 @@ export class WalletService {
       const wallet = await this.getOrCreateWallet(userId);
 
       // Get user details
-      const userQuery = 'SELECT Email, FirstName, LastName FROM Users WHERE UserID = @param0';
-      const userResult = await dbService.executeQuery(userQuery, [userId]);
+      const user = await WalletRepository.getUserBasic(userId);
       
-      if (!userResult.recordset || userResult.recordset.length === 0) {
+      if (!user) {
         throw new NotFoundError('User not found');
       }
-      
-      const user = userResult.recordset[0];
 
       // Generate receipt
       const sanitizedUser = (userId || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
@@ -174,30 +154,18 @@ export class WalletService {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour expiry
 
-      const insertQuery = `
-        INSERT INTO WalletRechargeOrders (
-          OrderID, WalletID, UserID, Amount, CurrencyID, 
-          Status, PaymentGateway, RazorpayOrderID, Receipt, ExpiresAt,
-          PackID, PromoCode
-        ) VALUES (
-          @param0, @param1, @param2, @param3, @param4, 
-          'Pending', 'Razorpay', @param5, @param6, @param7,
-          @param8, @param9
-        )
-      `;
-
-      await dbService.executeQuery(insertQuery, [
+      await WalletRepository.insertRechargeOrder({
         orderId,
-        wallet.WalletID,
+        walletId: wallet.WalletID,
         userId,
         amount,
-        wallet.CurrencyID,
-        order.id,
+        currencyId: wallet.CurrencyID,
+        razorpayOrderId: order.id,
         receipt,
         expiresAt,
-        packId || null,
-        promoCode?.trim().toUpperCase() || null
-      ]);
+        packId: packId || null,
+        promoCode: promoCode?.trim().toUpperCase() || null
+      });
 
       return {
         orderId: order.id,
@@ -240,22 +208,14 @@ export class WalletService {
       }
 
       // Get order details
-      const orderQuery = `
-        SELECT OrderID, WalletID, UserID, Amount, Status, RazorpayOrderID, PackID, PromoCode
-        FROM WalletRechargeOrders
-        WHERE RazorpayOrderID = @param0 AND UserID = @param1
-      `;
-      
-      const orderResult = await dbService.executeQuery(orderQuery, [
+      const order = await WalletRepository.findRechargeOrder(
         verificationData.razorpayOrderId,
         userId
-      ]);
+      );
 
-      if (!orderResult.recordset || orderResult.recordset.length === 0) {
+      if (!order) {
         throw new NotFoundError('Recharge order not found');
       }
-
-      const order = orderResult.recordset[0];
 
       if (order.Status === 'Paid') {
         throw new ValidationError('Order already processed');
@@ -269,48 +229,26 @@ export class WalletService {
       let balanceAfter = balanceBefore + order.Amount;
 
       // SECURITY FIX: Atomic balance update to prevent race condition
-      await dbService.executeQuery(
-        `UPDATE Wallets 
-         SET Balance = Balance + @param1, 
-             UpdatedAt = GETUTCDATE(), 
-             LastTransactionAt = GETUTCDATE() 
-         WHERE WalletID = @param0`,
-        [wallet.WalletID, order.Amount]
-      );
+      await WalletRepository.atomicCredit(wallet.WalletID, order.Amount);
 
       // Create transaction record
       const transactionId = AuthService.generateUniqueId();
-      await dbService.executeQuery(
-        `INSERT INTO WalletTransactions (
-          TransactionID, WalletID, TransactionType, Amount, 
-          BalanceBefore, BalanceAfter, CurrencyID, Source, 
-          PaymentReference, Description, Status
-        ) VALUES (
-          @param0, @param1, 'Credit', @param2, @param3, 
-          @param4, @param5, 'Razorpay', @param6, @param7, 'Completed'
-        )`,
-        [
-          transactionId,
-          wallet.WalletID,
-          order.Amount,
-          balanceBefore,
-          balanceAfter,
-          wallet.CurrencyID,
-          verificationData.razorpayPaymentId,
-          `Wallet recharge - ₹${order.Amount}`
-        ]
-      );
+      await WalletRepository.insertTransaction({
+        transactionId,
+        walletId: wallet.WalletID,
+        type: 'Credit',
+        amount: order.Amount,
+        balanceBefore,
+        balanceAfter,
+        currencyId: wallet.CurrencyID,
+        source: 'Razorpay',
+        paymentReference: verificationData.razorpayPaymentId,
+        description: `Wallet recharge - ₹${order.Amount}`,
+        status: 'Completed'
+      });
 
       // Update order status
-      await dbService.executeQuery(
-        `UPDATE WalletRechargeOrders 
-         SET Status = 'Paid', 
-             RazorpayPaymentID = @param1, 
-             RazorpaySignature = @param2, 
-             PaidAt = GETUTCDATE() 
-         WHERE OrderID = @param0`,
-        [order.OrderID, verificationData.razorpayPaymentId, verificationData.razorpaySignature]
-      );
+      await WalletRepository.markOrderPaid(order.OrderID, verificationData.razorpayPaymentId, verificationData.razorpaySignature);
 
       // === AUTO-CREDIT BONUS (Pack + Promo) ===
       let totalBonus = 0;
@@ -346,10 +284,7 @@ export class WalletService {
 
       // Update bonus credited on the order record
       if (totalBonus > 0) {
-        await dbService.executeQuery(
-          `UPDATE WalletRechargeOrders SET BonusCredited = @param1 WHERE OrderID = @param0`,
-          [order.OrderID, totalBonus]
-        );
+        await WalletRepository.updateOrderBonus(order.OrderID, totalBonus);
         // Re-fetch balance after bonus
         const updatedWallet = await this.getOrCreateWallet(userId);
         balanceAfter = updatedWallet.Balance;
@@ -375,24 +310,19 @@ export class WalletService {
         const errorTransId = AuthService.generateUniqueId();
         const wallet = await this.getOrCreateWallet(userId);
         
-        await dbService.executeQuery(
-          `INSERT INTO WalletTransactions (
-            TransactionID, WalletID, TransactionType, Amount, 
-            BalanceBefore, BalanceAfter, CurrencyID, Source, 
-            PaymentReference, Description, Status
-          ) VALUES (
-            @param0, @param1, 'Credit', 0, @param2, @param2, 
-            @param3, 'Razorpay', @param4, @param5, 'Failed'
-          )`,
-          [
-            errorTransId,
-            wallet.WalletID,
-            wallet.Balance,
-            wallet.CurrencyID,
-            verificationData.razorpayPaymentId || null,
-            error instanceof Error ? error.message : 'Payment verification failed'
-          ]
-        );
+        await WalletRepository.insertTransaction({
+          transactionId: errorTransId,
+          walletId: wallet.WalletID,
+          type: 'Credit',
+          amount: 0,
+          balanceBefore: wallet.Balance,
+          balanceAfter: wallet.Balance,
+          currencyId: wallet.CurrencyID,
+          source: 'Razorpay',
+          paymentReference: verificationData.razorpayPaymentId || null,
+          description: error instanceof Error ? error.message : 'Payment verification failed',
+          status: 'Failed'
+        });
       } catch (logError) {
         console.error('Error logging failed transaction:', logError);
       }
@@ -439,40 +369,9 @@ export class WalletService {
       const wallet = await this.getOrCreateWallet(userId);
       const offset = (page - 1) * pageSize;
 
-      let whereClause = 'WHERE wt.WalletID = @param0';
-      const params: any[] = [wallet.WalletID];
-
-      if (transactionType) {
-        whereClause += ' AND wt.TransactionType = @param1';
-        params.push(transactionType);
-      }
-
-      const query = `
-        SELECT 
-          wt.TransactionID,
-          wt.TransactionType,
-          wt.Amount,
-          wt.BalanceBefore,
-          wt.BalanceAfter,
-          c.Code as CurrencyCode,
-          c.Symbol as CurrencySymbol,
-          wt.Source,
-          wt.PaymentReference,
-          wt.Description,
-          wt.Status,
-          wt.CreatedAt,
-          COUNT(*) OVER() as _TotalCount
-        FROM WalletTransactions wt
-        INNER JOIN Currencies c ON wt.CurrencyID = c.CurrencyID
-        ${whereClause}
-        ORDER BY wt.CreatedAt DESC
-        OFFSET ${offset} ROWS
-        FETCH NEXT ${pageSize} ROWS ONLY
-      `;
-
-      const result = await dbService.executeQuery(query, params);
-      const rows = result.recordset || [];
-      const total = rows[0]?._TotalCount || 0;
+      const { rows, total } = await WalletRepository.findTransactions(
+        wallet.WalletID, offset, pageSize, transactionType
+      );
 
       // Strip _TotalCount from each row
       const transactions = rows.map(({ _TotalCount, ...rest }: any) => rest);
@@ -499,33 +398,7 @@ export class WalletService {
     try {
       const offset = (page - 1) * pageSize;
 
-      const query = `
-        SELECT 
-          wro.OrderID,
-          wro.Amount,
-          c.Code as CurrencyCode,
-          c.Symbol as CurrencySymbol,
-          wro.Status,
-          wro.PaymentGateway,
-          wro.RazorpayOrderID,
-          wro.RazorpayPaymentID,
-          wro.Receipt,
-          wro.CreatedAt,
-          wro.PaidAt,
-          wro.ExpiresAt,
-          wro.ErrorMessage,
-          COUNT(*) OVER() as _TotalCount
-        FROM WalletRechargeOrders wro
-        INNER JOIN Currencies c ON wro.CurrencyID = c.CurrencyID
-        WHERE wro.UserID = @param0
-        ORDER BY wro.CreatedAt DESC
-        OFFSET ${offset} ROWS
-        FETCH NEXT ${pageSize} ROWS ONLY
-      `;
-
-      const result = await dbService.executeQuery(query, [userId]);
-      const rows = result.recordset || [];
-      const total = rows[0]?._TotalCount || 0;
+      const { rows, total } = await WalletRepository.findRechargeOrders(userId, offset, pageSize);
       const orders = rows.map(({ _TotalCount, ...rest }: any) => rest);
 
       return {
@@ -563,49 +436,31 @@ export class WalletService {
       }
 
       // SECURITY FIX: Atomic balance update with WHERE clause to prevent race condition
-      const updateResult = await dbService.executeQuery(
-        `UPDATE Wallets 
-         SET Balance = Balance - @param1, 
-             UpdatedAt = GETUTCDATE(), 
-             LastTransactionAt = GETUTCDATE() 
-         WHERE WalletID = @param0 AND Balance >= @param1`,
-        [wallet.WalletID, amount]
-      );
+      const rowsAffected = await WalletRepository.atomicDebit(wallet.WalletID, amount);
 
       // If no rows updated, balance was insufficient (concurrent debit won the race)
-      if (!updateResult.rowsAffected || updateResult.rowsAffected[0] === 0) {
+      if (rowsAffected === 0) {
         throw new InsufficientBalanceError('Insufficient wallet balance (concurrent transaction)');
       }
 
       // Read actual balance AFTER atomic update for accurate ledger
-      const updatedWallet = await dbService.executeQuery(
-        'SELECT Balance FROM Wallets WHERE WalletID = @param0', [wallet.WalletID]
-      );
-      const balanceAfter = updatedWallet.recordset?.[0]?.Balance ?? (wallet.Balance - amount);
+      const balanceAfter = await WalletRepository.getBalance(wallet.WalletID);
       const balanceBefore = balanceAfter + amount;
 
       // Create transaction record with accurate post-update balances
       const transactionId = AuthService.generateUniqueId();
-      await dbService.executeQuery(
-        `INSERT INTO WalletTransactions (
-          TransactionID, WalletID, TransactionType, Amount, 
-          BalanceBefore, BalanceAfter, CurrencyID, Source, 
-          Description, Status
-        ) VALUES (
-          @param0, @param1, 'Debit', @param2, @param3, 
-          @param4, @param5, @param6, @param7, 'Completed'
-        )`,
-        [
-          transactionId,
-          wallet.WalletID,
-          amount,
-          balanceBefore,
-          balanceAfter,
-          wallet.CurrencyID,
-          source,
-          description
-        ]
-      );
+      await WalletRepository.insertTransaction({
+        transactionId,
+        walletId: wallet.WalletID,
+        type: 'Debit',
+        amount,
+        balanceBefore,
+        balanceAfter,
+        currencyId: wallet.CurrencyID,
+        source,
+        description,
+        status: 'Completed'
+      });
 
       console.log(`Wallet debited: ?${amount} for user ${userId}. New balance: ?${balanceAfter}`);
 
@@ -636,19 +491,7 @@ export class WalletService {
     try {
       const wallet = await this.getOrCreateWallet(userId);
 
-      const statsQuery = `
-        SELECT 
-          COUNT(*) as TotalTransactions,
-          SUM(CASE WHEN TransactionType = 'Credit' THEN Amount ELSE 0 END) as TotalCredits,
-          SUM(CASE WHEN TransactionType = 'Debit' THEN Amount ELSE 0 END) as TotalDebits,
-          MAX(CASE WHEN TransactionType = 'Credit' THEN CreatedAt END) as LastCreditAt,
-          MAX(CASE WHEN TransactionType = 'Debit' THEN CreatedAt END) as LastDebitAt
-        FROM WalletTransactions
-        WHERE WalletID = @param0 AND Status = 'Completed'
-      `;
-
-      const result = await dbService.executeQuery(statsQuery, [wallet.WalletID]);
-      const stats = result.recordset[0];
+      const stats = await WalletRepository.getTransactionStats(wallet.WalletID);
 
       return {
         walletId: wallet.WalletID,
@@ -686,44 +529,26 @@ export class WalletService {
       const wallet = await this.getOrCreateWallet(userId);
 
       // SECURITY FIX: Atomic balance update to prevent race condition
-      await dbService.executeQuery(
-        `UPDATE Wallets 
-         SET Balance = Balance + @param1, 
-             UpdatedAt = GETUTCDATE(), 
-             LastTransactionAt = GETUTCDATE() 
-         WHERE WalletID = @param0`,
-        [wallet.WalletID, amount]
-      );
+      await WalletRepository.atomicCredit(wallet.WalletID, amount);
 
       // Read actual balance AFTER atomic update for accurate ledger
-      const updatedWallet = await dbService.executeQuery(
-        'SELECT Balance FROM Wallets WHERE WalletID = @param0', [wallet.WalletID]
-      );
-      const balanceAfter = updatedWallet.recordset?.[0]?.Balance ?? (wallet.Balance + amount);
+      const balanceAfter = await WalletRepository.getBalance(wallet.WalletID);
       const balanceBefore = balanceAfter - amount;
 
       // Create transaction record with accurate post-update balances
       const transactionId = AuthService.generateUniqueId();
-      await dbService.executeQuery(
-        `INSERT INTO WalletTransactions (
-          TransactionID, WalletID, TransactionType, Amount, 
-          BalanceBefore, BalanceAfter, CurrencyID, Source, 
-          Description, Status, CreatedAt
-        ) VALUES (
-          @param0, @param1, 'Credit', @param2, @param3, 
-          @param4, @param5, @param6, @param7, 'Completed', GETUTCDATE()
-        )`,
-        [
-          transactionId,
-          wallet.WalletID,
-          amount,
-          balanceBefore,
-          balanceAfter,
-          wallet.CurrencyID,
-          source,
-          description
-        ]
-      );
+      await WalletRepository.insertTransaction({
+        transactionId,
+        walletId: wallet.WalletID,
+        type: 'Credit',
+        amount,
+        balanceBefore,
+        balanceAfter,
+        currencyId: wallet.CurrencyID,
+        source,
+        description,
+        status: 'Completed'
+      });
 
       return {
         success: true,
@@ -751,14 +576,7 @@ export class WalletService {
       }
 
       // Check if bonus already given
-      const checkQuery = `
-        SELECT WalletBonusGiven 
-        FROM Users 
-        WHERE UserID = @param0
-      `;
-      const checkResult = await dbService.executeQuery(checkQuery, [userId]);
-
-      if (checkResult.recordset[0]?.WalletBonusGiven) {
+      if (await WalletRepository.isWelcomeBonusGiven(userId)) {
         return { success: false, amount: 0 };
       }
 
@@ -771,12 +589,7 @@ export class WalletService {
       );
 
       // Mark bonus as given
-      await dbService.executeQuery(
-        `UPDATE Users 
-         SET WalletBonusGiven = 1, UpdatedAt = GETUTCDATE() 
-         WHERE UserID = @param0`,
-        [userId]
-      );
+      await WalletRepository.markWelcomeBonusGiven(userId);
 
       return { success: true, amount: WELCOME_BONUS_AMOUNT };
     } catch (error) {
@@ -841,41 +654,17 @@ export class WalletService {
       const withdrawalFee = 0; // No withdrawal fee
       
       // Only REFERRAL_EARNINGS are withdrawable — everything else is prepaid/bonus credit
-      const earningsQuery = `
-        SELECT COALESCE(SUM(Amount), 0) as TotalEarnings
-        FROM WalletTransactions
-        WHERE WalletID = @param0 
-          AND TransactionType = 'Credit'
-          AND Status = 'Completed'
-          AND Source = 'REFERRAL_EARNINGS'
-      `;
-      const earningsResult = await dbService.executeQuery(earningsQuery, [wallet.WalletID]);
-      const totalEarnings = earningsResult.recordset?.[0]?.TotalEarnings || 0;
+      const totalEarnings = await WalletRepository.sumReferralEarnings(wallet.WalletID);
 
       // Get total already withdrawn
-      const withdrawnQuery = `
-        SELECT COALESCE(SUM(Amount), 0) as TotalWithdrawn
-        FROM WalletWithdrawals
-        WHERE UserID = @param0 
-          AND Status IN ('Completed', 'Pending', 'Processing')
-      `;
-      const withdrawnResult = await dbService.executeQuery(withdrawnQuery, [userId]);
-      const totalWithdrawn = withdrawnResult.recordset?.[0]?.TotalWithdrawn || 0;
+      const totalWithdrawn = await WalletRepository.sumWithdrawn(userId);
       
       // Withdrawable = referral earnings minus already withdrawn, capped at current balance
       const netEarnings = Math.max(0, totalEarnings - totalWithdrawn);
       const withdrawableAmount = Math.max(0, Math.min(netEarnings, wallet.Balance || 0));
       
       // Get total earned (all credits) for display
-      const earnedQuery = `
-        SELECT COALESCE(SUM(Amount), 0) as TotalEarned
-        FROM WalletTransactions
-        WHERE WalletID = @param0 
-          AND TransactionType = 'Credit'
-          AND Status = 'Completed'
-      `;
-      const earnedResult = await dbService.executeQuery(earnedQuery, [wallet.WalletID]);
-      const totalEarned = earnedResult.recordset?.[0]?.TotalEarned || 0;
+      const totalEarned = await WalletRepository.sumAllCredits(wallet.WalletID);
 
       const minimumWithdrawal = await PricingService.getMinimumWithdrawal(); // Dynamic from PricingSettings (₹200)
       const canWithdraw = withdrawableAmount >= minimumWithdrawal;
@@ -925,43 +714,26 @@ export class WalletService {
 
       // Create withdrawal request
       const withdrawalId = AuthService.generateUniqueId();
-      const insertQuery = `
-        INSERT INTO WalletWithdrawals (
-          WithdrawalID, WalletID, UserID, Amount, ProcessingFee, NetAmount, CurrencyID, 
-          UPI_ID, BankAccountNumber, BankIFSC, BankAccountName,
-          Status, RequestedAt
-        ) VALUES (
-          @param0, @param1, @param2, @param3, @param4, @param5, 4,
-          @param6, @param7, @param8, @param9,
-          'Pending', GETUTCDATE()
-        )
-      `;
       
-      await dbService.executeQuery(insertQuery, [
+      await WalletRepository.insertWithdrawal({
         withdrawalId,
-        wallet.WalletID,
+        walletId: wallet.WalletID,
         userId,
         amount,
         processingFee,
         netAmount,
-        paymentDetails.upiId || null,
-        paymentDetails.bankAccount || null,
-        paymentDetails.ifscCode || null,
-        paymentDetails.accountHolderName || null
-      ]);
+        upiId: paymentDetails.upiId || null,
+        bankAccount: paymentDetails.bankAccount || null,
+        ifscCode: paymentDetails.ifscCode || null,
+        accountHolderName: paymentDetails.accountHolderName || null
+      });
 
       // 🔧 IMMEDIATE WALLET DEDUCTION: Deduct the withdrawal amount from wallet balance
-      const deductQuery = `
-        UPDATE Wallets 
-        SET Balance = Balance - @param0, 
-            UpdatedAt = GETUTCDATE() 
-        WHERE UserID = @param1 AND Balance >= @param0
-      `;
-      const deductResult = await dbService.executeQuery(deductQuery, [amount, userId]);
+      const deductedRows = await WalletRepository.atomicDebitByUser(userId, amount);
       
-      if (deductResult.rowsAffected?.[0] !== 1) {
+      if (deductedRows !== 1) {
         // Rollback: Delete the withdrawal request if deduction failed
-        await dbService.executeQuery(`DELETE FROM WalletWithdrawals WHERE WithdrawalID = @param0`, [withdrawalId]);
+        await WalletRepository.deleteWithdrawal(withdrawalId);
         throw new ValidationError('Failed to deduct from wallet. Please try again.');
       }
 
@@ -972,32 +744,22 @@ export class WalletService {
 
       // Record the withdrawal transaction
       const transactionId = AuthService.generateUniqueId();
-      await dbService.executeQuery(
-        `INSERT INTO WalletTransactions (
-          TransactionID, WalletID, TransactionType, Amount, 
-          BalanceBefore, BalanceAfter, CurrencyID,
-          Source, PaymentReference, Description, Status, CreatedAt
-        ) VALUES (
-          @param0, @param1, 'Debit', @param2, 
-          @param3, @param4, @param5,
-          'WITHDRAWAL', @param6, @param7, 'Completed', GETUTCDATE()
-        )`,
-        [
-          transactionId,
-          wallet.WalletID,
-          amount,
-          balanceBefore,
-          balanceAfter,
-          wallet.CurrencyID,
-          withdrawalId,
-          `Withdrawal request #${withdrawalId.slice(0, 8)}`
-        ]
-      );
+      await WalletRepository.insertTransaction({
+        transactionId,
+        walletId: wallet.WalletID,
+        type: 'Debit',
+        amount,
+        balanceBefore,
+        balanceAfter,
+        currencyId: wallet.CurrencyID,
+        source: 'WITHDRAWAL',
+        paymentReference: withdrawalId,
+        description: `Withdrawal request #${withdrawalId.slice(0, 8)}`,
+        status: 'Completed'
+      });
 
       // Get user info for admin notification
-      const userQuery = `SELECT FirstName, LastName, Email FROM Users WHERE UserID = @param0`;
-      const userResult = await dbService.executeQuery(userQuery, [userId]);
-      const user = userResult.recordset?.[0];
+      const user = await WalletRepository.getUserBasic(userId);
 
       // Send admin notification email (async, don't wait)
       if (user) {
@@ -1056,40 +818,11 @@ export class WalletService {
       const safePageSize = Math.min(50, Math.max(1, Math.floor(pageSize) || 20));
       const offset = (safePage - 1) * safePageSize;
 
-      // Count total
-      const countQuery = `
-        SELECT COUNT(*) as Total
-        FROM WalletWithdrawals
-        WHERE UserID = @param0
-      `;
-      const countResult = await dbService.executeQuery(countQuery, [userId]);
-      const total = countResult.recordset?.[0]?.Total || 0;
+      const { rows: withdrawals, total } = await WalletRepository.findUserWithdrawals(userId, offset, safePageSize);
       const totalPages = Math.ceil(total / safePageSize);
 
-      // Get withdrawals
-      const dataQuery = `
-        SELECT 
-          WithdrawalID,
-          Amount,
-          ProcessingFee,
-          NetAmount,
-          UPI_ID as UpiId,
-          BankAccountNumber,
-          Status,
-          RequestedAt,
-          ProcessedAt,
-          PaymentReference,
-          RejectionReason
-        FROM WalletWithdrawals
-        WHERE UserID = @param0
-        ORDER BY RequestedAt DESC
-        OFFSET ${offset} ROWS
-        FETCH NEXT ${safePageSize} ROWS ONLY
-      `;
-      const dataResult = await dbService.executeQuery(dataQuery, [userId]);
-
       return {
-        withdrawals: dataResult.recordset || [],
+        withdrawals,
         total,
         page: safePage,
         pageSize: safePageSize,
@@ -1118,55 +851,11 @@ export class WalletService {
       const safePageSize = Math.min(100, Math.max(1, Math.floor(pageSize) || 50));
       const offset = (safePage - 1) * safePageSize;
 
-      let whereClause = '';
-      const params: any[] = [];
-      
-      if (status) {
-        whereClause = 'WHERE w.Status = @param0';
-        params.push(status);
-      }
-
-      // Count total
-      const countQuery = `
-        SELECT COUNT(*) as Total
-        FROM WalletWithdrawals w
-        ${whereClause}
-      `;
-      const countResult = await dbService.executeQuery(countQuery, params);
-      const total = countResult.recordset?.[0]?.Total || 0;
+      const { rows: withdrawals, total } = await WalletRepository.findAdminWithdrawals(offset, safePageSize, status);
       const totalPages = Math.ceil(total / safePageSize);
 
-      // Get withdrawals with user info
-      const dataQuery = `
-        SELECT 
-          w.WithdrawalID,
-          w.UserID,
-          u.FirstName,
-          u.LastName,
-          u.Email,
-          w.Amount,
-          w.ProcessingFee,
-          w.NetAmount,
-          w.UPI_ID as UpiId,
-          w.BankAccountNumber,
-          w.BankIFSC,
-          w.BankAccountName,
-          w.Status,
-          w.RequestedAt,
-          w.ProcessedAt,
-          w.PaymentReference,
-          w.RejectionReason
-        FROM WalletWithdrawals w
-        INNER JOIN Users u ON w.UserID = u.UserID
-        ${whereClause}
-        ORDER BY w.RequestedAt DESC
-        OFFSET ${offset} ROWS
-        FETCH NEXT ${safePageSize} ROWS ONLY
-      `;
-      const dataResult = await dbService.executeQuery(dataQuery, params);
-
       return {
-        withdrawals: dataResult.recordset || [],
+        withdrawals,
         total,
         page: safePage,
         pageSize: safePageSize,
@@ -1184,19 +873,11 @@ export class WalletService {
   static async processWithdrawal(withdrawalId: string, action: 'approve' | 'reject', adminId: string, paymentReference?: string, rejectionReason?: string): Promise<{ success: boolean; message: string }> {
     try {
       // Get withdrawal
-      const getQuery = `
-        SELECT w.*, u.Email, u.FirstName
-        FROM WalletWithdrawals w
-        INNER JOIN Users u ON w.UserID = u.UserID
-        WHERE w.WithdrawalID = @param0
-      `;
-      const result = await dbService.executeQuery(getQuery, [withdrawalId]);
+      const withdrawal = await WalletRepository.findWithdrawalWithUser(withdrawalId);
       
-      if (!result.recordset?.length) {
+      if (!withdrawal) {
         throw new ValidationError('Withdrawal request not found');
       }
-
-      const withdrawal = result.recordset[0];
 
       if (withdrawal.Status !== 'Pending') {
         throw new ValidationError(`Cannot ${action} withdrawal with status '${withdrawal.Status}'`);
@@ -1204,15 +885,7 @@ export class WalletService {
 
       if (action === 'approve') {
         // Approve withdrawal - balance already deducted when request was placed
-        const updateQuery = `
-          UPDATE WalletWithdrawals 
-          SET Status = 'Completed', 
-              ProcessedAt = GETUTCDATE(), 
-              PaymentReference = @param1,
-              ProcessedBy = @param2
-          WHERE WithdrawalID = @param0
-        `;
-        await dbService.executeQuery(updateQuery, [withdrawalId, paymentReference || 'Manual transfer', adminId]);
+        await WalletRepository.approveWithdrawal(withdrawalId, paymentReference || 'Manual transfer', adminId);
 
         // Note: Balance was already deducted when withdrawal was requested
         // No need to deduct again
@@ -1238,56 +911,31 @@ Thank you for using RefOpen!`
 
       } else {
         // Reject withdrawal - refund the amount back to wallet
-        const updateQuery = `
-          UPDATE WalletWithdrawals 
-          SET Status = 'Rejected', 
-              ProcessedAt = GETUTCDATE(), 
-              RejectionReason = @param1,
-              ProcessedBy = @param2
-          WHERE WithdrawalID = @param0
-        `;
-        await dbService.executeQuery(updateQuery, [withdrawalId, rejectionReason || 'Request rejected by admin', adminId]);
+        await WalletRepository.rejectWithdrawal(withdrawalId, rejectionReason || 'Request rejected by admin', adminId);
 
         // Refund amount back to wallet since it was deducted when request was placed
-        const refundQuery = `
-          UPDATE Wallets 
-          SET Balance = Balance + @param1, UpdatedAt = GETUTCDATE()
-          WHERE WalletID = @param0
-        `;
-        await dbService.executeQuery(refundQuery, [withdrawal.WalletID, withdrawal.Amount]);
+        await WalletRepository.refund(withdrawal.WalletID, withdrawal.Amount);
 
         // Get updated balance for transaction record
-        const walletResult = await dbService.executeQuery(
-          `SELECT Balance, CurrencyID FROM Wallets WHERE WalletID = @param0`,
-          [withdrawal.WalletID]
-        );
-        const refundedWallet = walletResult.recordset?.[0];
+        const refundedWallet = await WalletRepository.getBalanceAndCurrency(withdrawal.WalletID);
         const balanceAfterRefund = refundedWallet?.Balance || 0;
         const balanceBeforeRefund = balanceAfterRefund - withdrawal.Amount;
 
         // Record refund transaction
         const refundTransactionId = AuthService.generateUniqueId();
-        await dbService.executeQuery(
-          `INSERT INTO WalletTransactions (
-            TransactionID, WalletID, TransactionType, Amount, 
-            BalanceBefore, BalanceAfter, CurrencyID,
-            Source, PaymentReference, Description, Status, CreatedAt
-          ) VALUES (
-            @param0, @param1, 'Credit', @param2, 
-            @param3, @param4, @param5,
-            'REFUND', @param6, @param7, 'Completed', GETUTCDATE()
-          )`,
-          [
-            refundTransactionId,
-            withdrawal.WalletID,
-            withdrawal.Amount,
-            balanceBeforeRefund,
-            balanceAfterRefund,
-            refundedWallet?.CurrencyID || 4,
-            withdrawalId,
-            `Withdrawal rejected - refund #${withdrawalId.slice(0, 8)}`
-          ]
-        );
+        await WalletRepository.insertTransaction({
+          transactionId: refundTransactionId,
+          walletId: withdrawal.WalletID,
+          type: 'Credit',
+          amount: withdrawal.Amount,
+          balanceBefore: balanceBeforeRefund,
+          balanceAfter: balanceAfterRefund,
+          currencyId: refundedWallet?.CurrencyID || 4,
+          source: 'REFUND',
+          paymentReference: withdrawalId,
+          description: `Withdrawal rejected - refund #${withdrawalId.slice(0, 8)}`,
+          status: 'Completed'
+        });
 
         // Send rejection email to user
         EmailService.send({
@@ -1326,15 +974,7 @@ If you have questions, please contact support.`
   static async getActiveHoldsTotal(userId: string): Promise<number> {
     try {
       const wallet = await this.getOrCreateWallet(userId);
-      
-      const query = `
-        SELECT COALESCE(SUM(Amount), 0) as TotalHolds
-        FROM WalletHolds
-        WHERE WalletID = @param0 AND Status = 'Active'
-      `;
-      
-      const result = await dbService.executeQuery(query, [wallet.WalletID]);
-      return result.recordset?.[0]?.TotalHolds || 0;
+      return await WalletRepository.sumActiveHolds(wallet.WalletID);
     } catch (error) {
       console.error('Error getting active holds total:', error);
       return 0;
@@ -1396,36 +1036,20 @@ If you have questions, please contact support.`
       }
 
       // Check if hold already exists for this referral request
-      const existingHoldQuery = `
-        SELECT HoldID FROM WalletHolds 
-        WHERE ReferralRequestID = @param0 AND Status = 'Active'
-      `;
-      const existingResult = await dbService.executeQuery(existingHoldQuery, [referralRequestId]);
-      
-      if (existingResult.recordset?.length) {
+      if (await WalletRepository.hasActiveHold(referralRequestId)) {
         throw new ValidationError('A hold already exists for this referral request');
       }
 
       // Create the hold
       const holdId = AuthService.generateUniqueId();
-      const insertQuery = `
-        INSERT INTO WalletHolds (
-          HoldID, WalletID, UserID, ReferralRequestID, 
-          Amount, Status, Description, CreatedAt
-        ) VALUES (
-          @param0, @param1, @param2, @param3, 
-          @param4, 'Active', @param5, GETUTCDATE()
-        )
-      `;
-
-      await dbService.executeQuery(insertQuery, [
+      await WalletRepository.insertHold({
         holdId,
-        wallet.WalletID,
+        walletId: wallet.WalletID,
         userId,
         referralRequestId,
         amount,
         description
-      ]);
+      });
 
       const newAvailableBalance = availableBalance - amount;
 
@@ -1449,66 +1073,39 @@ If you have questions, please contact support.`
   static async convertHoldToDebit(referralRequestId: string): Promise<WalletTransaction> {
     try {
       // Find the active hold for this referral request
-      const holdQuery = `
-        SELECT h.HoldID, h.WalletID, h.UserID, h.Amount, h.Description, w.Balance, w.CurrencyID
-        FROM WalletHolds h
-        INNER JOIN Wallets w ON h.WalletID = w.WalletID
-        WHERE h.ReferralRequestID = @param0 AND h.Status = 'Active'
-      `;
+      const hold = await WalletRepository.findActiveHoldWithBalance(referralRequestId);
       
-      const holdResult = await dbService.executeQuery(holdQuery, [referralRequestId]);
-      
-      if (!holdResult.recordset?.length) {
+      if (!hold) {
         throw new NotFoundError('No active hold found for this referral request');
       }
 
-      const hold = holdResult.recordset[0];
       const balanceBefore = hold.Balance;
       const balanceAfter = balanceBefore - hold.Amount;
 
       // SECURITY FIX: Atomic balance update to prevent race condition
-      const updateResult = await dbService.executeQuery(
-        `UPDATE Wallets 
-         SET Balance = Balance - @param1, 
-             UpdatedAt = GETUTCDATE(), 
-             LastTransactionAt = GETUTCDATE() 
-         WHERE WalletID = @param0 AND Balance >= @param1`,
-        [hold.WalletID, hold.Amount]
-      );
+      const rowsAffected = await WalletRepository.atomicDebit(hold.WalletID, hold.Amount);
 
-      if (!updateResult.rowsAffected || updateResult.rowsAffected[0] === 0) {
+      if (rowsAffected === 0) {
         throw new ValidationError('Insufficient wallet balance to convert hold');
       }
 
       // Create transaction record
       const transactionId = AuthService.generateUniqueId();
-      await dbService.executeQuery(
-        `INSERT INTO WalletTransactions (
-          TransactionID, WalletID, TransactionType, Amount, 
-          BalanceBefore, BalanceAfter, CurrencyID, Source, 
-          Description, Status
-        ) VALUES (
-          @param0, @param1, 'Debit', @param2, @param3, 
-          @param4, @param5, 'Referral_Request', @param6, 'Completed'
-        )`,
-        [
-          transactionId,
-          hold.WalletID,
-          hold.Amount,
-          balanceBefore,
-          balanceAfter,
-          hold.CurrencyID,
-          hold.Description || 'Referral request completed'
-        ]
-      );
+      await WalletRepository.insertTransaction({
+        transactionId,
+        walletId: hold.WalletID,
+        type: 'Debit',
+        amount: hold.Amount,
+        balanceBefore,
+        balanceAfter,
+        currencyId: hold.CurrencyID,
+        source: 'Referral_Request',
+        description: hold.Description || 'Referral request completed',
+        status: 'Completed'
+      });
 
       // Mark hold as converted
-      await dbService.executeQuery(
-        `UPDATE WalletHolds 
-         SET Status = 'Converted', ConvertedAt = GETUTCDATE() 
-         WHERE HoldID = @param0`,
-        [hold.HoldID]
-      );
+      await WalletRepository.markHoldConverted(hold.HoldID);
 
       console.log(`Hold converted to debit: ₹${hold.Amount} for user ${hold.UserID}. New balance: ₹${balanceAfter}`);
 
@@ -1539,48 +1136,34 @@ If you have questions, please contact support.`
   static async releaseHold(referralRequestId: string): Promise<{ released: boolean; amount: number }> {
     try {
       // Find the active hold for this referral request
-      const holdQuery = `
-        SELECT h.HoldID, h.Amount, h.UserID, h.WalletID
-        FROM WalletHolds h
-        WHERE h.ReferralRequestID = @param0 AND h.Status = 'Active'
-      `;
+      const holdResult = await WalletRepository.findActiveHold(referralRequestId);
       
-      const holdResult = await dbService.executeQuery(holdQuery, [referralRequestId]);
-      
-      if (!holdResult.recordset?.length) {
+      if (!holdResult) {
         console.log(`No active hold found to release for referral ${referralRequestId}`);
         return { released: false, amount: 0 };
       }
 
-      const hold = holdResult.recordset[0];
+      const hold = holdResult;
 
       // Mark hold as released
-      await dbService.executeQuery(
-        `UPDATE WalletHolds 
-         SET Status = 'Released', ReleasedAt = GETUTCDATE() 
-         WHERE HoldID = @param0`,
-        [hold.HoldID]
-      );
+      await WalletRepository.markHoldReleased(hold.HoldID);
 
       // Record a hold-released transaction for user visibility
       try {
-        const walletResult = await dbService.executeQuery(
-          `SELECT Balance FROM Wallets WHERE WalletID = @param0`,
-          [hold.WalletID]
-        );
-        const currentBalance = walletResult.recordset?.[0]?.Balance || 0;
+        const currentBalance = await WalletRepository.getBalance(hold.WalletID);
         const transactionId = AuthService.generateUniqueId();
-        await dbService.executeQuery(
-          `INSERT INTO WalletTransactions (
-            TransactionID, WalletID, TransactionType, Amount, BalanceBefore, BalanceAfter,
-            CurrencyID, Source, Description, Status, CreatedAt
-          ) VALUES (
-            @param0, @param1, 'Credit', @param2, @param3, @param3,
-            1, 'HOLD_RELEASED', @param4, 'Completed', GETUTCDATE()
-          )`,
-          [transactionId, hold.WalletID, hold.Amount, currentBalance,
-           `Hold of \u20b9${hold.Amount} released — free cancellation (within grace period)`]
-        );
+        await WalletRepository.insertTransaction({
+          transactionId,
+          walletId: hold.WalletID,
+          type: 'Credit',
+          amount: hold.Amount,
+          balanceBefore: currentBalance,
+          balanceAfter: currentBalance,
+          currencyId: 1,
+          source: 'HOLD_RELEASED',
+          description: `Hold of ₹${hold.Amount} released — free cancellation (within grace period)`,
+          status: 'Completed'
+        });
       } catch (txErr: any) {
         console.warn('Non-critical: Failed to record hold-released transaction:', txErr?.message);
       }
@@ -1605,91 +1188,77 @@ If you have questions, please contact support.`
   }> {
     try {
       // Find the active hold for this referral request
-      const holdQuery = `
-        SELECT h.HoldID, h.Amount, h.UserID, h.WalletID
-        FROM WalletHolds h
-        WHERE h.ReferralRequestID = @param0 AND h.Status = 'Active'
-      `;
+      const hold = await WalletRepository.findActiveHold(referralRequestId);
       
-      const holdResult = await dbService.executeQuery(holdQuery, [referralRequestId]);
-      
-      if (!holdResult.recordset?.length) {
+      if (!hold) {
         console.log(`No active hold found to release for referral ${referralRequestId}`);
         return { released: false, amountReleased: 0, feeDeducted: 0 };
       }
 
-      const hold = holdResult.recordset[0];
       const holdAmount = hold.Amount;
       const actualDeduction = Math.min(deductionAmount, holdAmount); // Can't deduct more than held
       const amountToRelease = holdAmount - actualDeduction;
 
       // Mark hold as released
-      await dbService.executeQuery(
-        `UPDATE WalletHolds 
-         SET Status = 'Released', ReleasedAt = GETUTCDATE() 
-         WHERE HoldID = @param0`,
-        [hold.HoldID]
-      );
+      await WalletRepository.markHoldReleased(hold.HoldID);
 
       // Get current balance
-      const walletQuery = `SELECT Balance FROM Wallets WHERE WalletID = @param0`;
-      const walletResult = await dbService.executeQuery(walletQuery, [hold.WalletID]);
-      const currentBalance = walletResult.recordset?.[0]?.Balance || 0;
+      const currentBalance = await WalletRepository.getBalance(hold.WalletID);
 
       // SECURITY FIX: Atomic balance update for cancellation fee
       if (actualDeduction > 0) {
         const newBalance = currentBalance - actualDeduction;
-        await dbService.executeQuery(
-          `UPDATE Wallets SET Balance = Balance - @param1, UpdatedAt = GETUTCDATE() WHERE WalletID = @param0 AND Balance >= @param1`,
-          [hold.WalletID, actualDeduction]
-        );
+        await WalletRepository.atomicDebit(hold.WalletID, actualDeduction);
         
         // Record the debit transaction for the fee
         const feeTransactionId = AuthService.generateUniqueId();
-        await dbService.executeQuery(
-          `INSERT INTO WalletTransactions (
-            TransactionID, WalletID, TransactionType, Amount, BalanceBefore, BalanceAfter, 
-            CurrencyID, Source, Description, Status, CreatedAt
-          ) VALUES (
-            @param0, @param1, 'Debit', @param2, @param3, @param4,
-            1, 'CANCELLATION_FEE', @param5, 'Completed', GETUTCDATE()
-          )`,
-          [feeTransactionId, hold.WalletID, actualDeduction, currentBalance, newBalance,
-           `Cancellation fee (\u20b9${actualDeduction}) for withdrawing referral request`]
-        );
+        await WalletRepository.insertTransaction({
+          transactionId: feeTransactionId,
+          walletId: hold.WalletID,
+          type: 'Debit',
+          amount: actualDeduction,
+          balanceBefore: currentBalance,
+          balanceAfter: newBalance,
+          currencyId: 1,
+          source: 'CANCELLATION_FEE',
+          description: `Cancellation fee (\u20b9${actualDeduction}) for withdrawing referral request`,
+          status: 'Completed'
+        });
 
         // Record a hold-released credit entry for the refunded portion
         if (amountToRelease > 0) {
           const releaseTransactionId = AuthService.generateUniqueId();
-          await dbService.executeQuery(
-            `INSERT INTO WalletTransactions (
-              TransactionID, WalletID, TransactionType, Amount, BalanceBefore, BalanceAfter,
-              CurrencyID, Source, Description, Status, CreatedAt
-            ) VALUES (
-              @param0, @param1, 'Credit', @param2, @param3, @param3,
-              1, 'HOLD_RELEASED', @param4, 'Completed', GETUTCDATE()
-            )`,
-            [releaseTransactionId, hold.WalletID, amountToRelease, newBalance,
-             `Hold of \u20b9${holdAmount} released — \u20b9${amountToRelease} refunded after \u20b9${actualDeduction} cancellation fee`]
-          );
+          await WalletRepository.insertTransaction({
+            transactionId: releaseTransactionId,
+            walletId: hold.WalletID,
+            type: 'Credit',
+            amount: amountToRelease,
+            balanceBefore: newBalance,
+            balanceAfter: newBalance,
+            currencyId: 1,
+            source: 'HOLD_RELEASED',
+            description: `Hold of \u20b9${holdAmount} released \u2014 \u20b9${amountToRelease} refunded after \u20b9${actualDeduction} cancellation fee`,
+            status: 'Completed'
+          });
         }
         
-        console.log(`Hold released with deduction: ₹${amountToRelease} released, ₹${actualDeduction} fee deducted for user ${hold.UserID}`);
+        console.log(`Hold released with deduction: \u20b9${amountToRelease} released, \u20b9${actualDeduction} fee deducted for user ${hold.UserID}`);
       } else {
-        // No fee — just record hold release
+        // No fee \u2014 just record hold release
         const transactionId = AuthService.generateUniqueId();
-        await dbService.executeQuery(
-          `INSERT INTO WalletTransactions (
-            TransactionID, WalletID, TransactionType, Amount, BalanceBefore, BalanceAfter,
-            CurrencyID, Source, Description, Status, CreatedAt
-          ) VALUES (
-            @param0, @param1, 'Credit', @param2, @param3, @param3,
-            1, 'HOLD_RELEASED', @param4, 'Completed', GETUTCDATE()
-          )`,
-          [transactionId, hold.WalletID, holdAmount, currentBalance,
-           `Hold of \u20b9${holdAmount} released — free cancellation (within grace period)`]
-        );
-        console.log(`Hold released (no fee): ₹${holdAmount} for user ${hold.UserID}`);
+        await WalletRepository.insertTransaction({
+          transactionId,
+          walletId: hold.WalletID,
+          type: 'Credit',
+          amount: holdAmount,
+          balanceBefore: currentBalance,
+          balanceAfter: currentBalance,
+          currencyId: 1,
+          source: 'HOLD_RELEASED',
+          description: `Hold of \u20b9${holdAmount} released \u2014 free cancellation (within grace period)`,
+          status: 'Completed'
+        });
+        console.log(`Hold released (no fee): \u20b9${holdAmount} for user ${hold.UserID}`);
       }
 
       return { 
@@ -1709,38 +1278,7 @@ If you have questions, please contact support.`
   static async getUserHolds(userId: string, status?: 'Active' | 'Converted' | 'Released'): Promise<any[]> {
     try {
       const wallet = await this.getOrCreateWallet(userId);
-      
-      let whereClause = 'WHERE h.WalletID = @param0';
-      const params: any[] = [wallet.WalletID];
-      
-      if (status) {
-        whereClause += ' AND h.Status = @param1';
-        params.push(status);
-      }
-
-      const query = `
-        SELECT 
-          h.HoldID,
-          h.ReferralRequestID,
-          h.Amount,
-          h.Status,
-          h.Description,
-          h.CreatedAt,
-          h.ConvertedAt,
-          h.ReleasedAt,
-          rr.JobTitle,
-          rr.ExpiryTime,
-          rr.OpenToAnyCompany,
-          CASE WHEN rr.OpenToAnyCompany = 1 THEN 'Any Company' ELSE COALESCE(o.Name, 'Unknown Company') END as CompanyName
-        FROM WalletHolds h
-        LEFT JOIN ReferralRequests rr ON h.ReferralRequestID = rr.RequestID
-        LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
-        ${whereClause}
-        ORDER BY h.CreatedAt DESC
-      `;
-
-      const result = await dbService.executeQuery(query, params);
-      return result.recordset || [];
+      return await WalletRepository.findUserHolds(wallet.WalletID, status);
     } catch (error) {
       console.error('Error getting user holds:', error);
       return [];
@@ -1752,16 +1290,7 @@ If you have questions, please contact support.`
    */
   static async getHoldByRequestId(referralRequestId: string): Promise<any | null> {
     try {
-      const query = `
-        SELECT 
-          HoldID, WalletID, UserID, ReferralRequestID,
-          Amount, Status, Description, CreatedAt, ConvertedAt, ReleasedAt
-        FROM WalletHolds
-        WHERE ReferralRequestID = @param0
-      `;
-      
-      const result = await dbService.executeQuery(query, [referralRequestId]);
-      return result.recordset?.[0] || null;
+      return await WalletRepository.findHoldByRequestId(referralRequestId);
     } catch (error) {
       console.error('Error getting hold by request ID:', error);
       return null;

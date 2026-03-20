@@ -3,7 +3,7 @@
  * Tracks screen views, user sessions, and engagement metrics
  */
 
-import { dbService } from './database.service';
+import { UserActivityRepository } from '../repositories/user-activity.repository';
 import { AuthService } from './auth.service';
 
 interface ActivityLog {
@@ -38,35 +38,23 @@ export class UserActivityService {
       const activityId = AuthService.generateUniqueId();
       
       // Update user's LastActive timestamp
-      await dbService.executeQuery(
-        `UPDATE Users SET LastActive = GETUTCDATE() WHERE UserID = @param0`,
-        [userId]
-      );
+      await UserActivityRepository.touchLastActive(userId);
 
       // Insert activity log
-      await dbService.executeQuery(
-        `INSERT INTO UserActivityLogs (
-          ActivityID, UserID, SessionID, ScreenName, Action, ActionDetails,
-          Platform, DeviceType, Browser, ClientIP, UserAgent, ReferrerScreen
-        ) VALUES (
-          @param0, @param1, @param2, @param3, @param4, @param5,
-          @param6, @param7, @param8, @param9, @param10, @param11
-        )`,
-        [
-          activityId,
-          userId,
-          activity.sessionId || null,
-          activity.screenName,
-          activity.action || 'view',
-          activity.actionDetails ? JSON.stringify(activity.actionDetails) : null,
-          activity.platform || null,
-          activity.deviceType || null,
-          activity.browser || null,
-          activity.clientIP || null,
-          activity.userAgent || null,
-          activity.referrerScreen || null
-        ]
-      );
+      await UserActivityRepository.insertLog({
+        activityId,
+        userId,
+        sessionId: activity.sessionId || null,
+        screenName: activity.screenName,
+        action: activity.action || 'view',
+        actionDetails: activity.actionDetails ? JSON.stringify(activity.actionDetails) : null,
+        platform: activity.platform || null,
+        deviceType: activity.deviceType || null,
+        browser: activity.browser || null,
+        clientIP: activity.clientIP || null,
+        userAgent: activity.userAgent || null,
+        referrerScreen: activity.referrerScreen || null
+      });
 
       // Update or create session
       if (activity.sessionId) {
@@ -85,13 +73,7 @@ export class UserActivityService {
    */
   static async logScreenExit(userId: string, activityId: string): Promise<void> {
     try {
-      await dbService.executeQuery(
-        `UPDATE UserActivityLogs 
-         SET ExitedAt = GETUTCDATE(),
-             DurationSeconds = DATEDIFF(SECOND, EnteredAt, GETUTCDATE())
-         WHERE ActivityID = @param0 AND UserID = @param1`,
-        [activityId, userId]
-      );
+      await UserActivityRepository.markScreenExit(activityId, userId);
     } catch (error) {
       console.error('Error logging screen exit:', error);
     }
@@ -103,32 +85,18 @@ export class UserActivityService {
   static async updateSession(userId: string, sessionId: string, activity: ActivityLog): Promise<void> {
     try {
       // Try to update existing session
-      const result = await dbService.executeQuery(
-        `UPDATE UserSessions 
-         SET LastActivityAt = GETUTCDATE(),
-             ScreensVisited = ScreensVisited + 1,
-             TotalDurationSeconds = DATEDIFF(SECOND, StartedAt, GETUTCDATE())
-         WHERE SessionID = @param0 AND UserID = @param1`,
-        [sessionId, userId]
-      );
+      const rowsAffected = await UserActivityRepository.updateSession(sessionId, userId);
 
       // If no session exists, create one
-      if (result.rowsAffected?.[0] === 0) {
-        await dbService.executeQuery(
-          `INSERT INTO UserSessions (
-            SessionID, UserID, Platform, DeviceType, Browser, ClientIP, ScreensVisited
-          ) VALUES (
-            @param0, @param1, @param2, @param3, @param4, @param5, 1
-          )`,
-          [
-            sessionId,
-            userId,
-            activity.platform || null,
-            activity.deviceType || null,
-            activity.browser || null,
-            activity.clientIP || null
-          ]
-        );
+      if (rowsAffected === 0) {
+        await UserActivityRepository.insertSession({
+          sessionId,
+          userId,
+          platform: activity.platform || null,
+          deviceType: activity.deviceType || null,
+          browser: activity.browser || null,
+          clientIP: activity.clientIP || null
+        });
       }
     } catch (error) {
       console.error('Error updating session:', error);
@@ -140,14 +108,7 @@ export class UserActivityService {
    */
   static async endSession(sessionId: string): Promise<void> {
     try {
-      await dbService.executeQuery(
-        `UPDATE UserSessions 
-         SET EndedAt = GETUTCDATE(),
-             IsActive = 0,
-             TotalDurationSeconds = DATEDIFF(SECOND, StartedAt, GETUTCDATE())
-         WHERE SessionID = @param0`,
-        [sessionId]
-      );
+      await UserActivityRepository.endSession(sessionId);
     } catch (error) {
       console.error('Error ending session:', error);
     }
@@ -158,25 +119,7 @@ export class UserActivityService {
    */
   static async getActiveUsers(): Promise<any[]> {
     try {
-      // Get users who have activity logs in the last 5 minutes
-      const result = await dbService.executeQuery(
-        `SELECT DISTINCT 
-          u.UserID, u.FirstName, u.LastName, u.Email, u.ProfilePictureURL, u.UserType,
-          al.ScreenName AS CurrentScreen,
-          al.EnteredAt AS LastActivityAt,
-          al.Platform
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(MINUTE, -5, GETUTCDATE())
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-          AND al.EnteredAt = (
-            SELECT MAX(al2.EnteredAt) FROM UserActivityLogs al2 WHERE al2.UserID = al.UserID
-          )
-        ORDER BY al.EnteredAt DESC`,
-        []
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.findActiveUsers();
     } catch (error) {
       console.error('Error getting active users:', error);
       return [];
@@ -188,22 +131,7 @@ export class UserActivityService {
    */
   static async getAllActiveUsersInPeriod(days: number = 30): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT DISTINCT 
-          u.UserID, u.FirstName, u.LastName, u.Email, u.ProfilePictureURL, u.UserType,
-          COUNT(al.ActivityID) AS TotalViews,
-          MAX(al.EnteredAt) AS LastSeen,
-          (SELECT TOP 1 ScreenName FROM UserActivityLogs WHERE UserID = u.UserID ORDER BY EnteredAt DESC) AS LastScreen
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY u.UserID, u.FirstName, u.LastName, u.Email, u.ProfilePictureURL, u.UserType
-        ORDER BY TotalViews DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.findAllUsersInPeriod(days);
     } catch (error) {
       console.error('Error getting all active users:', error);
       return [];
@@ -215,16 +143,7 @@ export class UserActivityService {
    */
   static async getUserActivity(userId: string, days: number = 7): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          ActivityID, ScreenName, Action, ActionDetails, Platform, DeviceType,
-          EnteredAt, ExitedAt, DurationSeconds, ReferrerScreen
-        FROM UserActivityLogs
-        WHERE UserID = @param0 AND EnteredAt >= DATEADD(DAY, -@param1, GETUTCDATE())
-        ORDER BY EnteredAt DESC`,
-        [userId, days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.findUserActivity(userId, days);
     } catch (error) {
       console.error('Error getting user activity:', error);
       return [];
@@ -237,26 +156,7 @@ export class UserActivityService {
    */
   static async getScreenAnalytics(days: number = 30): Promise<ScreenStats[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          al.ScreenName,
-          COUNT(*) AS TotalViews,
-          COUNT(DISTINCT al.UserID) AS UniqueUsers,
-          AVG(ISNULL(al.DurationSeconds, 0)) AS AvgDurationSeconds,
-          -- Bounce rate: % of users who left within 5 seconds
-          CAST(SUM(CASE WHEN al.DurationSeconds IS NOT NULL AND al.DurationSeconds < 5 THEN 1 ELSE 0 END) AS FLOAT) / 
-            NULLIF(COUNT(CASE WHEN al.DurationSeconds IS NOT NULL THEN 1 END), 0) * 100 AS BounceRate
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND al.ScreenName NOT LIKE 'Admin%'
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY al.ScreenName
-        ORDER BY TotalViews DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getScreenStats(days);
     } catch (error) {
       console.error('Error getting screen analytics:', error);
       return [];
@@ -269,33 +169,7 @@ export class UserActivityService {
    */
   static async getDropOffAnalytics(days: number = 30): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `WITH ScreenSequence AS (
-          SELECT 
-            al.UserID, al.SessionID, al.ScreenName, al.EnteredAt,
-            LEAD(al.ScreenName) OVER (PARTITION BY al.SessionID ORDER BY al.EnteredAt) AS NextScreen
-          FROM UserActivityLogs al
-          INNER JOIN Users u ON al.UserID = u.UserID
-          WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-            AND al.SessionID IS NOT NULL
-            AND al.ScreenName NOT LIKE 'Admin%'
-            AND u.UserType != 'Admin'
-            AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        )
-        SELECT 
-          ScreenName,
-          COUNT(*) AS TotalExits,
-          COUNT(DISTINCT UserID) AS UniqueExits,
-          -- Exit rate: % who didn't go to another screen
-          CAST(SUM(CASE WHEN NextScreen IS NULL THEN 1 ELSE 0 END) AS FLOAT) / 
-            NULLIF(COUNT(*), 0) * 100 AS ExitRate
-        FROM ScreenSequence
-        WHERE ScreenName NOT LIKE 'Admin%'
-        GROUP BY ScreenName
-        ORDER BY ExitRate DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getDropOffStats(days);
     } catch (error) {
       console.error('Error getting drop-off analytics:', error);
       return [];
@@ -308,25 +182,7 @@ export class UserActivityService {
    */
   static async getUserFlowAnalytics(days: number = 30): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          al.ReferrerScreen AS FromScreen,
-          al.ScreenName AS ToScreen,
-          COUNT(*) AS TransitionCount,
-          COUNT(DISTINCT al.UserID) AS UniqueUsers
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND al.ReferrerScreen IS NOT NULL
-          AND al.ScreenName NOT LIKE 'Admin%'
-          AND al.ReferrerScreen NOT LIKE 'Admin%'
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY al.ReferrerScreen, al.ScreenName
-        ORDER BY TransitionCount DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getUserFlowStats(days);
     } catch (error) {
       console.error('Error getting user flow analytics:', error);
       return [];
@@ -339,23 +195,7 @@ export class UserActivityService {
    */
   static async getDailyActiveUsersTrend(days: number = 30): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          CAST(al.EnteredAt AS DATE) AS Date,
-          COUNT(DISTINCT al.UserID) AS ActiveUsers,
-          COUNT(*) AS TotalScreenViews,
-          COUNT(DISTINCT al.SessionID) AS TotalSessions
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND al.ScreenName NOT LIKE 'Admin%'
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY CAST(al.EnteredAt AS DATE)
-        ORDER BY Date DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getDailyTrend(days);
     } catch (error) {
       console.error('Error getting DAU trend:', error);
       return [];
@@ -368,22 +208,7 @@ export class UserActivityService {
    */
   static async getHourlyActivityPattern(days: number = 7): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          DATEPART(HOUR, al.EnteredAt) AS Hour,
-          COUNT(*) AS ActivityCount,
-          COUNT(DISTINCT al.UserID) AS UniqueUsers
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND al.ScreenName NOT LIKE 'Admin%'
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY DATEPART(HOUR, al.EnteredAt)
-        ORDER BY Hour`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getHourlyPattern(days);
     } catch (error) {
       console.error('Error getting hourly pattern:', error);
       return [];
@@ -395,22 +220,7 @@ export class UserActivityService {
    */
   static async getDeviceBreakdown(days: number = 30): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          ISNULL(al.DeviceType, 'unknown') AS DeviceType,
-          COUNT(*) AS Count,
-          COUNT(DISTINCT al.UserID) AS UniqueUsers
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND al.ScreenName NOT LIKE 'Admin%'
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY al.DeviceType
-        ORDER BY Count DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getBreakdown('DeviceType', days);
     } catch (error) {
       console.error('Error getting device breakdown:', error);
       return [];
@@ -422,22 +232,7 @@ export class UserActivityService {
    */
   static async getBrowserBreakdown(days: number = 30): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          ISNULL(al.Browser, 'unknown') AS Browser,
-          COUNT(*) AS Count,
-          COUNT(DISTINCT al.UserID) AS UniqueUsers
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND al.ScreenName NOT LIKE 'Admin%'
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY al.Browser
-        ORDER BY Count DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getBreakdown('Browser', days);
     } catch (error) {
       console.error('Error getting browser breakdown:', error);
       return [];
@@ -449,22 +244,7 @@ export class UserActivityService {
    */
   static async getPlatformBreakdown(days: number = 30): Promise<any[]> {
     try {
-      const result = await dbService.executeQuery(
-        `SELECT 
-          ISNULL(al.Platform, 'unknown') AS Platform,
-          COUNT(*) AS Count,
-          COUNT(DISTINCT al.UserID) AS UniqueUsers
-        FROM UserActivityLogs al
-        INNER JOIN Users u ON al.UserID = u.UserID
-        WHERE al.EnteredAt >= DATEADD(DAY, -@param0, GETUTCDATE())
-          AND al.ScreenName NOT LIKE 'Admin%'
-          AND u.UserType != 'Admin'
-          AND (u.Phone IS NULL OR u.Phone != '0000000000')
-        GROUP BY al.Platform
-        ORDER BY Count DESC`,
-        [days]
-      );
-      return result.recordset || [];
+      return await UserActivityRepository.getBreakdown('Platform', days);
     } catch (error) {
       console.error('Error getting platform breakdown:', error);
       return [];
