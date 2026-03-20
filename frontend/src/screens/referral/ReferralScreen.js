@@ -217,7 +217,12 @@ export default function ReferralScreen({ navigation }) {
       if (openResult.success) {
         const allRequests = openResult.data?.requests || [];
         // Filter to only show open statuses
-        const open = allRequests.filter(r => OPEN_STATUSES.includes(r.Status));
+        // OpenToAnyCompany parents in Completed state should still show as open
+        // (they remain claimable by other referrers even after first claim)
+        const open = allRequests.filter(r => 
+          OPEN_STATUSES.includes(r.Status) || 
+          (r.OpenToAnyCompany && r.Status === 'Completed')
+        );
         setOpenRequests(open);
       } else {
         setOpenRequests([]);

@@ -262,7 +262,11 @@ const [dashboardData, setDashboardData] = useState(() => {
             const allRequests = res.data?.requests || res.data || [];
             // Only show open statuses (same as Open tab in ReferralScreen)
             const OPEN_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
-            const openOnly = allRequests.filter(r => OPEN_STATUSES.includes(r.Status));
+            // OpenToAnyCompany parents in Completed state are still claimable
+            const openOnly = allRequests.filter(r => 
+              OPEN_STATUSES.includes(r.Status) || 
+              (r.OpenToAnyCompany && r.Status === 'Completed')
+            );
             setReferrerAvailableJobs(openOnly.slice(0, 5));
           }
         } catch (err) { if (err?.name !== 'AbortError') console.warn('Referrer jobs failed:', err); }
