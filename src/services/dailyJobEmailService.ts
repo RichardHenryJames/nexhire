@@ -10,7 +10,6 @@ import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 import { AIJobRecommendationService } from './ai-job-recommendation.service';
 import { JobService } from './job.service';
-import { maskEmail } from '../utils/encryption';
 
 const APP_URL = process.env.APP_URL || 'https://www.refopen.com';
 
@@ -39,14 +38,15 @@ interface JobForEmail {
     SalaryRangeMax: number | null;
     JobTypeName: string;
     WorkplaceTypeName: string;
-    PublishedAt: Date | null;
+    PublishedAt: Date;
 }
 
 export class DailyJobEmailService {
 
     /**
      * Get users eligible for daily job emails
-     * Active JobSeeker users with DailyJobRecommendationEmail enabled
+     * Users created after 2025-12-15 AND logged in within last 1 month
+     * AND have DailyJobRecommendationEmail enabled (to avoid spamming inactive users)
      */
     static async getEligibleUsers(): Promise<UserForEmail[]> {
         const query = `
@@ -57,7 +57,9 @@ export class DailyJobEmailService {
             FROM Users u
             INNER JOIN Applicants a ON u.UserID = a.UserID
             LEFT JOIN NotificationPreferences np ON u.UserID = np.UserID
-            WHERE u.IsActive = 1
+            WHERE u.CreatedAt >= '2025-12-15 19:47:35.3700000'
+              AND u.LastLoginAt >= DATEADD(MONTH, -1, GETUTCDATE())
+              AND u.IsActive = 1
               AND u.Email IS NOT NULL
               AND u.Email != ''
               AND u.UserType = 'JobSeeker'
@@ -70,121 +72,103 @@ export class DailyJobEmailService {
     }
 
     /**
-     * Get total job count for a user (for email subject/CTA)
-     */
-    static async getTotalJobCountForUser(userId: string): Promise<number> {
-        try {
-            // Simple count of all published jobs
-            const result = await dbService.executeQuery(
-                `SELECT COUNT(*) as total FROM Jobs WHERE Status = 'Published'`,
-                []
-            );
-            return result.recordset?.[0]?.total || 0;
-        } catch (error: any) {
-            console.warn(`Failed to get total job count for user ${userId}:`, error.message);
-            return 0;
-        }
-    }
-
-    /**
-     * Get top 5 recommended jobs for a user (FREE - no wallet deduction)
+     * Get top 10 recommended jobs for a user (FREE - no wallet deduction)
      * Uses the SAME logic as Jobs screen - JobService.getJobs with personalization
-     * NOTE: We skip fresher filter for emails to ensure users get job recommendations
      */
     static async getTopJobsForUser(userId: string): Promise<JobForEmail[]> {
         try {
-            // Use JobService.getJobs() - same as Jobs screen, already personalized and fast
-            // Pass excludeUserApplications (userId) to enable personalization based on user's:
-            // - Job preferences (preferredJobTypes, preferredWorkTypes, preferredLocations)
-            // - Work experience (latestJobTitle for role-based scoring)
-            // Default ordering: Remote > Hybrid > Onsite (when no workplace preference set)
-            const { jobs } = await JobService.getJobs({
+            // Use the SAME logic as Jobs screen - JobService.getJobs with personalization
+            // The backend automatically ranks jobs by user's job title, preferences, etc.
+            const params = {
                 page: 1,
-                pageSize: 5,  // Show 5 jobs in email (changed from 10)
-                sortBy: 'PublishedAt',
-                sortOrder: 'desc',
-                status: 'Published',
-                excludeUserApplications: userId,  // This enables personalization!
-                excludeAppliedJobs: true  // Internal service: exclude applied jobs (no HasApplied flag)
-            });
-
-            // Map to JobForEmail format
-            return jobs.map(job => ({
-                JobID: job.JobID,
-                Title: job.Title,
-                OrganizationName: (job as any).OrganizationName || '',
-                OrganizationLogo: (job as any).OrganizationLogo || '',
-                Location: job.Location || '',
-                City: job.City || '',
-                Country: job.Country || '',
-                SalaryRangeMin: job.SalaryRangeMin ?? null,
-                SalaryRangeMax: job.SalaryRangeMax ?? null,
-                JobTypeName: (job as any).JobTypeName || '',
-                WorkplaceTypeName: (job as any).WorkplaceTypeName || '',
-                PublishedAt: job.PublishedAt ?? null
-            }));
+                pageSize: 10,
+                excludeUserApplications: userId, // This triggers personalization ranking
+                excludeAppliedJobs: true, // Internal service: exclude applied jobs (no HasApplied flag)
+                postedWithinDays: 30
+            };
+            
+            const result = await JobService.getJobs(params);
+            if (result.jobs && result.jobs.length > 0) {
+                return result.jobs as unknown as JobForEmail[];
+            }
+            
+            // Fallback: Get latest 5 published jobs if no personalized results
+            const fallbackQuery = `
+                SELECT TOP 5
+                    j.JobID, j.Title,
+                    o.Name as OrganizationName,
+                    ISNULL(o.LogoURL, '') as OrganizationLogo,
+                    j.Location, j.City, j.Country,
+                    j.SalaryRangeMin, j.SalaryRangeMax,
+                    jt.Value as JobTypeName,
+                    wt.Value as WorkplaceTypeName,
+                    j.PublishedAt
+                FROM Jobs j
+                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
+                INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
+                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
+                WHERE j.Status = 'Published'
+                  AND j.PublishedAt >= DATEADD(DAY, -7, GETDATE())
+                ORDER BY j.PublishedAt DESC
+            `;
+            const fallbackResult = await dbService.executeQuery(fallbackQuery, []);
+            return fallbackResult.recordset || [];
         } catch (error: any) {
             console.warn(`Failed to get jobs for user ${userId}:`, error.message);
-            (error as any).__dailyEmailDebug = `getTopJobsForUser failed: ${error.message}`;
-            throw error;
+            return [];
         }
     }
 
     /**
-     * Generate HTML for job cards in email (Instahyre style - clean list layout)
+     * Generate HTML for job cards in email
      */
     static generateJobCardsHtml(jobs: JobForEmail[]): string {
         if (!jobs || jobs.length === 0) {
             return `
-                <tr>
-                    <td style="padding: 20px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                        <p style="margin: 0; color: #666; font-size: 14px;">No new jobs found matching your profile today. Check back tomorrow!</p>
-                    </td>
-                </tr>
+                <table width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9fa; border-radius: 8px; margin: 15px 0;">
+                    <tr>
+                        <td style="padding: 20px; text-align: center;">
+                            <p style="margin: 0; color: #666; font-size: 14px;">No new jobs found matching your profile today. Check back tomorrow!</p>
+                        </td>
+                    </tr>
+                </table>
             `;
         }
 
         return jobs.map((job, index) => {
-            const location = job.City || job.Location || job.Country || '';
-            const jobUrl = `${APP_URL}/job/${job.JobID}`;
-            const logoFallback = `<div style="width: 48px; height: 48px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 8px; display: inline-block; text-align: center; line-height: 48px; color: white; font-weight: bold; font-size: 20px;">${(job.OrganizationName || 'J').charAt(0).toUpperCase()}</div>`;
-            
-            // Build info line: Job Type • Workplace • Location
-            const infoParts: string[] = [];
-            if (job.JobTypeName) infoParts.push(job.JobTypeName);
-            if (job.WorkplaceTypeName) infoParts.push(job.WorkplaceTypeName);
-            if (location) infoParts.push(location);
-            const infoLine = infoParts.join(' • ');
+            const location = job.City || job.Location || job.Country || 'Location not specified';
+            const salary = this.formatSalary(job.SalaryRangeMin, job.SalaryRangeMax);
+            const jobUrl = `${APP_URL}/jobs/${job.JobID}`;
             
             return `
-                <tr>
-                    <td style="padding: 16px 0; border-bottom: 1px solid #e5e7eb;">
-                        <table width="100%" cellpadding="0" cellspacing="0">
-                            <tr>
-                                <td width="56" valign="middle">
-                                    ${job.OrganizationLogo 
-                                        ? `<img src="${job.OrganizationLogo}" alt="${job.OrganizationName}" style="width: 48px; height: 48px; border-radius: 8px; object-fit: contain; background: #f9fafb; display: block;" />`
-                                        : logoFallback
-                                    }
-                                </td>
-                                <td valign="middle" style="padding-left: 12px;">
-                                    <!-- Job Title -->
-                                    <a href="${jobUrl}" style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: #1a1a1a; text-decoration: none; display: block;">
-                                        ${job.Title}
-                                    </a>
-                                    <!-- Company -->
-                                    <p style="margin: 0 0 4px 0; font-size: 14px; color: #4f46e5; font-weight: 500;">
-                                        ${job.OrganizationName}
-                                    </p>
-                                    <!-- Job Info -->
-                                    <p style="margin: 0; font-size: 13px; color: #6b7280;">
-                                        ${infoLine || 'View details'}
-                                    </p>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
+                <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; margin: 15px 0;">
+                    <tr>
+                        <td style="padding: 20px;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td width="50" valign="top">
+                                        ${job.OrganizationLogo 
+                                            ? `<img src="${job.OrganizationLogo}" alt="${job.OrganizationName}" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;" />`
+                                            : `<div style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">${job.OrganizationName?.charAt(0) || 'J'}</div>`
+                                        }
+                                    </td>
+                                    <td style="padding-left: 15px;">
+                                        <a href="${jobUrl}" style="color: #333; text-decoration: none; font-size: 16px; font-weight: 600; display: block; margin-bottom: 4px;">${job.Title}</a>
+                                        <p style="margin: 0 0 8px 0; color: #667eea; font-size: 14px; font-weight: 500;">${job.OrganizationName}</p>
+                                        <p style="margin: 0; color: #888; font-size: 13px;">
+                                            📍 ${location} 
+                                            ${job.WorkplaceTypeName ? `• ${job.WorkplaceTypeName}` : ''}
+                                            ${salary ? `• ${salary}` : ''}
+                                        </p>
+                                    </td>
+                                    <td width="100" valign="middle" align="right">
+                                        <a href="${jobUrl}" style="display: inline-block; background: #667eea; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 500;">View</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
             `;
         }).join('');
     }
@@ -210,31 +194,26 @@ export class DailyJobEmailService {
 
     /**
      * Send daily job recommendation email to a single user
-     * Returns: { success: boolean, errorDetail?: string }
      */
-    static async sendEmailToUser(user: UserForEmail): Promise<{ success: boolean; errorDetail?: string }> {
+    static async sendEmailToUser(user: UserForEmail): Promise<boolean> {
         try {
-            // Get total job count and top 5 jobs in parallel
-            const [totalJobs, jobs] = await Promise.all([
-                this.getTotalJobCountForUser(user.UserID),
-                this.getTopJobsForUser(user.UserID)
-            ]);
+            // Get top 5 jobs for this user
+            const jobs = await this.getTopJobsForUser(user.UserID);
             
             // Skip if no jobs found
             if (!jobs || jobs.length === 0) {
-                console.log(`⏭️ Skipping email for ${maskEmail(user.Email)} - no jobs found`);
-                return { success: false, errorDetail: `No jobs found for user ${user.Email} (UserID: ${user.UserID})` };
+                console.log(`⏭️ Skipping email for ${user.Email} - no jobs found`);
+                return false;
             }
             
             // Generate job cards HTML
             const jobCardsHtml = this.generateJobCardsHtml(jobs);
             
-            // Render email template with total job count
+            // Render email template
             const template = TemplateService.render('daily_job_recommendations', {
                 firstName: user.FirstName || 'there',
                 jobCardsHtml,
-                jobCount: jobs.length,
-                totalJobs: totalJobs || jobs.length
+                jobCount: jobs.length
             });
             
             // Send email
@@ -247,18 +226,11 @@ export class DailyJobEmailService {
                 emailType: 'daily_job_recommendations'
             });
             
-            if (result.success) {
-                // Also send in-app notification
-                const { default: InAppNotificationService } = await import('./inAppNotification.service');
-                await InAppNotificationService.notifyJobRecommendations(user.UserID, user.FirstName || 'there', jobs.length);
-                return { success: true };
-            } else {
-                return { success: false, errorDetail: `Email send failed for ${user.Email} (jobs found: ${jobs.length})` };
-            }
+            return result.success;
             
         } catch (error: any) {
             console.error(`❌ Failed to send email to ${user.Email}:`, error.message);
-            return { success: false, errorDetail: `Exception for ${user.Email}: ${error.message}` };
+            return false;
         }
     }
 
@@ -298,14 +270,12 @@ export class DailyJobEmailService {
                     const batchResult = batchResults[j];
                     const user = batch[j];
                     
-                    if (batchResult.status === 'fulfilled' && batchResult.value.success) {
+                    if (batchResult.status === 'fulfilled' && batchResult.value) {
                         result.emailsSent++;
                     } else {
                         result.emailsFailed++;
                         if (batchResult.status === 'rejected') {
                             result.errors.push(`${user.Email}: ${batchResult.reason?.message || 'Unknown error'}`);
-                        } else if (batchResult.status === 'fulfilled' && batchResult.value.errorDetail) {
-                            result.errors.push(batchResult.value.errorDetail);
                         }
                     }
                 }
@@ -364,36 +334,28 @@ export class DailyJobEmailService {
 
             // Check if user has daily job recommendation emails enabled
             if (!user.DailyJobRecommendationEmail) {
-                console.log(`⏭️ Skipping ${maskEmail(user.Email)} - DailyJobRecommendationEmail is disabled`);
+                console.log(`⏭️ Skipping ${user.Email} - DailyJobRecommendationEmail is disabled`);
                 result.errors.push(`User ${user.Email} has DailyJobRecommendationEmail disabled`);
                 return result;
             }
 
-            console.log(`📧 Sending test daily job email to ${maskEmail(user.Email)}...`);
+            console.log(`📧 Sending test daily job email to ${user.Email}...`);
 
-            // Get jobs first to check if that's the issue
-            const jobs = await this.getTopJobsForUser(user.UserID);
-            if (!jobs || jobs.length === 0) {
-                result.emailsFailed = 1;
-                result.errors.push(`No jobs found for user ${user.Email} (UserID: ${user.UserID})`);
-                return result;
-            }
-
-            const sendResult = await this.sendEmailToUser(user);
+            const success = await this.sendEmailToUser(user);
             
-            if (sendResult.success) {
+            if (success) {
                 result.emailsSent = 1;
-                console.log(`✅ Test email sent successfully to ${maskEmail(user.Email)}`);
+                console.log(`✅ Test email sent successfully to ${user.Email}`);
             } else {
                 result.emailsFailed = 1;
-                result.errors.push(sendResult.errorDetail || `Email send failed for ${user.Email} (jobs found: ${jobs.length})`);
+                result.errors.push(`Failed to send email to ${user.Email}`);
             }
 
             return result;
 
         } catch (error: any) {
             console.error('❌ Test email error:', error.message);
-            result.errors.push(`Error: ${error.message}`);
+            result.errors.push(error.message);
             return result;
         }
     }
