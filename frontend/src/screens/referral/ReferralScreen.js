@@ -217,7 +217,12 @@ export default function ReferralScreen({ navigation }) {
       if (openResult.success) {
         const allRequests = openResult.data?.requests || [];
         // Filter to only show open statuses
-        const open = allRequests.filter(r => OPEN_STATUSES.includes(r.Status));
+        // OpenToAnyCompany parents in Completed state should still show as open
+        // (they remain claimable by other referrers even after first claim)
+        const open = allRequests.filter(r => 
+          OPEN_STATUSES.includes(r.Status) || 
+          (r.OpenToAnyCompany && r.Status === 'Completed')
+        );
         setOpenRequests(open);
       } else {
         setOpenRequests([]);
@@ -344,6 +349,23 @@ export default function ReferralScreen({ navigation }) {
     return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
   };
 
+  // Relative time for card display (matches MyReferralRequestsScreen)
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return '';
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Pending':
@@ -452,19 +474,12 @@ export default function ReferralScreen({ navigation }) {
         onPress={() => isOpenTab ? handleViewRequest(request) : undefined}
       >
         <View style={styles.requestHeader}>
-          {/* Person Avatar - Clickable to open profile */}
+          {/* Person Avatar - Clickable to open referral detail (same as card tap) */}
           <TouchableOpacity 
             style={styles.avatarContainer}
-            activeOpacity={applicantUserId ? 0.7 : 1}
-            disabled={!applicantUserId}
-            onPress={() =>
-              applicantUserId
-                ? navigation.navigate('ViewProfile', {
-                    userId: applicantUserId,
-                    userName: applicantName,
-                  })
-                : undefined
-            }
+            activeOpacity={isOpenTab ? 0.7 : 1}
+            disabled={!isOpenTab}
+            onPress={() => isOpenTab ? handleViewRequest(request) : undefined}
           >
             {applicantPhotoUrl ? (
               <CachedImage
@@ -500,7 +515,9 @@ export default function ReferralScreen({ navigation }) {
               </Text>
               <Text style={styles.metaDot}>•</Text>
               <Text style={styles.timeAgo}>
-                {formatDate(request.RequestedAt)}
+                {activeTab === 'closed' && request.ReferredAt
+                  ? getRelativeTime(request.ReferredAt)
+                  : getRelativeTime(request.RequestedAt)}
               </Text>
             </View>
 
@@ -543,6 +560,11 @@ export default function ReferralScreen({ navigation }) {
               )}
             </View>
           </View>
+
+          {/* Chevron — only on open tab (cards are clickable) */}
+          {isOpenTab && (
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
+          )}
 
           {/* Verified Badge */}
           {request.Status === 'Verified' && (
@@ -964,7 +986,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   tabContent: {
     flex: 1,
-    padding: 12,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   tabDescription: {
     fontSize: typography.sizes.sm,
@@ -1004,38 +1027,35 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   requestCard: {
     backgroundColor: colors.surface,
-    padding: 12,
+    padding: 16,
     marginBottom: 10,
-    borderRadius: 10,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
+    marginHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   requestHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 12,
   },
-  avatarContainer: {
-    marginRight: 12,
-  },
+  avatarContainer: {},
   personAvatar: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: colors.gray100,
   },
   personAvatarPlaceholder: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarInitials: {
-    fontSize: 18,
-    fontWeight: typography.weights.bold,
+    fontSize: 16,
+    fontWeight: '700',
     color: colors.white,
   },
   logoContainer: {
@@ -1060,13 +1080,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   requestInfo: {
     flex: 1,
-    marginRight: 8,
+    gap: 2,
   },
   applicantNamePrimary: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.bold,
+    fontSize: 15,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 2,
   },
   wantsReferralRow: {
     flexDirection: 'row',
@@ -1076,8 +1095,9 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     gap: 4,
   },
   wantsReferralText: {
-    fontSize: typography.sizes.sm,
+    fontSize: 13,
     color: colors.textSecondary,
+    fontWeight: '500',
   },
   jobTitleBold: {
     fontSize: typography.sizes.sm,
@@ -1101,7 +1121,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textMuted,
   },
   timeAgo: {
-    fontSize: typography.sizes.xs,
+    fontSize: 12,
     color: colors.textMuted,
   },
   quickActionsRow: {

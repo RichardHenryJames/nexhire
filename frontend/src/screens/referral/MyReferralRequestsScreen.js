@@ -20,7 +20,6 @@ import refopenAPI from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
-import VerifyReferralModal from '../../components/modals/VerifyReferralModal';
 import useResponsive from '../../hooks/useResponsive';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
@@ -75,8 +74,6 @@ export default function MyReferralRequestsScreen({ route }) {
     }
   };
 
-  const [verifyTarget, setVerifyTarget] = useState(null);
-
   useFocusEffect(
     useCallback(() => {
       loadMyRequests();
@@ -122,32 +119,60 @@ export default function MyReferralRequestsScreen({ route }) {
     setRefreshing(false);
   };
 
+  // Check if request is expiring soon (within 5 days) and has no referrer yet — show CTA to convert to open
+  const isExpiringSoon = (request) => {
+    if (!['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(request.Status)) return false;
+    if (request.OpenToAnyCompany) return false; // Already open — no action possible
+    const expiryDate = request.ExpiryTime 
+      ? new Date(request.ExpiryTime) 
+      : new Date(new Date(request.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+    const diffMs = expiryDate - new Date();
+    return diffMs > 0 && diffMs <= 5 * 24 * 60 * 60 * 1000; // within 5 days
+  };
+
   // Split requests into 3 categories: Action Needed / In Progress / Closed
   const ACTION_STATUSES = ['ProofUploaded', 'Completed'];
   const IN_PROGRESS_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
   const CLOSED_STATUSES = ['Verified', 'Unverified', 'Refunded', 'Cancelled', 'Expired'];
 
-  const actionRequests = useMemo(() => myRequests.filter(r => {
-    // Completed/ProofUploaded with pending verification children (open-to-any)
-    if (ACTION_STATUSES.includes(r.Status) && r.OpenToAnyCompany && r.PendingVerificationCount > 0) return true;
-    // Completed/ProofUploaded for targeted (non open-to-any) requests
-    if (ACTION_STATUSES.includes(r.Status) && !r.OpenToAnyCompany) return true;
-    return false;
-  }), [myRequests]);
+  const actionRequests = useMemo(() => {
+    const filtered = myRequests.filter(r => {
+      // Completed/ProofUploaded with pending verification children (open-to-any)
+      if (ACTION_STATUSES.includes(r.Status) && r.OpenToAnyCompany && r.PendingVerificationCount > 0) return true;
+      // Completed/ProofUploaded for targeted (non open-to-any) requests
+      if (ACTION_STATUSES.includes(r.Status) && !r.OpenToAnyCompany) return true;
+      return false;
+    });
+    // Oldest first — most urgent to verify at top
+    return filtered.sort((a, b) => new Date(a.RequestedAt) - new Date(b.RequestedAt));
+  }, [myRequests]);
 
-  const progressRequests = useMemo(() => myRequests.filter(r => {
-    if (IN_PROGRESS_STATUSES.includes(r.Status)) return true;
-    // Open-to-any Completed but all children already verified — nothing to do, but not truly closed
-    // Open-to-any Completed but all children already verified → closed
-    return false;
-  }), [myRequests]);
+  const progressRequests = useMemo(() => {
+    const filtered = myRequests.filter(r => {
+      if (IN_PROGRESS_STATUSES.includes(r.Status)) return true;
+      // Open-to-any Completed but all children already verified — nothing to do, but not truly closed
+      // Open-to-any Completed but all children already verified → closed
+      return false;
+    });
+    // Sort: convert-to-open eligible (expiring soon) first, then by oldest first
+    return filtered.sort((a, b) => {
+      const aExpiring = isExpiringSoon(a) ? 0 : 1;
+      const bExpiring = isExpiringSoon(b) ? 0 : 1;
+      if (aExpiring !== bExpiring) return aExpiring - bExpiring;
+      return new Date(a.RequestedAt) - new Date(b.RequestedAt);
+    });
+  }, [myRequests]);
 
-  const closedRequests = useMemo(() => myRequests.filter(r => {
-    if (CLOSED_STATUSES.includes(r.Status)) return true;
-    // Open-to-any Completed with no pending verifications → all done
-    if (r.OpenToAnyCompany && ACTION_STATUSES.includes(r.Status) && (r.PendingVerificationCount || 0) === 0) return true;
-    return false;
-  }), [myRequests]);
+  const closedRequests = useMemo(() => {
+    const filtered = myRequests.filter(r => {
+      if (CLOSED_STATUSES.includes(r.Status)) return true;
+      // Open-to-any Completed with no pending verifications → all done
+      if (r.OpenToAnyCompany && ACTION_STATUSES.includes(r.Status) && (r.PendingVerificationCount || 0) === 0) return true;
+      return false;
+    });
+    // Newest first — most recent completions at top
+    return filtered.sort((a, b) => new Date(b.RequestedAt) - new Date(a.RequestedAt));
+  }, [myRequests]);
 
   const filteredRequests = activeTab === 'action' ? actionRequests 
     : activeTab === 'progress' ? progressRequests 
@@ -168,17 +193,6 @@ export default function MyReferralRequestsScreen({ route }) {
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 30) return `${diffDays}d ago`;
     return `${Math.floor(diffDays / 30)}mo ago`;
-  };
-
-  // Check if request is expiring soon (within 3 days) and has no referrer yet — show CTA to convert to open
-  const isExpiringSoon = (request) => {
-    if (!['Pending', 'NotifiedToReferrers', 'Viewed'].includes(request.Status)) return false;
-    if (request.OpenToAnyCompany) return false; // Already open — no action possible
-    const expiryDate = request.ExpiryTime 
-      ? new Date(request.ExpiryTime) 
-      : new Date(new Date(request.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
-    const diffMs = expiryDate - new Date();
-    return diffMs > 0 && diffMs <= 3 * 24 * 60 * 60 * 1000; // within 3 days
   };
 
   const getStatusColor = (status) => {
@@ -290,39 +304,6 @@ export default function MyReferralRequestsScreen({ route }) {
     setShowProofViewer(true);
   };
 
-  const handleVerifyReferral = async (requestId) => {
-    const request = myRequests.find((r) => r.RequestID === requestId);
-    setVerifyTarget({ requestId, request });
-  };
-
-  const performVerifyReferral = async (requestId, verified) => {
-    try {
-      const result = await refopenAPI.verifyReferralCompletion(requestId, verified);
-      if (result.success) {
-        const newStatus = verified ? 'Verified' : 'Unverified';
-        showToast(
-          verified
-            ? 'Referral verified!'
-            : 'Marked as unverified. A support ticket has been created — our team will review within 2 working days.',
-          verified ? 'success' : 'info'
-        );
-        setMyRequests((prev) =>
-          prev.map((r) =>
-            r.RequestID === requestId
-              ? { ...r, Status: newStatus, VerifiedByApplicant: verified ? 1 : 0 }
-              : r
-          )
-        );
-        loadMyRequests();
-      } else {
-        showToast('Failed to verify referral. Please try again.', 'error');
-      }
-    } catch (e) {
-      console.error('Verify error:', e);
-      showToast('Failed to verify referral. Please try again.', 'error');
-    }
-  };
-
   const handleViewTracking = (request) => {
     navigation.navigate('ReferralTracking', { 
       requestId: request.RequestID,
@@ -405,61 +386,24 @@ export default function MyReferralRequestsScreen({ route }) {
             </Text>
           </View>
 
-          {/* Chevron */}
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
-        </View>
-
-        {/* Contextual badges */}
-        {(isExpiringSoon(request) || (request.ChildReferralCount > 0) || (request.OpenToAnyCompany && request.MinSalary)) && (
-          <View style={styles.badgeRow}>
-            {isExpiringSoon(request) && (
-              <View style={[styles.badge, { backgroundColor: colors.warning + '15' }]}>
-                <Ionicons name="flash" size={12} color={colors.warning} />
-                <Text style={[styles.badgeText, { color: colors.warning }]}>Convert to Open</Text>
-              </View>
-            )}
-            {request.ChildReferralCount > 0 && (
-              <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
-                <Ionicons name="checkmark-circle" size={12} color={colors.success} />
-                <Text style={[styles.badgeText, { color: colors.success }]}>
-                  {request.ChildReferralCount} referral{request.ChildReferralCount > 1 ? 's' : ''}
-                </Text>
-              </View>
-            )}
-            {request.OpenToAnyCompany && request.MinSalary ? (
-              <View style={[styles.badge, { backgroundColor: colors.success + '15' }]}>
-                <Ionicons name="cash-outline" size={12} color={colors.success} />
-                <Text style={[styles.badgeText, { color: colors.success }]}>
-                  Min {request.SalaryCurrency === 'USD' ? '$' : '₹'}{request.MinSalary?.toLocaleString()}{request.SalaryPeriod === 'Annual' ? '/yr' : '/mo'}
-                </Text>
-              </View>
-            ) : null}
-          </View>
-        )}
-
-        {/* Action hint — verify referral */}
-        {(request.Status === 'Completed' || request.Status === 'ProofUploaded') &&
-         (!request.OpenToAnyCompany || (request.PendingVerificationCount || 0) > 0) && (
-          request.OpenToAnyCompany ? (
-            <View style={styles.actionHint}>
+          {/* Chevron — with Verify prefix when action needed, Convert to Open when expiring */}
+          {(request.Status === 'Completed' || request.Status === 'ProofUploaded') &&
+           (!request.OpenToAnyCompany || (request.PendingVerificationCount || 0) > 0) ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="alert-circle" size={14} color={colors.warning} />
-              <Text style={styles.actionHintText}>
-                {request.PendingVerificationCount} referral{request.PendingVerificationCount > 1 ? 's' : ''} to verify
-              </Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.warning} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>Verify</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.warning} />
+            </View>
+          ) : isExpiringSoon(request) ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="globe-outline" size={14} color={'#8B5CF6'} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#8B5CF6' }}>Upgrade</Text>
+              <Ionicons name="chevron-forward" size={16} color={'#8B5CF6'} />
             </View>
           ) : (
-            <TouchableOpacity
-              style={styles.actionHint}
-              onPress={(e) => { e.stopPropagation?.(); handleVerifyReferral(request.RequestID); }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="alert-circle" size={14} color={colors.warning} />
-              <Text style={styles.actionHintText}>Verify Referral</Text>
-              <Ionicons name="chevron-forward" size={13} color={colors.warning} />
-            </TouchableOpacity>
-          )
-        )}
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -596,20 +540,6 @@ export default function MyReferralRequestsScreen({ route }) {
           </View>
         </Modal>
       )}
-
-      {/* Verification Confirmation Modal */}
-      <VerifyReferralModal
-        visible={!!verifyTarget}
-        jobTitle={verifyTarget?.request?.JobTitle}
-        proofFileURL={verifyTarget?.request?.ProofFileURL}
-        proofDescription={verifyTarget?.request?.ProofDescription}
-        onClose={() => setVerifyTarget(null)}
-        onVerify={(verified) => {
-          const requestId = verifyTarget?.requestId;
-          setVerifyTarget(null);
-          if (requestId != null) performVerifyReferral(requestId, verified);
-        }}
-      />
     </View>
   );
 }

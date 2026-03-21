@@ -301,7 +301,7 @@ export default function JobsLandingScreen({ navigation, route }) {
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* Search bar + filter icon */}
+      {/* Search bar + filter icon (filter icon only on desktop, mobile has it in header) */}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <View style={[styles.searchBar, { flex: 1, backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Ionicons name="search" size={18} color={colors.gray400} />
@@ -320,12 +320,14 @@ export default function JobsLandingScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity
-          style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}
-          onPress={() => openFilterChip(null)}
-        >
-          <Ionicons name="options-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
+        {isDesktopWeb && (
+          <TouchableOpacity
+            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => openFilterChip(null)}
+          >
+            <Ionicons name="options-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Quick filter chips — focused, direct action */}

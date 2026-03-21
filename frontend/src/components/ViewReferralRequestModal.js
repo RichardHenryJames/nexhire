@@ -324,6 +324,19 @@ export default function ViewReferralRequestModal({
           }}>
             {/* Top: Candidate info row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, paddingBottom: 12, gap: 12 }}>
+              <TouchableOpacity
+                activeOpacity={referralRequest?.ApplicantUserID ? 0.7 : 1}
+                disabled={!referralRequest?.ApplicantUserID}
+                onPress={() => {
+                  if (referralRequest?.ApplicantUserID) {
+                    onClose();
+                    navigation.navigate('ViewProfile', {
+                      userId: referralRequest.ApplicantUserID,
+                      userName: applicantName,
+                    });
+                  }
+                }}
+              >
               {referralRequest?.ApplicantProfilePictureURL ? (
                 <Image 
                   source={{ uri: referralRequest.ApplicantProfilePictureURL }} 
@@ -336,6 +349,7 @@ export default function ViewReferralRequestModal({
                   </Text>
                 </View>
               )}
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }} numberOfLines={1}>{applicantName}</Text>
                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>
@@ -418,6 +432,26 @@ export default function ViewReferralRequestModal({
                   <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '600' }}>Preferred: {referralRequest.PreferredLocations}</Text>
                 </View>
               ) : null}
+
+              {/* Min Salary for open-to-any requests */}
+              {referralRequest?.OpenToAnyCompany && referralRequest?.MinSalary ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 10 }}>
+                  <Ionicons name="cash-outline" size={13} color={colors.success} />
+                  <Text style={{ fontSize: 12, color: colors.success, fontWeight: '600' }}>
+                    Min {referralRequest.SalaryCurrency === 'USD' ? '$' : '₹'}{referralRequest.MinSalary?.toLocaleString()}{referralRequest.SalaryPeriod === 'Annual' ? '/yr' : '/mo'}
+                  </Text>
+                </View>
+              ) : null}
+
+              {/* Requested date */}
+              {referralRequest?.RequestedAt && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 }}>
+                  <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                  <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                    Requested on {new Date(referralRequest.RequestedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} at {new Date(referralRequest.RequestedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </Text>
+                </View>
+              )}
 
               {/* Action pills: Resume | View Job | Job ID */}
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>

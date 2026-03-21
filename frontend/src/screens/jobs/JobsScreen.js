@@ -1938,9 +1938,13 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             </View>
           }
           rightContent={
-            <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
-              <Ionicons name="options-outline" size={22} color={colors.primary} />
-            </TouchableOpacity>
+            // On mobile, filter is accessible via "More" chip in quick filters row
+            // Only show filter icon in header on desktop where TabHeader doesn't render
+            isDesktopWeb ? (
+              <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
+                <Ionicons name="options-outline" size={22} color={colors.primary} />
+              </TouchableOpacity>
+            ) : undefined
           }
           showMessages={false}
         />

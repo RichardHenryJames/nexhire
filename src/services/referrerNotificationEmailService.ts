@@ -13,7 +13,6 @@ import { dbService } from './database.service';
 import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 import { ReferralService } from './referral.service';
-import { maskEmail } from '../utils/encryption';
 
 interface ReferrerForEmail {
     UserID: string;
@@ -85,9 +84,10 @@ export class ReferrerNotificationEmailService {
      * Uses ReferralService.getAvailableRequests for consistency with frontend
      */
     static async getOpenRequestsForReferrer(referrer: ReferrerForEmail): Promise<OpenReferralRequest[]> {
-        // Get ApplicantID from UserID via repository
-        const { UserRepository } = await import('../repositories/user.repository');
-        const applicantId = await UserRepository.getApplicantId(referrer.UserID);
+        // Get ApplicantID from UserID
+        const applicantQuery = `SELECT ApplicantID FROM Applicants WHERE UserID = @param0`;
+        const applicantResult = await dbService.executeQuery(applicantQuery, [referrer.UserID]);
+        const applicantId = applicantResult.recordset?.[0]?.ApplicantID;
         
         if (!applicantId) {
             console.log(`No applicant found for user ${referrer.UserID}`);
@@ -97,10 +97,14 @@ export class ReferrerNotificationEmailService {
         // Use ReferralService for consistency with frontend
         const result = await ReferralService.getAvailableRequests(applicantId, 1, 100);
         
-        // Filter for OPEN_STATUSES only - 'Expired' status is excluded automatically
-        // Backend timer job handles expiration, no need for client-side date check
+        // Calculate 2-week cutoff date
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        
+        // Filter for OPEN_STATUSES only (same as frontend), exclude requests older than 2 weeks, and take top 10
+        // OpenToAnyCompany parents in Completed state are still claimable by other referrers
         const openRequests = result.requests
-            .filter(r => this.OPEN_STATUSES.includes(r.Status))
+            .filter(r => (this.OPEN_STATUSES.includes(r.Status) || ((r as any).OpenToAnyCompany && r.Status === 'Completed')) && new Date(r.RequestedAt) >= twoWeeksAgo)
             .slice(0, 10)
             .map(r => {
                 const req = r as any; // SQL query returns more fields than type definition
@@ -124,9 +128,10 @@ export class ReferrerNotificationEmailService {
      * Uses ReferralService.getAvailableRequests for consistency with frontend
      */
     static async getOpenRequestsCount(referrer: ReferrerForEmail): Promise<number> {
-        // Get ApplicantID from UserID via repository
-        const { UserRepository } = await import('../repositories/user.repository');
-        const applicantId = await UserRepository.getApplicantId(referrer.UserID);
+        // Get ApplicantID from UserID
+        const applicantQuery = `SELECT ApplicantID FROM Applicants WHERE UserID = @param0`;
+        const applicantResult = await dbService.executeQuery(applicantQuery, [referrer.UserID]);
+        const applicantId = applicantResult.recordset?.[0]?.ApplicantID;
         
         if (!applicantId) {
             return 0;
@@ -135,9 +140,13 @@ export class ReferrerNotificationEmailService {
         // Use ReferralService for consistency with frontend
         const result = await ReferralService.getAvailableRequests(applicantId, 1, 100);
         
-        // Count only OPEN_STATUSES - 'Expired' status is excluded automatically
-        // Backend timer job handles expiration, no need for client-side date check
-        return result.requests.filter(r => this.OPEN_STATUSES.includes(r.Status)).length;
+        // Calculate 2-week cutoff date
+        const twoWeeksAgo = new Date();
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        
+        // Count only OPEN_STATUSES (same as frontend), exclude requests older than 2 weeks
+        // OpenToAnyCompany parents in Completed state are still claimable
+        return result.requests.filter(r => (this.OPEN_STATUSES.includes(r.Status) || ((r as any).OpenToAnyCompany && r.Status === 'Completed')) && new Date(r.RequestedAt) >= twoWeeksAgo).length;
     }
 
     /**
@@ -227,7 +236,7 @@ export class ReferrerNotificationEmailService {
                                         <span style="color: #9ca3af; font-size: 12px;">${timeAgo}</span>
                                     </td>
                                     <td width="70" style="width: 70px; text-align: right; vertical-align: middle;">
-                                        <a href="${appUrl}/provide-referral" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 13px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">
+                                        <a href="${appUrl}/referrals" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 13px; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);">
                                             View
                                         </a>
                                     </td>
@@ -245,7 +254,7 @@ export class ReferrerNotificationEmailService {
                 <table width="100%" cellpadding="0" cellspacing="0" style="margin: 15px 0;">
                     <tr>
                         <td style="text-align: center; padding: 12px; background: #f0fdf4; border-radius: 8px;">
-                            <a href="${appUrl}/provide-referral" style="color: #059669; font-size: 14px; text-decoration: none; font-weight: 600;">
+                            <a href="${appUrl}/referrals" style="color: #059669; font-size: 14px; text-decoration: none; font-weight: 600;">
                                 👀 View ${totalCount - 10} more requests →
                             </a>
                         </td>
@@ -293,14 +302,6 @@ export class ReferrerNotificationEmailService {
             const appUrl = process.env.APP_URL || 'https://www.refopen.com';
             const requestCardsHtml = this.generateRequestCardsHtml(requests, totalCount);
 
-            // Handle singular/plural for proper grammar
-            const isSingular = totalCount === 1;
-            const candidateWord = isSingular ? 'Candidate' : 'Candidates';
-            const candidateWordLower = isSingular ? 'candidate' : 'candidates';
-            const needWord = isSingular ? 'Needs' : 'Need';
-            const requestWord = isSingular ? 'Request' : 'Requests';
-            const isAre = isSingular ? 'is' : 'are';
-
             const template = TemplateService.render('referrer_open_requests', {
                 firstName: referrer.FirstName || 'there',
                 companyName: referrer.CompanyName,
@@ -311,12 +312,7 @@ export class ReferrerNotificationEmailService {
                 totalReferred: stats.totalReferred,
                 totalEarnings: stats.totalEarnings,
                 requestCardsHtml,
-                appUrl,
-                candidateWord,
-                candidateWordLower,
-                needWord,
-                requestWord,
-                isAre
+                appUrl
             });
 
             await EmailService.send({
@@ -325,10 +321,6 @@ export class ReferrerNotificationEmailService {
                 html: template.html,
                 emailType: 'referrer_open_requests'
             });
-
-            // Also send in-app notification
-            const { default: InAppNotificationService } = await import('./inAppNotification.service');
-            await InAppNotificationService.notifyReferrerDigest(referrer.UserID, referrer.FirstName, referrer.CompanyName, totalCount);
 
             return { success: true, jobCount: totalCount };
         } catch (error: any) {
@@ -359,9 +351,9 @@ export class ReferrerNotificationEmailService {
                     const sendResult = await this.sendReferrerNotificationEmail(referrer);
                     if (sendResult.success && sendResult.jobCount > 0) {
                         result.emailsSent++;
-                        console.log(`✅ Sent to ${maskEmail(referrer.Email)} (${sendResult.jobCount} requests)`);
+                        console.log(`✅ Sent to ${referrer.Email} (${sendResult.jobCount} requests)`);
                     } else if (sendResult.jobCount === 0) {
-                        console.log(`⏭️ Skipped ${maskEmail(referrer.Email)} (no open requests)`);
+                        console.log(`⏭️ Skipped ${referrer.Email} (no open requests)`);
                     } else {
                         result.emailsFailed++;
                     }
@@ -446,16 +438,13 @@ export class ReferrerNotificationEmailService {
         triggerType: 'Timer' | 'Manual'
     ): Promise<void> {
         try {
-            const durationSeconds = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
-            const errors = result.errors.length > 0 ? result.errors.join('; ') : '';
-            
             const query = `
                 INSERT INTO DailyJobEmailLogs (
-                    ExecutionID, StartTime, EndTime, DurationSeconds, TotalUsers, 
-                    EmailsSent, EmailsFailed, Errors, TriggerType
+                    ExecutionID, StartTime, EndTime, TotalUsers, EmailsSent, EmailsFailed, 
+                    TriggerType, Status, ErrorDetails
                 ) VALUES (
-                    @param0, @param1, @param2, @param3, @param4, 
-                    @param5, @param6, @param7, @param8
+                    @param0, @param1, @param2, @param3, @param4, @param5, 
+                    @param6, @param7, @param8
                 )
             `;
             
@@ -463,12 +452,12 @@ export class ReferrerNotificationEmailService {
                 executionId,
                 startTime,
                 endTime,
-                durationSeconds,
                 result.totalReferrers,
                 result.emailsSent,
                 result.emailsFailed,
-                errors,
-                triggerType
+                triggerType,
+                result.emailsFailed === 0 ? 'Success' : 'PartialSuccess',
+                result.errors.length > 0 ? result.errors.join('; ') : null
             ]);
         } catch (error) {
             console.error('Failed to log referrer email run:', error);

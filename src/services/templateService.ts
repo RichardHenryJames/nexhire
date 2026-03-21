@@ -1178,7 +1178,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a
     // ========================================
 
     'daily_job_recommendations': {
-        subject: '💼 {{totalJobs}} jobs waiting for you, {{firstName}}!',
+        subject: '{{firstName}}, {{totalJobs}} jobs match your profile today',
         html: `
 <!DOCTYPE html>
 <html>
@@ -1186,49 +1186,27 @@ ${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff; -webkit-font-smoothing: antialiased;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb; -webkit-font-smoothing: antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb;">
         <tr>
-            <td align="center" style="padding: 20px;">
-                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff;">
+            <td align="center" style="padding: 20px 16px;">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden;">
                     
-                    <!-- Greeting -->
+                    <!-- Header -->
                     <tr>
-                        <td style="padding: 20px 0;">
-                            <p style="color: #1a1a1a; font-size: 15px; line-height: 1.6; margin: 0;">
+                        <td style="padding: 28px 24px 0;">
+                            <p style="color: #1a1a1a; font-size: 16px; line-height: 1.5; margin: 0 0 6px 0;">
                                 Hi {{firstName}},
                             </p>
-                        </td>
-                    </tr>
-                    
-                    <!-- Intro Text -->
-                    <tr>
-                        <td style="padding: 0 0 15px 0;">
-                            <p style="color: #4a4a4a; font-size: 14px; line-height: 1.7; margin: 0;">
-                                Here are some active job openings we have that match your profile. Just click on any company to read about the job and apply.
+                            <p style="color: #555; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
+                                We found <strong>{{totalJobs}} jobs</strong> that match your profile. Here are the top picks for you:
                             </p>
-                        </td>
-                    </tr>
-                    
-                    <!-- Tip Banner -->
-                    <tr>
-                        <td style="padding: 0 0 20px 0;">
-                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #FEF3C7; border: 1px solid #FCD34D; border-radius: 6px;">
-                                <tr>
-                                    <td style="padding: 12px 15px;">
-                                        <p style="margin: 0; font-size: 13px; color: #92400E;">
-                                            💡 <strong>Tip:</strong> Complete your profile for better job matches. 
-                                            <a href="{{appUrl}}/profile" style="color: #2563eb; text-decoration: none; font-weight: 500;">Update profile →</a>
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
                         </td>
                     </tr>
                     
                     <!-- Job List -->
                     <tr>
-                        <td>
+                        <td style="padding: 0 24px;">
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 {{jobCardsHtml}}
                             </table>
@@ -1237,10 +1215,26 @@ ${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a
                     
                     <!-- CTA Button -->
                     <tr>
-                        <td align="center" style="padding: 30px 0;">
-                            <a href="{{appUrl}}/jobs" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 14px 40px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px;">
-                                View all {{totalJobs}} jobs for you »
+                        <td align="center" style="padding: 24px;">
+                            <a href="{{appUrl}}/jobs" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 13px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
+                                Browse all {{totalJobs}} jobs
                             </a>
+                        </td>
+                    </tr>
+                    
+                    <!-- Tip -->
+                    <tr>
+                        <td style="padding: 0 24px 24px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #f0f9ff; border-radius: 8px;">
+                                <tr>
+                                    <td style="padding: 12px 16px;">
+                                        <p style="margin: 0; font-size: 13px; color: #1e40af;">
+                                            💡 <strong>Tip:</strong> Keep your profile updated for better matches. 
+                                            <a href="{{appUrl}}/profile" style="color: #2563eb; text-decoration: underline;">Update profile</a>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
                         </td>
                     </tr>
                     
