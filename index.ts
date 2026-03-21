@@ -3902,6 +3902,10 @@ app.http("admin-update-career-application", {
 app.timer("jobScraperTimer", {
   schedule: "0 0 2,8,14,20 * * *", // 4x daily: 2 AM, 8 AM, 2 PM, 8 PM UTC
   handler: async (myTimer: Timer, context: InvocationContext) => {
+    // Log immediately so we can distinguish "never fired" from "fired but skipped"
+    context.log(`[JobScraper] Timer fired at ${new Date().toISOString()}`);
+    context.log(`[JobScraper] RefOpen_ENV=${process.env.RefOpen_ENV}, NODE_ENV=${process.env.NODE_ENV}`);
+
     // Skip scraping on dev/staging — only run on production
     const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
     if (appEnv !== 'production' && appEnv !== 'prod') {
