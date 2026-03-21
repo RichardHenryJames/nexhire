@@ -1,4 +1,3 @@
-import { dbService } from '../services/database.service';
 import { JobRepository } from '../repositories/job.repository';
 import { AuthService } from '../services/auth.service';
 import { Job, PaginationParams, QueryParams, JobCreateRequest } from '../types';
@@ -651,8 +650,7 @@ export class JobService {
             // Result: 4,000ms → ~2,500ms with identical page 1 results.
             dataQuery += ` ORDER BY ${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder}`;
 
-            const dataResult = await dbService.executeQuery<any>(dataQuery, dataParams);
-            const allRows = dataResult.recordset || [];
+            const allRows = await JobRepository.executeQuery<any>(dataQuery, dataParams);
 
             // Parse user preferences for JS-side scoring
             const prefJobTypes = (personalization.preferredJobTypes || '').split(',')
@@ -727,8 +725,7 @@ export class JobService {
             dataParams.push(offset, pageSizeNum + 1);
             paramIndex += 2;
 
-            const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
-            fetched = dataResult.recordset || [];
+            fetched = await JobRepository.executeQuery<Job>(dataQuery, dataParams);
         }
 
         const hasMore = fetched.length > pageSizeNum;
@@ -969,9 +966,7 @@ export class JobService {
             }
         }
 
-        const countQuery = `SELECT COUNT(*) as total FROM Jobs j ${whereClause}`;
-        const countResult = await dbService.executeQuery(countQuery, queryParams);
-        const total = countResult.recordset[0]?.total || 0;
+        const total = await JobRepository.countByOrganization(whereClause, queryParams);
         const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
         const offset = (page - 1) * pageSize;
@@ -986,8 +981,8 @@ export class JobService {
             OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
         queryParams.push(offset, pageSize);
 
-        const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
-        return { jobs: dataResult.recordset || [], total, totalPages };
+        const jobs = await JobRepository.executeQuery<Job>(dataQuery, queryParams);
+        return { jobs, total, totalPages };
     }
 
     // Get jobs posted by a specific user (for referrers and employers)
@@ -1030,9 +1025,7 @@ export class JobService {
             }
         }
 
-        const countQuery = `SELECT COUNT(*) as total FROM Jobs j ${whereClause}`;
-        const countResult = await dbService.executeQuery(countQuery, queryParams);
-        const total = countResult.recordset[0]?.total || 0;
+        const total = await JobRepository.countByOrganization(whereClause, queryParams);
         const totalPages = Math.max(Math.ceil(total / pageSize), 1);
 
         const offset = (page - 1) * pageSize;
@@ -1055,8 +1048,8 @@ export class JobService {
             OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY`;
         queryParams.push(offset, pageSize);
 
-        const dataResult = await dbService.executeQuery<Job>(dataQuery, queryParams);
-        return { jobs: dataResult.recordset || [], total, totalPages };
+        const jobs = await JobRepository.executeQuery<Job>(dataQuery, queryParams);
+        return { jobs, total, totalPages };
     }
 
     // Get currencies (reference data) — delegates to ReferenceRepository (cached, 30 min TTL)
@@ -1213,8 +1206,7 @@ export class JobService {
                 // 🚀 PERF: Title scoring in app layer — see getJobs for detailed explanation
                 dataQuery += ` ORDER BY ${preferenceScoreSql} DESC, j.PublishedAt DESC, j.JobID DESC`;
 
-                const dataResult = await dbService.executeQuery<any>(dataQuery, dataParams);
-                const allRows = dataResult.recordset || [];
+                const allRows = await JobRepository.executeQuery<any>(dataQuery, dataParams);
 
                 const wpOrder: Record<number, number> = { 444: 1, 442: 2, 443: 3 };
                 const scored = allRows.map((row: any) => {
@@ -1254,8 +1246,7 @@ export class JobService {
                 dataParams.push(offset, pageSizeNum + 1);
                 paramIndex += 2;
 
-                const dataResult = await dbService.executeQuery<Job>(dataQuery, dataParams);
-                fetched = dataResult.recordset || [];
+                fetched = await JobRepository.executeQuery<Job>(dataQuery, dataParams);
             }
 
             const hasMore = fetched.length > pageSizeNum;

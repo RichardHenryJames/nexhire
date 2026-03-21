@@ -1,4 +1,3 @@
-import { dbService } from '../services/database.service';
 import { UserServiceRepository } from '../repositories/user-service.repository';
 import { AuthService } from '../services/auth.service';
 import { User, UserRegistrationRequest, UserLoginRequest } from '../types';
@@ -56,7 +55,7 @@ export class UserService {
         }
 
         // Start transaction for user and organization/applicant creation
-        const tx = await dbService.beginTransaction();
+        const tx = await UserServiceRepository.beginTransaction();
         try {
             // Insert user into database
             // Determine consent data
@@ -106,7 +105,7 @@ export class UserService {
                 emailVerified, // @param14: EmailVerified (1 if OTP verified, 0 if not)
             ];
 
-            const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);
+            const userResult = await UserServiceRepository.executeTransactionQuery<User>(tx, userQuery, userParameters);
             
             if (!userResult.recordset || userResult.recordset.length === 0) {
                 throw new Error('Failed to create user');
@@ -129,12 +128,7 @@ export class UserService {
             // Log consent to audit table after successful commit
             if (termsAccepted) {
                 try {
-                    await dbService.executeQuery(`
-                        INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
-                        VALUES (@param0, 'TERMS', @param1, GETUTCDATE(), @param3, @param4);
-                        INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
-                        VALUES (@param0, 'PRIVACY_POLICY', @param2, GETUTCDATE(), @param3, @param4);
-                    `, [userId, termsVersion, privacyPolicyVersion, requestMeta?.ipAddress || null, requestMeta?.userAgent || null]);
+                    await UserServiceRepository.logConsent(userId, termsVersion, privacyPolicyVersion, requestMeta?.ipAddress || null, requestMeta?.userAgent || null);
                 } catch (consentLogError) {
                     console.error('Error logging consent (registration still successful):', consentLogError);
                 }
@@ -197,13 +191,7 @@ export class UserService {
         const organizationName = userData.organizationName || `${userData.firstName} ${userData.lastName}'s Company`;
         
         // Check if organization already exists
-        const existingOrgQuery = `
-            SELECT OrganizationID 
-            FROM Organizations 
-            WHERE Name = @param0
-        `;
-        
-        const existingOrgResult = await dbService.executeTransactionQuery(tx, existingOrgQuery, [organizationName]);
+        const existingOrgResult = await UserServiceRepository.findOrgByNameTx(tx, organizationName);
         
         let organizationId: number;
         
@@ -212,18 +200,6 @@ export class UserService {
             organizationId = existingOrgResult.recordset[0].OrganizationID;
         } else {
             // Organization doesn't exist, create new one
-            const orgQuery = `
-                INSERT INTO Organizations (
-                    Name, Description, Industry, Size, Headquarters, 
-                    Website, Type, EstablishedDate, CreatedAt, UpdatedAt
-                ) 
-                OUTPUT INSERTED.OrganizationID
-                VALUES (
-                    @param0, @param1, @param2, @param3, @param4,
-                    @param5, @param6, @param7, GETUTCDATE(), GETUTCDATE()
-                )
-            `;
-
             const orgParameters = [
                 organizationName,
                 userData.organizationDescription || `Organization for ${userData.firstName} ${userData.lastName}`,
@@ -235,7 +211,7 @@ export class UserService {
                 userData.establishedDate || null
             ];
 
-            const orgResult = await dbService.executeTransactionQuery(tx, orgQuery, orgParameters);
+            const orgResult = await UserServiceRepository.insertOrganizationTx(tx, orgParameters);
             
             // Get the auto-generated OrganizationID
             if (!orgResult.recordset || orgResult.recordset.length === 0) {
@@ -245,23 +221,14 @@ export class UserService {
         }
         
         // Employer profile creation with the OrganizationID (existing or new)
-        // Use only columns that exist in the database schema
-        const employerQuery = `
-            INSERT INTO Employers (
-                EmployerID, UserID, OrganizationID, Role, IsVerified, JoinedAt
-            ) VALUES (
-                @param0, @param1, @param2, 'Recruiter', 0, GETUTCDATE()
-            )
-        `;
-
-        await dbService.executeTransactionQuery(tx, employerQuery, [employerId, userId, organizationId]);
+        await UserServiceRepository.insertEmployerTx(tx, employerId, userId, organizationId);
         
         return { organizationId: organizationId.toString(), employerId };
     }
 
     // Legacy non-transactional helper (kept for backward compatibility; prefer the TX version)
     private static async createEmployerProfileWithOrganization(userId: string, userData: any): Promise<{ organizationId: string; employerId: string }> {
-        const tx = await dbService.beginTransaction();
+        const tx = await UserServiceRepository.beginTransaction();
         try {
             const res = await this.createEmployerProfileWithOrganizationTx(tx, userId, userData);
             await tx.commit();
@@ -275,23 +242,12 @@ export class UserService {
     // Create applicant profile (transactional)
     private static async createApplicantProfileTx(tx: any, userId: string): Promise<void> {
         const applicantId = AuthService.generateUniqueId();
-        const query = `
-            INSERT INTO Applicants (
-                ApplicantID, UserID, ProfileCompleteness, IsOpenToWork,
-                AllowRecruitersToContact, HideCurrentCompany, HideSalaryDetails,
-                ImmediatelyAvailable, WillingToRelocate, IsFeatured, OpenToRefer,
-                CreatedAt, UpdatedAt
-            ) VALUES (
-                @param0, @param1, 10, 1, 1, 0, 0, 0, 0, 0, 1,
-                GETUTCDATE(), GETUTCDATE()
-            )
-        `;
-        await dbService.executeTransactionQuery(tx, query, [applicantId, userId]);
+        await UserServiceRepository.insertApplicantTx(tx, applicantId, userId);
     }
 
     // Legacy non-transactional applicant helper
     private static async createApplicantProfile(userId: string): Promise<void> {
-        const tx = await dbService.beginTransaction();
+        const tx = await UserServiceRepository.beginTransaction();
         try {
             await this.createApplicantProfileTx(tx, userId);
             await tx.commit();
@@ -310,23 +266,17 @@ export class UserService {
 
         // Prevent duplicate employer creation if already employer and record exists
         if (user.UserType === appConstants.userTypes.EMPLOYER) {
-            const existing = await dbService.executeQuery(
-                'SELECT EmployerID FROM Employers WHERE UserID = @param0',
-                [userId]
-            );
-            if (existing.recordset && existing.recordset.length > 0) {
+            const exists = await UserServiceRepository.employerExists(userId);
+            if (exists) {
                 throw new ConflictError('Employer profile already exists');
             }
         }
 
-        const tx = await dbService.beginTransaction();
+        const tx = await UserServiceRepository.beginTransaction();
         try {
             // Upgrade user type to Employer if needed
             if (user.UserType !== appConstants.userTypes.EMPLOYER) {
-                await dbService.executeTransactionQuery(tx,
-                    `UPDATE Users SET UserType = 'Employer', UpdatedAt = GETUTCDATE() WHERE UserID = @param0`,
-                    [userId]
-                );
+                await UserServiceRepository.upgradeToEmployerTx(tx, userId);
             }
             // Create org + employer under same transaction
             const result = await this.createEmployerProfileWithOrganizationTx(tx, userId, data);
@@ -441,22 +391,13 @@ export class UserService {
         const { UserRepository } = await import('../repositories/user.repository');
         const safeColumns = UserRepository.SAFE_COLUMNS;
 
-        const query = `
-            UPDATE Users 
-            SET ${updateFields}, UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0;
-            
-            SELECT ${safeColumns} FROM Users WHERE UserID = @param0;
-        `;
+        const updated = await UserServiceRepository.updateUserProfile(userId, updateFields, values, safeColumns);
 
-        const parameters = [userId, ...values];
-        const result = await dbService.executeQuery<User>(query, parameters);
-
-        if (!result.recordset || result.recordset.length === 0) {
+        if (!updated) {
             throw new Error('Failed to update user profile');
         }
 
-        return result.recordset[0];
+        return updated;
     }
 
     // Change password
@@ -475,14 +416,7 @@ export class UserService {
         // Hash new password
         const hashedNewPassword = await AuthService.hashPassword(newPassword);
 
-        // Update password
-        const query = `
-            UPDATE Users 
-            SET Password = @param1, UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0
-        `;
-
-        await dbService.executeQuery(query, [userId, hashedNewPassword]);
+        await UserServiceRepository.updatePassword(userId, hashedNewPassword);
     }
 
     /**
@@ -521,13 +455,7 @@ export class UserService {
 
         // Store token hash in database for verification (optional security measure)
         const tokenHash = await AuthService.hashPassword(resetToken.substring(0, 20));
-        await dbService.executeQuery(`
-            UPDATE Users 
-            SET PasswordResetToken = @param1, 
-                PasswordResetExpires = DATEADD(HOUR, 1, GETUTCDATE()),
-                UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0
-        `, [user.UserID, tokenHash]);
+        await UserServiceRepository.setPasswordResetToken(user.UserID, tokenHash);
 
         // Send password reset email
         try {
@@ -595,15 +523,7 @@ export class UserService {
         // Hash new password
         const hashedPassword = await AuthService.hashPassword(newPassword);
 
-        // Update password and clear reset token
-        await dbService.executeQuery(`
-            UPDATE Users 
-            SET Password = @param1, 
-                PasswordResetToken = NULL, 
-                PasswordResetExpires = NULL,
-                UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0
-        `, [user.UserID, hashedPassword]);
+        await UserServiceRepository.clearPasswordResetToken(user.UserID, hashedPassword);
 
         return { 
             success: true, 
@@ -657,24 +577,12 @@ export class UserService {
 
     // Verify email
     static async verifyEmail(userId: string): Promise<void> {
-        const query = `
-            UPDATE Users 
-            SET EmailVerified = 1, UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0
-        `;
-
-        await dbService.executeQuery(query, [userId]);
+        await UserServiceRepository.markEmailVerified(userId);
     }
 
     // Deactivate user account
     static async deactivateAccount(userId: string): Promise<void> {
-        const query = `
-            UPDATE Users 
-            SET IsActive = 0, UpdatedAt = GETUTCDATE()
-            WHERE UserID = @param0
-        `;
-
-        await dbService.executeQuery(query, [userId]);
+        await UserServiceRepository.deactivateUser(userId);
     }
 
     // Get user dashboard stats - ENHANCED with comprehensive analytics
@@ -707,7 +615,7 @@ export class UserService {
         const graduationYear = educationData.graduationYear || '';
         const gpa = educationData.gpa || '';
 
-        await dbService.executeQuery(`UPDATE Applicants SET Institution=@param1, HighestEducation=@param2, FieldOfStudy=@param3, GraduationYear=@param4, GPA=@param5, UpdatedAt=GETUTCDATE() WHERE ApplicantID=@param0`, [applicantId, institutionName, degreeType, fieldOfStudy, graduationYear, gpa]);
+        await UserServiceRepository.updateApplicantEducation(applicantId, institutionName, degreeType, fieldOfStudy, graduationYear, gpa);
         const completeness = await this.recomputeProfileCompletenessByApplicantId(applicantId);
         return { success: true, message: 'Education updated successfully', profileCompleteness: completeness };
     }
@@ -750,7 +658,7 @@ export class UserService {
         if (workExperienceData.preferredLocations) { updateFields.push(`PreferredLocations=@param${idx}`); params.push(workExperienceData.preferredLocations); idx++; }
         if (updateFields.length) {
             updateFields.push('UpdatedAt=GETUTCDATE()');
-            await dbService.executeQuery(`UPDATE Applicants SET ${updateFields.join(', ')} WHERE ApplicantID=@param0`, params);
+            await UserServiceRepository.updateApplicantDynamic(`${updateFields.join(', ')}`, params);
         }
         const completeness = await this.recomputeProfileCompletenessByApplicantId(applicantId);
         return { success: true, message: 'Work experience data processed successfully', profileCompleteness: completeness };
@@ -776,7 +684,7 @@ export class UserService {
         if (jobPreferencesData.preferredCompanySize) { updateFields.push(`PreferredCompanySize=@param${idx}`); params.push(jobPreferencesData.preferredCompanySize); idx++; }
         if (!updateFields.length) throw new ValidationError('No job preferences data provided');
         updateFields.push('UpdatedAt=GETUTCDATE()');
-        await dbService.executeQuery(`UPDATE Applicants SET ${updateFields.join(', ')} WHERE ApplicantID=@param0`, params);
+        await UserServiceRepository.updateApplicantDynamic(`${updateFields.join(', ')}`, params);
         const completeness = await this.recomputeProfileCompletenessByApplicantId(applicantId);
         return { success: true, message: 'Job preferences updated successfully', profileCompleteness: completeness };
     }
@@ -794,21 +702,12 @@ export class UserService {
 
             // PERF: Fetch flags in parallel (independent queries)
             const [userFlagsResult, currentWorkExpResult] = await Promise.all([
-                dbService.executeQuery(`
-                    SELECT IsVerifiedReferrer FROM Users WHERE UserID = @param0
-                `, [userId]),
-                dbService.executeQuery(`
-                    SELECT TOP 1 CompanyEmailVerified 
-                    FROM WorkExperiences 
-                    WHERE ApplicantID = @param0 
-                      AND IsActive = 1 
-                      AND (IsCurrent = 1 OR EndDate IS NULL)
-                    ORDER BY StartDate DESC
-                `, [applicantId]),
+                UserServiceRepository.getUserFlags(userId),
+                UserServiceRepository.getCurrentWorkExpVerification(applicantId),
             ]);
-            const isVerifiedReferrer = userFlagsResult.recordset?.[0]?.IsVerifiedReferrer || false;
-            const isCurrentJobVerified = currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === true || 
-                                         currentWorkExpResult.recordset?.[0]?.CompanyEmailVerified === 1;
+            const isVerifiedReferrer = userFlagsResult?.IsVerifiedReferrer || false;
+            const isCurrentJobVerified = currentWorkExpResult?.CompanyEmailVerified === true || 
+                                         currentWorkExpResult?.CompanyEmailVerified === 1;
 
             // FIRST: Recalculate profile completeness to ensure it's up to date
             let profileCompleteness = 0;
@@ -897,8 +796,7 @@ export class UserService {
                      WHERE a.UserID = @param0 AND ja.StatusID > 1 AND ja.StatusID != 6) as AverageResponseTimeInDays
             `;
 
-            const result = await dbService.executeQuery(statsQuery, [userId]);
-            const baseStats = result.recordset[0] || {};
+            const baseStats = await UserServiceRepository.getJobSeekerStats(statsQuery, [userId]);
 
             // PERF: Fetch all supplemental stats in parallel (independent queries)
             const [referralStats, resumeStats, recentActivityStats, profileInsights] = await Promise.all([
@@ -911,11 +809,7 @@ export class UserService {
             // Get draft jobs count for verified referrers
             let draftJobs = 0;
             if (isVerifiedReferrer) {
-                const draftJobsResult = await dbService.executeQuery(
-                    `SELECT COUNT(*) as DraftCount FROM Jobs WHERE PostedByUserID = @param0 AND Status = 'Draft'`,
-                    [userId]
-                );
-                draftJobs = draftJobsResult.recordset?.[0]?.DraftCount || 0;
+                draftJobs = await UserServiceRepository.getDraftJobsCount(userId);
             }
 
             return {
@@ -1065,8 +959,7 @@ export class UserService {
                      WHERE j.PostedByUserID = @param0 AND ja.StatusID > 1) as AverageResponseTimeInDays
             `;
 
-            const result = await dbService.executeQuery(statsQuery, [userId]);
-            const baseStats = result.recordset[0] || {};
+            const baseStats = await UserServiceRepository.getEmployerStats(statsQuery, [userId]);
 
             // Get employer-specific referral stats
             const employerReferralStats = await this.getEmployerReferralStats(userId);
@@ -1139,22 +1032,10 @@ export class UserService {
     // Calculate employer profile completeness
     static async calculateEmployerProfileCompleteness(userId: string): Promise<number> {
         try {
-            const query = `
-                SELECT 
-                    u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
-                    e.Role, e.OrganizationID,
-                    o.Name as OrganizationName, o.Industry, o.Size, o.Website, o.Description
-                FROM Users u
-                LEFT JOIN Employers e ON u.UserID = e.UserID
-                LEFT JOIN Organizations o ON e.OrganizationID = o.OrganizationID
-                WHERE u.UserID = @param0
-            `;
-            const result = await dbService.executeQuery(query, [userId]);
-            if (!result.recordset || result.recordset.length === 0) {
+            const row = await UserServiceRepository.getEmployerCompletenessData(userId);
+            if (!row) {
                 return 0;
             }
-            
-            const row = result.recordset[0];
             const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
             
             // Employer fields (10 total)
@@ -1199,8 +1080,8 @@ export class UserService {
                 WHERE (rr.AssignedReferrerID = @param0 OR rr.ApplicantID = @param1)
             `;
             
-            const result = await dbService.executeQuery(query, [userId, applicantId]);
-            const stats = result.recordset[0] || {};
+            const result = await UserServiceRepository.getReferralStats(query, [userId, applicantId]);
+            const stats = result || {};
             
             // Map the results
             const mappedStats = {
@@ -1226,17 +1107,7 @@ export class UserService {
 
     private static async getResumeStats(applicantId: string): Promise<any> {
         try {
-            const query = `
-                SELECT 
-                    COUNT(*) as TotalResumes,
-                    CASE WHEN EXISTS(SELECT 1 FROM ApplicantResumes WHERE ApplicantID = @param0 AND IsPrimary = 1) 
-                         THEN 1 ELSE 0 END as PrimaryResumeSet
-                FROM ApplicantResumes 
-                WHERE ApplicantID = @param0
-            `;
-            
-            const result = await dbService.executeQuery(query, [applicantId]);
-            const resumeData = result.recordset[0] || { TotalResumes: 0, PrimaryResumeSet: 0 };
+            const resumeData = await UserServiceRepository.getResumeStats(applicantId);
             
             const mappedStats = { 
                 totalResumes: resumeData.TotalResumes || 0, 
@@ -1252,24 +1123,7 @@ export class UserService {
 
     private static async getRecentActivityStats(userId: string): Promise<any[]> {
         try {
-            const query = `
-                SELECT TOP 10
-                    'application' as ActivityType,
-                    j.Title as JobTitle,
-                    o.Name as CompanyName,
-                    ja.SubmittedAt as ActivityDate,
-                    aps.Status as CurrentStatus
-                FROM JobApplications ja
-                INNER JOIN Applicants a ON ja.ApplicantID = a.ApplicantID
-                INNER JOIN Jobs j ON ja.JobID = j.JobID
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN ApplicationStatuses aps ON ja.StatusID = aps.StatusID
-                WHERE a.UserID = @param0 AND ja.StatusID != 6
-                ORDER BY ja.SubmittedAt DESC
-            `;
-            
-            const result = await dbService.executeQuery(query, [userId]);
-            return result.recordset || [];
+            return await UserServiceRepository.getRecentActivity(userId);
         } catch (error) {
             console.error('Error getting recent activity stats:', error);
             return [];
@@ -1278,24 +1132,7 @@ export class UserService {
 
     private static async getProfileInsights(applicantId: string): Promise<any> {
         try {
-            const query = `
-                SELECT 
-                    PrimarySkills,
-                    SecondarySkills,
-                    PreferredJobTypes,
-                    PreferredWorkTypes,
-                    PreferredLocations,
-                    CurrentJobTitle,
-                    ISNULL(TotalExperienceMonths, 0) as TotalExperienceMonths,
-                    LinkedInProfile,
-                    IsOpenToWork,
-                    AllowRecruitersToContact
-                FROM Applicants 
-                WHERE ApplicantID = @param0
-            `;
-            
-            const result = await dbService.executeQuery(query, [applicantId]);
-            const profile = result.recordset[0] || {};
+            const profile = await UserServiceRepository.getProfileInsights(applicantId);
             
             return {
                 hasSkills: !!(profile.PrimarySkills || profile.SecondarySkills),
@@ -1313,21 +1150,7 @@ export class UserService {
 
     private static async getEmployerReferralStats(userId: string): Promise<any> {
         try {
-            const query = `
-                SELECT 
-                    (SELECT COUNT(DISTINCT rr.RequestID)
-                     FROM ReferralRequests rr
-                     INNER JOIN Jobs j ON rr.JobID = j.JobID
-                     WHERE j.PostedByUserID = @param0) as ReferralsForMyJobs,
-                    
-                    (SELECT COUNT(DISTINCT rr.RequestID)
-                     FROM ReferralRequests rr
-                     INNER JOIN Jobs j ON rr.JobID = j.JobID
-                     WHERE j.PostedByUserID = @param0 AND rr.Status IN ('Completed', 'Verified')) as CompletedReferralsForMyJobs
-            `;
-            
-            const result = await dbService.executeQuery(query, [userId]);
-            return result.recordset[0] || {};
+            return await UserServiceRepository.getEmployerReferralStats(userId);
         } catch (error) {
             console.error('Error getting employer referral stats:', error);
             return {};
@@ -1336,22 +1159,7 @@ export class UserService {
 
     private static async getTopPerformingJobs(userId: string): Promise<any[]> {
         try {
-            const query = `
-                SELECT TOP 5
-                    j.JobID,
-                    j.Title,
-                    j.Status,
-                    j.CreatedAt,
-                    ISNULL(j.CurrentApplications, 0) as ApplicationCount,
-                    (SELECT COUNT(*) FROM JobApplications ja WHERE ja.JobID = j.JobID AND ja.StatusID = 3) as ShortlistedCount,
-                    (SELECT COUNT(*) FROM JobApplications ja WHERE ja.JobID = j.JobID AND ja.StatusID = 5) as HiredCount
-                FROM Jobs j
-                WHERE j.PostedByUserID = @param0
-                ORDER BY ISNULL(j.CurrentApplications, 0) DESC, j.CreatedAt DESC
-            `;
-            
-            const result = await dbService.executeQuery(query, [userId]);
-            return result.recordset || [];
+            return await UserServiceRepository.getTopPerformingJobs(userId);
         } catch (error) {
             console.error('Error getting top performing jobs:', error);
             return [];
@@ -1360,21 +1168,7 @@ export class UserService {
 
     private static async getHiringPipelineInsights(userId: string): Promise<any> {
         try {
-            const query = `
-                SELECT 
-                    COUNT(CASE WHEN ja.StatusID = 1 THEN 1 END) as Applied,
-                    COUNT(CASE WHEN ja.StatusID = 2 THEN 1 END) as Reviewing,
-                    COUNT(CASE WHEN ja.StatusID = 3 THEN 1 END) as Shortlisted,
-                    COUNT(CASE WHEN ja.StatusID = 4 THEN 1 END) as Interview,
-                    COUNT(CASE WHEN ja.StatusID = 5 THEN 1 END) as Hired,
-                    COUNT(CASE WHEN ja.StatusID = 6 THEN 1 END) as Rejected
-                FROM JobApplications ja
-                INNER JOIN Jobs j ON ja.JobID = j.JobID
-                WHERE j.PostedByUserID = @param0
-            `;
-            
-            const result = await dbService.executeQuery(query, [userId]);
-            const pipeline = result.recordset[0] || {};
+            const pipeline = await UserServiceRepository.getHiringPipelineInsights(userId);
             
             // Calculate conversion rates
             const total = Object.values(pipeline).reduce((sum: number, count: any) => sum + (count || 0), 0);
@@ -1396,35 +1190,13 @@ export class UserService {
     private static async getOrganizationMetrics(userId: string): Promise<any> {
         try {
             // Get employer's organization
-            const orgQuery = `
-                SELECT o.OrganizationID, o.Name, o.Size, o.Industry
-                FROM Employers e
-                INNER JOIN Organizations o ON e.OrganizationID = o.OrganizationID
-                WHERE e.UserID = @param0
-            `;
-            
-            const orgResult = await dbService.executeQuery(orgQuery, [userId]);
-            if (!orgResult.recordset || orgResult.recordset.length === 0) {
+            const org = await UserServiceRepository.getEmployerOrganization(userId);
+            if (!org) {
                 return {};
             }
             
-            const org = orgResult.recordset[0];
-            
             // Get organization-wide metrics
-            const metricsQuery = `
-                SELECT 
-                    COUNT(DISTINCT e.EmployerID) as TotalEmployers,
-                    COUNT(DISTINCT j.JobID) as TotalJobs,
-                    COUNT(DISTINCT ja.ApplicationID) as TotalApplications
-                FROM Organizations o
-                LEFT JOIN Employers e ON o.OrganizationID = e.OrganizationID
-                LEFT JOIN Jobs j ON o.OrganizationID = j.OrganizationID
-                LEFT JOIN JobApplications ja ON j.JobID = ja.JobID
-                WHERE o.OrganizationID = @param0
-            `;
-            
-            const metricsResult = await dbService.executeQuery(metricsQuery, [org.OrganizationID]);
-            const metrics = metricsResult.recordset[0] || {};
+            const metrics = await UserServiceRepository.getOrganizationMetrics(org.OrganizationID);
             
             return {
                 organizationName: org.Name,
@@ -1556,8 +1328,8 @@ export class UserService {
                 (SELECT ISNULL(ProfileCompleteness, 0) FROM Applicants WHERE UserID = @param0) as ProfileCompleteness
         `;
 
-        const result = await dbService.executeQuery(query, [userId]);
-        return result.recordset[0] || {};
+        const result = await UserServiceRepository.getStats(query, [userId]);
+        return result;
     }
 
     private static async getBasicEmployerStats(userId: string): Promise<any> {
@@ -1573,8 +1345,8 @@ export class UserService {
                  WHERE j.PostedByUserID = @param0 AND ja.StatusID = 1) as PendingApplications
         `;
 
-        const result = await dbService.executeQuery(query, [userId]);
-        return result.recordset[0] || {};
+        const result = await UserServiceRepository.getStats(query, [userId]);
+        return result;
     }
 
     // Keep original method names for backward compatibility
@@ -1589,28 +1361,10 @@ export class UserService {
     // Centralized profile completeness recalculation (enhanced with more factors)
     private static async recalculateApplicantProfileCompleteness(applicantId: string): Promise<number> {
         try {
-            const query = `
-                SELECT 
-                    -- User table fields
-                    u.FirstName, u.LastName, u.Email, u.Phone, u.ProfilePictureURL,
-                    -- Applicant table fields
-                    a.Headline, a.CurrentJobTitle, a.CurrentCompanyName, a.TotalExperienceMonths,
-                    a.CurrentLocation, a.Summary,
-                    a.Institution, a.HighestEducation, a.FieldOfStudy,
-                    a.PrimarySkills, a.SecondarySkills,
-                    a.PreferredJobTypes, a.PreferredWorkTypes, a.PreferredLocations,
-                    a.LinkedInProfile,
-                    (SELECT COUNT(*) FROM ApplicantResumes r WHERE r.ApplicantID = a.ApplicantID) AS ResumeCount,
-                    (SELECT COUNT(*) FROM WorkExperiences w WHERE w.ApplicantID = a.ApplicantID AND w.IsActive = 1) AS WorkExpCount
-                FROM Applicants a
-                INNER JOIN Users u ON a.UserID = u.UserID
-                WHERE a.ApplicantID = @param0
-            `;
-            const result = await dbService.executeQuery(query, [applicantId]);
-            if (!result.recordset || result.recordset.length === 0) {
+            const row: any = await UserServiceRepository.getCompletenessData(applicantId);
+            if (!row) {
                 throw new NotFoundError('Applicant not found for completeness recalculation');
             }
-            const row: any = result.recordset[0];
             const hasValue = (v: any) => v !== null && v !== undefined && String(v).trim().length > 0;
 
             // Match frontend calculation - 20 total fields
@@ -1653,10 +1407,7 @@ export class UserService {
             
             const completeness = Math.min(100, Math.max(0, Math.round((achieved * 100) / totalFields)));
 
-            await dbService.executeQuery(
-                `UPDATE Applicants SET ProfileCompleteness = @param1, UpdatedAt = GETUTCDATE() WHERE ApplicantID = @param0`,
-                [applicantId, completeness]
-            );
+            await UserServiceRepository.updateProfileCompleteness(applicantId, completeness);
             return completeness;
         } catch (error) {
             console.error('Error recalculating profile completeness:', error);
@@ -1694,25 +1445,16 @@ export class UserService {
         // If exceeded, lock the account
         if (newAttempts > maxAttempts) {
             newAttempts = 0; // Reset attempts after locking
-            await dbService.executeQuery(
-                `UPDATE Users SET LoginAttempts = @param1, AccountLockoutEnd = DATEADD(MINUTE, @param2, GETUTCDATE()) WHERE UserID = @param0`,
-                [userId, newAttempts, lockoutDuration]
-            );
+            await UserServiceRepository.lockAccount(userId, newAttempts, lockoutDuration);
             throw new ValidationError('Account is temporarily locked due to multiple failed login attempts. Please try again later.');
         } else {
-            await dbService.executeQuery(
-                `UPDATE Users SET LoginAttempts = @param1 WHERE UserID = @param0`,
-                [userId, newAttempts]
-            );
+            await UserServiceRepository.incrementLoginAttempts(userId, newAttempts);
         }
     }
 
     // Update last login date
     private static async updateLastLogin(userId: string): Promise<void> {
-        await dbService.executeQuery(
-            `UPDATE Users SET LastLoginAt = GETUTCDATE(), LoginAttempts = 0, AccountLockoutEnd = NULL WHERE UserID = @param0`,
-            [userId]
-        );
+        await UserServiceRepository.recordSuccessfulLogin(userId);
     }
 
     /**
@@ -1760,13 +1502,8 @@ export class UserService {
                 .join(', ');
 
             const values = Object.values(updateData);
-            const query = `
-                UPDATE Users 
-                SET ${updateFields}, UpdatedAt = GETUTCDATE()
-                WHERE UserID = @param0
-            `;
 
-            await dbService.executeQuery(query, [existingUser.UserID, ...values]);
+            await UserServiceRepository.updateGoogleLoginFields(existingUser.UserID, updateFields, values);
             
             // Refresh user data
             const updatedUser = await this.findById(existingUser.UserID);
@@ -1826,17 +1563,10 @@ export class UserService {
         // Validate and lookup referral code if provided
         let referrerId: string | null = null;
         if (additionalData.referralCode && additionalData.referralCode.trim().length > 0) {
-            const referrerQuery = `
-                SELECT UserID, Email, FirstName, LastName 
-                FROM Users 
-                WHERE CAST(UserID AS NVARCHAR(50)) LIKE @param0 
-                AND IsActive = 1
-            `;
+            const referrer = await UserServiceRepository.findByReferralCode(additionalData.referralCode.trim() + '-%');
             
-            const referrerResult = await dbService.executeQuery(referrerQuery, [additionalData.referralCode.trim() + '-%']);
-            
-            if (referrerResult.recordset && referrerResult.recordset.length > 0) {
-                referrerId = referrerResult.recordset[0].UserID;
+            if (referrer) {
+                referrerId = referrer.UserID;
             }
         }
         
@@ -1846,7 +1576,7 @@ export class UserService {
         const termsAccepted = additionalData.termsAccepted === true;
 
         // Start transaction for user and profile creation
-        const tx = await dbService.beginTransaction();
+        const tx = await UserServiceRepository.beginTransaction();
         try {
             // Insert user into database with Google data
             const userQuery = `
@@ -1894,7 +1624,7 @@ export class UserService {
                 termsAccepted ? privacyPolicyVersion : null // PrivacyPolicyVersion
             ];
 
-            const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, userParameters);
+            const userResult = await UserServiceRepository.executeTransactionQuery<User>(tx, userQuery, userParameters);
             
             if (!userResult.recordset || userResult.recordset.length === 0) {
                 throw new Error('Failed to create user');
