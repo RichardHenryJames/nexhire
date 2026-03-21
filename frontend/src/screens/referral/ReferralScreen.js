@@ -349,6 +349,23 @@ export default function ReferralScreen({ navigation }) {
     return `${date.toLocaleDateString('en-US', dateOptions)} at ${date.toLocaleTimeString('en-US', timeOptions)}`;
   };
 
+  // Relative time for card display (matches MyReferralRequestsScreen)
+  const getRelativeTime = (dateString) => {
+    if (!dateString) return '';
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 30) return `${diffDays}d ago`;
+    return `${Math.floor(diffDays / 30)}mo ago`;
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'Pending':
@@ -498,7 +515,9 @@ export default function ReferralScreen({ navigation }) {
               </Text>
               <Text style={styles.metaDot}>•</Text>
               <Text style={styles.timeAgo}>
-                {formatDate(request.RequestedAt)}
+                {activeTab === 'closed' && request.ReferredAt
+                  ? getRelativeTime(request.ReferredAt)
+                  : getRelativeTime(request.RequestedAt)}
               </Text>
             </View>
 

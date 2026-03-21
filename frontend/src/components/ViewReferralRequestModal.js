@@ -433,6 +433,16 @@ export default function ViewReferralRequestModal({
                 </View>
               ) : null}
 
+              {/* Requested date */}
+              {referralRequest?.RequestedAt && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 }}>
+                  <Ionicons name="calendar-outline" size={13} color={colors.textMuted} />
+                  <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                    Requested on {new Date(referralRequest.RequestedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} at {new Date(referralRequest.RequestedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </Text>
+                </View>
+              )}
+
               {/* Action pills: Resume | View Job | Job ID */}
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 {/* Resume pill */}

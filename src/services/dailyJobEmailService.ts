@@ -72,6 +72,22 @@ export class DailyJobEmailService {
     }
 
     /**
+     * Get total published job count (for email subject/CTA)
+     */
+    static async getTotalJobCountForUser(userId: string): Promise<number> {
+        try {
+            const result = await dbService.executeQuery(
+                `SELECT COUNT(*) as total FROM Jobs WHERE Status = 'Published'`,
+                []
+            );
+            return result.recordset?.[0]?.total || 0;
+        } catch (error: any) {
+            console.warn(`Failed to get total job count for user ${userId}:`, error.message);
+            return 0;
+        }
+    }
+
+    /**
      * Get top 10 recommended jobs for a user (FREE - no wallet deduction)
      * Uses the SAME logic as Jobs screen - JobService.getJobs with personalization
      */
@@ -136,39 +152,39 @@ export class DailyJobEmailService {
         }
 
         return jobs.map((job, index) => {
-            const location = job.City || job.Location || job.Country || 'Location not specified';
+            const location = job.City || job.Location || job.Country || '';
             const salary = this.formatSalary(job.SalaryRangeMin, job.SalaryRangeMax);
             const jobUrl = `${APP_URL}/jobs/${job.JobID}`;
+            const infoParts: string[] = [];
+            if (location) infoParts.push(`📍 ${location}`);
+            if (job.WorkplaceTypeName) infoParts.push(job.WorkplaceTypeName);
+            if (salary) infoParts.push(salary);
             
             return `
-                <table width="100%" cellpadding="0" cellspacing="0" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; margin: 15px 0;">
-                    <tr>
-                        <td style="padding: 20px;">
-                            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="padding: 0 0 2px 0;">
+                        <a href="${jobUrl}" style="text-decoration: none; display: block;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="border-bottom: 1px solid #f0f0f0;">
                                 <tr>
-                                    <td width="50" valign="top">
+                                    <td width="48" valign="top" style="padding: 14px 0;">
                                         ${job.OrganizationLogo 
-                                            ? `<img src="${job.OrganizationLogo}" alt="${job.OrganizationName}" style="width: 45px; height: 45px; border-radius: 8px; object-fit: cover;" />`
-                                            : `<div style="width: 45px; height: 45px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px;">${job.OrganizationName?.charAt(0) || 'J'}</div>`
+                                            ? `<img src="${job.OrganizationLogo}" alt="${job.OrganizationName}" style="width: 42px; height: 42px; border-radius: 10px; object-fit: cover; border: 1px solid #eee;" />`
+                                            : `<div style="width: 42px; height: 42px; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 10px; text-align: center; line-height: 42px; color: white; font-weight: bold; font-size: 17px;">${(job.OrganizationName || 'J').charAt(0).toUpperCase()}</div>`
                                         }
                                     </td>
-                                    <td style="padding-left: 15px;">
-                                        <a href="${jobUrl}" style="color: #333; text-decoration: none; font-size: 16px; font-weight: 600; display: block; margin-bottom: 4px;">${job.Title}</a>
-                                        <p style="margin: 0 0 8px 0; color: #667eea; font-size: 14px; font-weight: 500;">${job.OrganizationName}</p>
-                                        <p style="margin: 0; color: #888; font-size: 13px;">
-                                            📍 ${location} 
-                                            ${job.WorkplaceTypeName ? `• ${job.WorkplaceTypeName}` : ''}
-                                            ${salary ? `• ${salary}` : ''}
-                                        </p>
+                                    <td style="padding: 14px 0 14px 12px;" valign="middle">
+                                        <p style="margin: 0 0 2px 0; font-size: 15px; font-weight: 600; color: #1a1a1a;">${job.Title}</p>
+                                        <p style="margin: 0 0 3px 0; font-size: 13px; color: #6366f1; font-weight: 500;">${job.OrganizationName}</p>
+                                        ${infoParts.length > 0 ? `<p style="margin: 0; font-size: 12px; color: #888;">${infoParts.join(' &bull; ')}</p>` : ''}
                                     </td>
-                                    <td width="100" valign="middle" align="right">
-                                        <a href="${jobUrl}" style="display: inline-block; background: #667eea; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 500;">View</a>
+                                    <td width="24" valign="middle" align="right" style="padding: 14px 0;">
+                                        <span style="color: #ccc; font-size: 18px;">&#8250;</span>
                                     </td>
                                 </tr>
                             </table>
-                        </td>
-                    </tr>
-                </table>
+                        </a>
+                    </td>
+                </tr>
             `;
         }).join('');
     }
@@ -197,8 +213,11 @@ export class DailyJobEmailService {
      */
     static async sendEmailToUser(user: UserForEmail): Promise<boolean> {
         try {
-            // Get top 5 jobs for this user
-            const jobs = await this.getTopJobsForUser(user.UserID);
+            // Get total job count and top jobs in parallel
+            const [totalJobs, jobs] = await Promise.all([
+                this.getTotalJobCountForUser(user.UserID),
+                this.getTopJobsForUser(user.UserID)
+            ]);
             
             // Skip if no jobs found
             if (!jobs || jobs.length === 0) {
@@ -213,7 +232,8 @@ export class DailyJobEmailService {
             const template = TemplateService.render('daily_job_recommendations', {
                 firstName: user.FirstName || 'there',
                 jobCardsHtml,
-                jobCount: jobs.length
+                jobCount: jobs.length,
+                totalJobs: totalJobs || jobs.length
             });
             
             // Send email
