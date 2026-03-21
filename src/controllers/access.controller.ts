@@ -138,13 +138,11 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
       case 'resume_analysis':
         const raCost = await PricingService.getAIResumeAnalysisCost();
         const raFreeUses = await PricingService.getAIResumeFreeUses();
-        // Count usage
+        // Count analyses — each analysis creates a new row, so COUNT(*) is the source of truth
         let raUsageCount = 0;
         try {
           const raResult = await (await import('../services/database.service')).dbService.executeQuery(
-            `SELECT COUNT(*) AS cnt FROM WalletTransactions wt
-             INNER JOIN Wallets w ON wt.WalletID = w.WalletID
-             WHERE w.UserID = @param0 AND wt.Source = 'Resume_Analysis'`,
+            `SELECT COUNT(*) AS cnt FROM ResumeMetadata WHERE UserID = @param0`,
             [user.userId]
           );
           raUsageCount = raResult.recordset?.[0]?.cnt || 0;
