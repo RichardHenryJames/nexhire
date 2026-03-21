@@ -361,20 +361,41 @@ export default function ReferralTrackingScreen() {
               </View>
 
               {/* Upgrade nudge — only for specific company with 10+ views */}
-              {!isOTA && views >= 10 && (
-                <TouchableOpacity 
-                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6' + '08', borderRadius: 10, padding: 12, marginTop: 6, gap: 8, borderWidth: 1, borderColor: '#8B5CF6' + '20' }}
-                  onPress={() => setShowConvertModal(true)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="trending-up" size={18} color={'#8B5CF6'} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#8B5CF6' }}>🚀 Get referred by multiple companies</Text>
-                    <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>{Math.round(views / m)}+ referrers are waiting. Upgrade for just ₹{Math.max(0, (pricing.openToAnyReferralCost || 249) - getReferralCostForJob(request || {}, pricing))} more</Text>
-                  </View>
-                  <Ionicons name="arrow-forward" size={16} color={'#8B5CF6'} />
-                </TouchableOpacity>
-              )}
+              {!isOTA && views >= 10 && (() => {
+                // Platform referrer count — urgency-based, independent of views/tier
+                const s2 = seed;
+                const baseReferrers = 120 + (s2 % 80); // 120-199
+                const expiryMs = request?.ExpiryTime
+                  ? new Date(request.ExpiryTime).getTime()
+                  : new Date(request?.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000;
+                const daysLeft = Math.max(0, (expiryMs - Date.now()) / (24 * 60 * 60 * 1000));
+                const urgency = Math.max(0, 1 - daysLeft / 14); // 0 at 14 days, 1 at 0 days
+                const totalReferrers = Math.round(baseReferrers * (1 + urgency * 0.5));
+                const referrerDisplay = `${Math.round(totalReferrers / 10) * 10}+`;
+                const delta = Math.max(0, (pricing.openToAnyReferralCost || 249) - getReferralCostForJob(request || {}, pricing));
+                return (
+                  <TouchableOpacity 
+                    style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6' + '10', borderRadius: 12, padding: 14, marginTop: 8, gap: 10, borderWidth: 1, borderColor: '#8B5CF6' + '30' }}
+                    onPress={() => setShowConvertModal(true)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6' + '20', justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="globe-outline" size={18} color={'#8B5CF6'} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6' }}>
+                        Get referred from any company
+                      </Text>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 3 }}>
+                        {referrerDisplay} people can refer you. {Math.ceil(daysLeft) <= 1 ? 'Expiring today!' : `Expires in ${Math.ceil(daysLeft)} days.`}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: '#8B5CF6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>Upgrade</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
           );
         })()}
@@ -420,12 +441,22 @@ export default function ReferralTrackingScreen() {
           const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
           const expiryColor = diffDays > 3 ? colors.success : diffDays >= 1 ? colors.warning : colors.error;
           const expiryText = diffDays >= 1 ? `${diffDays}d ${diffHours}h remaining` : `${diffHours}h remaining`;
+          const showConvertHint = !request?.OpenToAnyCompany && diffDays <= 5;
           return (
-            <View style={[styles.dateRow, { marginTop: 4 }]}>
-              <Ionicons name="timer-outline" size={16} color={expiryColor} />
-              <Text style={[styles.dateText, { color: expiryColor, fontWeight: '600' }]}>
-                Expires: {expiryText}
-              </Text>
+            <View style={{ marginTop: 4 }}>
+              <View style={styles.dateRow}>
+                <Ionicons name="timer-outline" size={16} color={expiryColor} />
+                <Text style={[styles.dateText, { color: expiryColor, fontWeight: '600' }]}>
+                  Expires: {expiryText}
+                </Text>
+              </View>
+              {showConvertHint && (
+                <TouchableOpacity onPress={() => setShowConvertModal(true)} activeOpacity={0.7}>
+                  <Text style={{ fontSize: 11, color: '#8B5CF6', fontWeight: '600', marginTop: 4, marginLeft: 24 }}>
+                    Upgrade to Open to get 14 fresh days →
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           );
         })()}
@@ -740,7 +771,7 @@ export default function ReferralTrackingScreen() {
                 activeOpacity={0.7}
               >
                 <Ionicons name="globe-outline" size={15} color={colors.white} />
-                <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Convert to Open</Text>
+                <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Upgrade to Open</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -767,7 +798,7 @@ export default function ReferralTrackingScreen() {
               activeOpacity={0.7}
             >
               <Ionicons name="globe-outline" size={18} color={colors.white} />
-              <Text style={styles.actionBtnText}>Convert to Open</Text>
+              <Text style={styles.actionBtnText}>Upgrade to Open</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -940,37 +971,35 @@ export default function ReferralTrackingScreen() {
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <View style={{ width: '100%', maxWidth: 420, backgroundColor: colors.surface, borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-              <Ionicons name="globe-outline" size={24} color={'#8B5CF6'} />
-              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginLeft: 10, flex: 1 }}>Go Open to All Companies</Text>
-              <TouchableOpacity onPress={() => setShowConvertModal(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
             {(() => {
-              // Dynamic reach estimate — same logic as view inflation
-              const viewedEvents = (history || []).filter(h => h.status === 'Viewed');
-              const realViews = viewedEvents.length;
-              const firstViewAt = viewedEvents.length > 0
-                ? new Date(viewedEvents[viewedEvents.length - 1].createdAt).getTime()
-                : Date.now();
-              const elapsed = Math.max(0, Date.now() - firstViewAt);
+              // Platform referrer count — urgency-based, independent of views/tier
               const s = requestId ? requestId.charCodeAt(0) + requestId.charCodeAt(requestId.length - 1) : 42;
-              const fullD = Math.floor(elapsed / (24 * 60 * 60 * 1000));
-              const t = request?.OrganizationTier || 'Standard';
-              let tm = 0.25;
-              if (t === 'Elite') tm = 0.29;
-              else if (t === 'Premium') tm = 0.33;
-              const dailyV = 2 * (8 + (s % 10)) * tm;
-              const currentViews = Math.max(realViews, Math.round(realViews + dailyV * fullD * (0.6 + 0.4 * Math.sin(s))));
-              const potentialReach = Math.round(currentViews / tm);
-              const reachDisplay = potentialReach > 10 ? `${Math.round(potentialReach / 10) * 10}+` : '50+';
+              const baseReferrers = 120 + (s % 80); // 120-199
+              const expiryMs = request?.ExpiryTime
+                ? new Date(request.ExpiryTime).getTime()
+                : new Date(request?.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000;
+              const daysLeft = Math.max(0, (expiryMs - Date.now()) / (24 * 60 * 60 * 1000));
+              const urgency = Math.max(0, 1 - daysLeft / 14); // 0 at 14 days, 1 at 0 days
+              const totalReferrers = Math.round(baseReferrers * (1 + urgency * 0.5));
+              const referrerDisplay = `${Math.round(totalReferrers / 10) * 10}+`;
+              // Companies = ~30-35% of referrers, always less
+              const companyCount = Math.max(10, Math.round(totalReferrers * (0.30 + 0.05 * ((s % 7) / 7))));
+              const companyDisplay = `${Math.round(companyCount / 10) * 10}+`;
 
               return (
-                <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12, lineHeight: 18 }}>
-                  Your request for "{request?.JobTitle}" will be visible to <Text style={{ fontWeight: '700', color: '#8B5CF6' }}>{reachDisplay} referrers</Text> across multiple companies. Multiple referrers can refer you. You only pay once.
-                </Text>
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                    <Ionicons name="globe-outline" size={24} color={'#8B5CF6'} />
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginLeft: 10, flex: 1 }}>Expand to {companyDisplay} Companies</Text>
+                    <TouchableOpacity onPress={() => setShowConvertModal(false)}>
+                      <Ionicons name="close" size={24} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12, lineHeight: 18 }}>
+                    Your request for "{request?.JobTitle}" will be visible to <Text style={{ fontWeight: '700', color: '#8B5CF6' }}>{referrerDisplay} referrers</Text> across <Text style={{ fontWeight: '700', color: '#8B5CF6' }}>{companyDisplay} companies</Text>. Multiple referrers can refer you. You only pay once.
+                  </Text>
+                </>
               );
             })()}
 
@@ -1002,9 +1031,14 @@ export default function ReferralTrackingScreen() {
               );
             })()}
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6 }}>
               <Ionicons name="shield-checkmark" size={16} color={colors.success} />
               <Text style={{ fontSize: 13, color: colors.success, fontWeight: '600' }}>Full refund if no one refers you</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 6 }}>
+              <Ionicons name="timer-outline" size={16} color={'#8B5CF6'} />
+              <Text style={{ fontSize: 13, color: '#8B5CF6', fontWeight: '600' }}>Expiry resets to fresh 14 days</Text>
             </View>
 
             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 }}>Set a minimum salary</Text>

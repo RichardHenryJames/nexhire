@@ -119,7 +119,7 @@ export default function MyReferralRequestsScreen({ route }) {
     setRefreshing(false);
   };
 
-  // Check if request is expiring soon (within 3 days) and has no referrer yet — show CTA to convert to open
+  // Check if request is expiring soon (within 5 days) and has no referrer yet — show CTA to convert to open
   const isExpiringSoon = (request) => {
     if (!['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(request.Status)) return false;
     if (request.OpenToAnyCompany) return false; // Already open — no action possible
@@ -127,7 +127,7 @@ export default function MyReferralRequestsScreen({ route }) {
       ? new Date(request.ExpiryTime) 
       : new Date(new Date(request.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
     const diffMs = expiryDate - new Date();
-    return diffMs > 0 && diffMs <= 3 * 24 * 60 * 60 * 1000; // within 3 days
+    return diffMs > 0 && diffMs <= 5 * 24 * 60 * 60 * 1000; // within 5 days
   };
 
   // Split requests into 3 categories: Action Needed / In Progress / Closed
@@ -397,7 +397,7 @@ export default function MyReferralRequestsScreen({ route }) {
           ) : isExpiringSoon(request) ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="globe-outline" size={14} color={'#8B5CF6'} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#8B5CF6' }}>Open</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#8B5CF6' }}>Upgrade</Text>
               <Ionicons name="chevron-forward" size={16} color={'#8B5CF6'} />
             </View>
           ) : (
