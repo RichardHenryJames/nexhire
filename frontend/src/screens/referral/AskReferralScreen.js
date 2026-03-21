@@ -725,6 +725,36 @@ export default function AskReferralScreen({ navigation, route }) {
               Two prominent cards: flagship "Open to Any" vs "Specific"
               ═══════════════════════════════════════════════════════ */}
           <View style={styles.modeSection}>
+
+            {/* ✨ Open Referral — Deal Banner (purple, matching Upgrade to Open) */}
+            <TouchableOpacity
+              onPress={() => switchToMode(true)}
+              activeOpacity={0.85}
+              style={{
+                flexDirection: 'row', alignItems: 'center',
+                backgroundColor: '#8B5CF6' + '12', borderWidth: 1, borderColor: '#8B5CF6' + '35',
+                borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14, gap: 10,
+              }}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6' + '20', justifyContent: 'center', alignItems: 'center' }}>
+                <Ionicons name="globe-outline" size={18} color={'#8B5CF6'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: typography.weights.bold, color: colors.text }}>
+                  Go Open{' · '}
+                  <Text style={{ textDecorationLine: 'line-through', color: colors.textMuted, fontWeight: typography.weights.medium, fontSize: 12 }}>₹499</Text>
+                  {' '}
+                  <Text style={{ color: '#8B5CF6', fontWeight: typography.weights.bold }}>₹{pricing.openToAnyReferralCost}</Text>
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 1 }}>
+                  240+ referrers across all companies can refer you
+                </Text>
+              </View>
+              <View style={{ backgroundColor: '#8B5CF6' + '18', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                <Text style={{ fontSize: 9, fontWeight: typography.weights.bold, color: '#8B5CF6', letterSpacing: 0.4 }}>50% OFF</Text>
+              </View>
+            </TouchableOpacity>
+
             <Text style={styles.modeHeading}>
               How do you want to be referred?
             </Text>
@@ -732,19 +762,19 @@ export default function AskReferralScreen({ navigation, route }) {
             {/* Desktop: cards side by side */}
             <View style={Platform.OS === 'web' && responsive.isDesktop ? { flexDirection: 'row', gap: 16 } : {}}>
 
-            {/* ── Open to Any Company (Flagship) ─────────────────── */}
+            {/* ── Open (Flagship) ─────────────────── */}
             <TouchableOpacity
               style={[
                 styles.modeCard,
                 Platform.OS === 'web' && responsive.isDesktop && { flex: 1 },
                 openToAnyCompany && styles.modeCardActive,
-                openToAnyCompany && { borderColor: colors.primary },
+                openToAnyCompany && { borderColor: '#8B5CF6', backgroundColor: '#8B5CF6' + '08' },
               ]}
               onPress={() => switchToMode(true)}
               activeOpacity={0.8}
             >
               {/* RECOMMENDED badge */}
-              <View style={styles.recommendedBadge}>
+              <View style={[styles.recommendedBadge, { backgroundColor: '#8B5CF6' }]}>
                 <Ionicons name="star" size={10} color={colors.white} />
                 <Text style={styles.recommendedText}>RECOMMENDED</Text>
               </View>
@@ -754,14 +784,14 @@ export default function AskReferralScreen({ navigation, route }) {
                   style={[
                     styles.modeIconBox,
                     openToAnyCompany && {
-                      backgroundColor: colors.primary + '20',
+                      backgroundColor: '#8B5CF6' + '20',
                     },
                   ]}
                 >
                   <Ionicons
                     name="globe-outline"
                     size={28}
-                    color={openToAnyCompany ? colors.primary : colors.gray400}
+                    color={openToAnyCompany ? '#8B5CF6' : colors.gray400}
                   />
                 </View>
 
@@ -769,10 +799,10 @@ export default function AskReferralScreen({ navigation, route }) {
                   <Text
                     style={[
                       styles.modeCardTitle,
-                      openToAnyCompany && { color: colors.primary },
+                      openToAnyCompany && { color: '#8B5CF6' },
                     ]}
                   >
-                    Open to Any Company
+                    Open
                   </Text>
                   <Text style={styles.modeCardDesc}>
                     Broadcast to all referrers. Multiple companies can
@@ -794,11 +824,11 @@ export default function AskReferralScreen({ navigation, route }) {
                     <View
                       style={[
                         styles.modeTag,
-                        { backgroundColor: colors.primaryBg },
+                        { backgroundColor: '#8B5CF6' + '15' },
                       ]}
                     >
                       <Text
-                        style={[styles.modeTagText, { color: colors.primary }]}
+                        style={[styles.modeTagText, { color: '#8B5CF6' }]}
                       >
                         Multiple referrals
                       </Text>
@@ -820,7 +850,7 @@ export default function AskReferralScreen({ navigation, route }) {
                   <Text
                     style={[
                       styles.modePriceAmount,
-                      openToAnyCompany && { color: colors.primary },
+                      openToAnyCompany && { color: '#8B5CF6' },
                     ]}
                   >
                     ₹{pricing.openToAnyReferralCost}
@@ -835,14 +865,14 @@ export default function AskReferralScreen({ navigation, route }) {
               <View
                 style={[
                   styles.modeRadio,
-                  openToAnyCompany && styles.modeRadioActive,
+                  openToAnyCompany && { borderColor: '#8B5CF6' },
                 ]}
               >
-                {openToAnyCompany && <View style={styles.modeRadioInner} />}
+                {openToAnyCompany && <View style={[styles.modeRadioInner, { backgroundColor: '#8B5CF6' }]} />}
               </View>
             </TouchableOpacity>
 
-            {/* ── Specific Company ────────────────────────────────── */}
+            {/* ── Specific ────────────────────────────────── */}
             <TouchableOpacity
               style={[
                 styles.modeCard,
@@ -876,7 +906,7 @@ export default function AskReferralScreen({ navigation, route }) {
                       !openToAnyCompany && { color: colors.primary },
                     ]}
                   >
-                    Specific Company
+                    Specific
                   </Text>
                   <Text style={styles.modeCardDesc}>
                     Target a specific company. One referrer claims your request.
@@ -1322,15 +1352,14 @@ export default function AskReferralScreen({ navigation, route }) {
           <TouchableOpacity
             style={[
               styles.stickyCTA,
+              openToAnyCompany && { backgroundColor: '#8B5CF6' },
               submitting && styles.stickyCTADisabled,
             ]}
             onPress={handleAskReferralClick}
-            disabled={!isFormReady || submitting || loadingWallet}
+            disabled={submitting}
             activeOpacity={0.85}
           >
-            {!isFormReady || loadingWallet ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : submitting ? (
+            {submitting ? (
               <>
                 <ActivityIndicator size="small" color={colors.white} />
                 <Text style={styles.stickyCTAText}>Sending...</Text>
