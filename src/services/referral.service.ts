@@ -2254,7 +2254,8 @@ export class ReferralService {
                     COALESCE(jo.LogoURL, eo.LogoURL) as OrganizationLogo,
                     u.FirstName + ' ' + u.LastName as AssignedReferrerName,
                     rp.FileURL, rp.Description,
-                    COALESCE(jo.Tier, eo.Tier, 'Standard') as OrganizationTier
+                    COALESCE(jo.Tier, eo.Tier, 'Standard') as OrganizationTier,
+                    rr.MinSalary, rr.SalaryCurrency, rr.SalaryPeriod, rr.PreferredLocations
                 FROM ReferralRequests rr
                 LEFT JOIN Jobs j ON j.JobID = rr.JobID
                 LEFT JOIN Organizations jo ON jo.OrganizationID = j.OrganizationID
@@ -2293,6 +2294,10 @@ export class ReferralService {
                 ProofFileURL: row.FileURL || null,
                 ProofDescription: row.Description || null,
                 OrganizationTier: row.OrganizationTier || 'Standard',
+                MinSalary: row.MinSalary || null,
+                SalaryCurrency: row.SalaryCurrency || 'INR',
+                SalaryPeriod: row.SalaryPeriod || 'Annual',
+                PreferredLocations: row.PreferredLocations || null,
             };
 
             // Get history with ActorID for referrers
