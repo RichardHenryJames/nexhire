@@ -609,7 +609,8 @@ export class ReferralService {
                     j.ExperienceMax as JobExperienceMax,
                     -- ✅ AssignedReferrerID now stores UserID directly
                     rr.AssignedReferrerID as AssignedReferrerUserID,
-                    rr.PreferredLocations
+                    rr.PreferredLocations,
+                    rr.MinSalary, rr.SalaryCurrency, rr.SalaryPeriod
                 FROM ReferralRequests rr
                 -- ✅ CHANGED: LEFT JOIN instead of INNER JOIN to include external referrals
                 LEFT JOIN Jobs j ON rr.JobID = j.JobID

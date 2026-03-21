@@ -294,6 +294,12 @@ export default function ReferralTrackingScreen() {
                 {request.SalaryCurrency === 'USD' ? '$' : '₹'}{request.MinSalary?.toLocaleString()}{request.SalaryPeriod === 'Annual' ? '/yr' : '/mo'} min
               </Text>
             ) : null}
+            {request.OpenToAnyCompany && request.PreferredLocations ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 }}>
+                <Ionicons name="location-outline" size={13} color={colors.primary} />
+                <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '500' }} numberOfLines={1}>{request.PreferredLocations}</Text>
+              </View>
+            ) : null}
             {request.JobURL && (
               <TouchableOpacity 
                 style={styles.linkButton}

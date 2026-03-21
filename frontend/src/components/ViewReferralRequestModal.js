@@ -433,6 +433,16 @@ export default function ViewReferralRequestModal({
                 </View>
               ) : null}
 
+              {/* Min Salary for open-to-any requests */}
+              {referralRequest?.OpenToAnyCompany && referralRequest?.MinSalary ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 10 }}>
+                  <Ionicons name="cash-outline" size={13} color={colors.success} />
+                  <Text style={{ fontSize: 12, color: colors.success, fontWeight: '600' }}>
+                    Min {referralRequest.SalaryCurrency === 'USD' ? '$' : '₹'}{referralRequest.MinSalary?.toLocaleString()}{referralRequest.SalaryPeriod === 'Annual' ? '/yr' : '/mo'}
+                  </Text>
+                </View>
+              ) : null}
+
               {/* Requested date */}
               {referralRequest?.RequestedAt && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 10 }}>
