@@ -3568,6 +3568,10 @@ app.http("triggerBecomeVerifiedEmail", {
 app.timer("becomeVerifiedReferrerEmail", {
   schedule: "0 30 12 * * 2", // 6 PM IST (12:30 UTC) every Tuesday
   handler: async (myTimer: Timer, context: InvocationContext) => {
+    // ── DISABLED: Promo email temporarily turned off (2026-03-22) ──
+    context.log("⏸️ Become Verified Referrer email is currently DISABLED. Skipping.");
+    return;
+
     const startTime = Date.now();
     const executionId = `become_verified_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
