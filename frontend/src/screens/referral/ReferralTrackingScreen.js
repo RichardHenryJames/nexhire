@@ -1215,8 +1215,8 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: 12,
+    paddingTop: 12,
   },
 
   // Header Card
