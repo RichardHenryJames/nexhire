@@ -1188,7 +1188,7 @@ export default function AskReferralScreen({ navigation, route }) {
               <Ionicons
                 name={showOptionalFields ? 'chevron-up' : 'chevron-down'}
                 size={18}
-                color={colors.primary}
+                color={colors.textSecondary}
               />
               <Text style={styles.optionalToggleText}>
                 {showOptionalFields ? 'Hide' : 'Show'} optional details
@@ -1999,12 +1999,12 @@ const createStyles = (colors, responsive = {}) =>
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 6,
-      backgroundColor: colors.primary + '15',
+      backgroundColor: colors.textSecondary + '20',
     },
     resumeChangeBtnText: {
       fontSize: typography.sizes.sm,
       fontWeight: typography.weights.semibold,
-      color: colors.primary,
+      color: colors.textSecondary,
     },
     resumeSelectList: {
       borderWidth: 1,
@@ -2089,13 +2089,13 @@ const createStyles = (colors, responsive = {}) =>
     optionalToggleText: {
       fontSize: typography.sizes.sm,
       fontWeight: typography.weights.medium,
-      color: colors.primary,
+      color: colors.textSecondary,
     },
     optionalFilledDot: {
       width: 6,
       height: 6,
       borderRadius: 3,
-      backgroundColor: colors.primary,
+      backgroundColor: colors.textSecondary,
     },
     optionalSection: {
       backgroundColor: colors.surface,
@@ -2118,14 +2118,14 @@ const createStyles = (colors, responsive = {}) =>
     salaryPrefix: {
       paddingHorizontal: 14,
       paddingVertical: 12,
-      backgroundColor: colors.primary + '12',
+      backgroundColor: colors.textSecondary + '12',
       borderRightWidth: 1,
       borderRightColor: colors.border,
     },
     salaryPrefixText: {
       fontSize: 16,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.textSecondary,
     },
     salaryInput: {
       flex: 1,
@@ -2137,14 +2137,14 @@ const createStyles = (colors, responsive = {}) =>
     salarySuffix: {
       paddingHorizontal: 14,
       paddingVertical: 12,
-      backgroundColor: colors.primary + '12',
+      backgroundColor: colors.textSecondary + '12',
       borderLeftWidth: 1,
       borderLeftColor: colors.border,
     },
     salarySuffixText: {
       fontSize: 14,
       fontWeight: '600',
-      color: colors.primary,
+      color: colors.textSecondary,
     },
 
     // ── Sticky Bottom CTA ──────────────────────────────────────────
