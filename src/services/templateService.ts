@@ -1429,7 +1429,10 @@ export class TemplateService {
      */
     private static replacePlaceholders(template: string, data: TemplateData): string {
         return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
-            return data[key] !== undefined ? String(data[key]) : match;
+            if (data[key] !== undefined) return String(data[key]);
+            // Safety: never show raw {{variable}} to users — strip it and warn
+            console.warn(`[TemplateService] Unresolved template variable: {{${key}}}`);
+            return '';
         });
     }
 
