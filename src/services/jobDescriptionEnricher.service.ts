@@ -20,12 +20,12 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 /** Enrichment config */
 const ENRICHMENT_CONFIG = {
-  /** Max jobs to enrich per scraper run (to avoid API cost spikes) */
-  maxJobsPerRun: 50,
-  /** Max concurrent AI calls */
-  concurrency: 3,
-  /** Delay between batches (ms) to respect rate limits */
-  batchDelayMs: 1000,
+  /** Max jobs to enrich per run — 150 × 12 runs/day = 1,800/day (within Groq's 14,400 RPD free tier) */
+  maxJobsPerRun: 150,
+  /** Max concurrent AI calls (2 to stay within 30 RPM free tier limit) */
+  concurrency: 2,
+  /** Delay between batches (ms) — 2.5s keeps us well under 30 RPM */
+  batchDelayMs: 2500,
   /** Max retries per job */
   maxRetries: 1,
 };
@@ -254,27 +254,27 @@ export class JobDescriptionEnricherService {
 
     let rawText = '';
 
-    // Try Gemini first
-    if (GEMINI_API_KEY) {
-      try {
-        const result = await this.callGemini(prompt);
-        if (result && result.length >= 200) rawText = result;
-      } catch (error: any) {
-        if (error.message?.includes('429') || error.message?.includes('rate')) {
-          console.log('🔄 Gemini rate limited, falling back to Groq');
-        } else {
-          console.warn(`⚠️  Gemini error: ${error.message}, trying Groq fallback`);
-        }
-      }
-    }
-
-    // Fallback to Groq
-    if (!rawText && GROQ_API_KEY) {
+    // Try Groq first (14,400 RPD free tier — 10x more generous than Gemini)
+    if (GROQ_API_KEY) {
       try {
         const result = await this.callGroq(prompt);
         if (result && result.length >= 200) rawText = result;
       } catch (error: any) {
-        throw new Error(`Both AI providers failed. Groq: ${error.message}`);
+        if (error.message?.includes('429') || error.message?.includes('rate')) {
+          console.log('🔄 Groq rate limited, falling back to Gemini');
+        } else {
+          console.warn(`⚠️  Groq error: ${error.message}, trying Gemini fallback`);
+        }
+      }
+    }
+
+    // Fallback to Gemini (1,500 RPD free tier)
+    if (!rawText && GEMINI_API_KEY) {
+      try {
+        const result = await this.callGemini(prompt);
+        if (result && result.length >= 200) rawText = result;
+      } catch (error: any) {
+        throw new Error(`Both AI providers failed. Gemini: ${error.message}`);
       }
     }
 

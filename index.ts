@@ -3168,12 +3168,12 @@ console.log(
 console.log("API Base URL: https://refopen-api-func.azurewebsites.net/api");
 
 // ========================================================================
-// TIMER TRIGGER - AI JOB DESCRIPTION ENRICHMENT (Every 2 hours)
+// TIMER TRIGGER - AI JOB DESCRIPTION ENRICHMENT (Every 1 hour)
 // Separate from scraping — processes AIEnriched=0 jobs, newest first
 // ========================================================================
 
 app.timer("jobEnrichmentTimer", {
-  schedule: "0 0 */2 * * *", // Every 2 hours
+  schedule: "0 0 * * * *", // Every 1 hour (was 2h — increased to clear 9,670 backlog faster)
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
     if (appEnv !== 'production' && appEnv !== 'prod') {
