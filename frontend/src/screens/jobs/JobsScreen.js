@@ -1401,6 +1401,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   const openingsCount = jobs.length;
 
   // Handle apply - simplified without animations
+  // For direct-scraped jobs, redirect to company career site instead of internal apply
   const handleApply = useCallback(async (job) => {
     if (!job) return;
     if (!user) {
@@ -1409,6 +1410,15 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
     }
     if (!isJobSeeker) {
       showToast('Only job seekers can apply for positions', 'error');
+      return;
+    }
+    // Direct jobs: open company career page
+    if (job.ExternalJobID?.startsWith('direct_') && job.ApplicationURL) {
+      if (Platform.OS === 'web') {
+        window.open(job.ApplicationURL, '_blank');
+      } else {
+        import('react-native').then(({ Linking }) => Linking.openURL(job.ApplicationURL));
+      }
       return;
     }
     if (!primaryResumeLoadedRef.current) await loadPrimaryResume();

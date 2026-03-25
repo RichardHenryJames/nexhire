@@ -233,19 +233,32 @@ const JobCard = ({
             </View>
           )}
 
-          {/* Apply button - show Applied badge if already applied, otherwise show Apply button */}
+          {/* Apply button - for direct jobs show "Apply on Site", for others show normal Apply/Applied */}
           {!hideApply && !isReferrerPosted && (
-            isApplied ? (
-              <View style={styles.appliedPill} accessibilityRole="text">
-                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
-                <Text style={styles.appliedText}>Applied</Text>
-              </View>
-            ) : onApply ? (
-              <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
-                <Ionicons name="paper-plane-outline" size={14} color={colors.primary} />
-                <Text style={styles.applyText}>Apply</Text>
-              </TouchableOpacity>
-            ) : null
+            (() => {
+              const isDirect = job.ExternalJobID?.startsWith('direct_');
+              if (isDirect) {
+                // Direct jobs: always show "Apply on Site" (redirect to company career page)
+                return onApply ? (
+                  <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply on company site">
+                    <Ionicons name="open-outline" size={14} color={colors.primary} />
+                    <Text style={styles.applyText}>Apply on Site</Text>
+                  </TouchableOpacity>
+                ) : null;
+              }
+              // Non-direct jobs: show Applied badge or Apply button
+              return isApplied ? (
+                <View style={styles.appliedPill} accessibilityRole="text">
+                  <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                  <Text style={styles.appliedText}>Applied</Text>
+                </View>
+              ) : onApply ? (
+                <TouchableOpacity style={styles.applyBtn} onPress={onApply} accessibilityLabel="Apply to job">
+                  <Ionicons name="paper-plane-outline" size={14} color={colors.primary} />
+                  <Text style={styles.applyText}>Apply</Text>
+                </TouchableOpacity>
+              ) : null;
+            })()
           )}
         </View>
       )}
