@@ -20,6 +20,7 @@ import VerifiedReferrerOverlay from '../components/VerifiedReferrerOverlay';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { useEmailVerification } from '../contexts/EmailVerificationContext';
 import refopenAPI from '../services/api';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
@@ -97,6 +98,7 @@ const HomeSectionLoader = React.memo(({ styles, colors }) => (
 
 export default function HomeScreen({ navigation }) {
 const { user, isEmployer, isJobSeeker, isAdmin, isVerifiedUser, isVerifiedReferrer, currentWork, refreshVerificationStatus } = useAuth();
+const { needsVerification, showVerificationModal } = useEmailVerification();
 const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
@@ -142,6 +144,9 @@ const [myReferrerRequests, setMyReferrerRequests] = useState(() => getCached(CAC
 
 // 🎯 Social share claims — initialized from cache
 const [approvedSocialPlatforms, setApprovedSocialPlatforms] = useState(() => getCached(CACHE_KEYS.SOCIAL_CLAIMS) || []);
+
+// 📧 Email verification banner dismiss state
+const [emailBannerDismissed, setEmailBannerDismissed] = useState(false);
 
 // 🎯 Wallet balance for header badge — initialized from cache
 const [walletBalance, setWalletBalance] = useState(() => getCached(CACHE_KEYS.WALLET_BALANCE) ?? null);
@@ -545,6 +550,35 @@ const [dashboardData, setDashboardData] = useState(() => {
         showsVerticalScrollIndicator={false}
       >
         <ResponsiveContainer style={styles.responsiveContent}>
+
+        {/* 📧 Email Verification Banner */}
+        {needsVerification && !emailBannerDismissed && (
+          <View style={styles.emailBanner}>
+            <View style={styles.emailBannerLeft}>
+              <Ionicons name="mail-unread" size={20} color="#4F46E5" />
+              <View style={styles.emailBannerTextWrap}>
+                <Text style={styles.emailBannerTitle}>Verify your email</Text>
+                <Text style={styles.emailBannerSubtitle}>Unlock all features — jobs, referrals & more</Text>
+              </View>
+            </View>
+            <View style={styles.emailBannerRight}>
+              <TouchableOpacity
+                style={styles.emailBannerButton}
+                onPress={showVerificationModal}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.emailBannerButtonText}>Verify Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.emailBannerDismiss}
+                onPress={() => setEmailBannerDismissed(true)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Enhanced Quick Actions for Job Seekers */}
         <View style={styles.actionsContainer}>
@@ -1052,6 +1086,60 @@ responsiveContent: {
   width: '100%',
   maxWidth: isDesktop ? 1200 : '100%',
   paddingHorizontal: isMobile ? 0 : 24,
+},
+// 📧 Email verification banner
+emailBanner: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  backgroundColor: '#EEF2FF',
+  borderWidth: 1,
+  borderColor: '#C7D2FE',
+  borderRadius: 12,
+  paddingVertical: 12,
+  paddingHorizontal: 14,
+  marginHorizontal: 16,
+  marginTop: 8,
+  marginBottom: 4,
+},
+emailBannerLeft: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  flex: 1,
+  gap: 10,
+},
+emailBannerTextWrap: {
+  flex: 1,
+},
+emailBannerTitle: {
+  fontSize: 14,
+  fontWeight: '700',
+  color: '#312E81',
+  marginBottom: 1,
+},
+emailBannerSubtitle: {
+  fontSize: 12,
+  color: '#4338CA',
+  opacity: 0.8,
+},
+emailBannerRight: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  gap: 8,
+},
+emailBannerButton: {
+  backgroundColor: '#4F46E5',
+  paddingHorizontal: 14,
+  paddingVertical: 7,
+  borderRadius: 8,
+},
+emailBannerButtonText: {
+  color: '#fff',
+  fontSize: 13,
+  fontWeight: '600',
+},
+emailBannerDismiss: {
+  padding: 2,
 },
 loadingContainer: {
   flex: 1,

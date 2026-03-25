@@ -146,6 +146,12 @@ import {
   verifyRegistrationOTP,
 } from "./src/controllers/registrationEmailVerification.controller";
 
+// NEW: Account Email Verification controller (authenticated - post-login)
+import {
+  sendAccountVerificationOTP,
+  verifyAccountEmailOTP,
+} from "./src/controllers/accountEmailVerification.controller";
+
 // Import storage controller - MOVED HERE to prevent execution issues
 import { uploadFile, deleteFile } from "./src/controllers/storage.controller";
 
@@ -1767,6 +1773,24 @@ app.http("auth-email-verify-otp", {
   authLevel: "anonymous",
   route: "auth/email/verify-otp",
   handler: withErrorHandling(verifyRegistrationOTP),
+});
+
+// ========================================================================
+// ACCOUNT EMAIL VERIFICATION ENDPOINTS - Post-login email verification
+// ========================================================================
+
+app.http("auth-account-send-verification-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/account/send-verification-otp",
+  handler: withAuth(sendAccountVerificationOTP),
+});
+
+app.http("auth-account-verify-email-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/account/verify-email-otp",
+  handler: withAuth(verifyAccountEmailOTP),
 });
 
 // ========================================================================
@@ -3568,6 +3592,10 @@ app.http("triggerBecomeVerifiedEmail", {
 app.timer("becomeVerifiedReferrerEmail", {
   schedule: "0 30 12 * * 2", // 6 PM IST (12:30 UTC) every Tuesday
   handler: async (myTimer: Timer, context: InvocationContext) => {
+    // ── DISABLED: Promo email temporarily turned off (2026-03-22) ──
+    context.log("⏸️ Become Verified Referrer email is currently DISABLED. Skipping.");
+    return;
+
     const startTime = Date.now();
     const executionId = `become_verified_timer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -3898,6 +3926,10 @@ app.http("admin-update-career-application", {
 app.timer("jobScraperTimer", {
   schedule: "0 0 2,8,14,20 * * *", // 4x daily: 2 AM, 8 AM, 2 PM, 8 PM UTC
   handler: async (myTimer: Timer, context: InvocationContext) => {
+    // Log immediately so we can distinguish "never fired" from "fired but skipped"
+    context.log(`[JobScraper] Timer fired at ${new Date().toISOString()}`);
+    context.log(`[JobScraper] RefOpen_ENV=${process.env.RefOpen_ENV}, NODE_ENV=${process.env.NODE_ENV}`);
+
     // Skip scraping on dev/staging — only run on production
     const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
     if (appEnv !== 'production' && appEnv !== 'prod') {

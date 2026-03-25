@@ -57,7 +57,7 @@ export class JobArchiveService {
      * @param batchSize - Maximum number of jobs to archive per batch (default: 100)
      * @returns Archive operation result
      */
-    static async archiveOldJobs(daysOld: number = 60, batchSize: number = 500): Promise<{
+    static async archiveOldJobs(daysOld: number = 60, batchSize: number = 200): Promise<{
         success: boolean;
         totalJobsFound: number;
         totalJobsArchived: number;
@@ -82,60 +82,45 @@ export class JobArchiveService {
                 batchNumber++;
                 console.log(`[Archive Service] === Processing Batch ${batchNumber} ===`);
 
-                // Get archivable jobs — exclude FK-referenced jobs using NOT EXISTS (fast)
-                const getOldJobsQuery = `
-                    SELECT TOP (@param1)
-                        j.JobID,
-                        j.OrganizationID,
-                        j.Title,
-                        j.Description,
-                        j.Responsibilities,
-                        j.BenefitsOffered,
-                        j.JobTypeID,
-                        j.WorkplaceTypeID,
-                        j.Location,
-                        j.City,
-                        j.State,
-                        j.Country,
-                        j.PostalCode,
-                        j.SalaryRangeMin,
-                        j.SalaryRangeMax,
-                        j.CurrencyID,
-                        j.SalaryPeriod,
-                        j.ExperienceMin,
-                        j.ExperienceMax,
-                        j.Status,
-                        j.PostedByType,
-                        j.PostedByUserID,
-                        j.ExternalJobID,
-                        j.ApplicationDeadline,
-                        j.CreatedAt,
-                        j.UpdatedAt,
-                        j.PublishedAt,
-                        j.IsRemote,
-                        j.Department,
-                        j.Tags,
-                        o.Name AS OrganizationName,
-                        o.Industry,
-                        o.LogoURL
+                // Step 1: Get just the JobIDs to archive (lightweight query — no joins, no heavy columns)
+                const getOldJobIdsQuery = `
+                    SELECT TOP (@param1) j.JobID
                     FROM Jobs j WITH (NOLOCK)
-                    LEFT JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
                     WHERE j.CreatedAt < DATEADD(day, -@param0, GETUTCDATE())
+                      AND j.IsArchived = 0
                       AND NOT EXISTS (SELECT 1 FROM ReferralRequests rr WHERE rr.JobID = j.JobID)
                       AND NOT EXISTS (SELECT 1 FROM SavedJobs sj WHERE sj.JobID = j.JobID)
                       AND NOT EXISTS (SELECT 1 FROM JobApplications ja WHERE ja.JobID = j.JobID)
                     ORDER BY j.CreatedAt ASC
                 `;
 
-                const oldJobs = await dbService.executeQuery(getOldJobsQuery, [daysOld, batchSize]);
-                const batchJobsFound = oldJobs.recordset?.length || 0;
+                const oldJobIds = await dbService.executeQuery(getOldJobIdsQuery, [daysOld, batchSize]);
+                const jobIds = (oldJobIds.recordset || []).map((r: any) => r.JobID);
 
-                if (batchJobsFound === 0) {
+                if (jobIds.length === 0) {
                     console.log(`[Archive Service] Batch ${batchNumber}: No more jobs found to archive.`);
                     hasMoreJobs = false;
                     break;
                 }
 
+                // Step 2: Fetch full data only for selected JobIDs (fast — PK lookup)
+                const idPlaceholders = jobIds.map((_: any, i: number) => `@param${i}`).join(',');
+                const getFullJobsQuery = `
+                    SELECT
+                        j.JobID, j.OrganizationID, j.Title, j.Description, j.Responsibilities,
+                        j.BenefitsOffered, j.JobTypeID, j.WorkplaceTypeID, j.Location, j.City,
+                        j.State, j.Country, j.PostalCode, j.SalaryRangeMin, j.SalaryRangeMax,
+                        j.CurrencyID, j.SalaryPeriod, j.ExperienceMin, j.ExperienceMax, j.Status,
+                        j.PostedByType, j.PostedByUserID, j.ExternalJobID, j.ApplicationDeadline,
+                        j.CreatedAt, j.UpdatedAt, j.PublishedAt, j.IsRemote, j.Department, j.Tags,
+                        o.Name AS OrganizationName, o.Industry, o.LogoURL
+                    FROM Jobs j WITH (NOLOCK)
+                    LEFT JOIN Organizations o WITH (NOLOCK) ON j.OrganizationID = o.OrganizationID
+                    WHERE j.JobID IN (${idPlaceholders})
+                `;
+
+                const oldJobs = await dbService.executeQuery(getFullJobsQuery, jobIds);
+                const batchJobsFound = oldJobs.recordset?.length || 0;
                 console.log(`[Archive Service] Batch ${batchNumber}: Found ${batchJobsFound} jobs to archive`);
 
                 // Get container client

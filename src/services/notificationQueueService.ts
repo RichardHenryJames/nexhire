@@ -42,6 +42,22 @@ export class NotificationQueueService {
         };
 
         try {
+            // 0. Recover stuck notifications (processing > 5 min = orphaned by crash/timeout)
+            try {
+                const recovered = await dbService.executeQuery(`
+                    UPDATE NotificationQueue
+                    SET Status = 'pending', ProcessedAt = NULL
+                    WHERE Status = 'processing'
+                      AND ProcessedAt < DATEADD(MINUTE, -5, GETUTCDATE())
+                `);
+                const recoveredCount = recovered.rowsAffected?.[0] || 0;
+                if (recoveredCount > 0) {
+                    console.log(`🔄 Recovered ${recoveredCount} stuck notifications back to pending`);
+                }
+            } catch (recoverErr: any) {
+                console.warn('Failed to recover stuck notifications:', recoverErr.message);
+            }
+
             // 1. Fetch and lock pending notifications
             const pendingResult = await dbService.executeQuery<QueueItem>(`
                 UPDATE TOP (@param0) NotificationQueue

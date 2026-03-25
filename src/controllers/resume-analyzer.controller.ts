@@ -154,7 +154,7 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
       PricingService.getAIResumeAnalysisCost(),
     ]);
 
-    // Count how many times this user has used the analyzer (from ResumeMetadata — reliable source)
+    // Count analyses — each analysis creates a new row, so COUNT(*) is the source of truth
     const usageResult = await dbService.executeQuery(
       `SELECT COUNT(*) AS cnt FROM ResumeMetadata WHERE UserID = @param0`,
       [userId]

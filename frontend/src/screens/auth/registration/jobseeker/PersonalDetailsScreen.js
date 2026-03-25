@@ -286,7 +286,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   };
 
   const validatePhoneNumber = (phone) => {
-    if (!phone) return false; // Required field
+    if (!phone) return true; // Optional field
     const phoneRegex = /^\+?[\d\s\-()]+$/;
     return phoneRegex.test(phone) && phone.replace(/[^\d]/g, '').length >= 10;
   };
@@ -442,10 +442,8 @@ newErrors.jobTitle = 'Job title is required when company is selected';
    }
     }
 
-    // Phone is mandatory
-    if (!formData.phone || !formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!validatePhoneNumber(formData.phone)) {
+    // Phone is optional — only validate format if provided
+    if (formData.phone && formData.phone.trim() && !validatePhoneNumber(formData.phone)) {
       newErrors.phone = 'Please enter a valid 10-digit phone number';
     }
 
@@ -456,10 +454,8 @@ newErrors.jobTitle = 'Job title is required when company is selected';
       }
     }
 
-    // Email verification is mandatory
-    if (!isGoogleUser && !emailVerified) {
-      newErrors.email = 'Please verify your email address before registering';
-    }
+    // Email verification is now optional during registration
+    // Users will be prompted to verify after login via EmailVerificationModal
 
     // Terms & Conditions acceptance is mandatory
     if (!termsAccepted) {
@@ -472,11 +468,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
 
   const handleRegister = async () => {
     if (!validateForm()) {
-      if (!isGoogleUser && !emailVerified) {
-        showToast('Please verify your email address first', 'error');
-      } else {
-        showToast('Please fix the errors before continuing', 'error');
-      }
+      showToast('Please fix the errors before continuing', 'error');
       return;
     }
 
@@ -488,7 +480,7 @@ newErrors.jobTitle = 'Job title is required when company is selected';
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
         userType: userType,
-        phone: formData.phone.trim(),
+        ...(formData.phone?.trim() && { phone: formData.phone.trim() }),
         ...(formData.dateOfBirth && { dateOfBirth: formData.dateOfBirth }),
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.location && { location: formData.location.trim() }),
@@ -755,7 +747,6 @@ styles.selectionButton,
                     { flex: 1 },
                     errors.email && styles.inputError,
                     isGoogleUser && styles.inputPrefilled,
-                    emailVerified && { borderColor: colors.success, borderWidth: 1.5 },
                   ]}
                   placeholder="Email Address"
                   placeholderTextColor={colors.gray400}
@@ -769,73 +760,12 @@ styles.selectionButton,
                   autoCorrect={false}
                   editable={true}
                 />
-                {!isGoogleUser && !showOtpInput && (
-                  emailVerified ? (
-                    <View style={styles.emailVerifiedInline}>
-                      <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={[
-                        styles.verifyEmailButtonInline,
-                        (!validateEmail(formData.email.trim()) || otpLoading) && styles.verifyEmailButtonDisabled
-                      ]}
-                      onPress={handleSendOTP}
-                      disabled={!validateEmail(formData.email.trim()) || otpLoading}
-                    >
-                      {otpLoading ? (
-                        <ActivityIndicator size="small" color={colors.white} />
-                      ) : (
-                        <Text style={styles.verifyEmailButtonText}>Verify</Text>
-                      )}
-                    </TouchableOpacity>
-                  )
-                )}
+
               </View>
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
             
-            {/* EMAIL VERIFICATION OTP input */}
-            {!isGoogleUser && showOtpInput && !emailVerified && (
-                  <View style={styles.otpSection}>
-                    <Text style={styles.otpLabel}>Enter the 6-digit code sent to your email</Text>
-                    <View style={styles.otpRow}>
-                      <TextInput
-                        style={styles.otpInput}
-                        placeholder="000000"
-                        placeholderTextColor={colors.gray500}
-                        value={otpCode}
-                        onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 6))}
-                        keyboardType="number-pad"
-                        maxLength={6}
-                        autoFocus={true}
-                      />
-                      <TouchableOpacity
-                        style={[
-                          styles.verifyOtpButton,
-                          (otpCode.length !== 6 || otpLoading) && styles.verifyEmailButtonDisabled
-                        ]}
-                        onPress={handleVerifyOTP}
-                        disabled={otpCode.length !== 6 || otpLoading}
-                      >
-                        {otpLoading ? (
-                          <ActivityIndicator size="small" color={colors.white} />
-                        ) : (
-                          <Text style={styles.verifyEmailButtonText}>Verify</Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity
-                      onPress={handleSendOTP}
-                      disabled={otpCooldown > 0 || otpLoading}
-                      style={{ marginTop: 8 }}
-                    >
-                      <Text style={[styles.resendText, otpCooldown > 0 && { color: colors.gray500 }]}>
-                        {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : 'Resend code'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-            )}
+
 
             {/* 🎁 NEW: Invite Code Input (Optional) */}
             <View style={styles.inputContainer}>
@@ -892,7 +822,7 @@ styles.selectionButton,
               )
             )}
             
-            {renderInput('phone', 'Phone Number', false, 'phone-pad', true)}
+            {renderInput('phone', 'Phone Number', false, 'phone-pad')}
             
             {/* ✅ REPLACED: DatePicker instead of manual input */}
             <DatePicker

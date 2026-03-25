@@ -752,13 +752,14 @@ export class ResumeAnalyzerService {
    * Save or update resume metadata in database.
    * 
    * If a resume with the same email already exists, updates the existing record
-   * and increments the analysis count. Otherwise creates a new record.
+   * Always creates a new row per analysis for clean usage tracking.
+   * COUNT(*) WHERE UserID = X gives the exact number of analyses.
    * 
    * Note: UserID is optional and will be NULL for anonymous users (public endpoint).
    * This is expected behavior as the resume analyzer is available without login.
    * 
    * @param params - Resume metadata parameters
-   * @returns The ResumeMetadataID (new or existing)
+   * @returns The new ResumeMetadataID
    */
   private static async saveResumeMetadata(params: {
     userId?: string;
@@ -773,68 +774,18 @@ export class ResumeAnalyzerService {
   }): Promise<string> {
     const { userId, fileName, fileSize, extractedData, parsedText, jobUrl, jobId, matchScore, aiModel } = params;
     
-    // Check if resume with same email already exists
-    if (extractedData.email) {
-      const existingQuery = `
-        SELECT ResumeMetadataID, AnalysisCount 
-        FROM ResumeMetadata 
-        WHERE Email = @param0
-        ORDER BY CreatedAt DESC
-      `;
-      const existing = await dbService.executeQuery(existingQuery, [extractedData.email]);
-      
-      if (existing.recordset && existing.recordset.length > 0) {
-        // Update existing record and increment analysis count
-        const existingId = existing.recordset[0].ResumeMetadataID;
-        const currentCount = existing.recordset[0].AnalysisCount || 1;
-        
-        const updateQuery = `
-          UPDATE ResumeMetadata SET
-            FileName = COALESCE(@param1, FileName),
-            FileSizeBytes = COALESCE(@param2, FileSizeBytes),
-            FullName = COALESCE(@param3, FullName),
-            Mobile = COALESCE(@param4, Mobile),
-            Skills = COALESCE(@param5, Skills),
-            ParsedText = @param6,
-            LastJobUrl = @param7,
-            LastJobId = @param8,
-            LastMatchScore = @param9,
-            AnalysisCount = @param10,
-            AIModel = @param11,
-            LastAnalyzedAt = GETUTCDATE()
-          WHERE ResumeMetadataID = @param0
-        `;
-        
-        await dbService.executeQuery(updateQuery, [
-          existingId,
-          fileName || null,
-          fileSize || null,
-          extractedData.fullName,
-          extractedData.mobile,
-          extractedData.skills,
-          parsedText?.trim() || null,
-          jobUrl || null,
-          jobId || null,
-          matchScore,
-          currentCount + 1,
-          aiModel || null
-        ]);
-        
-        console.log(`[ResumeAnalyzer] Updated record, count: ${currentCount + 1}`);
-        return existingId;
-      }
-    }
-    
-    // Insert new record
+    // Always insert a new row — each analysis is a separate record
     const insertQuery = `
       INSERT INTO ResumeMetadata (
         UserID, FileName, FileSizeBytes, FullName, Email, Mobile, 
-        Skills, ParsedText, LastJobUrl, LastJobId, LastMatchScore, AIModel
+        Skills, ParsedText, LastJobUrl, LastJobId, LastMatchScore, AIModel,
+        AnalysisCount
       )
       OUTPUT INSERTED.ResumeMetadataID
       VALUES (
         @param0, @param1, @param2, @param3, @param4, @param5,
-        @param6, @param7, @param8, @param9, @param10, @param11
+        @param6, @param7, @param8, @param9, @param10, @param11,
+        1
       )
     `;
     
@@ -853,6 +804,7 @@ export class ResumeAnalyzerService {
       aiModel || null
     ]);
     
+    console.log(`[ResumeAnalyzer] New analysis record created for user ${userId || 'anonymous'}`);
     return result.recordset[0].ResumeMetadataID;
   }
   

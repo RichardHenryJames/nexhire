@@ -73,7 +73,7 @@ export const userRegistrationSchema = Joi.object({
     firstName: Joi.string().min(2).max(100).required(),
     lastName: Joi.string().min(2).max(100).required(),
     userType: Joi.string().valid('JobSeeker', 'Employer').required(), // SECURITY FIX: Removed 'Admin' — admin accounts created internally only
-    phone: Joi.string().pattern(/^[+]?[\d\s\-()]+$/).optional(),
+    phone: Joi.string().pattern(/^[+]?[\d\s\-()]+$/).allow('', null).optional(),
     dateOfBirth: Joi.date().max('now').optional(),
     gender: Joi.string().valid('Male', 'Female', 'Other', 'Prefer not to say').optional(),
     // Organization details (organizationSize now fully optional/free-form up to 50 chars)

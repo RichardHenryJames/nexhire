@@ -820,18 +820,22 @@ export const logReferralStatus = withErrorHandling(async (req: HttpRequest, cont
                     const { NotificationService } = await import('../services/notificationService');
                     const info = await dbService.executeQuery(
                         `SELECT a.UserID as SeekerUserID, u.Email as SeekerEmail, u.FirstName as SeekerName,
-                                rr.JobTitle, o.Name as CompanyName
+                                rr.JobTitle, rr.OpenToAnyCompany,
+                                COALESCE(o.Name, refOrg.Name, 'Company') as CompanyName
                          FROM ReferralRequests rr
                          LEFT JOIN Applicants a ON rr.ApplicantID = a.ApplicantID
                          LEFT JOIN Users u ON a.UserID = u.UserID
                          LEFT JOIN Organizations o ON rr.OrganizationID = o.OrganizationID
-                         WHERE rr.RequestID = @param0`, [requestId]
+                         LEFT JOIN WorkExperience we ON we.UserID = @param1 AND we.IsCurrent = 1 AND we.IsActive = 1
+                         LEFT JOIN Organizations refOrg ON we.OrganizationID = refOrg.OrganizationID
+                         WHERE rr.RequestID = @param0`, [requestId, user.userId]
                     );
                     const row = info.recordset[0];
+                    const claimerCompany = row?.CompanyName || 'Company';
                     if (row) {
                         // In-app notification
                         await InAppNotificationService.notifyReferralClaimed(
-                            row.SeekerUserID, actorName, row.JobTitle, row.CompanyName, requestId
+                            row.SeekerUserID, actorName, row.JobTitle, claimerCompany, requestId
                         );
                         // Email notification to seeker + admin
                         await NotificationService.notifyReferralClaimed({
@@ -839,9 +843,9 @@ export const logReferralStatus = withErrorHandling(async (req: HttpRequest, cont
                             seekerId: row.SeekerUserID,
                             seekerName: row.SeekerName || 'Job Seeker',
                             seekerEmail: row.SeekerEmail,
-                            referrerName: `${row.CompanyName || 'Company'} Employee`,
+                            referrerName: `${claimerCompany} Employee`,
                             jobTitle: row.JobTitle || 'Job Position',
-                            companyName: row.CompanyName || 'Company'
+                            companyName: claimerCompany
                         });
                     }
                 } catch (e: any) { console.error('Notification error (non-critical):', e.message); }
