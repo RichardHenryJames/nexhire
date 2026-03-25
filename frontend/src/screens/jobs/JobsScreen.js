@@ -259,7 +259,24 @@ export default function JobsScreen({ navigation, route }) {
 
   const [jobs, setJobs] = useState(() => getCached(CACHE_KEYS.JOBS_LIST) || []);
   const [loading, setLoading] = useState(!hasCached(CACHE_KEYS.JOBS_LIST));
+  const [filterLoading, setFilterLoading] = useState(false); // loading after quick filter pill tap
   const [refreshing, setRefreshing] = useState(false);
+
+  // Rotating loading messages (same style as JobsLandingScreen)
+  const loadingMessages = useMemo(() => [
+    'Curating jobs for you...',
+    'Finding the best matches...',
+    'Scanning top companies...',
+    'Personalizing recommendations...',
+    'Almost there...',
+  ], []);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  useEffect(() => {
+    if (!loading && !filterLoading) return;
+    setLoadingMsgIdx(0);
+    const timer = setInterval(() => setLoadingMsgIdx(i => (i + 1) % loadingMessages.length), 2000);
+    return () => clearInterval(timer);
+  }, [loading, filterLoading, loadingMessages]);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const debouncedQuery = useDebounce(searchQuery, 350);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 30, hasMore: true });
@@ -310,7 +327,7 @@ export default function JobsScreen({ navigation, route }) {
 
   // Manual reload trigger
   const [reloadKey, setReloadKey] = useState(0);
-  const triggerReload = useCallback(() => setReloadKey(k => k + 1), []);
+  const triggerReload = useCallback(() => { setFilterLoading(true); setReloadKey(k => k + 1); }, []);
 
   // Draft for modal
   const [filterDraft, setFilterDraft] = useState({ ...EMPTY_FILTERS });
@@ -957,6 +974,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
+          setFilterLoading(false);
           setRefreshing(false);
         }
       }
@@ -1285,15 +1303,23 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   const renderList = () => {
     const data = jobs; // Always show openings
 
-    // 🔧 NEW: Show loader while initially loading OR when searching/filtering (loading=true and no jobs yet)
+    // Full-screen loader when no jobs cached (initial load)
     if (loading && data.length === 0) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryDark} />
-       <Text style={[styles.loadingText, { marginTop: 12 }]}>Curating jobs for you...</Text>
+          <Text style={[styles.loadingText, { marginTop: 12 }]}>{loadingMessages[loadingMsgIdx]}</Text>
         </View>
-   );
+      );
     }
+
+    // Inline loading bar when quick filter is tapped (keep showing old jobs underneath)
+    const filterLoadingBanner = filterLoading && data.length > 0 ? (
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 8, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <ActivityIndicator size="small" color={colors.primary} />
+        <Text style={{ fontSize: 12, color: colors.textSecondary }}>{loadingMessages[loadingMsgIdx]}</Text>
+      </View>
+    ) : null;
 
     if (smartPaginating && data.length === 0) {
       return (
@@ -1335,6 +1361,11 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
     // Simple job cards without animations - with Ad integration
     const elements = [];
+    
+    // Show inline filter loading banner above jobs
+    if (filterLoadingBanner) {
+      elements.push(<View key="filter-loading">{filterLoadingBanner}</View>);
+    }
     
     data.forEach((job, index) => {
       const id = job.JobID || index;
