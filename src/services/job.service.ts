@@ -17,6 +17,25 @@ import { PricingService } from './pricing.service';
 const MAX_PAGE_SIZE = 100;
 const MAX_UNPAGED_TOTAL = 500; // when all=true, cap results to this many
 
+/**
+ * Shared SQL columns for job listing queries (JobCard display).
+ * Single source of truth — used by getJobs, searchJobs, getJobsByPostedUser.
+ * Any new column needed on job cards should be added HERE, not in individual queries.
+ */
+const JOB_CARD_COLUMNS = `
+    j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
+    j.OrganizationID, j.PostedByType,
+    j.Location, j.City, j.State, j.Country, j.IsRemote,
+    j.ExperienceMin, j.ExperienceMax,
+    j.ExternalJobID, j.ApplicationURL,
+    j.PublishedAt, j.CreatedAt`;
+
+/** Extended columns for employer dashboard (includes Status, salary, etc.) */
+const JOB_CARD_COLUMNS_EMPLOYER = `${JOB_CARD_COLUMNS},
+    j.Status, j.PostedByUserID,
+    j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
+    j.UpdatedAt`;
+
 export class JobService {
     private static async getApplicantPersonalization(userId?: string): Promise<{
         preferredJobTypes: string | null;
@@ -645,13 +664,7 @@ export class JobService {
             // Diagnosis showed CTEs add ~1,500ms to SQL query (3,984ms → 2,502ms without).
             // JS preference scoring takes only ~30ms for 3,225 rows with identical results.
             dataQuery = `
-            SELECT
-                j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                j.OrganizationID, j.PostedByType,
-                j.Location, j.City, j.State, j.Country, j.IsRemote, 
-                j.ExperienceMin, j.ExperienceMax,
-                j.ExternalJobID, j.ApplicationURL,
-                j.PublishedAt, j.CreatedAt,
+            SELECT ${JOB_CARD_COLUMNS},
                 jt.Value as JobTypeName,
                 wt.Value as WorkplaceTypeName,
                 o.Name as OrganizationName,
@@ -666,13 +679,7 @@ export class JobService {
         `;
         } else {
             dataQuery = `${personalizationCtes}
-            SELECT
-                j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                j.OrganizationID, j.PostedByType,
-                j.Location, j.City, j.State, j.Country, j.IsRemote, 
-                j.ExperienceMin, j.ExperienceMax,
-                j.ExternalJobID, j.ApplicationURL,
-                j.PublishedAt, j.CreatedAt,
+            SELECT ${JOB_CARD_COLUMNS},
                 jt.Value as JobTypeName,
                 wt.Value as WorkplaceTypeName,
                 o.Name as OrganizationName,
@@ -1160,14 +1167,7 @@ export class JobService {
         // INNER JOIN to ReferenceMetadata was causing 120s+ timeouts on 118k jobs
         // Subqueries execute in ~20ms
         const dataQuery = `
-            SELECT
-                j.JobID, j.Title, j.Status, j.JobTypeID, j.WorkplaceTypeID,
-                j.OrganizationID, j.PostedByType, j.PostedByUserID,
-                j.Location, j.City, j.State, j.Country, j.IsRemote,
-                j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
-                j.ExperienceMin, j.ExperienceMax,
-                j.ExternalJobID, j.ApplicationURL,
-                j.PublishedAt, j.CreatedAt, j.UpdatedAt,
+            SELECT ${JOB_CARD_COLUMNS_EMPLOYER},
                 (SELECT TOP 1 Value FROM ReferenceMetadata WHERE ReferenceID = j.JobTypeID AND RefType = 'JobType') as JobTypeName,
                 (SELECT TOP 1 Name FROM Organizations WHERE OrganizationID = j.OrganizationID) as OrganizationName,
                 ISNULL((SELECT TOP 1 LogoURL FROM Organizations WHERE OrganizationID = j.OrganizationID), '') as OrganizationLogo
@@ -1319,14 +1319,8 @@ export class JobService {
             // 🚀 OPTIMIZATION: Select ONLY columns needed for JobCard display (removed unused columns)
             const dataStartTime = Date.now();
             let dataQuery = `${personalizationCtes}
-                SELECT
-                    j.JobID, j.Title, j.JobTypeID, j.WorkplaceTypeID,
-                    j.OrganizationID, j.PostedByType,
-                    j.Location, j.City, j.Country, j.IsRemote, 
+                SELECT ${JOB_CARD_COLUMNS},
                     j.SalaryRangeMin, j.SalaryRangeMax, j.SalaryPeriod,
-                    j.ExperienceMin, j.ExperienceMax,
-                    j.ExternalJobID, j.ApplicationURL,
-                    j.PublishedAt, j.CreatedAt,
                     jt.Value as JobTypeName,
                     wt.Value as WorkplaceTypeName,
                     o.Name as OrganizationName,
