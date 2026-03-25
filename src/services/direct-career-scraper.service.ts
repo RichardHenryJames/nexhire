@@ -11,7 +11,6 @@
  */
 
 import axios from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 import { dbService } from './database.service';
 import { AuthService } from './auth.service';
 import {
