@@ -1169,6 +1169,7 @@ export default function ReferralTrackingScreen() {
         companyName={verifyChildTarget?.child?.CompanyName}
         proofFileURL={verifyChildTarget?.child?.ProofFileURL}
         proofDescription={verifyChildTarget?.child?.ProofDescription}
+        isOpenToAny={!!request?.OpenToAnyCompany}
         onClose={() => setVerifyChildTarget(null)}
         onVerify={async (verified) => {
           const rid = verifyChildTarget?.requestId;

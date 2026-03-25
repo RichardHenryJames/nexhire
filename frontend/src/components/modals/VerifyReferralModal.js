@@ -33,6 +33,7 @@ export default function VerifyReferralModal({
   companyName,
   proofFileURL,
   proofDescription,
+  isOpenToAny,
   onVerify,
   onClose,
 }) {
@@ -108,7 +109,8 @@ export default function VerifyReferralModal({
             </Text>
           </View>
 
-          {/* Dispute Warning */}
+          {/* Dispute Warning — hidden for Open to Any referrals */}
+          {!isOpenToAny && (
           <View style={[styles.warningBox, { backgroundColor: colors.warning + '0D', borderColor: colors.warning + '35' }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
               <Ionicons name="warning" size={15} color={colors.warning} />
@@ -124,11 +126,13 @@ export default function VerifyReferralModal({
               </Text>
             </View>
           </View>
+          )}
 
           </ScrollView>
 
           {/* Actions - Fixed at bottom */}
           <View style={[styles.actions, { paddingTop: 12 }]}>
+            {!isOpenToAny && (
             <TouchableOpacity
               style={[styles.btn, { backgroundColor: colors.error + '10', borderColor: colors.error + '30', borderWidth: 1 }]}
               onPress={() => onVerify(false)}
@@ -137,8 +141,9 @@ export default function VerifyReferralModal({
               <Ionicons name="alert-circle" size={16} color={colors.error} style={{ marginRight: 6 }} />
               <Text style={{ color: colors.error, fontWeight: '700', fontSize: 13 }}>Raise Dispute</Text>
             </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={[styles.btn, { backgroundColor: colors.success }]}
+              style={[styles.btn, { backgroundColor: colors.success, flex: isOpenToAny ? 1 : undefined }]}
               onPress={() => onVerify(true)}
               activeOpacity={0.8}
             >

@@ -161,6 +161,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   }, []);
 
   // Handle Apply button - exactly like JobsScreen
+  // For direct-scraped jobs, redirect to company career site
   const handleApply = useCallback(async (job) => {
     if (!job) return;
     if (!user) {
@@ -169,6 +170,15 @@ export default function AIRecommendedJobsScreen({ navigation }) {
     }
     if (!isJobSeeker) {
       showToast('Only job seekers can apply for positions', 'error');
+      return;
+    }
+    // Direct jobs: open company career page
+    if (job.ExternalJobID?.startsWith('direct_') && job.ApplicationURL) {
+      if (Platform.OS === 'web') {
+        window.open(job.ApplicationURL, '_blank');
+      } else {
+        import('react-native').then(({ Linking }) => Linking.openURL(job.ApplicationURL));
+      }
       return;
     }
     // Check for primary resume and quick apply

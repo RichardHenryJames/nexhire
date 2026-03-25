@@ -2544,8 +2544,8 @@ Apply now to join a dynamic team that's building the future! 🌟`;
 
   private static calculateExpiryDate(postedAt: string, jobAge: number): string {
     const posted = new Date(postedAt);
-    // Jobs expire 60 days after posting
-    const expiryDate = new Date(posted.getTime() + (60 * 24 * 60 * 60 * 1000));
+    // Jobs expire 30 days after posting (reduced from 60d — Adzuna URLs die after ~14d)
+    const expiryDate = new Date(posted.getTime() + (30 * 24 * 60 * 60 * 1000));
     return expiryDate.toISOString();
   }
 

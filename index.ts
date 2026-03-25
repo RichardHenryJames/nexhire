@@ -2658,6 +2658,127 @@ app.http("scraping-health", {
 });
 
 // ========================================================================
+// DIRECT CAREER SITE SCRAPER ENDPOINTS (Scrapes directly from company sites)
+// ========================================================================
+
+app.http("direct-scraper-trigger", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/scrape/direct/trigger",
+  handler: withErrorHandling(async (req, context) => {
+    try {
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return { status: 401, jsonBody: { success: false, error: "Authorization header required" } };
+      }
+      const { AuthService } = await import("./src/services/auth.service");
+      const payload = AuthService.verifyToken(authHeader.substring(7));
+      if (payload.userType !== "Admin") {
+        return { status: 403, jsonBody: { success: false, error: "Admin access required" } };
+      }
+
+      console.log("🎯 Direct career scraping triggered by admin:", payload.userId);
+
+      const { DirectCareerScraperService } = await import("./src/services/direct-career-scraper.service");
+      const result = await DirectCareerScraperService.scrapeDirectJobs();
+
+      // Run AI enrichment on newly scraped direct jobs
+      let enrichmentSummary: any = null;
+      try {
+        const { JobDescriptionEnricherService } = await import("./src/services/jobDescriptionEnricher.service");
+        console.log("🤖 Starting AI enrichment for direct-scraped jobs...");
+        const enrichResult = await JobDescriptionEnricherService.enrichPendingJobs();
+        enrichmentSummary = {
+          enriched: enrichResult.totalEnriched,
+          processed: enrichResult.totalProcessed,
+          timeSeconds: Math.round(enrichResult.executionTimeMs / 1000),
+        };
+      } catch (enrichError: any) {
+        enrichmentSummary = { error: enrichError.message };
+      }
+
+      return {
+        status: result.success ? 200 : 500,
+        jsonBody: {
+          success: result.success,
+          message: `Direct career scraping completed. ${result.jobsAdded} jobs added from ${result.summary.companiesScraped} companies.`,
+          data: {
+            jobsAdded: result.jobsAdded,
+            companiesScraped: result.summary.companiesScraped,
+            totalJobsScraped: result.summary.totalJobsScraped,
+            companyBreakdown: result.summary.companyBreakdown,
+            executionTimeSeconds: Math.round(result.summary.executionTime / 1000),
+            errors: result.errors,
+            aiEnrichment: enrichmentSummary,
+          },
+        },
+      };
+    } catch (error: any) {
+      console.error("Direct career scraping failed:", error);
+      return { status: 500, jsonBody: { success: false, error: error.message } };
+    }
+  }),
+});
+
+app.http("direct-scraper-stats", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/scrape/direct/stats",
+  handler: withErrorHandling(async (req, context) => {
+    try {
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return { status: 401, jsonBody: { success: false, error: "Authorization header required" } };
+      }
+      const { AuthService } = await import("./src/services/auth.service");
+      const payload = AuthService.verifyToken(authHeader.substring(7));
+      if (payload.userType !== "Admin") {
+        return { status: 403, jsonBody: { success: false, error: "Admin access required" } };
+      }
+
+      const { DirectCareerScraperService } = await import("./src/services/direct-career-scraper.service");
+      const stats = await DirectCareerScraperService.getStats();
+
+      return {
+        status: 200,
+        jsonBody: { success: true, data: stats, message: "Direct scraper statistics retrieved" },
+      };
+    } catch (error: any) {
+      return { status: 500, jsonBody: { success: false, error: error.message } };
+    }
+  }),
+});
+
+app.http("direct-scraper-config", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "jobs/scrape/direct/config",
+  handler: withErrorHandling(async (req, context) => {
+    try {
+      const authHeader = req.headers.get("authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return { status: 401, jsonBody: { success: false, error: "Authorization header required" } };
+      }
+      const { AuthService } = await import("./src/services/auth.service");
+      const payload = AuthService.verifyToken(authHeader.substring(7));
+      if (payload.userType !== "Admin") {
+        return { status: 403, jsonBody: { success: false, error: "Admin access required" } };
+      }
+
+      const { DirectCareerScraperService } = await import("./src/services/direct-career-scraper.service");
+      const config = DirectCareerScraperService.getConfig();
+
+      return {
+        status: 200,
+        jsonBody: { success: true, data: config, message: "Direct scraper configuration" },
+      };
+    } catch (error: any) {
+      return { status: 500, jsonBody: { success: false, error: error.message } };
+    }
+  }),
+});
+
+// ========================================================================
 // JOB SCRAPING SCHEDULER CONTROL ENDPOINTS - NEW
 // ========================================================================
 
@@ -3047,12 +3168,12 @@ console.log(
 console.log("API Base URL: https://refopen-api-func.azurewebsites.net/api");
 
 // ========================================================================
-// TIMER TRIGGER - AI JOB DESCRIPTION ENRICHMENT (Every 2 hours)
+// TIMER TRIGGER - AI JOB DESCRIPTION ENRICHMENT (Every 1 hour)
 // Separate from scraping — processes AIEnriched=0 jobs, newest first
 // ========================================================================
 
 app.timer("jobEnrichmentTimer", {
-  schedule: "0 0 */2 * * *", // Every 2 hours
+  schedule: "0 0 * * * *", // Every 1 hour (was 2h — increased to clear 9,670 backlog faster)
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
     if (appEnv !== 'production' && appEnv !== 'prod') {
@@ -4080,6 +4201,69 @@ app.timer("jobScraperTimer", {
       }
 
       throw error;
+    }
+  },
+});
+
+// ========================================================================
+// TIMER TRIGGER - DIRECT CAREER SITE SCRAPER (Once daily at 3 AM UTC)
+// Scrapes directly from company career pages (Workday, Greenhouse, etc.)
+// ========================================================================
+
+app.timer("directCareerScraperTimer", {
+  schedule: "0 0 3 * * *", // Daily at 3 AM UTC (1 hour after Adzuna scraper)
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    context.log(`[DirectScraper] Timer fired at ${new Date().toISOString()}`);
+
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') {
+      context.log(`[DirectScraper] Skipping — not production (env: ${appEnv})`);
+      return;
+    }
+
+    try {
+      context.log("🎯 Direct Career Site Scraper — Timer Trigger Started");
+      const { DirectCareerScraperService } = await import("./src/services/direct-career-scraper.service");
+      const result = await DirectCareerScraperService.scrapeDirectJobs();
+
+      context.log(`🎯 Direct scraper complete: ${result.jobsAdded} jobs from ${result.summary.companiesScraped} companies`);
+      context.log(`   Companies: ${Object.entries(result.summary.companyBreakdown).map(([k,v]) => `${k}(${v})`).join(', ')}`);
+      context.log(`   Time: ${Math.round(result.summary.executionTime / 1000)}s`);
+
+      if (result.errors.length > 0) {
+        context.warn(`   Errors: ${result.errors.slice(0, 5).join('; ')}`);
+      }
+
+      // Log to ScrapingLogs table (same table as Adzuna scraper)
+      try {
+        const { dbService } = await import("./src/services/database.service");
+        await dbService.executeQuery(`
+          INSERT INTO ScrapingLogs (
+            RunId, StartTime, EndTime, Success, JobsAdded, IndiaJobs,
+            TotalScraped, Sources, ErrorCount, Errors, TriggerType, WasPastDue
+          )
+          VALUES (@param0, @param1, @param2, @param3, @param4, @param5,
+                  @param6, @param7, @param8, @param9, @param10, @param11)
+        `, [
+          `direct_${Date.now()}`,
+          new Date(Date.now() - result.summary.executionTime).toISOString(),
+          new Date().toISOString(),
+          result.success,
+          result.jobsAdded,
+          0, // India jobs (not tracked separately for direct scraper)
+          result.summary.totalJobsScraped,
+          JSON.stringify(result.summary.companyBreakdown),
+          result.errors.length,
+          result.errors.slice(0, 5).join('; '),
+          'DirectCareerTimer',
+          myTimer.isPastDue,
+        ]);
+        context.log('📝 Logged to ScrapingLogs');
+      } catch (logErr: any) {
+        context.warn(`⚠️ Failed to log: ${logErr.message}`);
+      }
+    } catch (error: any) {
+      context.error(`🎯 Direct scraper failed: ${error.message}`);
     }
   },
 });

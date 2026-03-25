@@ -687,10 +687,37 @@ const { jobId, fromReferralRequest } = route.params || {};
       'adzuna': 'Adzuna',
       'weworkremotely': 'WeWorkRemotely',
       'hackernews': 'Hacker News',
-      'naukri': 'Naukri.com'
+      'naukri': 'Naukri.com',
+      'direct': 'Company Career Site'   // Direct career site scraper
     };
     
     return sourceMap[source.toLowerCase()] || 'External Job Board';
+  };
+
+  const isDirectJob = () => {
+    return job.ExternalJobID?.startsWith('direct_');
+  };
+
+  // Get the company's real requisition/job ID (strip scraper prefixes)
+  const getDisplayJobId = () => {
+    if (!job.ExternalJobID) return null;
+    
+    if (job.ExternalJobID.startsWith('direct_')) {
+      // "direct_boeing_JR2026497191" → "JR2026497191"
+      // "direct_stripe_gh_7532733" → "7532733"
+      const parts = job.ExternalJobID.split('_');
+      // Skip "direct" prefix and company name, return the actual job ID
+      // Patterns: direct_{company}_{id}, direct_{slug}_gh_{id}, direct_{slug}_sr_{id}, direct_{slug}_lever_{id}, direct_{slug}_ashby_{id}
+      const atsTypes = ['gh', 'sr', 'lever', 'ashby'];
+      if (parts.length >= 4 && atsTypes.includes(parts[parts.length - 2])) {
+        return parts[parts.length - 1]; // Last segment is the ID
+      }
+      if (parts.length >= 3) {
+        return parts.slice(2).join('_'); // Everything after direct_{company}
+      }
+    }
+    
+    return null; // Don't show raw Adzuna/RemoteOK IDs — they mean nothing to users
   };
 
   const getJobSourceName = () => {
@@ -1023,6 +1050,24 @@ const { jobId, fromReferralRequest } = route.params || {};
           {job.IsRemote && (
             <Text style={[styles.tag, styles.remoteTag]}>Remote</Text>
           )}
+          {isDirectJob() && getDisplayJobId() && (
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(99, 102, 241, 0.1)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.25)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, gap: 4 }}
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  navigator.clipboard?.writeText(getDisplayJobId());
+                } else {
+                  import('expo-clipboard').then(m => m.setStringAsync(getDisplayJobId()));
+                }
+                showToast(`Job ID ${getDisplayJobId()} copied`, 'success');
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="shield-checkmark" size={12} color="#10B981" />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.primary }}>{getDisplayJobId()}</Text>
+              <Ionicons name="copy-outline" size={11} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Action Buttons — LinkedIn style */}
@@ -1061,14 +1106,14 @@ const { jobId, fromReferralRequest } = route.params || {};
                   hasApplied && styles.btnOutlinedSuccess,
                   applying && styles.btnOutlinedDisabled
                 ]} 
-                onPress={(hasApplied || applying) ? null : () => setShowCoverLetterModal(true)}
+                onPress={(hasApplied || applying) ? null : (isDirectJob() ? openExternalApplication : () => setShowCoverLetterModal(true))}
                 disabled={hasApplied || applying}
               >
                 {applying ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : (
                   <Ionicons 
-                    name={hasApplied ? 'checkmark-circle' : 'paper-plane-outline'} 
+                    name={hasApplied ? 'checkmark-circle' : isDirectJob() ? 'open-outline' : 'paper-plane-outline'} 
                     size={16} 
                     color={hasApplied ? colors.success : colors.text} 
                   />
@@ -1078,19 +1123,7 @@ const { jobId, fromReferralRequest } = route.params || {};
                   hasApplied && { color: colors.success },
                   applying && { color: colors.gray400 }
                 ]}>
-                  {applying ? 'Applying...' : hasApplied ? 'Applied' : 'Apply'}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {/* Save — outlined */}
-            {!hasApplied && !isEmployer && (
-              <TouchableOpacity
-                style={[styles.btnOutlined, isSaved && styles.btnOutlinedActive]}
-                onPress={handleSaveJob}
-              >
-                <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={16} color={isSaved ? colors.primary : colors.text} />
-                <Text style={[styles.btnOutlinedText, isSaved && { color: colors.primary }]}>
-                  {isSaved ? 'Saved' : 'Save'}
+                  {applying ? 'Applying...' : hasApplied ? 'Applied' : isDirectJob() ? 'Apply on Site' : 'Apply'}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1128,6 +1161,8 @@ const { jobId, fromReferralRequest } = route.params || {};
           </View>
         </View>
       )}
+
+
 
       {/* Job Description - FIXED HTML RENDERING */}
       {job.Description && (
