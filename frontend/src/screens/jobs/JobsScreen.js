@@ -80,7 +80,8 @@ const EMPTY_FILTERS = {
   experienceMax: '',
   postedWithinDays: null,
   department: '',
-  postedByType: null
+  postedByType: null,
+  directOnly: null
 };
 
 // Helper: detect if any filters are active (compared to EMPTY_FILTERS)
@@ -861,6 +862,7 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
     if (filters.department) apiFilters.department = filters.department;
         if (filters.postedByType !== null && filters.postedByType !== undefined) apiFilters.postedByType = filters.postedByType;
+        if (filters.directOnly) apiFilters.directOnly = true;
     
         // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
         if (filterF500) apiFilters.isFortune500 = true;
@@ -999,6 +1001,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
       if (filters.postedByType !== null && filters.postedByType !== undefined) apiFilters.postedByType = filters.postedByType;
+      if (filters.directOnly) apiFilters.directOnly = true;
       
       // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
       if (filterF500) apiFilters.isFortune500 = true;
@@ -1743,12 +1746,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
               {[
-                { label: 'Fresher', active: filters.experienceMin === 0 && filters.experienceMax === 1, onPress: () => {
-                  const a = filters.experienceMin === 0 && filters.experienceMax === 1;
-                  setFilters(prev => ({ ...prev, experienceMin: a ? '' : 0, experienceMax: a ? '' : 1 }));
-                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
-                }},
-                { label: 'Entry Level', active: filters.experienceMin === 0 && filters.experienceMax === 2, onPress: () => {
+                { label: 'Fresher / Entry Level', active: filters.experienceMin === 0 && filters.experienceMax === 2, onPress: () => {
                   const a = filters.experienceMin === 0 && filters.experienceMax === 2;
                   setFilters(prev => ({ ...prev, experienceMin: a ? '' : 0, experienceMax: a ? '' : 2 }));
                   setPagination(p => ({ ...p, page: 1 })); triggerReload();
@@ -1756,6 +1754,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 { label: 'Mid Level', active: filters.experienceMin === 3 && filters.experienceMax === 5, onPress: () => {
                   const a = filters.experienceMin === 3 && filters.experienceMax === 5;
                   setFilters(prev => ({ ...prev, experienceMin: a ? '' : 3, experienceMax: a ? '' : 5 }));
+                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
+                }},
+                { label: 'Company Direct', active: filters.directOnly === true, onPress: () => {
+                  setFilters(prev => ({ ...prev, directOnly: prev.directOnly ? null : true }));
                   setPagination(p => ({ ...p, page: 1 })); triggerReload();
                 }},
               ].concat(
@@ -1975,8 +1977,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
                 {/* Experience — direct toggle (single-select) */}
                 {[
-                  { label: 'Fresher', min: 0, max: 1 },
-                  { label: 'Entry Level', min: 0, max: 2 },
+                  { label: 'Fresher / Entry Level', min: 0, max: 2 },
                   { label: 'Mid Level', min: 3, max: 5 },
                 ].map(lvl => {
                   const active = filters.experienceMin === lvl.min && filters.experienceMax === lvl.max;
@@ -1999,6 +2000,25 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                     </View>
                   );
                 })}
+
+                {/* Company Direct — show only direct career site jobs */}
+                {(() => {
+                  const active = filters.directOnly === true;
+                  return (
+                    <View style={styles.quickFilterItem}>
+                      <TouchableOpacity
+                        style={[styles.quickFilterDropdown, active && styles.quickFilterActive]}
+                        onPress={() => {
+                          setFilters(prev => ({ ...prev, directOnly: active ? null : true }));
+                          setPagination(p => ({ ...p, page: 1 }));
+                          triggerReload();
+                        }}
+                      >
+                        <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Company Direct</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
 
                 {/* Remote — direct toggle (find Remote workplace type) */}
                 {(() => {

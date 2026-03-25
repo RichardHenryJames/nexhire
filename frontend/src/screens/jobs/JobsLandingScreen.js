@@ -343,8 +343,7 @@ export default function JobsLandingScreen({ navigation, route }) {
 
         {/* Experience — direct navigate */}
         {[
-          { label: 'Fresher', min: 0, max: 1 },
-          { label: 'Entry Level', min: 0, max: 2 },
+          { label: 'Fresher / Entry Level', min: 0, max: 2 },
           { label: 'Mid Level', min: 3, max: 5 },
         ].map(lvl => (
           <TouchableOpacity
@@ -358,6 +357,17 @@ export default function JobsLandingScreen({ navigation, route }) {
             <Text style={[styles.chipText, { color: colors.text }]}>{lvl.label}</Text>
           </TouchableOpacity>
         ))}
+
+        {/* Company Direct — navigate to direct career site jobs */}
+        <TouchableOpacity
+          style={[styles.chip, { backgroundColor: colors.gray100 || colors.background, borderColor: colors.border }]}
+          onPress={() => navigation.navigate('JobsList', {
+            screenTitle: 'Company Direct Jobs',
+            appliedFilters: { directOnly: true },
+          })}
+        >
+          <Text style={[styles.chipText, { color: colors.text }]}>Company Direct</Text>
+        </TouchableOpacity>
 
         {/* Remote */}
         {(() => {

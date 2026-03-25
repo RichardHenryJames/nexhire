@@ -401,6 +401,11 @@ export class JobService {
             paramIndex++;
         }
 
+        // 🎯 Direct career site jobs filter (ExternalJobID LIKE 'direct_%')
+        if (f.directOnly === true || f.directOnly === 'true' || f.directOnly === '1') {
+            whereClause += ` AND j.ExternalJobID LIKE 'direct_%'`;
+        }
+
         // 🧑‍💼 PostedByType filter - filter by who posted the job (0=Scraped, 1=Employer, 2=Referrer)
         if (f.postedByType !== undefined && f.postedByType !== null && f.postedByType !== '') {
             const postedByTypeValue = parseInt(String(f.postedByType), 10);
