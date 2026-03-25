@@ -197,7 +197,7 @@ ${OTP_EMAIL_FOOTER}
 
     return {
       success: true,
-      message: `Verification code sent to ${normalizedEmail}. Please check your inbox.`,
+      message: 'Verification code sent. Please check your inbox.',
       data: { expiresInMinutes: OTP_EXPIRY_MINUTES }
     };
 
@@ -293,10 +293,232 @@ export const validateEmailVerification = async (email: string, verificationId: s
   }
 };
 
+// ========================================================================
+// ACCOUNT EMAIL VERIFICATION (Post-login — for users who skipped verification)
+// ========================================================================
+
+/**
+ * Send OTP to a logged-in user's email for account verification.
+ * Uses the same EmailVerificationOTPs table with purpose 'ACCOUNT_EMAIL_VERIFICATION'.
+ */
+export const sendAccountVerificationOTP = async (userId: string, email: string): Promise<RegistrationOTPResult> => {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 1. Check if user already verified
+    const userResult = await dbService.executeQuery(
+      `SELECT EmailVerified FROM Users WHERE UserID = @param0 AND IsActive = 1`,
+      [userId]
+    );
+    if (userResult.recordset.length === 0) {
+      return { success: false, message: 'User not found', error: 'USER_NOT_FOUND' };
+    }
+    if (userResult.recordset[0].EmailVerified) {
+      return { success: false, message: 'Email is already verified', error: 'ALREADY_VERIFIED' };
+    }
+
+    // 2. Rate limiting — 60s cooldown
+    const recentOTP = await dbService.executeQuery(`
+      SELECT TOP 1 OTPID, CreatedAt
+      FROM EmailVerificationOTPs
+      WHERE Email = @param0
+        AND Purpose = 'ACCOUNT_EMAIL_VERIFICATION'
+        AND IsUsed = 0
+        AND ExpiresAt > GETUTCDATE()
+      ORDER BY CreatedAt DESC
+    `, [normalizedEmail]);
+
+    if (recentOTP.recordset.length > 0) {
+      const createdAt = new Date(recentOTP.recordset[0].CreatedAt);
+      const now = new Date();
+      const secondsSince = (now.getTime() - createdAt.getTime()) / 1000;
+      if (secondsSince < 60) {
+        return {
+          success: false,
+          message: `Please wait ${Math.ceil(60 - secondsSince)} seconds before requesting a new code`,
+          error: 'OTP_COOLDOWN'
+        };
+      }
+    }
+
+    // 3. Generate OTP
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
+
+    // 4. Invalidate existing OTPs
+    await dbService.executeQuery(`
+      UPDATE EmailVerificationOTPs
+      SET IsUsed = 1
+      WHERE Email = @param0
+        AND Purpose = 'ACCOUNT_EMAIL_VERIFICATION'
+        AND IsUsed = 0
+    `, [normalizedEmail]);
+
+    // 5. Store new OTP
+    await dbService.executeQuery(`
+      INSERT INTO EmailVerificationOTPs 
+      (UserID, WorkExperienceID, Email, OTPCode, ExpiresAt, Purpose)
+      VALUES 
+      (@param0, NULL, @param1, @param2, @param3, 'ACCOUNT_EMAIL_VERIFICATION')
+    `, [userId, normalizedEmail, otp, expiresAt]);
+
+    // 6. Send OTP email
+    const emailResult = await EmailService.send({
+      to: normalizedEmail,
+      subject: 'RefOpen - Verify Your Email Address',
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5; -webkit-font-smoothing: antialiased;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: #4F46E5; padding: 40px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">Verify Your Email</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="color: #1a1a1a; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                                Hi there! 👋
+                            </p>
+                            <p style="color: #4a4a4a; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+                                Please verify your email address to unlock all features on RefOpen. Enter the code below in the app.
+                            </p>
+                            
+                            <p style="color: #64748B; font-size: 14px; margin: 0 0 12px 0;">Your verification code is:</p>
+                            
+                            <!-- OTP Code -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="padding: 24px; text-align: center;">
+                                        <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #4F46E5;">${otp}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="color: #64748B; font-size: 14px; line-height: 1.6; margin: 0 0 16px 0;">
+                                This code will expire in <strong style="color: #1a1a1a;">${OTP_EXPIRY_MINUTES} minutes</strong>.
+                            </p>
+                            
+                            <p style="color: #64748B; font-size: 14px; line-height: 1.6; margin: 0;">
+                                If you didn't request this, please ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+                    
+${OTP_EMAIL_FOOTER}
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+      `,
+      text: `Your RefOpen verification code is: ${otp}. This code expires in ${OTP_EXPIRY_MINUTES} minutes.`
+    });
+
+    if (!emailResult.success) {
+      console.error('Failed to send account verification OTP email:', emailResult.error);
+      return { success: false, message: 'Failed to send verification email. Please try again.', error: 'EMAIL_SEND_FAILED' };
+    }
+
+    return {
+      success: true,
+      message: 'Verification code sent. Please check your inbox.',
+      data: { expiresInMinutes: OTP_EXPIRY_MINUTES }
+    };
+
+  } catch (error: any) {
+    console.error('Error sending account verification OTP:', error);
+    return { success: false, message: 'An error occurred while sending verification code', error: error.message };
+  }
+};
+
+/**
+ * Verify OTP for account email verification (post-login).
+ * On success, sets EmailVerified = 1 in Users table.
+ */
+export const verifyAccountVerificationOTP = async (userId: string, email: string, otp: string): Promise<RegistrationOTPResult> => {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 1. Find the OTP record
+    const otpResult = await dbService.executeQuery(`
+      SELECT TOP 1 
+        OTPID, OTPCode, Email, ExpiresAt, IsUsed, AttemptCount, MaxAttempts
+      FROM EmailVerificationOTPs
+      WHERE Email = @param0
+        AND Purpose = 'ACCOUNT_EMAIL_VERIFICATION'
+        AND IsUsed = 0
+      ORDER BY CreatedAt DESC
+    `, [normalizedEmail]);
+
+    if (otpResult.recordset.length === 0) {
+      return { success: false, message: 'No pending verification found. Please request a new code.', error: 'NO_PENDING_OTP' };
+    }
+
+    const otpRecord = otpResult.recordset[0];
+
+    // 2. Check if OTP is expired
+    if (new Date(otpRecord.ExpiresAt) < new Date()) {
+      return { success: false, message: 'Verification code has expired. Please request a new one.', error: 'OTP_EXPIRED' };
+    }
+
+    // 3. Check attempt count
+    if (otpRecord.AttemptCount >= otpRecord.MaxAttempts) {
+      await dbService.executeQuery(`UPDATE EmailVerificationOTPs SET IsUsed = 1 WHERE OTPID = @param0`, [otpRecord.OTPID]);
+      return { success: false, message: 'Too many failed attempts. Please request a new code.', error: 'MAX_ATTEMPTS_EXCEEDED' };
+    }
+
+    // 4. Verify OTP
+    if (otpRecord.OTPCode !== otp) {
+      await dbService.executeQuery(`UPDATE EmailVerificationOTPs SET AttemptCount = AttemptCount + 1 WHERE OTPID = @param0`, [otpRecord.OTPID]);
+      const remaining = otpRecord.MaxAttempts - otpRecord.AttemptCount - 1;
+      return { success: false, message: `Invalid code. ${remaining} attempt(s) remaining.`, error: 'INVALID_OTP', data: { remainingAttempts: remaining } };
+    }
+
+    // 5. OTP correct! Mark as used
+    await dbService.executeQuery(`
+      UPDATE EmailVerificationOTPs
+      SET IsUsed = 1, UsedAt = GETUTCDATE()
+      WHERE OTPID = @param0
+    `, [otpRecord.OTPID]);
+
+    // 6. Update Users table — set EmailVerified = 1
+    await dbService.executeQuery(`
+      UPDATE Users
+      SET EmailVerified = 1, UpdatedAt = GETUTCDATE()
+      WHERE UserID = @param0 AND Email = @param1
+    `, [userId, normalizedEmail]);
+
+    return {
+      success: true,
+      message: 'Email verified successfully! All features are now unlocked.',
+    };
+
+  } catch (error: any) {
+    console.error('Error verifying account email OTP:', error);
+    return { success: false, message: 'An error occurred while verifying code', error: error.message };
+  }
+};
+
 export const registrationEmailVerificationService = {
   sendOTP: sendRegistrationEmailOTP,
   verifyOTP: verifyRegistrationEmailOTP,
-  validate: validateEmailVerification
+  validate: validateEmailVerification,
+  sendAccountOTP: sendAccountVerificationOTP,
+  verifyAccountOTP: verifyAccountVerificationOTP,
 };
 
 export default registrationEmailVerificationService;

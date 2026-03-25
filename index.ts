@@ -146,6 +146,12 @@ import {
   verifyRegistrationOTP,
 } from "./src/controllers/registrationEmailVerification.controller";
 
+// NEW: Account Email Verification controller (authenticated - post-login)
+import {
+  sendAccountVerificationOTP,
+  verifyAccountEmailOTP,
+} from "./src/controllers/accountEmailVerification.controller";
+
 // Import storage controller - MOVED HERE to prevent execution issues
 import { uploadFile, deleteFile } from "./src/controllers/storage.controller";
 
@@ -1767,6 +1773,24 @@ app.http("auth-email-verify-otp", {
   authLevel: "anonymous",
   route: "auth/email/verify-otp",
   handler: withErrorHandling(verifyRegistrationOTP),
+});
+
+// ========================================================================
+// ACCOUNT EMAIL VERIFICATION ENDPOINTS - Post-login email verification
+// ========================================================================
+
+app.http("auth-account-send-verification-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/account/send-verification-otp",
+  handler: withAuth(sendAccountVerificationOTP),
+});
+
+app.http("auth-account-verify-email-otp", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/account/verify-email-otp",
+  handler: withAuth(verifyAccountEmailOTP),
 });
 
 // ========================================================================

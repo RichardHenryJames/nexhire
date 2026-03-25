@@ -665,6 +665,32 @@ class RefOpenAPI {
   }
 
   // ==========================================
+  // ACCOUNT EMAIL VERIFICATION (Post-login — for unverified users)
+  // ==========================================
+
+  /**
+   * Send OTP to the logged-in user's email for account verification
+   * Requires JWT token (authenticated)
+   */
+  async sendAccountVerificationOTP() {
+    return this.apiCall('/auth/account/send-verification-otp', {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Verify OTP for account email verification (authenticated)
+   * On success, sets EmailVerified = 1 in the database
+   * @param {string} otp - The 6-digit OTP code
+   */
+  async verifyAccountEmailOTP(otp) {
+    return this.apiCall('/auth/account/verify-email-otp', {
+      method: 'POST',
+      body: JSON.stringify({ otp }),
+    });
+  }
+
+  // ==========================================
   // COMPANY EMAIL VERIFICATION (Verified Referrer)
   // ==========================================
   

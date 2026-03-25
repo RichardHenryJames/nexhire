@@ -159,8 +159,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return 'Please enter a valid email address';
     
-    // Email must be verified for non-Google users
-    if (!isGoogleUser && !emailVerified) return 'Please verify your email address first';
+    // Email verification is now optional during registration
+    // Users will be prompted to verify after login via EmailVerificationModal
     
     // Skip password validation for Google users and already authenticated users
     if (!refopenAPI.token && !isGoogleUser) {
@@ -404,7 +404,6 @@ export default function EmployerAccountScreen({ navigation, route }) {
                 styles.input,
                 { flex: 1 },
                 isGoogleUser && styles.inputPrefilled,
-                emailVerified && { borderColor: colors.success, borderWidth: 1.5 },
               ]} 
               value={email} 
               onChangeText={setEmail} 
@@ -413,75 +412,11 @@ export default function EmployerAccountScreen({ navigation, route }) {
               placeholder="Enter email address"
               placeholderTextColor={colors.gray400}
             />
-            {!isGoogleUser && !showOtpInput && (
-              emailVerified ? (
-                <View style={styles.emailVerifiedInline}>
-                  <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[
-                    styles.verifyEmailButtonInline,
-                    (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || otpLoading) && styles.verifyEmailButtonDisabled
-                  ]}
-                  onPress={handleSendOTP}
-                  disabled={!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) || otpLoading}
-                >
-                  {otpLoading ? (
-                    <ActivityIndicator size="small" color={colors.white} />
-                  ) : (
-                    <Text style={styles.verifyEmailButtonText}>Verify</Text>
-                  )}
-                </TouchableOpacity>
-              )
-            )}
+
           </View>
         </View>
 
-        {/* EMAIL VERIFICATION OTP input */}
-        {!isGoogleUser && showOtpInput && !emailVerified && (
-          <View style={styles.emailVerifyContainer}>
-              <View style={styles.otpSection}>
-                <Text style={styles.otpLabel}>Enter the 6-digit code sent to your email</Text>
-                <View style={styles.otpRow}>
-                  <TextInput
-                    style={styles.otpInput}
-                    placeholder="000000"
-                    placeholderTextColor={colors.gray500}
-                    value={otpCode}
-                    onChangeText={(text) => setOtpCode(text.replace(/[^0-9]/g, '').slice(0, 6))}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    autoFocus={true}
-                  />
-                  <TouchableOpacity
-                    style={[
-                      styles.verifyOtpButton,
-                      (otpCode.length !== 6 || otpLoading) && styles.verifyEmailButtonDisabled
-                    ]}
-                    onPress={handleVerifyOTP}
-                    disabled={otpCode.length !== 6 || otpLoading}
-                  >
-                    {otpLoading ? (
-                      <ActivityIndicator size="small" color={colors.white} />
-                    ) : (
-                      <Text style={styles.verifyEmailButtonText}>Verify</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  onPress={handleSendOTP}
-                  disabled={otpCooldown > 0 || otpLoading}
-                  style={{ marginTop: 8 }}
-                >
-                  <Text style={[styles.resendText, otpCooldown > 0 && { color: colors.gray500 }]}>
-                    {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : 'Resend code'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
+
 
         {/* 🎁 NEW: Referral Code Input (Optional) */}
         <View style={styles.field}>

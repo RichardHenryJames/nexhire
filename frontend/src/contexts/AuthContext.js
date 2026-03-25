@@ -672,6 +672,8 @@ export const AuthProvider = ({ children }) => {
     isVerifiedUser, // Permanent - for blue tick badge
     currentWork, // Current work experience for badge display
     refreshVerificationStatus,
+    isEmailVerified: !!user?.EmailVerified, // Email verification status
+    markEmailVerified: () => setUser(prev => prev ? { ...prev, EmailVerified: true } : prev),
     userType: user?.UserType || null,
     userName: user ? `${user.FirstName} ${user.LastName}` : null,
     userEmail: user?.Email || null,
