@@ -687,10 +687,37 @@ const { jobId, fromReferralRequest } = route.params || {};
       'adzuna': 'Adzuna',
       'weworkremotely': 'WeWorkRemotely',
       'hackernews': 'Hacker News',
-      'naukri': 'Naukri.com'
+      'naukri': 'Naukri.com',
+      'direct': 'Company Career Site'   // Direct career site scraper
     };
     
     return sourceMap[source.toLowerCase()] || 'External Job Board';
+  };
+
+  const isDirectJob = () => {
+    return job.ExternalJobID?.startsWith('direct_');
+  };
+
+  // Get the company's real requisition/job ID (strip scraper prefixes)
+  const getDisplayJobId = () => {
+    if (!job.ExternalJobID) return null;
+    
+    if (job.ExternalJobID.startsWith('direct_')) {
+      // "direct_boeing_JR2026497191" → "JR2026497191"
+      // "direct_stripe_gh_7532733" → "7532733"
+      const parts = job.ExternalJobID.split('_');
+      // Skip "direct" prefix and company name, return the actual job ID
+      // Patterns: direct_{company}_{id}, direct_{slug}_gh_{id}, direct_{slug}_sr_{id}, direct_{slug}_lever_{id}, direct_{slug}_ashby_{id}
+      const atsTypes = ['gh', 'sr', 'lever', 'ashby'];
+      if (parts.length >= 4 && atsTypes.includes(parts[parts.length - 2])) {
+        return parts[parts.length - 1]; // Last segment is the ID
+      }
+      if (parts.length >= 3) {
+        return parts.slice(2).join('_'); // Everything after direct_{company}
+      }
+    }
+    
+    return null; // Don't show raw Adzuna/RemoteOK IDs — they mean nothing to users
   };
 
   const getJobSourceName = () => {
@@ -1126,6 +1153,26 @@ const { jobId, fromReferralRequest } = route.params || {};
               </View>
             ))}
           </View>
+        </View>
+      )}
+
+      {/* ✅ Direct Job: Verified badge + Requisition ID */}
+      {isDirectJob() && (
+        <View style={styles.jobTagsSection}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.12)', borderWidth: 1, borderColor: 'rgba(16, 185, 129, 0.3)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, gap: 4 }}>
+              <Ionicons name="shield-checkmark" size={14} color="#10B981" />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#10B981' }}>Verified — Direct from company career site</Text>
+            </View>
+          </View>
+          {getDisplayJobId() && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="document-text-outline" size={14} color={colors.textSecondary} />
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                Job ID: <Text style={{ fontWeight: '600', color: colors.primary }}>{getDisplayJobId()}</Text>
+              </Text>
+            </View>
+          )}
         </View>
       )}
 

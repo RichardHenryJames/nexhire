@@ -162,7 +162,8 @@ export class JobDescriptionEnricherService {
         rm_wt.Value AS WorkplaceType,
         j.ExperienceMin,
         j.ExperienceMax,
-        j.Tags
+        j.Tags,
+        j.ExternalJobID
       FROM Jobs j
       JOIN Organizations o ON j.OrganizationID = o.OrganizationID
       LEFT JOIN ReferenceMetadata rm_wt ON j.WorkplaceTypeID = rm_wt.ReferenceID
@@ -188,10 +189,27 @@ export class JobDescriptionEnricherService {
         return false;
       }
 
+      // Determine if the existing description is already high-quality (from direct career scraper)
+      // Direct-scraped jobs have real descriptions from Workday/Greenhouse — don't overwrite those
+      const existingDescLength = (job.Description || '').length;
+      const hasGoodDescription = existingDescLength >= 500; // 500+ chars = real ATS description
+      const isDirectJob = (job as any).ExternalJobID?.startsWith('direct_');
+
       // Build dynamic SET clause — only update fields that AI returned
-      const setClauses: string[] = ['Description = @param0', 'AIEnriched = 1', 'UpdatedAt = SYSDATETIMEOFFSET()', 'PublishedAt = SYSDATETIMEOFFSET()'];
-      const params: any[] = [enriched.description];
-      let paramIdx = 1;
+      // DON'T overwrite PublishedAt — it destroys the real posted date
+      const setClauses: string[] = ['AIEnriched = 1', 'UpdatedAt = SYSDATETIMEOFFSET()'];
+      const params: any[] = [];
+      let paramIdx = 0;
+
+      // Only overwrite Description if the existing one is thin (< 500 chars)
+      // Direct-scraped jobs with full Workday/Greenhouse descriptions should keep theirs
+      if (!hasGoodDescription) {
+        setClauses.push(`Description = @param${paramIdx}`);
+        params.push(enriched.description);
+        paramIdx++;
+      } else if (isDirectJob) {
+        console.log(`📋 Keeping original description for direct job "${job.Title}" (${existingDescLength} chars)`);
+      }
 
       if (enriched.responsibilities && enriched.responsibilities.length > 20) {
         setClauses.push(`Responsibilities = @param${paramIdx}`);

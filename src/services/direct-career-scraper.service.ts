@@ -65,7 +65,9 @@ export class DirectCareerScraperService {
       return jobs;
     }
     
-    const baseUrl = `https://${config.tenant}.wd${config.wdNumber}.myworkdayjobs.com/wday/cxs/${config.tenant}/${config.site}/jobs`;
+    const wdBase = `https://${config.tenant}.wd${config.wdNumber}.myworkdayjobs.com`;
+    const listUrl = `${wdBase}/wday/cxs/${config.tenant}/${config.site}/jobs`;
+    const detailBase = `${wdBase}/wday/cxs/${config.tenant}/${config.site}`;
     
     // Workday API returns max 20 per page. Use search terms + pagination.
     const allSearchTerms = DIRECT_SCRAPER_CONFIG.workdaySearchTerms;
@@ -89,7 +91,7 @@ export class DirectCareerScraperService {
           searchText: term,
         };
         
-        const response = await axios.post(baseUrl, body, {
+        const response = await axios.post(listUrl, body, {
           timeout: DIRECT_SCRAPER_CONFIG.requestTimeoutMs,
           headers: {
             'Content-Type': 'application/json',
@@ -118,7 +120,6 @@ export class DirectCareerScraperService {
           // Parse posted date
           let postedDate: Date | undefined;
           if (posting.postedOn) {
-            // Workday uses "Posted 2 Days Ago", "Posted Today", "Posted 30+ Days Ago"
             const daysMatch = posting.postedOn.match(/(\d+)\s*(?:days?|d)/i);
             if (daysMatch) {
               postedDate = new Date(Date.now() - parseInt(daysMatch[1]) * 86400000);
@@ -129,19 +130,57 @@ export class DirectCareerScraperService {
             }
           }
           
+          // Fetch full job description from detail endpoint
+          // Listing endpoint only returns title/location — no description
+          let description = '';
+          let department = posting.category || undefined;
+          try {
+            const detailResp = await axios.get(`${detailBase}${posting.externalPath}`, {
+              timeout: 10000,
+              headers: { 'Accept': 'application/json' },
+              validateStatus: (s) => s === 200,
+            });
+            const info = detailResp.data?.jobPostingInfo;
+            if (info?.jobDescription) {
+              // Clean HTML from Workday job description
+              description = info.jobDescription
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&#39;/g, "'")
+                .replace(/&quot;/g, '"')
+                .replace(/\s+/g, ' ')
+                .trim()
+                .substring(0, 3000);
+            }
+            // Get more accurate location from detail
+            if (info?.location) {
+              // Detail endpoint has full location, listing just says "2 Locations"
+            }
+            await this.delay(300); // Small delay between detail fetches
+          } catch {
+            // Detail fetch failed — use fallback description
+          }
+          
+          if (!description) {
+            description = this.generateWorkdayDescription(posting.title, config.name, location, department);
+          }
+          
           jobs.push({
             externalJobId: `direct_${config.name.toLowerCase().replace(/\s+/g, '_')}_${jobId}`,
             companyJobId: jobId,
             title: (posting.title || '').substring(0, 200),
             company: config.name,
             location: location.substring(0, 200),
-            description: posting.descriptionPlainText || posting.description || `${posting.title} at ${config.name}. Apply directly on the official career site.`,
+            description,
             applicationUrl: directUrl,
             careerPageUrl: config.careerPageUrl,
             postedDate,
             jobType: this.detectJobType(posting.title, posting.employmentType),
             workplaceType: this.detectWorkplaceType(location, posting.title),
-            department: posting.category || undefined,
+            department,
             source: 'workday',
           });
         }
@@ -216,7 +255,7 @@ export class DirectCareerScraperService {
           title: (posting.title || '').substring(0, 200),
           company: config.name,
           location,
-          description: description || `${posting.title} at ${config.name}. Apply directly on the official career site.`,
+          description: description || this.generateFallbackDescription(posting.title, config.name, location, department),
           applicationUrl: directUrl,
           careerPageUrl: config.careerPageUrl,
           postedDate,
@@ -280,7 +319,7 @@ export class DirectCareerScraperService {
             .replace(/<[^>]+>/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
-            .substring(0, 3000) || `${posting.name} at ${config.name}`;
+            .substring(0, 3000) || this.generateFallbackDescription(posting.name, config.name, location, posting.department?.label);
           
           let postedDate: Date | undefined;
           if (posting.releasedDate) {
@@ -361,7 +400,7 @@ export class DirectCareerScraperService {
             title: (posting.title || '').substring(0, 200),
             company: 'Amazon',
             location,
-            description: (posting.description || posting.basic_qualifications || `${posting.title} at Amazon`).substring(0, 3000),
+            description: (posting.description || posting.basic_qualifications || this.generateFallbackDescription(posting.title, 'Amazon', location, posting.job_category)).substring(0, 3000),
             applicationUrl: directUrl,
             careerPageUrl: config.careerPageUrl,
             postedDate,
@@ -427,7 +466,7 @@ export class DirectCareerScraperService {
           title: (posting.text || '').substring(0, 200),
           company: config.name,
           location,
-          description: description || `${posting.text} at ${config.name}`,
+          description: description || this.generateFallbackDescription(posting.text, config.name, location, posting.categories?.department),
           applicationUrl: directUrl,
           careerPageUrl: config.careerPageUrl,
           postedDate,
@@ -479,7 +518,7 @@ export class DirectCareerScraperService {
             title: (p.name || p.title || '').substring(0, 200),
             company: 'Netflix',
             location,
-            description: (p.description || `${p.name} at Netflix`).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 3000),
+            description: (p.description || this.generateFallbackDescription(p.name, 'Netflix', location, p.department)).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 3000),
             applicationUrl: directUrl,
             careerPageUrl: config.careerPageUrl,
             postedDate: p.t_create ? new Date(p.t_create) : undefined,
@@ -541,7 +580,7 @@ export class DirectCareerScraperService {
           title: (p.title || '').substring(0, 200),
           company: config.name,
           location,
-          description: (p.descriptionPlain || `${p.title} at ${config.name}`).substring(0, 3000),
+          description: (p.descriptionPlain || this.generateFallbackDescription(p.title, config.name, location, p.teamName)).substring(0, 3000),
           applicationUrl: directUrl,
           careerPageUrl: config.careerPageUrl,
           jobType: this.detectJobType(p.title, p.employmentType),
@@ -653,7 +692,7 @@ export class DirectCareerScraperService {
       currencyId,
       experienceMin, experienceMax, priority,
       postedAt, expiresAt, now, now, job.externalJobId,
-      `Direct, ${job.source}, ${job.company}, ${job.jobType}`,
+      `${job.jobType}, ${job.workplaceType}${job.department ? ', ' + job.department : ''}`,  // Skills/tags only — no source metadata (source is in ExternalJobID prefix)
       job.applicationUrl,
     ]);
   }
@@ -834,6 +873,31 @@ export class DirectCareerScraperService {
   private static getWorkplaceTypeId(type: string): number {
     const map: Record<string, number> = { 'Onsite': 443, 'Remote': 444, 'Hybrid': 442 };
     return map[type] || 443;
+  }
+
+  /**
+   * Generate a meaningful description for Workday jobs when the API doesn't return one.
+   * Workday's /jobs listing endpoint often omits descriptionPlainText.
+   */
+  private static generateWorkdayDescription(title: string, company: string, location: string, category?: string): string {
+    const dept = category || this.extractDepartment(title);
+    return `${company} is hiring for the role of ${title}${location ? ` in ${location}` : ''}.\n\n` +
+      `Department: ${dept}\n\n` +
+      `This is an active position posted directly on ${company}'s official career site. ` +
+      `The full job description, requirements, and application form are available on the company's career page.\n\n` +
+      `To view the complete details and apply, click the Apply button which will take you directly to ${company}'s official career portal.`;
+  }
+
+  /**
+   * Generate a fallback description for any ATS when the API doesn't return one.
+   */
+  private static generateFallbackDescription(title: string, company: string, location: string, department?: string): string {
+    const dept = department || this.extractDepartment(title);
+    return `${company} is hiring for the role of ${title}${location ? ` in ${location}` : ''}.\n\n` +
+      `Department: ${dept}\n\n` +
+      `This is an active position posted directly on ${company}'s official career site. ` +
+      `The full job description, requirements, and application form are available on the company's career page.\n\n` +
+      `To view the complete details and apply, click the Apply button which will take you directly to ${company}'s official career portal.`;
   }
 
   private static detectCurrencyFromLocation(location: string): number {
