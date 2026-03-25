@@ -299,7 +299,8 @@ export const extractQueryParams = (req: HttpRequest): QueryParams & PaginationPa
         datePosted: query.get('datePosted') || undefined,
         workType: query.get('workType') || undefined,
         isFortune500: parseBoolean(query.get('isFortune500')),
-        dontPersonalize: parseBoolean(query.get('dontPersonalize'))
+        dontPersonalize: parseBoolean(query.get('dontPersonalize')),
+        directOnly: parseBoolean(query.get('directOnly'))
     } as any;
 };
 
