@@ -1102,7 +1102,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   jobTitleBold: {
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.bold,
-    color: colors.primary,
+    color: colors.text,
     flexShrink: 1,
   },
   metaRow: {

@@ -205,7 +205,7 @@ export const DIRECT_SCRAPER_CONFIG = {
   /** Whether the direct scraper is enabled */
   enabled: true,
   /** Maximum total jobs per run across all companies */
-  maxJobsPerRun: 1500,
+  maxJobsPerRun: 5000,
   /** Delay between API requests (ms) */
   requestDelayMs: 800,
   /** Request timeout (ms) */

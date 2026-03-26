@@ -269,7 +269,7 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
     paddingVertical: isDesktop ? 20 : 16,
     paddingHorizontal: isDesktop ? 18 : 14,
     borderRadius: 12,
-    marginHorizontal: isDesktop ? 0 : 8,
+    marginHorizontal: isDesktop ? 0 : 4,
     marginVertical: 4,
     borderWidth: 1,
     borderColor: colors.border + '40',
