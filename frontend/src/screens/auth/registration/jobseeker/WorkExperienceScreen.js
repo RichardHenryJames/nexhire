@@ -257,7 +257,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
           {/* ── Step 1: Company (inline dropdown) + Continue ──── */}
           <AnimatedFormStep
-            visible={currentStep >= 1}
+            visible={currentStep >= 1 && !showJobDropdown}
             question="Which company?"
             helpText="Optional — you can skip this"
             completed={!!companyName && !showCompanyDropdown}
@@ -392,15 +392,16 @@ const createStyles = (colors, responsive = {}) =>
     /* Dropdown (shared) */
     dropdownContainer: {
       position: 'absolute', top: '100%', left: 0, right: 0,
-      backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border,
+      backgroundColor: '#2D2D2D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
       borderRadius: 14, marginTop: 6, maxHeight: 280, zIndex: 9999, elevation: 10,
-      shadowColor: colors.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 20,
       overflow: 'hidden',
     },
     dropdownScroll: { maxHeight: 280 },
     dropdownItem: {
       paddingVertical: 14, paddingHorizontal: 18,
-      borderBottomWidth: 1, borderBottomColor: colors.borderFaint,
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: '#2D2D2D',
     },
     dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
     dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },

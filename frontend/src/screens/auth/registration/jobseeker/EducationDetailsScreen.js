@@ -249,7 +249,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
           {/* ── Step 1: Field of Study (inline dropdown) ── */}
           <AnimatedFormStep
-            visible={currentStep >= 1}
+            visible={currentStep >= 1 && !showDegreeDropdown}
             question="What's your field of study?"
             helpText={degreeType ? `Within ${degreeType}` : undefined}
             completed={!!fieldOfStudy && !showFieldDropdown}
@@ -318,7 +318,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
           {/* ── Step 2: Graduation Year ─────────────────── */}
           <AnimatedFormStep
-            visible={currentStep >= 2}
+            visible={currentStep >= 2 && !showFieldDropdown && !showDegreeDropdown}
             question="Expected graduation year?"
             completed={isGradYearValid}
           >
@@ -334,7 +334,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
           </AnimatedFormStep>
 
           {/* ── Continue ────────────────────────────────── */}
-          {isGradYearValid && (
+          {isGradYearValid && !showDegreeDropdown && !showFieldDropdown && (
             <Animated.View style={styles.continueWrap}>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryChip}>
@@ -397,15 +397,16 @@ const createStyles = (colors, responsive = {}) =>
     /* Dropdown */
     dropdownContainer: {
       position: 'absolute', top: '100%', left: 0, right: 0,
-      backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border,
+      backgroundColor: '#2D2D2D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
       borderRadius: 14, marginTop: 6, maxHeight: 280, zIndex: 9999, elevation: 10,
-      shadowColor: colors.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 20,
       overflow: 'hidden',
     },
     dropdownScroll: { maxHeight: 280 },
     dropdownItem: {
       paddingVertical: 14, paddingHorizontal: 18,
-      borderBottomWidth: 1, borderBottomColor: colors.borderFaint,
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: '#2D2D2D',
     },
     dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
     dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
