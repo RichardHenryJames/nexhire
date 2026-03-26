@@ -181,7 +181,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             question="What's your current role?"
             completed={jobTitle.trim().length >= 2 && !showJobDropdown}
           >
-            <View style={{ position: 'relative', zIndex: 3000 }}>
+            <View style={{ position: 'relative', zIndex: showJobDropdown ? 9999 : 1 }}>
               <TextInput
                 style={[styles.textInput, jobTitle.trim().length >= 2 && !showJobDropdown && styles.textInputCompleted]}
                 placeholder="e.g. Software Engineer, Marketing Manager"
@@ -257,12 +257,12 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
           {/* ── Step 1: Company (inline dropdown) + Continue ──── */}
           <AnimatedFormStep
-            visible={currentStep >= 1 && !showJobDropdown}
+            visible={currentStep >= 1}
             question="Which company?"
             helpText="Optional — you can skip this"
             completed={!!companyName && !showCompanyDropdown}
           >
-            <View style={{ position: 'relative', zIndex: 2000 }}>
+            <View style={{ position: 'relative', zIndex: showCompanyDropdown ? 9999 : 1 }}>
               <TextInput
                 style={[styles.textInput, companyName && !showCompanyDropdown && styles.textInputCompleted]}
                 placeholder="Search company..."
@@ -346,7 +346,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
           </AnimatedFormStep>
 
           {/* ── Continue Button ─────────────────────────── */}
-          {currentStep >= 1 && !showJobDropdown && !showCompanyDropdown && (
+          {currentStep >= 1 && (
             <Animated.View style={styles.continueWrap}>
               <TouchableOpacity
                 style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}

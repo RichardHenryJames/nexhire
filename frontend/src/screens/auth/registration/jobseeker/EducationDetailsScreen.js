@@ -54,15 +54,15 @@ export default function EducationDetailsScreen({ navigation, route }) {
     setCurrentStep((prev) => (step > prev ? step : prev));
   }, []);
 
-  // Degree selected + dropdown closed → show field
+  // Degree selected → show field
   useEffect(() => {
-    if (degreeTypeKey && !showDegreeDropdown) advanceTo(1);
-  }, [degreeTypeKey, showDegreeDropdown, advanceTo]);
+    if (degreeTypeKey) advanceTo(1);
+  }, [degreeTypeKey, advanceTo]);
 
-  // Field selected + dropdown closed → show gradYear
+  // Field selected → show gradYear
   useEffect(() => {
-    if (fieldOfStudy && !showFieldDropdown) advanceTo(2);
-  }, [fieldOfStudy, showFieldDropdown, advanceTo]);
+    if (fieldOfStudy) advanceTo(2);
+  }, [fieldOfStudy, advanceTo]);
 
   // ─── Load degree types on mount ──────────────────────────────
   useEffect(() => {
@@ -186,7 +186,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             question="What degree are you pursuing?"
             completed={!!degreeType && !showDegreeDropdown}
           >
-            <View style={{ position: 'relative', zIndex: 3000 }}>
+            <View style={{ position: 'relative', zIndex: showDegreeDropdown ? 9999 : 1 }}>
               <TextInput
                 style={[styles.textInput, degreeType && !showDegreeDropdown && styles.textInputCompleted]}
                 placeholder="Search degree type..."
@@ -249,12 +249,12 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
           {/* ── Step 1: Field of Study (inline dropdown) ── */}
           <AnimatedFormStep
-            visible={currentStep >= 1 && !showDegreeDropdown}
+            visible={currentStep >= 1}
             question="What's your field of study?"
             helpText={degreeType ? `Within ${degreeType}` : undefined}
             completed={!!fieldOfStudy && !showFieldDropdown}
           >
-            <View style={{ position: 'relative', zIndex: 2000 }}>
+            <View style={{ position: 'relative', zIndex: showFieldDropdown ? 9999 : 1 }}>
               <TextInput
                 style={[styles.textInput, fieldOfStudy && !showFieldDropdown && styles.textInputCompleted]}
                 placeholder={`Search field for ${degreeType || 'your degree'}...`}
@@ -318,7 +318,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
           {/* ── Step 2: Graduation Year ─────────────────── */}
           <AnimatedFormStep
-            visible={currentStep >= 2 && !showFieldDropdown && !showDegreeDropdown}
+            visible={currentStep >= 2}
             question="Expected graduation year?"
             completed={isGradYearValid}
           >
@@ -334,7 +334,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
           </AnimatedFormStep>
 
           {/* ── Continue ────────────────────────────────── */}
-          {isGradYearValid && !showDegreeDropdown && !showFieldDropdown && (
+          {isGradYearValid && (
             <Animated.View style={styles.continueWrap}>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryChip}>
