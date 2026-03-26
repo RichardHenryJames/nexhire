@@ -21,6 +21,7 @@ import { spacing, typography, borderRadius, styles as themeStyles } from '../../
 import { useTheme } from '../../contexts/ThemeContext';
 import { authDarkColors } from '../../styles/authDarkColors';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
+import AnimatedSection from '../../components/auth/AnimatedSection';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
 
@@ -255,6 +256,7 @@ export default function LoginScreen({ navigation }) {
           >
             <View style={screenStyles.card}>
               {/* Header */}
+              <AnimatedSection delay={0}>
               <View style={screenStyles.header}>
             <Image
               source={require('../../../assets/refopen-logo.png')}
@@ -265,8 +267,10 @@ export default function LoginScreen({ navigation }) {
             <Text style={screenStyles.title}>India's Leading Job & Referral Platform</Text>
             <Text style={screenStyles.subtitle}>Apply • Hire • Refer • Earn Rewards</Text>
           </View>
+          </AnimatedSection>
 
           {/* NEW: Google Sign-In Section */}
+          <AnimatedSection delay={200}>
           {googleAuthAvailable && (
             <>
               <View style={screenStyles.googleSection}>
@@ -284,8 +288,10 @@ export default function LoginScreen({ navigation }) {
               </View>
             </>
           )}
+          </AnimatedSection>
 
           {/* Login Form */}
+          <AnimatedSection delay={350}>
           <View style={screenStyles.form}>
             {/* Email Input */}
             <View style={screenStyles.inputGroup}>
@@ -397,8 +403,10 @@ export default function LoginScreen({ navigation }) {
               </View>
             )}
           </View>
+          </AnimatedSection>
 
           {/* Register Link */}
+          <AnimatedSection delay={500}>
           <View style={screenStyles.footer}>
             <Text style={screenStyles.footerText}>
               Don't have an account?{' '}
@@ -432,6 +440,7 @@ export default function LoginScreen({ navigation }) {
             <Ionicons name="information-circle-outline" size={18} color={colors.primary} />
             <Text style={screenStyles.aboutLinkText}>About RefOpen</Text>
           </TouchableOpacity>
+          </AnimatedSection>
         </View>
           </ScrollView>
         </KeyboardAvoidingView>

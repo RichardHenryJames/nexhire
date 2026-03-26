@@ -23,6 +23,7 @@ import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
 import { parseLocalDate } from '../../../../utils/dateUtils';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
+import AnimatedSection from '../../../../components/auth/AnimatedSection';
 
 // Debounce like college picker
 const useDebounce = (value, delay = 300) => {
@@ -405,13 +406,17 @@ export default function WorkExperienceScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Tell us about your work experience</Text>
-            <Text style={styles.subtitle}>
-              This helps us understand your professional background and match you with relevant opportunities
-            </Text>
-          </View>
+          <AnimatedSection delay={0}>
+            <View style={styles.header}>
+              <Text style={styles.emoji}>💼</Text>
+              <Text style={styles.title}>Tell us about your work</Text>
+              <Text style={styles.subtitle}>
+                This helps us match you with relevant opportunities
+              </Text>
+            </View>
+          </AnimatedSection>
 
+          <AnimatedSection delay={200}>
           <View style={styles.form}>
             {/* Employment Status */}
             <View style={styles.inputContainer}>
@@ -539,13 +544,17 @@ export default function WorkExperienceScreen({ navigation, route }) {
             />
           </View>
 
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
-          >
-            <Text style={styles.continueButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={20} color={colors.white} />
-          </TouchableOpacity>
+          </AnimatedSection>
+
+          <AnimatedSection delay={400}>
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={handleContinue}
+            >
+              <Text style={styles.continueButtonText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={20} color={colors.white} />
+            </TouchableOpacity>
+          </AnimatedSection>
         </View>
       </ScrollView>
 
@@ -694,14 +703,18 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignSelf: 'center',
   },
   header: {
-    marginBottom: 28,
+    marginBottom: 32,
+  },
+  emoji: {
+    fontSize: 36,
+    marginBottom: 12,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 8,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 15,

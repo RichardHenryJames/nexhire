@@ -24,6 +24,7 @@ import DatePicker from '../../../../components/DatePicker';
 import { showToast } from '../../../../components/Toast';
 import { parseLocalDate, todayString } from '../../../../utils/dateUtils';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
+import AnimatedSection from '../../../../components/auth/AnimatedSection';
 
 // Debounce hook for search
 const useDebounce = (value, delay = 300) => {
@@ -688,6 +689,7 @@ styles.selectionButton,
     >
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.content}>
+          <AnimatedSection delay={0}>
           <View style={styles.header}>
             
             {/* Show Google user info if applicable */}
@@ -723,7 +725,9 @@ styles.selectionButton,
               }
             </Text>
           </View>
+          </AnimatedSection>
 
+          <AnimatedSection delay={150}>
           <View style={styles.form}>
             <View style={styles.row}>
               <View style={styles.halfInput}>
@@ -983,7 +987,10 @@ styles.selectionButton,
             </View>
           </View>
 
-          {/* Summary of selections */}
+          </AnimatedSection>
+
+          <AnimatedSection delay={300}>
+          {/* Summary of selections */}}
           <View style={styles.summaryContainer}>
             <Text style={styles.summaryTitle}>Your Profile Summary</Text>
             <View style={styles.summaryItem}>
@@ -1171,6 +1178,7 @@ styles.selectionButton,
               </Text>
             </TouchableOpacity>
           )}
+          </AnimatedSection>
         </View>
       </ScrollView>
 
@@ -1338,11 +1346,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontStyle: 'italic',
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
     color: colors.text,
     marginBottom: 8,
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 15,

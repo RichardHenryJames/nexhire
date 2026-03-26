@@ -11,14 +11,19 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { authDarkColors } from '../../styles/authDarkColors';
-import { typography } from '../../styles/theme';
 import useResponsive from '../../hooks/useResponsive';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 /**
- * RegistrationWrapper - Premium wrapper for all registration screens
- * Provides: gradient background, step progress, back nav, trust footer, fade-in
+ * RegistrationWrapper — Premium wrapper for all registration screens.
+ *
+ * Features:
+ *   • Gradient dark background with decorative orbs
+ *   • Step dot indicator with connecting lines & pulse on current step
+ *   • Fade-in content entrance
+ *   • Desktop: floating card with subtle shadow
+ *   • Trust footer badge
  */
 export default function RegistrationWrapper({
   children,
@@ -33,7 +38,7 @@ export default function RegistrationWrapper({
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
-  // Subtle fade-in on mount
+  // ── Content fade-in ────────────────────────────────────
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(18)).current;
 
@@ -52,7 +57,27 @@ export default function RegistrationWrapper({
     ]).start();
   }, []);
 
-  const progress = totalSteps > 0 ? currentStep / totalSteps : 0;
+  // ── Pulse ring for current step dot ─────────────────────
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.25,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
 
   return (
     <View style={styles.root}>
@@ -69,7 +94,7 @@ export default function RegistrationWrapper({
       <View style={styles.orbTopRight} pointerEvents="none" />
       <View style={styles.orbBottomLeft} pointerEvents="none" />
 
-      {/* Top navigation bar */}
+      {/* ── Top navigation bar ─────────────────────────── */}
       <View style={styles.topNav}>
         {onBack ? (
           <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.7}>
@@ -79,26 +104,72 @@ export default function RegistrationWrapper({
           <View style={{ width: 40 }} />
         )}
 
+        {/* ── Step dot indicator ──────────────────────── */}
         {showProgress && totalSteps > 1 && (
-          <View style={styles.progressContainer}>
-            <View style={styles.progressTrack}>
-              <Animated.View
-                style={[
-                  styles.progressFill,
-                  { width: `${Math.round(progress * 100)}%` },
-                ]}
-              />
+          <View style={styles.stepIndicator}>
+            <View style={styles.stepsRow}>
+              {Array.from({ length: totalSteps }, (_, i) => {
+                const stepNum = i + 1;
+                const isCompleted = stepNum < currentStep;
+                const isCurrent = stepNum === currentStep;
+
+                return (
+                  <React.Fragment key={i}>
+                    {/* Connecting line */}
+                    {i > 0 && (
+                      <View
+                        style={[
+                          styles.stepLine,
+                          isCompleted && styles.stepLineCompleted,
+                          isCurrent && styles.stepLineActive,
+                        ]}
+                      />
+                    )}
+
+                    {/* Dot */}
+                    {isCurrent ? (
+                      <View style={styles.stepDotCurrentWrap}>
+                        {/* Animated pulse ring */}
+                        <Animated.View
+                          style={[
+                            styles.stepPulseRing,
+                            { transform: [{ scale: pulseAnim }] },
+                          ]}
+                        />
+                        <View style={[styles.stepDot, styles.stepDotCurrent]}>
+                          <Text style={styles.stepDotTextCurrent}>{stepNum}</Text>
+                        </View>
+                      </View>
+                    ) : (
+                      <View
+                        style={[
+                          styles.stepDot,
+                          isCompleted && styles.stepDotCompleted,
+                        ]}
+                      >
+                        {isCompleted ? (
+                          <Ionicons name="checkmark" size={13} color="#fff" />
+                        ) : (
+                          <Text style={styles.stepDotText}>{stepNum}</Text>
+                        )}
+                      </View>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </View>
-            <Text style={styles.progressText}>
-              {stepLabel || `Step ${currentStep} of ${totalSteps}`}
-            </Text>
+
+            {/* Current step label */}
+            {stepLabel ? (
+              <Text style={styles.stepLabelText}>{stepLabel}</Text>
+            ) : null}
           </View>
         )}
 
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Animated content */}
+      {/* ── Animated content ───────────────────────────── */}
       <Animated.View
         style={[
           styles.contentWrapper,
@@ -108,19 +179,17 @@ export default function RegistrationWrapper({
           },
         ]}
       >
-        {/* Desktop: wrap in a card container for visual containment */}
+        {/* Desktop: wrap in a floating card */}
         {Platform.OS === 'web' && responsive.isDesktop ? (
           <View style={styles.desktopCardOuter}>
-            <View style={styles.desktopCard}>
-              {children}
-            </View>
+            <View style={styles.desktopCard}>{children}</View>
           </View>
         ) : (
           children
         )}
       </Animated.View>
 
-      {/* Trust footer */}
+      {/* ── Trust footer ───────────────────────────────── */}
       {showTrustBadge && (
         <View style={styles.trustFooter}>
           <Ionicons name="shield-checkmark" size={14} color={colors.textMuted} />
@@ -133,6 +202,7 @@ export default function RegistrationWrapper({
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────
 const createStyles = (colors, responsive = {}) =>
   StyleSheet.create({
     root: {
@@ -140,6 +210,8 @@ const createStyles = (colors, responsive = {}) =>
       backgroundColor: colors.background,
       overflow: 'hidden',
     },
+
+    /* ── Decorative orbs ──────────────── */
     orbTopRight: {
       position: 'absolute',
       top: -60,
@@ -158,6 +230,8 @@ const createStyles = (colors, responsive = {}) =>
       borderRadius: 110,
       backgroundColor: colors.accentGlowSubtle,
     },
+
+    /* ── Top nav ──────────────────────── */
     topNav: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -175,31 +249,82 @@ const createStyles = (colors, responsive = {}) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    progressContainer: {
+
+    /* ── Step dot indicator ────────────── */
+    stepIndicator: {
       flex: 1,
       alignItems: 'center',
       marginHorizontal: 16,
     },
-    progressTrack: {
-      width: '100%',
-      maxWidth: 200,
-      height: 4,
-      backgroundColor: colors.borderSubtle,
-      borderRadius: 2,
-      overflow: 'hidden',
+    stepsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
     },
-    progressFill: {
-      height: '100%',
-      backgroundColor: colors.primary,
-      borderRadius: 2,
+    stepDot: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.stepUpcoming,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255, 255, 255, 0.15)',
     },
-    progressText: {
+    stepDotCompleted: {
+      backgroundColor: colors.stepCompleted,
+      borderColor: colors.stepCompleted,
+    },
+    stepDotCurrent: {
+      backgroundColor: colors.stepActive,
+      borderColor: colors.stepActive,
+    },
+    stepDotCurrentWrap: {
+      width: 28,
+      height: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    stepPulseRing: {
+      position: 'absolute',
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: 'rgba(59, 130, 246, 0.3)',
+    },
+    stepDotText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: 'rgba(255, 255, 255, 0.35)',
+    },
+    stepDotTextCurrent: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    stepLine: {
+      width: 24,
+      height: 2,
+      backgroundColor: colors.stepLine,
+      marginHorizontal: 4,
+      borderRadius: 1,
+    },
+    stepLineCompleted: {
+      backgroundColor: colors.stepLineCompleted,
+    },
+    stepLineActive: {
+      backgroundColor: colors.stepLineActive,
+    },
+    stepLabelText: {
       fontSize: 11,
       color: colors.textMuted,
-      marginTop: 4,
+      marginTop: 6,
       fontWeight: '500',
       letterSpacing: 0.3,
     },
+
+    /* ── Content ──────────────────────── */
     contentWrapper: {
       flex: 1,
     },
@@ -217,11 +342,12 @@ const createStyles = (colors, responsive = {}) =>
       borderWidth: 1,
       borderColor: colors.borderSubtle,
       overflow: 'hidden',
-      // Subtle shadow for elevation
-      ...(Platform.OS === 'web' ? {
-        boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
-      } : {}),
+      ...(Platform.OS === 'web'
+        ? { boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }
+        : {}),
     },
+
+    /* ── Trust footer ─────────────────── */
     trustFooter: {
       flexDirection: 'row',
       alignItems: 'center',
