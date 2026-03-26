@@ -7,8 +7,6 @@ import {
   Platform,
   ScrollView,
   TextInput,
-  Modal,
-  FlatList,
   ActivityIndicator,
   Image,
   Animated,
@@ -21,7 +19,6 @@ import { showToast } from '../../../../components/Toast';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 import AnimatedFormStep from '../../../../components/auth/AnimatedFormStep';
 
-// Debounce hook
 const useDebounce = (value, delay = 300) => {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -42,21 +39,20 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const [jobTitle, setJobTitle] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [organizationId, setOrganizationId] = useState(null);
-  const [selectedOrg, setSelectedOrg] = useState(null); // full org for logo
+  const [selectedOrg, setSelectedOrg] = useState(null);
 
-  // ─── Job role dropdown ───────────────────────────────────────
+  // ─── Job role inline dropdown ────────────────────────────────
   const [jobRoles, setJobRoles] = useState([]);
   const [loadingJobRoles, setLoadingJobRoles] = useState(false);
-  const [showJobTitleDropdown, setShowJobTitleDropdown] = useState(false);
-  const [jobTitleSearch, setJobTitleSearch] = useState('');
+  const [showJobDropdown, setShowJobDropdown] = useState(false);
+  const [jobSearch, setJobSearch] = useState('');
 
-  // ─── Company picker modal ────────────────────────────────────
-  const [showOrgModal, setShowOrgModal] = useState(false);
-  const [orgQuery, setOrgQuery] = useState('');
-  const debouncedOrgQuery = useDebounce(orgQuery, 300);
+  // ─── Company inline dropdown ─────────────────────────────────
   const [orgResults, setOrgResults] = useState([]);
   const [orgLoading, setOrgLoading] = useState(false);
-  const [manualOrgMode, setManualOrgMode] = useState(false);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [companySearch, setCompanySearch] = useState('');
+  const debouncedCompanySearch = useDebounce(companySearch, 300);
 
   // ─── Progressive reveal ──────────────────────────────────────
   const scrollRef = useRef(null);
@@ -68,10 +64,10 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
   // Only advance to company step when dropdown is closed AND role is valid
   useEffect(() => {
-    if (jobTitle.trim().length >= 2 && !showJobTitleDropdown) advanceTo(1);
-  }, [jobTitle, showJobTitleDropdown, advanceTo]);
+    if (jobTitle.trim().length >= 2 && !showJobDropdown) advanceTo(1);
+  }, [jobTitle, showJobDropdown, advanceTo]);
 
-  // ─── Load job roles ──────────────────────────────────────────
+  // ─── Load job roles on mount ─────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -88,16 +84,16 @@ export default function WorkExperienceScreen({ navigation, route }) {
     })();
   }, []);
 
-  // ─── Organization search ─────────────────────────────────────
+  // ─── Company search ──────────────────────────────────────────
   useEffect(() => {
-    if (!showOrgModal || manualOrgMode) return;
+    if (!showCompanyDropdown) return;
     (async () => {
       try {
         setOrgLoading(true);
-        const res = await refopenAPI.getOrganizations(debouncedOrgQuery || '', null);
+        const res = await refopenAPI.getOrganizations(debouncedCompanySearch || '', null);
         const raw = res?.success && Array.isArray(res.data) ? res.data : [];
-        if (debouncedOrgQuery?.trim()) {
-          const s = debouncedOrgQuery.toLowerCase();
+        if (debouncedCompanySearch?.trim()) {
+          const s = debouncedCompanySearch.toLowerCase();
           setOrgResults(raw.filter((o) => o.name?.toLowerCase().includes(s)));
         } else {
           setOrgResults(raw);
@@ -108,14 +104,22 @@ export default function WorkExperienceScreen({ navigation, route }) {
         setOrgLoading(false);
       }
     })();
-  }, [debouncedOrgQuery, showOrgModal, manualOrgMode]);
+  }, [debouncedCompanySearch, showCompanyDropdown]);
 
   // ─── Handlers ────────────────────────────────────────────────
+  const handleSelectJob = (role) => {
+    setJobTitle(role.Value);
+    setJobSearch('');
+    setShowJobDropdown(false);
+    advanceTo(1);
+  };
+
   const handleSelectOrg = (org) => {
     setOrganizationId(org.id);
     setCompanyName(org.name);
     setSelectedOrg(org);
-    setShowOrgModal(false);
+    setCompanySearch('');
+    setShowCompanyDropdown(false);
   };
 
   const handleContinue = () => {
@@ -143,6 +147,13 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
   const isContinueEnabled = jobTitle.trim().length >= 2;
 
+  // Filtered job roles
+  const filteredJobs = useMemo(() => {
+    if (!jobSearch.trim()) return jobRoles;
+    const s = jobSearch.toLowerCase();
+    return jobRoles.filter((r) => r.Value?.toLowerCase().includes(s));
+  }, [jobSearch, jobRoles]);
+
   // ─── RENDER ──────────────────────────────────────────────────
   return (
     <RegistrationWrapper
@@ -164,95 +175,180 @@ export default function WorkExperienceScreen({ navigation, route }) {
             <Text style={styles.subtitle}>Just 2 quick things — we'll use this for matching</Text>
           </View>
 
-          {/* Step 0: Job Title */}
+          {/* ── Step 0: Job Title (inline dropdown) ──── */}
           <AnimatedFormStep
             visible={currentStep >= 0}
             question="What's your current role?"
-            completed={jobTitle.trim().length >= 2}
+            completed={jobTitle.trim().length >= 2 && !showJobDropdown}
           >
-            <View style={{ position: 'relative', zIndex: 1000 }}>
+            <View style={{ position: 'relative', zIndex: 3000 }}>
               <TextInput
-                style={[styles.textInput, jobTitle.trim().length >= 2 && styles.textInputCompleted]}
+                style={[styles.textInput, jobTitle.trim().length >= 2 && !showJobDropdown && styles.textInputCompleted]}
                 placeholder="e.g. Software Engineer, Marketing Manager"
                 placeholderTextColor={colors.textMuted}
-                value={jobTitleSearch || jobTitle}
+                value={showJobDropdown ? jobSearch : jobTitle}
                 onChangeText={(text) => {
-                  setJobTitleSearch(text);
-                  setJobTitle(text);
-                  setShowJobTitleDropdown(text.length > 0);
+                  setJobSearch(text);
+                  if (!showJobDropdown) {
+                    setShowJobDropdown(true);
+                    setJobTitle(text); // allow free-text
+                  } else {
+                    setJobTitle(text); // update as user types
+                  }
                 }}
-                onFocus={() => { if (jobTitle) setJobTitleSearch(''); }}
+                onFocus={() => {
+                  setShowJobDropdown(true);
+                  setJobSearch('');
+                }}
                 autoCorrect={false}
                 spellCheck={false}
               />
-              {showJobTitleDropdown && jobTitleSearch.length > 0 && (() => {
-                const matches = jobRoles.filter((r) => r.Value?.toLowerCase().includes(jobTitleSearch.toLowerCase()));
-                if (loadingJobRoles) return (
-                  <View style={styles.dropdownContainer}>
-                    <View style={{ padding: 20, alignItems: 'center' }}>
+              {jobTitle && !showJobDropdown && (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => { setJobTitle(''); setShowJobDropdown(true); setJobSearch(''); }}
+                >
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+
+              {showJobDropdown && (
+                <View style={styles.dropdownContainer}>
+                  {loadingJobRoles ? (
+                    <View style={styles.dropdownLoading}>
                       <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.dropdownLoadingText}>Loading roles...</Text>
                     </View>
-                  </View>
-                );
-                if (matches.length > 0) return (
-                  <View style={styles.dropdownContainer}>
-                    <ScrollView style={{ maxHeight: 250 }} keyboardShouldPersistTaps="handled">
-                      {matches.slice(0, 15).map((role) => (
+                  ) : filteredJobs.length > 0 ? (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                      {filteredJobs.slice(0, 15).map((role) => (
                         <TouchableOpacity
                           key={role.ReferenceID}
                           style={styles.dropdownItem}
-                          onPress={() => {
-                            setJobTitle(role.Value);
-                            setJobTitleSearch('');
-                            setShowJobTitleDropdown(false);
-                            advanceTo(1); // immediately show company
-                          }}
+                          onPress={() => handleSelectJob(role)}
                         >
                           <Text style={styles.dropdownItemText}>{role.Value}</Text>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
-                  </View>
-                );
-                return null;
-              })()}
+                  ) : jobSearch.length > 0 ? (
+                    <View style={styles.dropdownEmpty}>
+                      <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                      <Text style={styles.dropdownEmptyText}>
+                        "{jobSearch}" will be used as your title
+                      </Text>
+                      <TouchableOpacity
+                        style={styles.dropdownUseBtn}
+                        onPress={() => {
+                          setJobTitle(jobSearch);
+                          setJobSearch('');
+                          setShowJobDropdown(false);
+                          advanceTo(1);
+                        }}
+                      >
+                        <Text style={styles.dropdownUseBtnText}>Use this title</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
+              )}
             </View>
           </AnimatedFormStep>
 
-          {/* Step 1: Company + Continue */}
+          {/* ── Step 1: Company (inline dropdown) + Continue ──── */}
           <AnimatedFormStep
             visible={currentStep >= 1}
             question="Which company?"
             helpText="Optional — you can add this later"
-            completed={!!companyName}
+            completed={!!companyName && !showCompanyDropdown}
             skippable={!companyName}
-            onSkip={() => {}} // no-op, company is optional
+            onSkip={() => {}}
           >
-            <TouchableOpacity
-              style={[styles.choiceChip, companyName && styles.choiceChipCompleted]}
-              onPress={() => { setShowOrgModal(true); setManualOrgMode(false); setOrgQuery(''); }}
-              activeOpacity={0.7}
-            >
-              <View style={styles.choiceChipInner}>
-                <View style={styles.choiceChipLeft}>
-                  {selectedOrg?.logoURL ? (
-                    <Image source={{ uri: selectedOrg.logoURL }} style={styles.orgLogo} resizeMode="contain" />
-                  ) : companyName ? (
-                    <View style={styles.orgLogoPlaceholder}>
-                      <Ionicons name="business" size={14} color={colors.gray400} />
+            <View style={{ position: 'relative', zIndex: 2000 }}>
+              <TextInput
+                style={[styles.textInput, companyName && !showCompanyDropdown && styles.textInputCompleted]}
+                placeholder="Search company..."
+                placeholderTextColor={colors.textMuted}
+                value={showCompanyDropdown ? companySearch : companyName}
+                onChangeText={(text) => {
+                  setCompanySearch(text);
+                  if (!showCompanyDropdown) {
+                    setShowCompanyDropdown(true);
+                    setCompanyName('');
+                    setOrganizationId(null);
+                    setSelectedOrg(null);
+                  }
+                }}
+                onFocus={() => {
+                  setShowCompanyDropdown(true);
+                  setCompanySearch('');
+                }}
+                autoCorrect={false}
+                autoCapitalize="words"
+              />
+              {companyName && !showCompanyDropdown && (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => { setCompanyName(''); setOrganizationId(null); setSelectedOrg(null); setShowCompanyDropdown(true); setCompanySearch(''); }}
+                >
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+
+              {showCompanyDropdown && (
+                <View style={styles.dropdownContainer}>
+                  {orgLoading ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.dropdownLoadingText}>Searching...</Text>
+                    </View>
+                  ) : orgResults.length > 0 ? (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                      {orgResults.slice(0, 15).map((org) => (
+                        <TouchableOpacity
+                          key={org.id}
+                          style={styles.orgDropdownItem}
+                          onPress={() => handleSelectOrg(org)}
+                        >
+                          {org.logoURL ? (
+                            <Image source={{ uri: org.logoURL }} style={styles.orgDropdownLogo} resizeMode="contain" />
+                          ) : (
+                            <View style={styles.orgDropdownLogoPlaceholder}>
+                              <Ionicons name="business" size={16} color={colors.gray400} />
+                            </View>
+                          )}
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.dropdownItemText}>{org.name}</Text>
+                            {org.industry && org.industry !== 'Other' && (
+                              <Text style={styles.dropdownItemSub}>{org.industry}</Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : companySearch.length > 1 ? (
+                    <View style={styles.dropdownEmpty}>
+                      <TouchableOpacity
+                        style={styles.dropdownUseBtn}
+                        onPress={() => {
+                          setCompanyName(companySearch.trim());
+                          setOrganizationId(null);
+                          setSelectedOrg(null);
+                          setCompanySearch('');
+                          setShowCompanyDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.dropdownUseBtnText}>Use "{companySearch.trim()}"</Text>
+                      </TouchableOpacity>
                     </View>
                   ) : null}
-                  <Text style={[styles.choiceChipValue, !companyName && styles.choiceChipPlaceholder]} numberOfLines={1}>
-                    {companyName || 'Select or search company'}
-                  </Text>
                 </View>
-                <Ionicons name="chevron-down" size={18} color={colors.gray400} />
-              </View>
-            </TouchableOpacity>
+              )}
+            </View>
           </AnimatedFormStep>
 
-          {/* Continue Button */}
-          {currentStep >= 1 && (
+          {/* ── Continue Button ─────────────────────────── */}
+          {currentStep >= 1 && !showJobDropdown && !showCompanyDropdown && (
             <Animated.View style={styles.continueWrap}>
               <TouchableOpacity
                 style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}
@@ -269,88 +365,6 @@ export default function WorkExperienceScreen({ navigation, route }) {
           )}
         </View>
       </ScrollView>
-
-      {/* Company Picker Modal */}
-      <Modal visible={showOrgModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowOrgModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalAccentLine} />
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={() => setShowOrgModal(false)} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>Select Company</Text>
-              <View style={{ width: 36 }} />
-            </View>
-
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={18} color={colors.gray400} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder={manualOrgMode ? 'Type company name' : 'Search companies...'}
-                placeholderTextColor={colors.gray400}
-                value={orgQuery}
-                onChangeText={setOrgQuery}
-                autoCapitalize="words"
-              />
-              {manualOrgMode ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    const name = orgQuery.trim();
-                    if (!name) { showToast('Type company name', 'error'); return; }
-                    setOrganizationId(null);
-                    setCompanyName(name);
-                    setSelectedOrg(null);
-                    setShowOrgModal(false);
-                  }}
-                >
-                  <Ionicons name="checkmark" size={20} color={colors.primary} />
-                </TouchableOpacity>
-              ) : orgLoading ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : null}
-            </View>
-
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 }}
-              onPress={() => setManualOrgMode((v) => !v)}
-            >
-              <Ionicons name={manualOrgMode ? 'checkbox-outline' : 'square-outline'} size={18} color={colors.primary} />
-              <Text style={{ color: colors.text, marginLeft: 8, fontSize: 14 }}>
-                {manualOrgMode ? 'Type name above and tap ✓' : "Can't find your company? Enter manually"}
-              </Text>
-            </TouchableOpacity>
-
-            {!manualOrgMode && (
-              <FlatList
-                data={orgResults}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.orgItem} onPress={() => handleSelectOrg(item)}>
-                    {item.logoURL ? (
-                      <Image source={{ uri: item.logoURL }} style={styles.orgItemLogo} resizeMode="contain" />
-                    ) : (
-                      <View style={styles.orgItemLogoPlaceholder}>
-                        <Ionicons name="business" size={20} color={colors.gray400} />
-                      </View>
-                    )}
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.orgItemName}>{item.name}</Text>
-                      {item.industry && item.industry !== 'Other' && (
-                        <Text style={styles.orgItemIndustry}>{item.industry}</Text>
-                      )}
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={colors.gray500} />
-                  </TouchableOpacity>
-                )}
-                keyboardShouldPersistTaps="handled"
-                removeClippedSubviews
-                windowSize={8}
-              />
-            )}
-          </View>
-        </View>
-      </Modal>
     </RegistrationWrapper>
   );
 }
@@ -371,32 +385,54 @@ const createStyles = (colors, responsive = {}) =>
 
     textInput: {
       backgroundColor: colors.inputBackground, borderWidth: 1.5, borderColor: colors.border,
-      borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18, fontSize: 15, color: colors.text,
+      borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18,
+      paddingRight: 44, fontSize: 15, color: colors.text,
     },
     textInputCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
+    clearBtn: { position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' },
 
-    choiceChip: {
-      backgroundColor: colors.inputBackground, borderRadius: 14,
-      paddingVertical: 16, paddingHorizontal: 18,
-      borderWidth: 1.5, borderColor: colors.border,
-    },
-    choiceChipCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
-    choiceChipInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    choiceChipLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 },
-    choiceChipValue: { fontSize: 15, color: colors.text, fontWeight: '500', flex: 1 },
-    choiceChipPlaceholder: { color: colors.textMuted, fontWeight: '400' },
-    orgLogo: { width: 24, height: 24, borderRadius: 6, backgroundColor: colors.white },
-    orgLogoPlaceholder: { width: 24, height: 24, borderRadius: 6, backgroundColor: colors.borderFaint, alignItems: 'center', justifyContent: 'center' },
-
+    /* Dropdown (shared) */
     dropdownContainer: {
       position: 'absolute', top: '100%', left: 0, right: 0,
-      backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
-      borderRadius: 12, marginTop: 4, maxHeight: 250, zIndex: 9999, elevation: 10,
-      shadowColor: colors.black, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12,
+      backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border,
+      borderRadius: 14, marginTop: 6, maxHeight: 280, zIndex: 9999, elevation: 10,
+      shadowColor: colors.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16,
+      overflow: 'hidden',
     },
-    dropdownItem: { padding: 14, borderBottomWidth: 1, borderBottomColor: colors.borderFaint },
-    dropdownItemText: { fontSize: 15, color: colors.text },
+    dropdownScroll: { maxHeight: 280 },
+    dropdownItem: {
+      paddingVertical: 14, paddingHorizontal: 18,
+      borderBottomWidth: 1, borderBottomColor: colors.borderFaint,
+    },
+    dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
+    dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    dropdownLoading: { padding: 24, alignItems: 'center', gap: 8 },
+    dropdownLoadingText: { fontSize: 13, color: colors.textMuted },
+    dropdownEmpty: { padding: 20, alignItems: 'center', gap: 8 },
+    dropdownEmptyText: { fontSize: 13, color: colors.success },
+    dropdownUseBtn: {
+      backgroundColor: colors.primaryGlow, borderRadius: 10,
+      paddingVertical: 10, paddingHorizontal: 18,
+      borderWidth: 1, borderColor: colors.primaryGlowStrong,
+    },
+    dropdownUseBtnText: { fontSize: 14, fontWeight: '600', color: colors.primary },
 
+    /* Org dropdown items */
+    orgDropdownItem: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingVertical: 12, paddingHorizontal: 16,
+      borderBottomWidth: 1, borderBottomColor: colors.borderFaint,
+    },
+    orgDropdownLogo: {
+      width: 32, height: 32, borderRadius: 8, marginRight: 12,
+      backgroundColor: colors.white, borderWidth: 1, borderColor: colors.borderFaint,
+    },
+    orgDropdownLogoPlaceholder: {
+      width: 32, height: 32, borderRadius: 8, marginRight: 12,
+      backgroundColor: colors.borderFaint, alignItems: 'center', justifyContent: 'center',
+    },
+
+    /* Continue */
     continueWrap: { marginTop: 24 },
     continueButton: {
       backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -406,45 +442,4 @@ const createStyles = (colors, responsive = {}) =>
     continueButtonDisabled: { backgroundColor: colors.surfaceElevated, shadowOpacity: 0, elevation: 0 },
     continueButtonText: { color: colors.white, fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
     continueButtonTextDisabled: { color: colors.textMuted },
-
-    /* Modal */
-    modalOverlay: {
-      flex: 1, backgroundColor: colors.background,
-      ...(Platform.OS === 'web' && responsive.isDesktop ? {
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
-      } : {}),
-    },
-    modalCard: {
-      flex: 1, backgroundColor: colors.surface,
-      ...(Platform.OS === 'web' && responsive.isDesktop ? {
-        flex: 'none', width: '100%', maxWidth: 560, height: '75vh',
-        borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        borderWidth: 1, borderColor: colors.borderSubtle,
-        boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
-      } : {}),
-    },
-    modalAccentLine: { height: 3, width: '100%', backgroundColor: colors.primary },
-    modalHeader: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 20, paddingVertical: 16,
-      paddingTop: Platform.OS === 'ios' ? 56 : 16,
-      borderBottomWidth: 1, borderBottomColor: colors.borderThin,
-    },
-    modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.overlayLight, alignItems: 'center', justifyContent: 'center' },
-    modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center', marginHorizontal: 8 },
-    searchContainer: {
-      flexDirection: 'row', alignItems: 'center', margin: 16,
-      backgroundColor: colors.inputBackground, borderRadius: 12, paddingHorizontal: 14,
-      borderWidth: 1, borderColor: colors.border,
-    },
-    searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, fontSize: 15, color: colors.text },
-    orgItem: {
-      flexDirection: 'row', alignItems: 'center', padding: 16, marginHorizontal: 12, marginBottom: 6,
-      backgroundColor: colors.surfaceElevated, borderRadius: 12, borderWidth: 1, borderColor: colors.borderFaint,
-    },
-    orgItemLogo: { width: 40, height: 40, borderRadius: 10, marginRight: 12, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.borderThin },
-    orgItemLogoPlaceholder: { width: 40, height: 40, borderRadius: 10, marginRight: 12, backgroundColor: colors.borderFaint, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderThin },
-    orgItemName: { fontSize: 15, fontWeight: '600', color: colors.text },
-    orgItemIndustry: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   });
