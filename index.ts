@@ -4263,9 +4263,10 @@ async function runDirectScraper(
         result.jobsAdded,
         0,
         result.summary.totalJobsScraped,
-        JSON.stringify(result.summary.companyBreakdown),
+        // Truncate to 500 chars — Sources column is nvarchar(500)
+        JSON.stringify(result.summary.companyBreakdown).substring(0, 490),
         result.errors.length,
-        result.errors.slice(0, 5).join('; '),
+        result.errors.slice(0, 3).join('; ').substring(0, 500),
         triggerName,
         myTimer.isPastDue,
       ]);

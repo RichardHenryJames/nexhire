@@ -2923,7 +2923,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       FROM Jobs j
       JOIN Organizations o ON j.OrganizationID = o.OrganizationID
       WHERE j.Status = 'Published' AND j.IsArchived = 0
-        AND j.CreatedAt >= DATEADD(day, -60, GETUTCDATE())
+        AND j.CreatedAt >= DATEADD(day, -30, GETUTCDATE())
     `;
     const result = await dbService.executeQuery(query);
     return new Set(result.recordset.map((row: any) => row.fingerprint));
