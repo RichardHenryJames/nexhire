@@ -480,40 +480,39 @@ const createStyles = (colors, responsive = {}) =>
 
     /* Modal */
     modalOverlay: {
-      flex: 1, backgroundColor: '#111111',
+      flex: 1, backgroundColor: colors.background,
       ...(Platform.OS === 'web' && responsive.isDesktop ? {
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.85)', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
+        backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
       } : {}),
     },
     modalCard: {
-      flex: 1, backgroundColor: '#1a1a2e',
+      flex: 1, backgroundColor: colors.surface,
       ...(Platform.OS === 'web' && responsive.isDesktop ? {
         flex: 'none', width: '100%', maxWidth: 560, height: '75vh',
         borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        borderWidth: 1, borderColor: 'rgba(59,130,246,0.15)',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(59,130,246,0.08)',
+        borderWidth: 1, borderColor: colors.borderSubtle,
+        boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
       } : {}),
     },
     modalAccentLine: {
       height: 3, width: '100%',
-      background: 'linear-gradient(90deg, transparent, rgba(59,130,246,0.5), rgba(139,92,246,0.5), transparent)',
-      backgroundColor: colors.primaryGlowStrong,
+      backgroundColor: colors.primary,
     },
     modalHeader: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
       paddingHorizontal: 20, paddingVertical: 16,
       paddingTop: Platform.OS === 'ios' ? 56 : 16,
-      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+      borderBottomWidth: 1, borderBottomColor: colors.borderThin,
     },
-    modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-    modalTitle: { fontSize: 17, fontWeight: '700', color: '#fff', flex: 1, textAlign: 'center', marginHorizontal: 8 },
+    modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.overlayLight, alignItems: 'center', justifyContent: 'center' },
+    modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center', marginHorizontal: 8 },
     searchContainer: {
       flexDirection: 'row', alignItems: 'center', margin: 16,
-      backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, paddingHorizontal: 14,
-      borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: colors.inputBackground, borderRadius: 12, paddingHorizontal: 14,
+      borderWidth: 1, borderColor: colors.border,
     },
-    searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, fontSize: 15, color: '#fff' },
+    searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, fontSize: 15, color: colors.text },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
     loadingText: { fontSize: 14, color: colors.textSecondary, marginTop: 16 },
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
@@ -521,11 +520,11 @@ const createStyles = (colors, responsive = {}) =>
     modalItem: {
       flexDirection: 'row', alignItems: 'center',
       paddingVertical: 14, paddingHorizontal: 20,
-      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)', minHeight: 56,
+      borderBottomWidth: 1, borderBottomColor: colors.borderFaint, minHeight: 56,
     },
     modalItemContent: { flex: 1 },
-    modalItemText: { fontSize: 15, fontWeight: '500', color: '#e0e0e0', marginBottom: 2 },
-    modalItemSub: { fontSize: 13, color: 'rgba(255,255,255,0.4)' },
-    categoryHeader: { backgroundColor: 'rgba(59,130,246,0.08)', paddingVertical: 8, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
+    modalItemText: { fontSize: 15, fontWeight: '500', color: colors.text, marginBottom: 2 },
+    modalItemSub: { fontSize: 13, color: colors.textMuted },
+    categoryHeader: { backgroundColor: colors.primaryGlow, paddingVertical: 8, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: colors.borderFaint },
     categoryHeaderText: { fontSize: 11, fontWeight: '700', color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.8 },
   });
