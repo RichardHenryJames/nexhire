@@ -259,10 +259,8 @@ export default function WorkExperienceScreen({ navigation, route }) {
           <AnimatedFormStep
             visible={currentStep >= 1}
             question="Which company?"
-            helpText="Optional — you can add this later"
+            helpText="Optional — you can skip this"
             completed={!!companyName && !showCompanyDropdown}
-            skippable={!companyName}
-            onSkip={() => {}}
           >
             <View style={{ position: 'relative', zIndex: 2000 }}>
               <TextInput
