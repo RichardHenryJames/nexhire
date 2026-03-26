@@ -180,6 +180,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             visible={currentStep >= 0}
             question="What's your current role?"
             completed={jobTitle.trim().length >= 2 && !showJobDropdown}
+            style={{ zIndex: showJobDropdown ? 9999 : 1 }}
           >
             <View style={{ position: 'relative', zIndex: showJobDropdown ? 9999 : 1 }}>
               <TextInput
@@ -261,6 +262,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
             question="Which company?"
             helpText="Optional — you can skip this"
             completed={!!companyName && !showCompanyDropdown}
+            style={{ zIndex: showCompanyDropdown ? 9998 : 1 }}
           >
             <View style={{ position: 'relative', zIndex: showCompanyDropdown ? 9999 : 1 }}>
               <TextInput

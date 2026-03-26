@@ -185,6 +185,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             visible={currentStep >= 0}
             question="What degree are you pursuing?"
             completed={!!degreeType && !showDegreeDropdown}
+            style={{ zIndex: showDegreeDropdown ? 9999 : 1 }}
           >
             <View style={{ position: 'relative', zIndex: showDegreeDropdown ? 9999 : 1 }}>
               <TextInput
@@ -253,6 +254,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             question="What's your field of study?"
             helpText={degreeType ? `Within ${degreeType}` : undefined}
             completed={!!fieldOfStudy && !showFieldDropdown}
+            style={{ zIndex: showFieldDropdown ? 9998 : 1 }}
           >
             <View style={{ position: 'relative', zIndex: showFieldDropdown ? 9999 : 1 }}>
               <TextInput
@@ -320,6 +322,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
           <AnimatedFormStep
             visible={currentStep >= 2}
             question="Expected graduation year?"
+            style={{ zIndex: 0 }}
             completed={isGradYearValid}
           >
             <TextInput
