@@ -120,20 +120,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
     }
   };
 
-  const handleSkipToFinal = () => {
-    if (!selectedType) {
-      showToast('Please select your experience level first', 'error');
-      return;
-    }
-    navigation.navigate('PersonalDetailsScreenDirect', {
-      userType,
-      experienceType: selectedType,
-      fromGoogleAuth,
-      googleUser,
-      skippedSteps: true,
-    });
-  };
-
   // ── Experience card component ────────────────────────────
   const ExperienceCard = ({ type, title, emoji, description, tags, animOpacity, animSlide }) => {
     const isSelected = selectedType === type;
@@ -249,21 +235,6 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
               animSlide={card2Slide}
             />
           </View>
-
-          {/* Skip pill */}
-          {!!selectedType && (
-            <Animated.View style={{ opacity: footerAnim }}>
-              <TouchableOpacity
-                style={styles.skipPillButton}
-                onPress={handleSkipToFinal}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="flash" size={14} color={colors.primary} />
-                <Text style={styles.skipPillButtonText}>Quick setup — skip details</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-              </TouchableOpacity>
-            </Animated.View>
-          )}
 
           {/* Continue button */}
           <Animated.View style={{ opacity: footerAnim, transform: [{ scale: btnScale }] }}>
@@ -488,26 +459,6 @@ const createStyles = (colors, responsive = {}) =>
     },
     cardTagTextSelected: {
       color: colors.primaryLight,
-    },
-
-    /* ── Skip pill ────────────────────── */
-    skipPillButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      alignSelf: 'center',
-      gap: 6,
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      borderRadius: 20,
-      backgroundColor: colors.primaryGlow,
-      borderWidth: 1,
-      borderColor: colors.primaryGlowStrong,
-      marginBottom: 20,
-    },
-    skipPillButtonText: {
-      fontSize: 13,
-      color: colors.primary,
-      fontWeight: '600',
     },
 
     /* ── Continue button ──────────────── */
