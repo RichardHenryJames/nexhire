@@ -105,6 +105,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
       navigation.navigate('EducationDetailsScreen', {
         userType,
         experienceType: selectedType,
+        totalSteps: 3,
         fromGoogleAuth,
         googleUser,
       });
@@ -112,6 +113,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
       navigation.navigate('WorkExperienceScreen', {
         userType,
         experienceType: selectedType,
+        totalSteps: 4,
         fromGoogleAuth,
         googleUser,
       });
@@ -180,7 +182,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   return (
     <RegistrationWrapper
       currentStep={1}
-      totalSteps={4}
+      totalSteps={selectedType === 'Student' ? 3 : selectedType === 'Experienced' ? 4 : 3}
       stepLabel="Choose your path"
       onBack={() => navigation.navigate('Login')}
       showTrustBadge={true}
