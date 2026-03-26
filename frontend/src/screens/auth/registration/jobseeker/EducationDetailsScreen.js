@@ -49,12 +49,14 @@ export default function EducationDetailsScreen({ navigation, route }) {
   });
 
   // ─── Reference data state ────────────────────────────────────
+  // Start with loading=true since we fetch on mount — prevents
+  // "No items available" flash if user opens modal before fetch completes.
   const [degreeTypes, setDegreeTypes] = useState([]);
   const [fieldsOfStudy, setFieldsOfStudy] = useState([]);
   const [yearsInCollege, setYearsInCollege] = useState([]);
-  const [loadingDegrees, setLoadingDegrees] = useState(false);
+  const [loadingDegrees, setLoadingDegrees] = useState(true);
   const [loadingFields, setLoadingFields] = useState(false);
-  const [loadingYears, setLoadingYears] = useState(false);
+  const [loadingYears, setLoadingYears] = useState(true);
 
   const [allColleges, setAllColleges] = useState([]);
   const [countries, setCountries] = useState([]);
@@ -283,25 +285,34 @@ export default function EducationDetailsScreen({ navigation, route }) {
     }
   };
 
+  // ─── Smart search helper ──────────────────────────────────────
+  // Strips dots, slashes, dashes, spaces so "btech" matches "B.Tech / B.E"
+  const normalize = (str) => str.toLowerCase().replace(/[.\-\/\s,()]/g, '');
+  const fuzzyMatch = (text, query) => {
+    const plain = text.toLowerCase();
+    const stripped = normalize(text);
+    return plain.includes(query) || stripped.includes(normalize(query));
+  };
+
   // ─── Filtered data for modals ────────────────────────────────
   const filteredData = useMemo(() => {
     if (activeModal === 'college') {
       if (!debouncedSearchTerm.trim()) return allColleges;
-      const s = debouncedSearchTerm.toLowerCase();
+      const s = debouncedSearchTerm.trim();
       return allColleges.filter(
         (c) =>
           c.id === 999999 ||
-          c.name.toLowerCase().includes(s) ||
-          (c.country && c.country.toLowerCase().includes(s)) ||
-          (c.state && c.state.toLowerCase().includes(s)) ||
-          (c.type && c.type.toLowerCase().includes(s))
+          fuzzyMatch(c.name, s) ||
+          (c.country && fuzzyMatch(c.country, s)) ||
+          (c.state && fuzzyMatch(c.state, s)) ||
+          (c.type && fuzzyMatch(c.type, s))
       );
     }
     if (activeModal === 'country') {
       if (!debouncedSearchTerm.trim()) return countries;
-      const s = debouncedSearchTerm.toLowerCase();
+      const s = debouncedSearchTerm.trim();
       return countries.filter(
-        (c) => c.name.toLowerCase().includes(s) || (c.region && c.region.toLowerCase().includes(s))
+        (c) => fuzzyMatch(c.name, s) || (c.region && fuzzyMatch(c.region, s))
       );
     }
     if (activeModal === 'degree') {
@@ -318,15 +329,15 @@ export default function EducationDetailsScreen({ navigation, route }) {
         });
         return result;
       }
-      const s = debouncedSearchTerm.toLowerCase();
+      const s = debouncedSearchTerm.trim();
       return degreeTypes.filter(
-        (d) => d.name.toLowerCase().includes(s) || d.category.toLowerCase().includes(s)
+        (d) => fuzzyMatch(d.name, s) || fuzzyMatch(d.category, s)
       );
     }
     if (activeModal === 'field') {
       if (!debouncedSearchTerm.trim()) return fieldsOfStudy;
-      const s = debouncedSearchTerm.toLowerCase();
-      return fieldsOfStudy.filter((f) => f.toLowerCase().includes(s));
+      const s = debouncedSearchTerm.trim();
+      return fieldsOfStudy.filter((f) => fuzzyMatch(f, s));
     }
     if (activeModal === 'year') {
       if (!debouncedSearchTerm.trim()) return yearsInCollege;
@@ -792,52 +803,70 @@ export default function EducationDetailsScreen({ navigation, route }) {
       <Modal
         visible={activeModal !== null}
         animationType="slide"
-        presentationStyle="pageSheet"
+        transparent={Platform.OS === 'web' && responsive.isDesktop}
+        presentationStyle={Platform.OS === 'web' ? undefined : 'pageSheet'}
         onRequestClose={closeModal}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalInner}>
+        <View style={styles.modalOverlay}>
+          {/* Desktop: click backdrop to close */}
+          {Platform.OS === 'web' && responsive.isDesktop && (
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={closeModal}
+            />
+          )}
+
+          <View style={styles.modalCard}>
+            {/* Mobile drag handle */}
+            {!(Platform.OS === 'web' && responsive.isDesktop) && (
+              <View style={styles.modalHandle}>
+                <View style={styles.modalHandleBar} />
+              </View>
+            )}
+
             {/* Header */}
             <View style={styles.modalHeader}>
               <TouchableOpacity onPress={closeModal} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color={colors.text} />
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
               <Text style={styles.modalTitle}>{getModalTitle()}</Text>
               {activeModal === 'college' ? (
-                <TouchableOpacity onPress={loadColleges} disabled={loading}>
-                  <Ionicons name="refresh" size={22} color={loading ? colors.gray400 : colors.primary} />
+                <TouchableOpacity onPress={loadColleges} disabled={loading} style={styles.modalRefreshBtn}>
+                  <Ionicons name="refresh" size={18} color={loading ? colors.gray400 : colors.primary} />
                 </TouchableOpacity>
               ) : activeModal === 'country' ? (
-                <TouchableOpacity onPress={loadCountries} disabled={loadingCountries}>
-                  <Ionicons
-                    name="refresh"
-                    size={22}
-                    color={loadingCountries ? colors.gray400 : colors.primary}
-                  />
+                <TouchableOpacity onPress={loadCountries} disabled={loadingCountries} style={styles.modalRefreshBtn}>
+                  <Ionicons name="refresh" size={18} color={loadingCountries ? colors.gray400 : colors.primary} />
                 </TouchableOpacity>
               ) : (
-                <View style={{ width: 22 }} />
+                <View style={{ width: 36 }} />
               )}
             </View>
 
+            {/* Accent line under header */}
+            <View style={styles.modalAccentLine} />
+
             {/* Search */}
             <View style={styles.searchContainer}>
-              <Ionicons name="search" size={18} color={colors.gray400} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder={getSearchPlaceholder()}
-                placeholderTextColor={colors.gray400}
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-                autoCorrect={false}
-                autoCapitalize="none"
-                autoFocus={false}
-              />
-              {searchTerm.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchTerm('')} style={{ padding: 4 }}>
-                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
-                </TouchableOpacity>
-              )}
+              <View style={styles.searchInner}>
+                <Ionicons name="search" size={16} color={colors.gray400} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={getSearchPlaceholder()}
+                  placeholderTextColor={colors.gray400}
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  autoFocus={false}
+                />
+                {searchTerm.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchTerm('')} style={{ padding: 4 }}>
+                    <Ionicons name="close-circle" size={16} color={colors.gray400} />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             {/* Loading */}
@@ -874,7 +903,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
             )}
 
             {/* List */}
-            {!((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country')) &&
+            {!((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country') || (loadingDegrees && activeModal === 'degree') || (loadingFields && activeModal === 'field') || (loadingYears && activeModal === 'year')) &&
               !error && (
                 <FlatList
                   data={filteredData}
@@ -1048,7 +1077,7 @@ const createStyles = (colors, responsive = {}) =>
     continueButtonTextDisabled: { color: colors.textMuted },
 
     /* ── Modal ────────────────────────────── */
-    modalContainer: {
+    modalOverlay: {
       flex: 1,
       backgroundColor: colors.background,
       ...(Platform.OS === 'web' && responsive.isDesktop
@@ -1060,62 +1089,96 @@ const createStyles = (colors, responsive = {}) =>
             bottom: 0,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             zIndex: 9999,
           }
         : {}),
     },
-    modalInner: {
+    modalCard: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: colors.surface,
       ...(Platform.OS === 'web' && responsive.isDesktop
         ? {
             flex: 'none',
             width: '100%',
-            maxWidth: 560,
-            height: '80vh',
+            maxWidth: 520,
+            height: '75vh',
+            maxHeight: 640,
             borderRadius: 20,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.borderLight,
+            boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
           }
         : {}),
+    },
+    modalHandle: {
+      alignItems: 'center',
+      paddingTop: 10,
+      paddingBottom: 2,
+    },
+    modalHandleBar: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: 'rgba(255, 255, 255, 0.15)',
     },
     modalHeader: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 20,
-      paddingVertical: 16,
-      paddingTop: Platform.OS === 'ios' ? 56 : 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderThin,
+      paddingVertical: 14,
+      paddingTop: Platform.OS === 'ios' ? 56 : Platform.OS === 'web' && responsive.isDesktop ? 20 : 14,
     },
     modalCloseBtn: {
       width: 36,
       height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.overlayLight,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalRefreshBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.06)',
       alignItems: 'center',
       justifyContent: 'center',
     },
     modalTitle: {
-      fontSize: 16,
+      fontSize: 17,
       fontWeight: '700',
       color: colors.text,
       flex: 1,
       textAlign: 'center',
       marginHorizontal: 8,
+      letterSpacing: -0.2,
+    },
+    modalAccentLine: {
+      height: 1,
+      marginHorizontal: 20,
+      backgroundColor: 'rgba(59, 130, 246, 0.2)',
     },
     searchContainer: {
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 8,
+    },
+    searchInner: {
       flexDirection: 'row',
       alignItems: 'center',
-      margin: 16,
-      backgroundColor: colors.inputBackground,
-      borderRadius: 12,
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: 14,
       paddingHorizontal: 14,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: 'rgba(255, 255, 255, 0.08)',
     },
     searchInput: {
       flex: 1,
@@ -1149,22 +1212,24 @@ const createStyles = (colors, responsive = {}) =>
       alignItems: 'center',
       paddingVertical: 14,
       paddingHorizontal: 20,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderFaint,
-      minHeight: 64,
+      marginHorizontal: 12,
+      marginVertical: 2,
+      borderRadius: 12,
+      minHeight: 60,
     },
     modalItemContent: { flex: 1 },
     modalItemText: { fontSize: 15, fontWeight: '500', color: colors.text, marginBottom: 2 },
-    modalItemSub: { fontSize: 13, color: colors.textMuted, marginBottom: 1 },
+    modalItemSub: { fontSize: 12, color: colors.textMuted, marginBottom: 1 },
     emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
     emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginTop: 16 },
     emptySubtext: { fontSize: 13, color: colors.textMuted, textAlign: 'center', marginTop: 8 },
     categoryHeader: {
-      backgroundColor: colors.primaryGlow,
+      backgroundColor: 'rgba(59, 130, 246, 0.06)',
       paddingVertical: 8,
       paddingHorizontal: 20,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.borderFaint,
+      marginHorizontal: 12,
+      marginTop: 8,
+      borderRadius: 8,
     },
     categoryHeaderText: {
       fontSize: 11,
