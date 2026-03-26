@@ -66,9 +66,10 @@ export default function WorkExperienceScreen({ navigation, route }) {
     setCurrentStep((prev) => (step > prev ? step : prev));
   }, []);
 
+  // Only advance to company step when dropdown is closed AND role is valid
   useEffect(() => {
-    if (jobTitle.trim().length >= 2) advanceTo(1);
-  }, [jobTitle, advanceTo]);
+    if (jobTitle.trim().length >= 2 && !showJobTitleDropdown) advanceTo(1);
+  }, [jobTitle, showJobTitleDropdown, advanceTo]);
 
   // ─── Load job roles ──────────────────────────────────────────
   useEffect(() => {
@@ -204,6 +205,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                             setJobTitle(role.Value);
                             setJobTitleSearch('');
                             setShowJobTitleDropdown(false);
+                            advanceTo(1); // immediately show company
                           }}
                         >
                           <Text style={styles.dropdownItemText}>{role.Value}</Text>

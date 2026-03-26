@@ -6,8 +6,6 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
-  Modal,
-  FlatList,
   TextInput,
   ActivityIndicator,
   Animated,
@@ -20,20 +18,9 @@ import { showToast } from '../../../../components/Toast';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 import AnimatedFormStep from '../../../../components/auth/AnimatedFormStep';
 
-// ─── Helpers ──────────────────────────────────────────────────
-const useDebounce = (value, delay) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  useEffect(() => {
-    const handler = setTimeout(() => setDebouncedValue(value), delay);
-    return () => clearTimeout(handler);
-  }, [value, delay]);
-  return debouncedValue;
-};
-
 /** Strip dots, slashes, spaces for fuzzy matching: "btech" matches "B.Tech / B.E" */
 const normalize = (s) => (s || '').toLowerCase().replace(/[.\s/\-_,()&]+/g, '');
 
-// ─── Screen ───────────────────────────────────────────────────
 export default function EducationDetailsScreen({ navigation, route }) {
   const colors = authDarkColors;
   const responsive = useResponsive();
@@ -41,69 +28,56 @@ export default function EducationDetailsScreen({ navigation, route }) {
 
   const { userType, experienceType, workExperienceData, totalSteps = 3 } = route.params;
 
-  // ─── Form state (slim: 3 fields) ────────────────────────────
-  const [formData, setFormData] = useState({
-    degreeType: '',
-    degreeTypeKey: '',
-    fieldOfStudy: '',
-    graduationYear: '',
-  });
+  // ─── Form state ──────────────────────────────────────────────
+  const [degreeType, setDegreeType] = useState('');
+  const [degreeTypeKey, setDegreeTypeKey] = useState('');
+  const [fieldOfStudy, setFieldOfStudy] = useState('');
+  const [graduationYear, setGraduationYear] = useState('');
 
-  // ─── Reference data ──────────────────────────────────────────
+  // ─── Degree dropdown ─────────────────────────────────────────
   const [degreeTypes, setDegreeTypes] = useState([]);
-  const [fieldsOfStudy, setFieldsOfStudy] = useState([]);
-  const [loadingDegrees, setLoadingDegrees] = useState(true); // true: loading on mount
-  const [loadingFields, setLoadingFields] = useState(false);
+  const [loadingDegrees, setLoadingDegrees] = useState(true);
+  const [degreeSearch, setDegreeSearch] = useState('');
+  const [showDegreeDropdown, setShowDegreeDropdown] = useState(false);
 
-  // ─── Modal state ─────────────────────────────────────────────
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeModal, setActiveModal] = useState(null); // 'degree' | 'field'
-  const debouncedSearch = useDebounce(searchTerm, 300);
+  // ─── Field of study dropdown ─────────────────────────────────
+  const [fieldsOfStudy, setFieldsOfStudy] = useState([]);
+  const [loadingFields, setLoadingFields] = useState(false);
+  const [fieldSearch, setFieldSearch] = useState('');
+  const [showFieldDropdown, setShowFieldDropdown] = useState(false);
 
   // ─── Progressive reveal ──────────────────────────────────────
   const scrollRef = useRef(null);
-  const [currentStep, setCurrentStep] = useState(0); // 0=degree, 1=field, 2=gradYear+continue
-  const stepLayouts = useRef({});
-
-  const scrollToStep = useCallback((idx) => {
-    setTimeout(() => {
-      const y = stepLayouts.current[idx];
-      if (y != null && scrollRef.current) {
-        scrollRef.current.scrollTo({ y: Math.max(0, y - 40), animated: true });
-      }
-    }, 250);
-  }, []);
+  const [currentStep, setCurrentStep] = useState(0); // 0=degree, 1=field, 2=gradYear
 
   const advanceTo = useCallback((step) => {
-    setCurrentStep((prev) => {
-      if (step > prev) { scrollToStep(step); return step; }
-      return prev;
-    });
-  }, [scrollToStep]);
+    setCurrentStep((prev) => (step > prev ? step : prev));
+  }, []);
 
-  // Degree selected → show field
+  // Degree selected + dropdown closed → show field
   useEffect(() => {
-    if (formData.degreeTypeKey) advanceTo(1);
-  }, [formData.degreeTypeKey, advanceTo]);
+    if (degreeTypeKey && !showDegreeDropdown) advanceTo(1);
+  }, [degreeTypeKey, showDegreeDropdown, advanceTo]);
 
-  // Field selected → show gradYear
+  // Field selected + dropdown closed → show gradYear
   useEffect(() => {
-    if (formData.fieldOfStudy) advanceTo(2);
-  }, [formData.fieldOfStudy, advanceTo]);
+    if (fieldOfStudy && !showFieldDropdown) advanceTo(2);
+  }, [fieldOfStudy, showFieldDropdown, advanceTo]);
 
-  // ─── Data loading ────────────────────────────────────────────
+  // ─── Load degree types on mount ──────────────────────────────
   useEffect(() => {
     (async () => {
       try {
         setLoadingDegrees(true);
         const response = await refopenAPI.getBulkReferenceMetadata(['DegreeType']);
         if (response?.success && response.data?.DegreeType) {
-          const items = response.data.DegreeType.filter((i) => i && i.Value).map((i) => ({
-            id: i.Category || String(i.ReferenceID),
-            name: i.Value,
-            category: i.Description || 'Others',
-          }));
-          setDegreeTypes(items);
+          setDegreeTypes(
+            response.data.DegreeType.filter((i) => i?.Value).map((i) => ({
+              id: i.Category || String(i.ReferenceID),
+              name: i.Value,
+              category: i.Description || 'Others',
+            }))
+          );
         }
       } catch (err) {
         console.error('Error loading degrees:', err);
@@ -113,156 +87,78 @@ export default function EducationDetailsScreen({ navigation, route }) {
     })();
   }, []);
 
-  const loadFieldsOfStudy = async (degreeKey) => {
-    if (!degreeKey) { setFieldsOfStudy([]); return; }
+  // ─── Load fields when degree changes ─────────────────────────
+  const loadFieldsOfStudy = async (key) => {
+    if (!key) { setFieldsOfStudy([]); return; }
     try {
       setLoadingFields(true);
-      const response = await refopenAPI.getReferenceMetadata('FieldOfStudy', degreeKey);
+      const response = await refopenAPI.getReferenceMetadata('FieldOfStudy', key);
       if (response.success && Array.isArray(response.data)) {
-        setFieldsOfStudy(response.data.filter((i) => i && i.Value).map((i) => i.Value));
+        setFieldsOfStudy(response.data.filter((i) => i?.Value).map((i) => i.Value));
       }
     } catch (err) {
-      console.error('Error loading fields:', err);
       setFieldsOfStudy([]);
     } finally {
       setLoadingFields(false);
     }
   };
 
-  // ─── Filtered data for modals ────────────────────────────────
-  const filteredData = useMemo(() => {
-    if (activeModal === 'degree') {
-      if (!debouncedSearch.trim()) {
-        // Group by category
-        const grouped = degreeTypes.reduce((acc, d) => {
-          if (!acc[d.category]) acc[d.category] = [];
-          acc[d.category].push(d);
-          return acc;
-        }, {});
-        const result = [];
-        Object.keys(grouped).forEach((cat) => {
-          result.push({ type: 'header', category: cat });
-          result.push(...grouped[cat]);
-        });
-        return result;
-      }
-      const s = normalize(debouncedSearch);
-      return degreeTypes.filter((d) => normalize(d.name).includes(s) || normalize(d.category).includes(s));
-    }
-    if (activeModal === 'field') {
-      if (!debouncedSearch.trim()) return fieldsOfStudy;
-      const s = normalize(debouncedSearch);
-      return fieldsOfStudy.filter((f) => normalize(f).includes(s));
-    }
-    return [];
-  }, [activeModal, debouncedSearch, degreeTypes, fieldsOfStudy]);
+  // ─── Filtered lists ──────────────────────────────────────────
+  const filteredDegrees = useMemo(() => {
+    if (!degreeSearch.trim()) return degreeTypes;
+    const s = normalize(degreeSearch);
+    return degreeTypes.filter((d) => normalize(d.name).includes(s) || normalize(d.category).includes(s));
+  }, [degreeSearch, degreeTypes]);
 
-  // ─── Validation ──────────────────────────────────────────────
-  const isGradYearValid = /^\d{4}$/.test(String(formData.graduationYear || '').trim());
-  const isContinueEnabled = Boolean(formData.degreeTypeKey && formData.fieldOfStudy && isGradYearValid);
+  const filteredFields = useMemo(() => {
+    if (!fieldSearch.trim()) return fieldsOfStudy;
+    const s = normalize(fieldSearch);
+    return fieldsOfStudy.filter((f) => normalize(f).includes(s));
+  }, [fieldSearch, fieldsOfStudy]);
 
   // ─── Handlers ────────────────────────────────────────────────
-  const handleContinue = () => {
-    if (!formData.degreeType) { showToast('Please select your degree type', 'error'); return; }
-    if (!formData.fieldOfStudy) { showToast('Please select your field of study', 'error'); return; }
-    if (!isGradYearValid) { showToast('Please enter a valid graduation year (YYYY)', 'error'); return; }
+  const handleSelectDegree = (item) => {
+    setDegreeType(item.name);
+    setDegreeTypeKey(item.id);
+    setDegreeSearch('');
+    setShowDegreeDropdown(false);
+    // Reset field since it depends on degree
+    setFieldOfStudy('');
+    setFieldSearch('');
+    setFieldsOfStudy([]);
+    loadFieldsOfStudy(item.id);
+    advanceTo(1);
+  };
 
-    const educationData = {
-      degreeType: formData.degreeType,
-      degreeTypeKey: formData.degreeTypeKey,
-      fieldOfStudy: formData.fieldOfStudy,
-      graduationYear: formData.graduationYear,
-    };
+  const handleSelectField = (item) => {
+    setFieldOfStudy(item);
+    setFieldSearch('');
+    setShowFieldDropdown(false);
+    advanceTo(2);
+  };
+
+  const isGradYearValid = /^\d{4}$/.test(String(graduationYear || '').trim());
+  const isContinueEnabled = Boolean(degreeTypeKey && fieldOfStudy && isGradYearValid);
+
+  const handleContinue = () => {
+    if (!degreeType) { showToast('Please select your degree type', 'error'); return; }
+    if (!fieldOfStudy) { showToast('Please select your field of study', 'error'); return; }
+    if (!isGradYearValid) { showToast('Enter a valid graduation year (YYYY)', 'error'); return; }
 
     navigation.navigate('PersonalDetailsScreenDirect', {
       userType,
       experienceType,
       totalSteps,
       workExperienceData,
-      educationData,
+      educationData: { degreeType, degreeTypeKey, fieldOfStudy, graduationYear },
       fromGoogleAuth: route?.params?.fromGoogleAuth,
       googleUser: route?.params?.googleUser,
     });
   };
 
-  const openModal = (type) => { setActiveModal(type); setSearchTerm(''); };
-  const closeModal = () => { setActiveModal(null); setSearchTerm(''); };
-
-  const handleSelection = (item, type) => {
-    if (type === 'degree') {
-      if (typeof item === 'string') {
-        setFormData({ ...formData, degreeType: item, degreeTypeKey: '', fieldOfStudy: '' });
-        setFieldsOfStudy([]);
-      } else {
-        setFormData({ ...formData, degreeType: item.name, degreeTypeKey: item.id, fieldOfStudy: '' });
-        setFieldsOfStudy([]);
-        loadFieldsOfStudy(item.id);
-      }
-    } else if (type === 'field') {
-      setFormData({ ...formData, fieldOfStudy: item });
-    }
-    closeModal();
-  };
-
-  // ─── Display helpers ─────────────────────────────────────────
-  const getModalTitle = () => activeModal === 'degree' ? 'Select Degree Type' : 'Select Field of Study';
-  const getSearchPlaceholder = () => activeModal === 'degree' ? 'Search degree types...' : 'Search fields...';
-  const isLoading = (activeModal === 'degree' && loadingDegrees) || (activeModal === 'field' && loadingFields);
-
-  // ─── Shared ChoiceChip ───────────────────────────────────────
-  const ChoiceChip = ({ value, placeholder, onPress, completed: done }) => (
-    <TouchableOpacity
-      style={[styles.choiceChip, done && styles.choiceChipCompleted]}
-      onPress={onPress}
-      activeOpacity={0.7}
-    >
-      <View style={styles.choiceChipInner}>
-        <View style={styles.choiceChipLeft}>
-          {done && (
-            <View style={styles.choiceChipCheck}>
-              <Ionicons name="checkmark" size={11} color="#fff" />
-            </View>
-          )}
-          <Text style={[styles.choiceChipValue, !value && styles.choiceChipPlaceholder]} numberOfLines={1}>
-            {value || placeholder}
-          </Text>
-        </View>
-        <Ionicons name="chevron-down" size={18} color={colors.gray400} />
-      </View>
-    </TouchableOpacity>
-  );
-
-  // ─── Modal item renderer ─────────────────────────────────────
-  const renderModalItem = ({ item, index }) => {
-    if (item.type === 'header') {
-      return (
-        <View key={`h-${item.category}`} style={styles.categoryHeader}>
-          <Text style={styles.categoryHeaderText}>{item.category}</Text>
-        </View>
-      );
-    }
-    const isDegree = activeModal === 'degree';
-    const isString = typeof item === 'string';
-    return (
-      <TouchableOpacity
-        key={`${activeModal}-${isString ? item : item.id}-${index}`}
-        style={styles.modalItem}
-        onPress={() => handleSelection(item, activeModal)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.modalItemContent}>
-          <Text style={styles.modalItemText}>{isDegree ? item.name : item}</Text>
-          {isDegree && item.category && <Text style={styles.modalItemSub}>{item.category}</Text>}
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const onStepLayout = (idx) => (e) => { stepLayouts.current[idx] = e.nativeEvent.layout.y; };
-
-  // ─── RENDER ──────────────────────────────────────────────────
   const stepNumber = experienceType === 'Student' ? 2 : 3;
 
+  // ─── RENDER ──────────────────────────────────────────────────
   return (
     <RegistrationWrapper
       currentStep={stepNumber}
@@ -281,73 +177,174 @@ export default function EducationDetailsScreen({ navigation, route }) {
           <View style={styles.header}>
             <Text style={styles.emoji}>🎓</Text>
             <Text style={styles.title}>Your education</Text>
-            <Text style={styles.subtitle}>Just 3 quick questions about your academic background</Text>
+            <Text style={styles.subtitle}>Just 3 quick questions</Text>
           </View>
 
-          {/* Step 0: Degree Type */}
+          {/* ── Step 0: Degree Type (inline dropdown) ──── */}
           <AnimatedFormStep
             visible={currentStep >= 0}
             question="What degree are you pursuing?"
-            completed={!!formData.degreeType}
-            onLayout={onStepLayout(0)}
+            completed={!!degreeType && !showDegreeDropdown}
           >
-            <ChoiceChip
-              value={formData.degreeType}
-              placeholder="Select degree type"
-              onPress={() => openModal('degree')}
-              completed={!!formData.degreeType}
-            />
+            <View style={{ position: 'relative', zIndex: 3000 }}>
+              <TextInput
+                style={[styles.textInput, degreeType && !showDegreeDropdown && styles.textInputCompleted]}
+                placeholder="Search degree type..."
+                placeholderTextColor={colors.textMuted}
+                value={showDegreeDropdown ? degreeSearch : degreeType}
+                onChangeText={(text) => {
+                  setDegreeSearch(text);
+                  if (!showDegreeDropdown) {
+                    setShowDegreeDropdown(true);
+                    setDegreeType('');
+                    setDegreeTypeKey('');
+                  }
+                }}
+                onFocus={() => {
+                  setShowDegreeDropdown(true);
+                  setDegreeSearch('');
+                }}
+                autoCorrect={false}
+              />
+              {degreeType && !showDegreeDropdown && (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => { setDegreeType(''); setDegreeTypeKey(''); setShowDegreeDropdown(true); setDegreeSearch(''); }}
+                >
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+
+              {showDegreeDropdown && (
+                <View style={styles.dropdownContainer}>
+                  {loadingDegrees ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.dropdownLoadingText}>Loading degrees...</Text>
+                    </View>
+                  ) : filteredDegrees.length > 0 ? (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                      {filteredDegrees.slice(0, 20).map((item, idx) => (
+                        <TouchableOpacity
+                          key={`deg-${item.id}-${idx}`}
+                          style={styles.dropdownItem}
+                          onPress={() => handleSelectDegree(item)}
+                        >
+                          <Text style={styles.dropdownItemText}>{item.name}</Text>
+                          <Text style={styles.dropdownItemSub}>{item.category}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.dropdownEmpty}>
+                      <Text style={styles.dropdownEmptyText}>
+                        {degreeSearch ? `No results for "${degreeSearch}"` : 'No degree types available'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
           </AnimatedFormStep>
 
-          {/* Step 1: Field of Study */}
+          {/* ── Step 1: Field of Study (inline dropdown) ── */}
           <AnimatedFormStep
             visible={currentStep >= 1}
             question="What's your field of study?"
-            helpText={formData.degreeType ? `Within ${formData.degreeType}` : undefined}
-            completed={!!formData.fieldOfStudy}
-            onLayout={onStepLayout(1)}
+            helpText={degreeType ? `Within ${degreeType}` : undefined}
+            completed={!!fieldOfStudy && !showFieldDropdown}
           >
-            <ChoiceChip
-              value={formData.fieldOfStudy}
-              placeholder={`Select field for ${formData.degreeType || 'your degree'}`}
-              onPress={() => {
-                if (!fieldsOfStudy.length && !loadingFields) loadFieldsOfStudy(formData.degreeTypeKey);
-                openModal('field');
-              }}
-              completed={!!formData.fieldOfStudy}
-            />
+            <View style={{ position: 'relative', zIndex: 2000 }}>
+              <TextInput
+                style={[styles.textInput, fieldOfStudy && !showFieldDropdown && styles.textInputCompleted]}
+                placeholder={`Search field for ${degreeType || 'your degree'}...`}
+                placeholderTextColor={colors.textMuted}
+                value={showFieldDropdown ? fieldSearch : fieldOfStudy}
+                onChangeText={(text) => {
+                  setFieldSearch(text);
+                  if (!showFieldDropdown) {
+                    setShowFieldDropdown(true);
+                    setFieldOfStudy('');
+                  }
+                }}
+                onFocus={() => {
+                  setShowFieldDropdown(true);
+                  setFieldSearch('');
+                  if (!fieldsOfStudy.length && degreeTypeKey && !loadingFields) {
+                    loadFieldsOfStudy(degreeTypeKey);
+                  }
+                }}
+                autoCorrect={false}
+              />
+              {fieldOfStudy && !showFieldDropdown && (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => { setFieldOfStudy(''); setShowFieldDropdown(true); setFieldSearch(''); }}
+                >
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+
+              {showFieldDropdown && (
+                <View style={styles.dropdownContainer}>
+                  {loadingFields ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.dropdownLoadingText}>Loading fields...</Text>
+                    </View>
+                  ) : filteredFields.length > 0 ? (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                      {filteredFields.slice(0, 20).map((item, idx) => (
+                        <TouchableOpacity
+                          key={`field-${item}-${idx}`}
+                          style={styles.dropdownItem}
+                          onPress={() => handleSelectField(item)}
+                        >
+                          <Text style={styles.dropdownItemText}>{item}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.dropdownEmpty}>
+                      <Text style={styles.dropdownEmptyText}>
+                        {fieldSearch ? `No results for "${fieldSearch}"` : 'No fields available'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
           </AnimatedFormStep>
 
-          {/* Step 2: Graduation Year + Continue */}
+          {/* ── Step 2: Graduation Year ─────────────────── */}
           <AnimatedFormStep
             visible={currentStep >= 2}
             question="Expected graduation year?"
             completed={isGradYearValid}
-            onLayout={onStepLayout(2)}
           >
             <TextInput
               style={[styles.textInput, isGradYearValid && styles.textInputCompleted]}
               placeholder={experienceType === 'Student' ? 'e.g. 2025 (expected)' : 'e.g. 2022'}
               placeholderTextColor={colors.textMuted}
-              value={formData.graduationYear}
-              onChangeText={(text) => setFormData({ ...formData, graduationYear: text })}
+              value={graduationYear}
+              onChangeText={setGraduationYear}
               keyboardType="numeric"
               maxLength={6}
             />
           </AnimatedFormStep>
 
-          {/* Continue Button */}
+          {/* ── Continue ────────────────────────────────── */}
           {isGradYearValid && (
             <Animated.View style={styles.continueWrap}>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryChip}>
-                  <Text style={styles.summaryChipText}>{formData.degreeType}</Text>
+                  <Text style={styles.summaryChipText}>{degreeType}</Text>
                 </View>
                 <View style={styles.summaryChip}>
-                  <Text style={styles.summaryChipText}>{formData.fieldOfStudy}</Text>
+                  <Text style={styles.summaryChipText}>{fieldOfStudy}</Text>
                 </View>
                 <View style={styles.summaryChip}>
-                  <Text style={styles.summaryChipText}>{formData.graduationYear}</Text>
+                  <Text style={styles.summaryChipText}>{graduationYear}</Text>
                 </View>
               </View>
 
@@ -366,68 +363,6 @@ export default function EducationDetailsScreen({ navigation, route }) {
           )}
         </View>
       </ScrollView>
-
-      {/* ── Universal Modal ─────────────────────────────────── */}
-      <Modal visible={activeModal !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={closeModal}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalAccentLine} />
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={closeModal} style={styles.modalCloseBtn}>
-                <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
-              <Text style={styles.modalTitle}>{getModalTitle()}</Text>
-              <View style={{ width: 36 }} />
-            </View>
-
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={18} color={colors.gray400} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder={getSearchPlaceholder()}
-                placeholderTextColor={colors.gray400}
-                value={searchTerm}
-                onChangeText={setSearchTerm}
-                autoCorrect={false}
-                autoCapitalize="none"
-              />
-              {searchTerm.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchTerm('')} style={{ padding: 4 }}>
-                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {isLoading && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={styles.loadingText}>Loading...</Text>
-              </View>
-            )}
-
-            {!isLoading && (
-              <FlatList
-                data={filteredData}
-                keyExtractor={(item, index) => `${activeModal}-${typeof item === 'string' ? item : item.id || item.category}-${index}`}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-                renderItem={renderModalItem}
-                ListEmptyComponent={() => (
-                  <View style={styles.emptyContainer}>
-                    <Ionicons name="school" size={48} color={colors.gray400} />
-                    <Text style={styles.emptyText}>
-                      {debouncedSearch ? `No results for "${debouncedSearch}"` : 'No items available'}
-                    </Text>
-                  </View>
-                )}
-                initialNumToRender={20}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-              />
-            )}
-          </View>
-        </View>
-      </Modal>
     </RegistrationWrapper>
   );
 }
@@ -447,27 +382,48 @@ const createStyles = (colors, responsive = {}) =>
     title: { fontSize: 28, fontWeight: '700', color: colors.text, letterSpacing: -0.4, marginBottom: 6 },
     subtitle: { fontSize: 15, color: colors.textSecondary, lineHeight: 22 },
 
-    choiceChip: {
-      backgroundColor: colors.inputBackground, borderRadius: 14,
-      paddingVertical: 16, paddingHorizontal: 18,
-      borderWidth: 1.5, borderColor: colors.border,
-    },
-    choiceChipCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
-    choiceChipInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    choiceChipLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 },
-    choiceChipCheck: { width: 18, height: 18, borderRadius: 9, backgroundColor: colors.success, alignItems: 'center', justifyContent: 'center' },
-    choiceChipValue: { fontSize: 15, color: colors.text, fontWeight: '500', flex: 1 },
-    choiceChipPlaceholder: { color: colors.textMuted, fontWeight: '400' },
-
     textInput: {
       backgroundColor: colors.inputBackground, borderWidth: 1.5, borderColor: colors.border,
-      borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18, fontSize: 15, color: colors.text,
+      borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18,
+      paddingRight: 44, // room for clear button
+      fontSize: 15, color: colors.text,
     },
     textInputCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
+    clearBtn: {
+      position: 'absolute', right: 14, top: 0, bottom: 0,
+      justifyContent: 'center',
+    },
 
+    /* Dropdown */
+    dropdownContainer: {
+      position: 'absolute', top: '100%', left: 0, right: 0,
+      backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border,
+      borderRadius: 14, marginTop: 6, maxHeight: 280, zIndex: 9999, elevation: 10,
+      shadowColor: colors.black, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16,
+      overflow: 'hidden',
+    },
+    dropdownScroll: { maxHeight: 280 },
+    dropdownItem: {
+      paddingVertical: 14, paddingHorizontal: 18,
+      borderBottomWidth: 1, borderBottomColor: colors.borderFaint,
+    },
+    dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
+    dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    dropdownLoading: {
+      padding: 24, alignItems: 'center', gap: 8,
+    },
+    dropdownLoadingText: { fontSize: 13, color: colors.textMuted },
+    dropdownEmpty: { padding: 24, alignItems: 'center' },
+    dropdownEmptyText: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
+
+    /* Summary + Continue */
     continueWrap: { marginTop: 8 },
     summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-    summaryChip: { backgroundColor: colors.primaryGlow, borderRadius: 20, paddingVertical: 6, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.primaryGlowStrong },
+    summaryChip: {
+      backgroundColor: colors.primaryGlow, borderRadius: 20,
+      paddingVertical: 6, paddingHorizontal: 14,
+      borderWidth: 1, borderColor: colors.primaryGlowStrong,
+    },
     summaryChipText: { fontSize: 12, fontWeight: '600', color: colors.primaryLight },
     continueButton: {
       backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -477,54 +433,4 @@ const createStyles = (colors, responsive = {}) =>
     continueButtonDisabled: { backgroundColor: colors.surfaceElevated, shadowOpacity: 0, elevation: 0 },
     continueButtonText: { color: colors.white, fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
     continueButtonTextDisabled: { color: colors.textMuted },
-
-    /* Modal */
-    modalOverlay: {
-      flex: 1, backgroundColor: colors.background,
-      ...(Platform.OS === 'web' && responsive.isDesktop ? {
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center', zIndex: 9999,
-      } : {}),
-    },
-    modalCard: {
-      flex: 1, backgroundColor: colors.surface,
-      ...(Platform.OS === 'web' && responsive.isDesktop ? {
-        flex: 'none', width: '100%', maxWidth: 560, height: '75vh',
-        borderRadius: 20, overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        borderWidth: 1, borderColor: colors.borderSubtle,
-        boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
-      } : {}),
-    },
-    modalAccentLine: {
-      height: 3, width: '100%',
-      backgroundColor: colors.primary,
-    },
-    modalHeader: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 20, paddingVertical: 16,
-      paddingTop: Platform.OS === 'ios' ? 56 : 16,
-      borderBottomWidth: 1, borderBottomColor: colors.borderThin,
-    },
-    modalCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.overlayLight, alignItems: 'center', justifyContent: 'center' },
-    modalTitle: { fontSize: 17, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center', marginHorizontal: 8 },
-    searchContainer: {
-      flexDirection: 'row', alignItems: 'center', margin: 16,
-      backgroundColor: colors.inputBackground, borderRadius: 12, paddingHorizontal: 14,
-      borderWidth: 1, borderColor: colors.border,
-    },
-    searchInput: { flex: 1, paddingVertical: 12, paddingHorizontal: 10, fontSize: 15, color: colors.text },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-    loadingText: { fontSize: 14, color: colors.textSecondary, marginTop: 16 },
-    emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-    emptyText: { fontSize: 15, color: colors.textSecondary, textAlign: 'center', marginTop: 16 },
-    modalItem: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingVertical: 14, paddingHorizontal: 20,
-      borderBottomWidth: 1, borderBottomColor: colors.borderFaint, minHeight: 56,
-    },
-    modalItemContent: { flex: 1 },
-    modalItemText: { fontSize: 15, fontWeight: '500', color: colors.text, marginBottom: 2 },
-    modalItemSub: { fontSize: 13, color: colors.textMuted },
-    categoryHeader: { backgroundColor: colors.primaryGlow, paddingVertical: 8, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: colors.borderFaint },
-    categoryHeaderText: { fontSize: 11, fontWeight: '700', color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.8 },
   });
