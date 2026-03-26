@@ -4578,11 +4578,11 @@ app.timer("unreadMessageReminderTimer", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - JOB RECOMMENDATION EMAILS (9:20 AM IST = 3:50 AM UTC, Every 2 Days)
+// TIMER TRIGGER - JOB RECOMMENDATION EMAILS (Daily at 9:20 AM IST = 3:50 AM UTC)
 // ========================================================================
 
 app.timer("dailyJobRecommendationEmail", {
-  schedule: "0 50 3 */2 * *", // 3:50 AM UTC = 9:20 AM IST every 2 days
+  schedule: "0 50 3 * * *", // Daily at 3:50 AM UTC = 9:20 AM IST
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `daily_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -5175,4 +5175,68 @@ app.http("rb-preview", {
   authLevel: "anonymous",
   route: "resume-builder/projects/{projectId}/preview",
   handler: withErrorHandling(rbPreviewResume),
+});
+
+// ========================================================================
+// ENGAGEMENT TIMER TRIGGERS
+// ========================================================================
+
+// Weekly Digest: Every Monday at 10:00 AM IST (4:30 AM UTC)
+app.timer("weeklyDigestTimer", {
+  schedule: "0 30 4 * * 1", // Monday 4:30 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[WeeklyDigest] Timer fired");
+    try {
+      const { sendWeeklyDigest } = await import("./src/services/engagement.service");
+      const result = await sendWeeklyDigest();
+      context.log(`[WeeklyDigest] ${result.sent} sent, ${result.failed} failed`);
+    } catch (e: any) { context.error(`[WeeklyDigest] Failed: ${e.message}`); }
+  },
+});
+
+// Saved Job Expiring Nudge: Daily at 8:00 AM IST (2:30 AM UTC)
+app.timer("savedJobExpiringTimer", {
+  schedule: "0 30 2 * * *", // Daily 2:30 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[SavedJobExpiring] Timer fired");
+    try {
+      const { sendSavedJobExpiringNudges } = await import("./src/services/engagement.service");
+      const result = await sendSavedJobExpiringNudges();
+      context.log(`[SavedJobExpiring] ${result.sent} users notified`);
+    } catch (e: any) { context.error(`[SavedJobExpiring] Failed: ${e.message}`); }
+  },
+});
+
+// Onboarding Drip Emails: Daily at 11:00 AM IST (5:30 AM UTC)
+app.timer("onboardingDripTimer", {
+  schedule: "0 30 5 * * *", // Daily 5:30 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[OnboardingDrip] Timer fired");
+    try {
+      const { sendOnboardingDripEmails } = await import("./src/services/engagement.service");
+      const result = await sendOnboardingDripEmails();
+      context.log(`[OnboardingDrip] ${result.sent} emails sent`);
+    } catch (e: any) { context.error(`[OnboardingDrip] Failed: ${e.message}`); }
+  },
+});
+
+// Similar Jobs Notifications: Daily at 12:30 PM IST (7:00 AM UTC)
+app.timer("similarJobsTimer", {
+  schedule: "0 0 7 * * *", // Daily 7:00 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[SimilarJobs] Timer fired");
+    try {
+      const { sendSimilarJobNotifications } = await import("./src/services/engagement.service");
+      const result = await sendSimilarJobNotifications();
+      context.log(`[SimilarJobs] ${result.sent} notifications sent`);
+    } catch (e: any) { context.error(`[SimilarJobs] Failed: ${e.message}`); }
+  },
 });

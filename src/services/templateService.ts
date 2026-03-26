@@ -1178,7 +1178,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a
     // ========================================
 
     'daily_job_recommendations': {
-        subject: '{{firstName}}, {{totalJobs}} jobs match your profile today',
+        subject: '{{firstName}}, new jobs match your profile today 💼',
         html: `
 <!DOCTYPE html>
 <html>
@@ -1199,7 +1199,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a
                                 Hi {{firstName}},
                             </p>
                             <p style="color: #555; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
-                                We found <strong>{{totalJobs}} jobs</strong> that match your profile. Here are the top picks for you:
+                                We found <strong>new jobs</strong> that match your profile. Here are the top picks for you:
                             </p>
                         </td>
                     </tr>
@@ -1217,7 +1217,7 @@ ${EMAIL_FOOTER.replace('{{footerText}}', "You're receiving this because you're a
                     <tr>
                         <td align="center" style="padding: 24px;">
                             <a href="{{appUrl}}/jobs" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 13px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                                Browse all {{totalJobs}} jobs
+                                Browse all matching jobs
                             </a>
                         </td>
                     </tr>
