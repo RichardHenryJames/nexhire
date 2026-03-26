@@ -292,11 +292,19 @@ export default function AIRecommendedJobsScreen({ navigation }) {
   }, [user, isJobSeeker, navigation, primaryResume, loadPrimaryResume, quickReferral]);
 
   return (
-    <View style={{ flex: 1 }}>
-      {/* AI Jobs Header — clean, centered, aesthetic */}
-      <View style={[styles.headerFixed, { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+    <View style={{ flex: 1, backgroundColor: '#111827' }}>
+      {/* Premium AI Header */}
+      <LinearGradient
+        colors={['#1e1b4b', '#312e81', '#1e1b4b']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[styles.headerFixed, { borderBottomWidth: 0 }]}
+      >
+        {/* Decorative orbs */}
+        <View style={{ position: 'absolute', top: -40, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(139, 92, 246, 0.12)' }} />
+        <View style={{ position: 'absolute', bottom: -30, left: 40, width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(99, 102, 241, 0.08)' }} />
+
         <View style={styles.header}>
-          {/* Back button — mobile only */}
           {!(Platform.OS === 'web' && responsive.isDesktop) && (
             <TouchableOpacity 
               onPress={() => {
@@ -308,20 +316,35 @@ export default function AIRecommendedJobsScreen({ navigation }) {
               }} 
               style={styles.backButton}
             >
-              <Ionicons name="arrow-back" size={24} color={colors.text} />
+              <Ionicons name="arrow-back" size={22} color="rgba(255,255,255,0.9)" />
             </TouchableOpacity>
           )}
           <View style={styles.headerCenter}>
             <View style={styles.headerTitleRow}>
-              <Image source={AILogo} style={{ width: 22, height: 22 }} resizeMode="contain" />
-              <Text style={[styles.headerTitle, { color: colors.text }]}>AI Recommended Jobs</Text>
+              <Ionicons name="sparkles" size={18} color="#c4b5fd" />
+              <Text style={[styles.headerTitle, { color: '#fff', letterSpacing: 0.3 }]}>AI Recommended Jobs</Text>
             </View>
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-              {aiJobs.length > 0 ? `${aiJobs.length} AI-matched jobs for you` : 'Personalized job matches powered by AI'}
-            </Text>
           </View>
         </View>
-      </View>
+      </LinearGradient>
+
+      {/* Accent line — thin gradient separator */}
+      <LinearGradient
+        colors={['transparent', '#7c3aed', '#a78bfa', '#7c3aed', 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{ height: 1.5, opacity: 0.5 }}
+      />
+
+      {/* Match count bar */}
+      {aiJobs.length > 0 && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, gap: 6 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e' }} />
+          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5 }}>
+            {aiJobs.length} personalized matches
+          </Text>
+        </View>
+      )}
 
       <WalletRechargeModal
         visible={showWalletModal}
@@ -430,7 +453,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 const createStyles = (colors, responsive = {}) => StyleSheet.create({
 container: {
   flex: 1,
-  backgroundColor: colors.background,
+  backgroundColor: '#111827',
   ...(Platform.OS === 'web' && responsive.isDesktop ? {
     alignItems: 'center',
   } : {}),
@@ -448,6 +471,7 @@ headerFixed: {
   right: 0,
   zIndex: 10000,
   elevation: 10,
+  overflow: 'hidden',
 },
 header: {
   flexDirection: 'row',

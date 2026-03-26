@@ -1313,14 +1313,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       );
     }
 
-    // Inline loading bar when quick filter is tapped (keep showing old jobs underneath)
-    const filterLoadingBanner = filterLoading && data.length > 0 ? (
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 8, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <ActivityIndicator size="small" color={colors.primary} />
-        <Text style={{ fontSize: 12, color: colors.textSecondary }}>{loadingMessages[loadingMsgIdx]}</Text>
-      </View>
-    ) : null;
-
     if (smartPaginating && data.length === 0) {
       return (
       <View style={styles.loadingContainer}>
@@ -1361,11 +1353,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
     // Simple job cards without animations - with Ad integration
     const elements = [];
-    
-    // Show inline filter loading banner above jobs
-    if (filterLoadingBanner) {
-      elements.push(<View key="filter-loading">{filterLoadingBanner}</View>);
-    }
     
     data.forEach((job, index) => {
       const id = job.JobID || index;
@@ -1811,6 +1798,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                   onPress={chip.onPress}
                 >
                   <Text style={[styles.quickFilterText, chip.active && styles.quickFilterActiveText]}>{chip.label}</Text>
+                  {chip.active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                 </TouchableOpacity>
               ))}
               {isFiltersDirty(filters) && (
@@ -2027,6 +2015,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                         }}
                       >
                         <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>{lvl.label}</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                       </TouchableOpacity>
                     </View>
                   );
@@ -2046,6 +2035,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                         }}
                       >
                         <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Company Direct</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                       </TouchableOpacity>
                     </View>
                   );
@@ -2063,6 +2053,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                         onPress={() => { onQuickToggleWorkplace(remoteWt.WorkplaceTypeID); }}
                       >
                         <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Remote</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                       </TouchableOpacity>
                     </View>
                   );
@@ -2082,6 +2073,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                         }}
                       >
                         <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Last 24h</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                       </TouchableOpacity>
                     </View>
                   );
