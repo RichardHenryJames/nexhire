@@ -329,6 +329,23 @@ export default function JobsScreen({ navigation, route }) {
   const [reloadKey, setReloadKey] = useState(0);
   const triggerReload = useCallback(() => { setFilterLoading(true); setReloadKey(k => k + 1); }, []);
 
+  // Dynamic header title based on active filters
+  const dynamicTitle = useMemo(() => {
+    if (filterF500) return 'Top MNC Jobs';
+    if (debouncedQuery) return `Results for "${debouncedQuery}"`;
+    
+    const parts = [];
+    if (filters.experienceMin === 0 && filters.experienceMax === 2) parts.push('Fresher / Entry Level');
+    else if (filters.experienceMin === 3 && filters.experienceMax === 5) parts.push('Mid Level');
+    else if (filters.experienceMin === 6) parts.push('Senior');
+    if (filters.directOnly) parts.push('Company Direct');
+    if ((filters.workplaceTypeIds || []).length > 0) parts.push('Remote');
+    if (filters.postedWithinDays === 1) parts.push('Last 24h');
+    
+    if (parts.length > 0) return parts.join(' · ') + ' Jobs';
+    return screenTitle || 'Browse Jobs';
+  }, [filters, filterF500, debouncedQuery, screenTitle]);
+
   // Draft for modal
   const [filterDraft, setFilterDraft] = useState({ ...EMPTY_FILTERS });
   const [showFilters, setShowFilters] = useState(!!openFilterSection);
@@ -1918,27 +1935,6 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       </View>
     );
   }
-
-  // Dynamic header title based on active filters
-  const dynamicTitle = useMemo(() => {
-    if (filterF500) return 'Top MNC Jobs';
-    if (debouncedQuery) return `Results for "${debouncedQuery}"`;
-    
-    const parts = [];
-    // Experience filter
-    if (filters.experienceMin === 0 && filters.experienceMax === 2) parts.push('Fresher / Entry Level');
-    else if (filters.experienceMin === 3 && filters.experienceMax === 5) parts.push('Mid Level');
-    else if (filters.experienceMin === 6) parts.push('Senior');
-    // Direct filter
-    if (filters.directOnly) parts.push('Company Direct');
-    // Remote filter
-    if ((filters.workplaceTypeIds || []).length > 0) parts.push('Remote');
-    // Time filter
-    if (filters.postedWithinDays === 1) parts.push('Last 24h');
-    
-    if (parts.length > 0) return parts.join(' · ') + ' Jobs';
-    return screenTitle || 'Browse Jobs';
-  }, [filters, filterF500, debouncedQuery, screenTitle]);
 
   // Normal render (mobile + non-split desktop)
   return (
