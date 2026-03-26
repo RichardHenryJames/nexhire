@@ -405,9 +405,9 @@ const createStyles = (colors, responsive = {}) =>
     },
     dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
     dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-    dropdownLoading: { padding: 24, alignItems: 'center', gap: 8 },
+    dropdownLoading: { padding: 24, alignItems: 'center', gap: 8, backgroundColor: '#2D2D2D' },
     dropdownLoadingText: { fontSize: 13, color: colors.textMuted },
-    dropdownEmpty: { padding: 20, alignItems: 'center', gap: 8 },
+    dropdownEmpty: { padding: 20, alignItems: 'center', gap: 8, backgroundColor: '#2D2D2D' },
     dropdownEmptyText: { fontSize: 13, color: colors.success },
     dropdownUseBtn: {
       backgroundColor: colors.primaryGlow, borderRadius: 10,
@@ -420,7 +420,8 @@ const createStyles = (colors, responsive = {}) =>
     orgDropdownItem: {
       flexDirection: 'row', alignItems: 'center',
       paddingVertical: 12, paddingHorizontal: 16,
-      borderBottomWidth: 1, borderBottomColor: colors.borderFaint,
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: '#2D2D2D',
     },
     orgDropdownLogo: {
       width: 32, height: 32, borderRadius: 8, marginRight: 12,
@@ -432,7 +433,7 @@ const createStyles = (colors, responsive = {}) =>
     },
 
     /* Continue */
-    continueWrap: { marginTop: 24 },
+    continueWrap: { marginTop: 24, position: 'relative', zIndex: 0 },
     continueButton: {
       backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
       paddingVertical: 18, paddingHorizontal: 24, borderRadius: 16, gap: 8,

@@ -411,14 +411,14 @@ const createStyles = (colors, responsive = {}) =>
     dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
     dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
     dropdownLoading: {
-      padding: 24, alignItems: 'center', gap: 8,
+      padding: 24, alignItems: 'center', gap: 8, backgroundColor: '#2D2D2D',
     },
     dropdownLoadingText: { fontSize: 13, color: colors.textMuted },
-    dropdownEmpty: { padding: 24, alignItems: 'center' },
+    dropdownEmpty: { padding: 24, alignItems: 'center', backgroundColor: '#2D2D2D' },
     dropdownEmptyText: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
 
     /* Summary + Continue */
-    continueWrap: { marginTop: 8 },
+    continueWrap: { marginTop: 8, position: 'relative', zIndex: 0 },
     summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
     summaryChip: {
       backgroundColor: colors.primaryGlow, borderRadius: 20,

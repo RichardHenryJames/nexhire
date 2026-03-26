@@ -102,6 +102,8 @@ export default function AnimatedFormStep({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 28,
+    position: 'relative',
+    overflow: 'visible',
   },
   questionRow: {
     flexDirection: 'row',
