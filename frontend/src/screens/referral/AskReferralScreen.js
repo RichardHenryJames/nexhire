@@ -193,7 +193,7 @@ export default function AskReferralScreen({ navigation, route }) {
   if (isAuthenticated && !isJobSeeker) return (<View style={s.gate}><Ionicons name="lock-closed" size={64} color={colors.gray400} /><Text style={s.gateTitle}>Access Restricted</Text><Text style={s.gateSub}>Only job seekers can request referrals.</Text></View>);
 
   // ── Summary panel (desktop sidebar / mobile bottom) ──────────
-  const SummaryPanel = () => (
+  const summaryJSX = (
     <View style={s.summary}>
       <Text style={s.summaryTitle}>Order Summary</Text>
       <View style={s.summaryDivider} />
@@ -247,7 +247,7 @@ export default function AskReferralScreen({ navigation, route }) {
   );
 
   // ── Form fields ──────────────────────────────────────────────
-  const FormContent = () => (
+  const formJSX = (
     <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 120 }} keyboardShouldPersistTaps="handled">
 
       {/* Backdrop for company dropdown */}
@@ -397,13 +397,13 @@ export default function AskReferralScreen({ navigation, route }) {
       {isDesktop ? (
         /* ── DESKTOP: Split layout ──────────────────────── */
         <View style={s.desktopLayout}>
-          <View style={s.desktopLeft}><FormContent /></View>
-          <View style={s.desktopRight}><SummaryPanel /></View>
+          <View style={s.desktopLeft}>{formJSX}</View>
+          <View style={s.desktopRight}>{summaryJSX}</View>
         </View>
       ) : (
         /* ── MOBILE: Single column + sticky bottom ──────── */
         <View style={s.inner}>
-          <FormContent />
+          {formJSX}
           <View style={s.stickyBottom}>
             <View style={s.stickySummary}>
               <Text style={s.stickyLabel}>Total</Text>
