@@ -19,6 +19,7 @@ import refopenAPI from '../../../../services/api';
 import { showToast } from '../../../../components/Toast';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
 import AnimatedFormStep from '../../../../components/auth/AnimatedFormStep';
+import DatePicker from '../../../../components/DatePicker';
 
 const useDebounce = (value, delay = 300) => {
   const [debounced, setDebounced] = useState(value);
@@ -36,8 +37,11 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
   const { userType, experienceType, totalSteps = 4 } = route.params;
 
-  // ─── Form (slim: 2 fields) ──────────────────────────────────
+  // ─── Form ──────────────────────────────────────────────────────
   const [jobTitle, setJobTitle] = useState('');
+  const [isCurrent, setIsCurrent] = useState(true);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [organizationId, setOrganizationId] = useState(null);
   const [selectedOrg, setSelectedOrg] = useState(null);
@@ -57,16 +61,21 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
   // ─── Progressive reveal ──────────────────────────────────────
   const scrollRef = useRef(null);
-  const [currentStep, setCurrentStep] = useState(0); // 0=jobTitle, 1=company+continue
+  const [currentStep, setCurrentStep] = useState(0); // 0=jobTitle, 1=dates, 2=company+continue
 
   const advanceTo = useCallback((step) => {
     setCurrentStep((prev) => (step > prev ? step : prev));
   }, []);
 
-  // Only advance to company step when dropdown is closed AND role is valid
+  // Job title selected → show dates
   useEffect(() => {
     if (jobTitle.trim().length >= 2 && !showJobDropdown) advanceTo(1);
   }, [jobTitle, showJobDropdown, advanceTo]);
+
+  // Start date filled → show company (if current, or if end date also filled)
+  useEffect(() => {
+    if (startDate && (isCurrent || endDate)) advanceTo(2);
+  }, [startDate, isCurrent, endDate, advanceTo]);
 
   // ─── Load job roles on mount ─────────────────────────────────
   useEffect(() => {
@@ -128,12 +137,22 @@ export default function WorkExperienceScreen({ navigation, route }) {
       showToast('Please enter your job title', 'error');
       return;
     }
+    if (!startDate) {
+      showToast('Please select a start date', 'error');
+      return;
+    }
+    if (!isCurrent && !endDate) {
+      showToast('Please select an end date', 'error');
+      return;
+    }
 
     const workExperienceData = [{
       jobTitle: jobTitle.trim(),
       companyName: companyName?.trim() || null,
       organizationId: organizationId || null,
-      isCurrentPosition: true,
+      startDate: startDate || null,
+      endDate: isCurrent ? null : (endDate || null),
+      isCurrentPosition: isCurrent,
     }];
 
     navigation.navigate('EducationDetailsScreen', {
@@ -146,7 +165,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
     });
   };
 
-  const isContinueEnabled = jobTitle.trim().length >= 2;
+  const isContinueEnabled = jobTitle.trim().length >= 2 && !!startDate && (isCurrent || !!endDate);
 
   // Filtered job roles
   const filteredJobs = useMemo(() => {
@@ -181,7 +200,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
           <View style={styles.header}>
             <Text style={styles.emoji}>💼</Text>
             <Text style={styles.title}>Where do you work?</Text>
-            <Text style={styles.subtitle}>Just 2 quick things — we'll use this for matching</Text>
+            <Text style={styles.subtitle}>Tell us about your role — we'll use this for matching</Text>
           </View>
 
           {/* ── Step 0: Job Title (inline dropdown) ──── */}
@@ -265,9 +284,65 @@ export default function WorkExperienceScreen({ navigation, route }) {
             </View>
           </AnimatedFormStep>
 
-          {/* ── Step 1: Company (inline dropdown) + Continue ──── */}
+          {/* ── Step 1: Is Current + Start Date + End Date ──── */}
           <AnimatedFormStep
             visible={currentStep >= 1}
+            question="When did you start?"
+            completed={!!startDate}
+            style={{ zIndex: 1 }}
+          >
+            {/* Current / Not current toggle */}
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[styles.toggleBtn, isCurrent && styles.toggleBtnActive]}
+                onPress={() => setIsCurrent(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.toggleBtnText, isCurrent && styles.toggleBtnTextActive]}>
+                  Currently here
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleBtn, !isCurrent && styles.toggleBtnActive]}
+                onPress={() => setIsCurrent(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.toggleBtnText, !isCurrent && styles.toggleBtnTextActive]}>
+                  Past role
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: 16 }}>
+              <DatePicker
+                label="Start Date"
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="Select start date"
+                required
+                maximumDate={new Date()}
+                colors={colors}
+              />
+            </View>
+
+            {!isCurrent && (
+              <View style={{ marginTop: 12 }}>
+                <DatePicker
+                  label="End Date"
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="Select end date"
+                  required
+                  maximumDate={new Date()}
+                  colors={colors}
+                />
+              </View>
+            )}
+          </AnimatedFormStep>
+
+          {/* ── Step 2: Company (inline dropdown) + Continue ──── */}
+          <AnimatedFormStep
+            visible={currentStep >= 2}
             question="Which company?"
             helpText="Optional — you can skip this"
             completed={!!companyName && !showCompanyDropdown}
@@ -357,7 +432,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
           </AnimatedFormStep>
 
           {/* ── Continue Button ─────────────────────────── */}
-          {currentStep >= 1 && (
+          {currentStep >= 2 && (
             <Animated.View style={styles.continueWrap}>
               <TouchableOpacity
                 style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}
@@ -441,6 +516,25 @@ const createStyles = (colors, responsive = {}) =>
     orgDropdownLogoPlaceholder: {
       width: 32, height: 32, borderRadius: 8, marginRight: 12,
       backgroundColor: colors.borderFaint, alignItems: 'center', justifyContent: 'center',
+    },
+
+    /* Toggle */
+    toggleRow: {
+      flexDirection: 'row', gap: 10,
+    },
+    toggleBtn: {
+      flex: 1, paddingVertical: 12, borderRadius: 12,
+      borderWidth: 1.5, borderColor: colors.border,
+      backgroundColor: colors.inputBackground, alignItems: 'center',
+    },
+    toggleBtnActive: {
+      borderColor: colors.primary, backgroundColor: colors.primaryGlow,
+    },
+    toggleBtnText: {
+      fontSize: 14, fontWeight: '600', color: colors.textMuted,
+    },
+    toggleBtnTextActive: {
+      color: colors.primary,
     },
 
     /* Continue */
