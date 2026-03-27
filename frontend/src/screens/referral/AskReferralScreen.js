@@ -310,10 +310,10 @@ export default function AskReferralScreen({ navigation, route }) {
       {/* Mode selector (pills with info inside) */}
       <View style={s.segment} onLayout={(e) => { segmentY.current = e.nativeEvent.layout.y; }}>
         <TouchableOpacity style={[s.segBtn, openToAny && s.segBtnActive, openToAny && { backgroundColor: '#8B5CF6'+'12', borderColor: '#8B5CF6' }]} onPress={() => switchMode(true)} activeOpacity={0.8}>
+          {openToAny && <View style={s.recBadge}><Text style={s.recBadgeText}>RECOMMENDED</Text></View>}
           <View style={s.segBtnRow}>
             <Ionicons name="globe-outline" size={18} color={openToAny ? '#8B5CF6' : colors.gray400} />
             <Text style={[s.segBtnTitle, openToAny && { color: '#8B5CF6' }]}>Open</Text>
-            <Text style={[s.segBtnPrice, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Get referred by employees from multiple companies with a single request</Text>}
         </TouchableOpacity>
@@ -321,9 +321,9 @@ export default function AskReferralScreen({ navigation, route }) {
           <View style={s.segBtnRow}>
             <Ionicons name="business-outline" size={18} color={!openToAny ? colors.primary : colors.gray400} />
             <Text style={[s.segBtnTitle, !openToAny && { color: colors.primary }]}>Specific</Text>
-            <Text style={[s.segBtnPrice, !openToAny && { color: colors.primary }]}>₹{pricing.referralRequestCost}</Text>
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Targeted referral from an employee at a specific company</Text>}
+          <Text style={s.segBtnFrom}>from ₹{pricing.referralRequestCost}</Text>
         </TouchableOpacity>
       </View>
 
@@ -461,7 +461,7 @@ export default function AskReferralScreen({ navigation, route }) {
           <Animated.View style={[s.stickyModePill, { transform: [{ translateY: stickyAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }]}>
             <View style={[s.stickyModeActive, openToAny ? { backgroundColor: '#8B5CF6' + '15', borderColor: '#8B5CF6' + '40' } : { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}>
               <Ionicons name={openToAny ? 'globe-outline' : 'business-outline'} size={16} color={openToAny ? '#8B5CF6' : colors.primary} />
-              <Text style={[s.stickyModeText, { color: openToAny ? '#8B5CF6' : colors.primary }]}>{openToAny ? 'Open' : 'Specific'} · ₹{effectiveCost}</Text>
+              <Text style={[s.stickyModeText, { color: openToAny ? '#8B5CF6' : colors.primary }]}>{openToAny ? 'Open' : 'Specific'}</Text>
             </View>
             <TouchableOpacity style={[s.stickyModeSwitch, { backgroundColor: openToAny ? colors.primary + '10' : '#8B5CF6' + '10' }]} onPress={() => switchMode(!openToAny)} activeOpacity={0.7}>
               <Ionicons name="swap-horizontal" size={14} color={openToAny ? colors.primary : '#8B5CF6'} />
@@ -554,12 +554,14 @@ const createStyles = (c, r = {}) => {
 
     /* Segmented control (expanded pills) */
     segment: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, gap: 8 },
-    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
+    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, position: 'relative', overflow: 'hidden' },
     segBtnActive: { borderColor: c.primary, backgroundColor: c.primary+'08' },
     segBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     segBtnTitle: { fontSize: 15, fontWeight: '700', color: c.textMuted, flex: 1 },
-    segBtnPrice: { fontSize: 15, fontWeight: '700', color: c.textMuted },
     segBtnDesc: { fontSize: 12, color: c.textSecondary, lineHeight: 16, marginTop: 6 },
+    segBtnFrom: { fontSize: 11, color: c.textMuted, marginTop: 4 },
+    recBadge: { position: 'absolute', top: 0, right: 0, backgroundColor: '#8B5CF6', paddingHorizontal: 8, paddingVertical: 3, borderBottomLeftRadius: 8 },
+    recBadgeText: { fontSize: 8, fontWeight: '700', color: '#fff', letterSpacing: 0.8 },
 
     /* Refund badge (mobile) */
     refundBadgeMobile: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginHorizontal: 16, marginBottom: 20, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: (c.success||'#22C55E')+'08', borderRadius: 8, borderWidth: 1, borderColor: (c.success||'#22C55E')+'18' },
