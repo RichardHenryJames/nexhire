@@ -315,7 +315,7 @@ export default function AskReferralScreen({ navigation, route }) {
             <Text style={[s.segBtnTitle, openToAny && { color: '#8B5CF6' }]}>Open</Text>
             <Text style={[s.segBtnPrice, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>
           </View>
-          {!isDesktop && openToAny && <Text style={s.segBtnDesc}>Get referred by employees from multiple companies with a single request</Text>}
+          {!isDesktop && <Text style={s.segBtnDesc}>Get referred by employees from multiple companies with a single request</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={[s.segBtn, !openToAny && s.segBtnActive]} onPress={() => switchMode(false)} activeOpacity={0.8}>
           <View style={s.segBtnRow}>
@@ -323,7 +323,7 @@ export default function AskReferralScreen({ navigation, route }) {
             <Text style={[s.segBtnTitle, !openToAny && { color: colors.primary }]}>Specific</Text>
             <Text style={[s.segBtnPrice, !openToAny && { color: colors.primary }]}>₹{pricing.referralRequestCost}</Text>
           </View>
-          {!isDesktop && !openToAny && <Text style={s.segBtnDesc}>Targeted referral from an employee at a specific company</Text>}
+          {!isDesktop && <Text style={s.segBtnDesc}>Targeted referral from an employee at a specific company</Text>}
         </TouchableOpacity>
       </View>
 
