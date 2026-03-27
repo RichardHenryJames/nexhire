@@ -261,18 +261,18 @@ export default function AskReferralScreen({ navigation, route }) {
 
       {/* Social proof in sidebar (desktop) */}
       {tickerCompany && (
-        <View style={s.sideProof}>
-          <View style={s.proofStats}>
-            <View style={s.proofDot} /><Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text><Text style={s.proofLabel}>online</Text>
-            <Text style={s.proofSep}>·</Text><Text style={s.proofCount}>{dailyRefCount}</Text><Text style={s.proofLabel}>today</Text>
-          </View>
-          <Animated.View style={[s.tickerRow, { opacity: tickerFade }]}>
-            <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
-            <Text style={s.tickerText}>Referred at </Text>
-            <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
-            <View style={s.liveBadge}><View style={s.liveDot} /><Text style={s.liveText}>LIVE</Text></View>
-          </Animated.View>
-        </View>
+        <Animated.View style={[s.sideProof, { opacity: tickerFade, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5 }]}>
+          <View style={s.proofDot} />
+          <Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text>
+          <Text style={s.proofLabel}>online</Text>
+          <Text style={s.proofSep}>·</Text>
+          <Text style={s.proofCount}>{dailyRefCount}</Text>
+          <Text style={s.proofLabel}>today</Text>
+          <Text style={s.proofSep}>·</Text>
+          <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
+          <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
+          <View style={s.liveBadge}><View style={s.liveDot} /><Text style={s.liveText}>LIVE</Text></View>
+        </Animated.View>
       )}
     </View>
   );
@@ -284,20 +284,20 @@ export default function AskReferralScreen({ navigation, route }) {
       {/* Backdrop for company dropdown */}
       {showCompanyDD && <Pressable style={Platform.OS==='web'?{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:9990}:{position:'absolute',top:-1000,left:-1000,right:-1000,bottom:-1000,zIndex:9990}} onPress={() => { setShowCompanyDD(false); setCompanySearch(''); }} />}
 
-      {/* Social proof (mobile only — desktop shows in sidebar) */}
+      {/* Social proof (mobile only) */}
       {!isDesktop && tickerCompany && (
-        <View style={s.proofBar}>
-          <View style={s.proofStats}>
-            <View style={s.proofDot} /><Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text><Text style={s.proofLabel}>referrers online</Text>
-            <Text style={s.proofSep}>·</Text><Text style={s.proofCount}>{dailyRefCount}</Text><Text style={s.proofLabel}>today</Text>
-          </View>
-          <Animated.View style={[s.tickerRow, { opacity: tickerFade }]}>
-            <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
-            <Text style={s.tickerText}>Referred at </Text>
-            <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
-            <View style={s.liveBadge}><View style={s.liveDot} /><Text style={s.liveText}>LIVE</Text></View>
-          </Animated.View>
-        </View>
+        <Animated.View style={[s.proofBar, { opacity: tickerFade }]}>
+          <View style={s.proofDot} />
+          <Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text>
+          <Text style={s.proofLabel}>online</Text>
+          <Text style={s.proofSep}>·</Text>
+          <Text style={s.proofCount}>{dailyRefCount}</Text>
+          <Text style={s.proofLabel}>referrals today</Text>
+          <Text style={s.proofSep}>·</Text>
+          <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
+          <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
+          <View style={s.liveBadge}><View style={s.liveDot} /><Text style={s.liveText}>LIVE</Text></View>
+        </Animated.View>
       )}
 
       {/* Header (desktop only — mobile uses TabHeader title) */}
@@ -533,18 +533,15 @@ const createStyles = (c, r = {}) => {
     },
     stickySwitchText: { fontSize: 12, fontWeight: '600', color: c.primary },
 
-    /* Social proof (mobile) */
-    proofBar: { marginHorizontal: 16, marginTop: 8, marginBottom: 4, backgroundColor: c.surface, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: c.border },
-    proofStats: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginBottom: 4 },
+    /* Social proof (single row) */
+    proofBar: { marginHorizontal: 16, marginTop: 8, marginBottom: 4, backgroundColor: c.surface, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, borderColor: c.border, flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap', justifyContent: 'center' },
     proofDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.success },
     proofOnline: { fontSize: 11, color: c.success, fontWeight: '700' },
     proofLabel: { fontSize: 11, color: c.textMuted },
     proofSep: { fontSize: 10, color: c.textMuted },
     proofCount: { fontSize: 11, color: c.primary, fontWeight: '700' },
-    tickerRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.border },
-    tickerLogo: { width: 20, height: 20, borderRadius: 4, backgroundColor: c.background },
-    tickerText: { fontSize: 11, color: c.textMuted },
-    tickerCompany: { fontSize: 11, fontWeight: '700', color: c.text, flex: 1 },
+    tickerLogo: { width: 18, height: 18, borderRadius: 4, backgroundColor: c.background },
+    tickerCompany: { fontSize: 11, fontWeight: '700', color: c.text },
     liveBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 99, backgroundColor: (c.success||'#22C55E')+'12', borderWidth: 1, borderColor: (c.success||'#22C55E')+'25' },
     liveDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: c.success, marginRight: 3 },
     liveText: { fontSize: 7, fontWeight: '700', color: c.success, letterSpacing: 0.5 },
