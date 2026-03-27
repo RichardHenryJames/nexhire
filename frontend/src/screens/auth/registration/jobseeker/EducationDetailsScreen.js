@@ -108,13 +108,25 @@ export default function EducationDetailsScreen({ navigation, route }) {
   const filteredDegrees = useMemo(() => {
     if (!degreeSearch.trim()) return degreeTypes;
     const s = normalize(degreeSearch);
-    return degreeTypes.filter((d) => normalize(d.name).includes(s) || normalize(d.category).includes(s));
+    const matches = degreeTypes.filter((d) => normalize(d.name).includes(s) || normalize(d.category).includes(s));
+    matches.sort((a, b) => {
+      const aStarts = normalize(a.name).startsWith(s) ? 0 : 1;
+      const bStarts = normalize(b.name).startsWith(s) ? 0 : 1;
+      return aStarts - bStarts;
+    });
+    return matches;
   }, [degreeSearch, degreeTypes]);
 
   const filteredFields = useMemo(() => {
     if (!fieldSearch.trim()) return fieldsOfStudy;
     const s = normalize(fieldSearch);
-    return fieldsOfStudy.filter((f) => normalize(f).includes(s));
+    const matches = fieldsOfStudy.filter((f) => normalize(f).includes(s));
+    matches.sort((a, b) => {
+      const aStarts = normalize(a).startsWith(s) ? 0 : 1;
+      const bStarts = normalize(b).startsWith(s) ? 0 : 1;
+      return aStarts - bStarts;
+    });
+    return matches;
   }, [fieldSearch, fieldsOfStudy]);
 
   // ─── Handlers ────────────────────────────────────────────────

@@ -167,7 +167,14 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const filteredJobs = useMemo(() => {
     if (!jobSearch.trim()) return jobRoles;
     const s = jobSearch.toLowerCase();
-    return jobRoles.filter((r) => r.Value?.toLowerCase().includes(s));
+    const matches = jobRoles.filter((r) => r.Value?.toLowerCase().includes(s));
+    // Sort: starts-with first, then contains
+    matches.sort((a, b) => {
+      const aStarts = a.Value?.toLowerCase().startsWith(s) ? 0 : 1;
+      const bStarts = b.Value?.toLowerCase().startsWith(s) ? 0 : 1;
+      return aStarts - bStarts;
+    });
+    return matches;
   }, [jobSearch, jobRoles]);
 
   // ─── RENDER ──────────────────────────────────────────────────
