@@ -59,9 +59,7 @@ export default function AskReferralScreen({ navigation, route }) {
   const [salaryCurrency, setSalaryCurrency] = useState('INR');
   const [salaryPeriod, setSalaryPeriod] = useState('Annual');
   const [preferredLocations, setPreferredLocations] = useState('');
-  const [showOptional, setShowOptional] = useState(false);
-  const [jobUrl, setJobUrl] = useState('');
-  const [errors, setErrors] = useState({});
+  const [jobUrl, setJobUrl] = useState('');\n  const [errors, setErrors] = useState({});
 
   // Modals
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -379,28 +377,42 @@ export default function AskReferralScreen({ navigation, route }) {
         {errors.resume && <Text style={s.fieldError}>{errors.resume}</Text>}
       </AnimatedFormStep>
 
-      {/* Optional */}
+      {/* Optional fields — always visible with friendly labels */}
       {step >= 2 && (
         <View style={{ paddingHorizontal: 16 }}>
-          <TouchableOpacity style={s.optToggle} onPress={()=>setShowOptional(!showOptional)} activeOpacity={0.7}>
-            <Ionicons name={showOptional?'chevron-up':'chevron-down'} size={18} color={colors.textSecondary}/>
-            <Text style={s.optToggleText}>{showOptional?'Hide':'Show'} optional details</Text>
-          </TouchableOpacity>
-          {showOptional && (
-            <View>
-              {openToAny && <>
-                <View style={s.fg}><Text style={s.fLabel}>Expected Salary</Text>
-                  <View style={s.salaryRow}>
-                    <TouchableOpacity style={s.salPre} onPress={()=>setSalaryCurrency(c=>c==='INR'?'USD':'INR')}><Text style={s.salPreText}>{salaryCurrency==='INR'?'₹':'$'}</Text></TouchableOpacity>
-                    <TextInput style={s.salInput} placeholder={salaryCurrency==='INR'?'15,00,000':'120,000'} placeholderTextColor={colors.gray500} value={minSalary} onChangeText={v=>setMinSalary(v.replace(/[^0-9]/g,''))} keyboardType="numeric" maxLength={10}/>
-                    <TouchableOpacity style={s.salSuf} onPress={()=>setSalaryPeriod(p=>p==='Annual'?'Monthly':'Annual')}><Text style={s.salSufText}>{salaryPeriod==='Annual'?'/yr':'/mo'}</Text></TouchableOpacity>
-                  </View>
-                </View>
-                <View style={s.fg}><Text style={s.fLabel}>Preferred Locations</Text><TextInput style={s.fieldInput} placeholder="e.g. Bangalore, Hyderabad, Remote" placeholderTextColor={colors.gray500} value={preferredLocations} onChangeText={setPreferredLocations} maxLength={200}/><Text style={s.fieldHint}>Comma-separated</Text></View>
-              </>}
-              <View style={s.fg}><Text style={s.fLabel}>Message to Referrer</Text><TextInput style={s.textArea} placeholder="Why you're a great fit..." placeholderTextColor={colors.gray500} value={referralMessage} onChangeText={setReferralMessage} multiline numberOfLines={3} maxLength={1000} textAlignVertical="top"/><Text style={s.fieldHint}>{referralMessage.length}/1000</Text></View>
+          {/* Job URL (Specific mode) */}
+          {!openToAny && (
+            <View style={s.fg}>
+              <Text style={s.fLabel}>Job listing URL <Text style={s.optLabel}>(optional)</Text></Text>
+              <TextInput style={s.fieldInput} placeholder="https://careers.company.com/job/12345" placeholderTextColor={colors.gray500} value={jobUrl} onChangeText={setJobUrl} keyboardType="url" autoCapitalize="none" />
             </View>
           )}
+
+          {/* Salary (Open mode) */}
+          {openToAny && (
+            <View style={s.fg}>
+              <Text style={s.fLabel}>Expected salary? <Text style={s.optLabel}>(optional)</Text></Text>
+              <View style={s.salaryRow}>
+                <TouchableOpacity style={s.salPre} onPress={()=>setSalaryCurrency(c=>c==='INR'?'USD':'INR')}><Text style={s.salPreText}>{salaryCurrency==='INR'?'₹':'$'}</Text></TouchableOpacity>
+                <TextInput style={s.salInput} placeholder={salaryCurrency==='INR'?'15,00,000':'120,000'} placeholderTextColor={colors.gray500} value={minSalary} onChangeText={v=>setMinSalary(v.replace(/[^0-9]/g,''))} keyboardType="numeric" maxLength={10}/>
+                <TouchableOpacity style={s.salSuf} onPress={()=>setSalaryPeriod(p=>p==='Annual'?'Monthly':'Annual')}><Text style={s.salSufText}>{salaryPeriod==='Annual'?'/yr':'/mo'}</Text></TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Locations (Open mode) */}
+          {openToAny && (
+            <View style={s.fg}>
+              <Text style={s.fLabel}>Preferred locations? <Text style={s.optLabel}>(optional)</Text></Text>
+              <TextInput style={s.fieldInput} placeholder="e.g. Bangalore, Hyderabad, Remote" placeholderTextColor={colors.gray500} value={preferredLocations} onChangeText={setPreferredLocations} maxLength={200}/>
+            </View>
+          )}
+
+          {/* Message */}
+          <View style={s.fg}>
+            <Text style={s.fLabel}>Message for the referrer? <Text style={s.optLabel}>(optional)</Text></Text>
+            <TextInput style={s.textArea} placeholder="Why you're a great fit for this role..." placeholderTextColor={colors.gray500} value={referralMessage} onChangeText={setReferralMessage} multiline numberOfLines={3} maxLength={1000} textAlignVertical="top"/>
+          </View>
         </View>
       )}
     </ScrollView>
