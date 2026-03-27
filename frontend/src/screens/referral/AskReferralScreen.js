@@ -269,11 +269,12 @@ export default function AskReferralScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Get Referred</Text>
-        <Text style={s.headerSub}>Fill in the details and we'll match you with the right referrer</Text>
-      </View>
+      {/* Header (desktop only — mobile uses TabHeader title) */}
+      {isDesktop && (
+        <View style={s.header}>
+          <Text style={s.headerTitle}>Get Referred</Text>
+        </View>
+      )}
 
       {/* Mode: segmented control */}
       <View style={s.segment}>
@@ -407,7 +408,7 @@ export default function AskReferralScreen({ navigation, route }) {
   // ── RENDER ───────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS==='ios'?'padding':'height'}>
-      <TabHeader navigation={navigation} showWallet walletBalance={loadingWallet?null:walletBalance} />
+      <TabHeader navigation={navigation} title={!isDesktop ? 'Get Referred' : undefined} showWallet walletBalance={loadingWallet?null:walletBalance} />
 
       {isDesktop ? (
         /* ── DESKTOP: Split layout ──────────────────────── */
