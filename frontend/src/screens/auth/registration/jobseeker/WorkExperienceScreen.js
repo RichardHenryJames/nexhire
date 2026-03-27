@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Image,
   Animated,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { authDarkColors } from '../../../../styles/authDarkColors';
@@ -169,6 +170,14 @@ export default function WorkExperienceScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
+          {/* Backdrop to close dropdowns on outside tap */}
+          {(showJobDropdown || showCompanyDropdown) && (
+            <Pressable
+              style={Platform.OS === 'web' ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9990 } : { position: 'absolute', top: -1000, left: -1000, right: -1000, bottom: -1000, zIndex: 9990 }}
+              onPress={() => { setShowJobDropdown(false); setShowCompanyDropdown(false); }}
+            />
+          )}
+
           <View style={styles.header}>
             <Text style={styles.emoji}>💼</Text>
             <Text style={styles.title}>Where do you work?</Text>
