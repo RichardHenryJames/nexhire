@@ -1,17 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  FlatList,
-  Animated,
+  View, Text, TextInput, ScrollView, TouchableOpacity, StyleSheet,
+  ActivityIndicator, KeyboardAvoidingView, Platform, Animated, Pressable, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,9 +16,17 @@ import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
-import AdCard from '../../components/ads/AdCard';
 import TabHeader from '../../components/TabHeader';
 import CachedImage from '../../components/CachedImage';
+
+const useDebounce = (value, delay = 300) => {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const h = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(h);
+  }, [value, delay]);
+  return debounced;
+};
 
 export default function AskReferralScreen({ navigation, route }) {
   const { user, isJobSeeker, isAuthenticated } = useAuth();
@@ -37,132 +35,81 @@ export default function AskReferralScreen({ navigation, route }) {
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 
-  // ─── Auth Guard ────────────────────────────────────────────────────
+  // ─── Auth Guard ──────────────────────────────────────────────
   const requireAuth = (action) => {
     if (!isAuthenticated || !user) {
-      navigation.navigate('Auth', {
-        screen: 'Login',
-        params: { returnTo: 'AskReferral', returnParams: route?.params },
-      });
+      navigation.navigate('Auth', { screen: 'Login', params: { returnTo: 'AskReferral', returnParams: route?.params } });
       return false;
     }
     return true;
   };
 
-  // ─── Loading States ────────────────────────────────────────────────
+  // ─── Loading States ──────────────────────────────────────────
   const [loadingWallet, setLoadingWallet] = useState(true);
   const [loadingResumes, setLoadingResumes] = useState(false);
-  const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // ─── Data ──────────────────────────────────────────────────────────
+  // ─── Data ────────────────────────────────────────────────────
   const [resumes, setResumes] = useState([]);
-  const [companies, setCompanies] = useState([]);
   const [walletBalance, setWalletBalance] = useState(0);
 
-  // ─── Fortune 500 Showcase ──────────────────────────────────────────
-  const [fortune500Companies, setFortune500Companies] = useState([]);
-  const [currentCompanyIndex, setCurrentCompanyIndex] = useState(0);
-  const fadeAnim = useState(new Animated.Value(1))[0];
-  const [showRotationTick, setShowRotationTick] = useState(false);
-  const rotationTimeoutRef = useRef(null);
-  const tickTimeoutRef = useRef(null);
+  // ─── Mode ────────────────────────────────────────────────────
+  const [openToAny, setOpenToAny] = useState(true);
 
-  // Daily-seeded referral count — matches EngagementHub's cumulative curve
-  const dailyRefCount = useMemo(() => {
-    const d = new Date();
-    const daySeed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-    const hash = Math.abs(Math.floor(Math.sin(daySeed * 2) * 10000));
-    const hr = d.getHours();
-    const min = d.getMinutes();
-    const HOURLY_RATE = [.3,.2,.2,.1,.1,.2,.5,1.2,2.0,3.0,3.8,4.2,4.5,4.3,4.0,3.5,3.0,2.5,2.0,1.5,1.0,.7,.5,.4];
-    const CUM = HOURLY_RATE.reduce((acc, v) => { acc.push((acc.length ? acc[acc.length - 1] : 0) + v); return acc; }, []);
-    const DAY_TOTAL = CUM[CUM.length - 1];
-    const cumNow = (hr > 0 ? CUM[hr - 1] : 0) + HOURLY_RATE[hr] * (min / 60);
-    const dailyTarget = 150 + (hash % 200); // 150–349
-    return Math.max(5, Math.round(dailyTarget * (cumNow / DAY_TOTAL)));
-  }, []);
-
-  // Referrers online — time-of-day curve, 1000-20000 range, refreshes every 2 min
-  const [referrersOnline, setReferrersOnline] = useState(() => {
-    const d = new Date();
-    const daySeed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-    const hash = Math.abs(Math.floor(Math.sin(daySeed * 6) * 10000));
-    const hr = d.getHours();
-    const min = d.getMinutes();
-    const TOD = [.08,.06,.05,.04,.04,.06,.12,.25,.45,.65,.82,.95,1.0,.98,.95,.88,.78,.65,.50,.38,.28,.20,.14,.10];
-    const curMul = TOD[hr];
-    const nxtMul = TOD[(hr + 1) % 24];
-    const timeMul = curMul + (nxtMul - curMul) * (min / 60);
-    const slot = Math.floor((hr * 60 + min) / 2);
-    const jitter = (Math.abs(Math.floor(Math.sin((daySeed + slot) * 11) * 100)) % 201) - 100;
-    const base = 3000 + (hash % 5000); // 3000-7999 base
-    return Math.max(1000, Math.round(base + 13000 * timeMul + jitter)); // ~1000 at 3am, ~20000 at 1pm
-  });
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const d = new Date();
-      const daySeed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
-      const hash = Math.abs(Math.floor(Math.sin(daySeed * 6) * 10000));
-      const hr = d.getHours();
-      const min = d.getMinutes();
-      const TOD = [.08,.06,.05,.04,.04,.06,.12,.25,.45,.65,.82,.95,1.0,.98,.95,.88,.78,.65,.50,.38,.28,.20,.14,.10];
-      const curMul = TOD[hr];
-      const nxtMul = TOD[(hr + 1) % 24];
-      const timeMul = curMul + (nxtMul - curMul) * (min / 60);
-      const slot = Math.floor((hr * 60 + min) / 2);
-      const jitter = (Math.abs(Math.floor(Math.sin((daySeed + slot) * 11) * 100)) % 201) - 100;
-      const base = 3000 + (hash % 5000);
-      setReferrersOnline(Math.max(1000, Math.round(base + 13000 * timeMul + jitter)));
-    }, 2 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // ─── Mode Selection (Open to Any = DEFAULT / flagship) ─────────────
-  const [openToAnyCompany, setOpenToAnyCompany] = useState(true);
-
-  // ─── Company Selection ─────────────────────────────────────────────
+  // ─── Company (inline dropdown) ───────────────────────────────
   const [selectedCompany, setSelectedCompany] = useState(null);
-  const [showCompanyModal, setShowCompanyModal] = useState(false);
-  const [companySearchTerm, setCompanySearchTerm] = useState('');
+  const [companySearch, setCompanySearch] = useState('');
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [orgResults, setOrgResults] = useState([]);
+  const [orgLoading, setOrgLoading] = useState(false);
+  const debouncedCompanySearch = useDebounce(companySearch, 300);
   const preSelectedOrganization = route?.params?.preSelectedOrganization;
 
-  // ─── Form State ────────────────────────────────────────────────────
-  const [formData, setFormData] = useState({
-    jobId: '',
-    jobTitle: '',
-    jobUrl: '',
-    referralMessage: '',
-    selectedResumeId: '',
-    minSalary: '',
-    salaryCurrency: 'INR',
-    salaryPeriod: 'Annual',
-    preferredLocations: '',
-  });
+  // ─── Form ────────────────────────────────────────────────────
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobId, setJobId] = useState('');
+  const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [referralMessage, setReferralMessage] = useState('');
   const [errors, setErrors] = useState({});
-  const [showOptionalFields, setShowOptionalFields] = useState(false);
 
-  // ─── Modals & Overlays ─────────────────────────────────────────────
+  // ─── Modals ──────────────────────────────────────────────────
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [walletModalData, setWalletModalData] = useState({
-    currentBalance: 0,
-    requiredAmount: pricing.referralRequestCost,
-  });
+  const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: 0 });
   const [showResumeModal, setShowResumeModal] = useState(false);
-  const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [referralCompanyName, setReferralCompanyName] = useState('');
   const [referralBroadcastTime, setReferralBroadcastTime] = useState(null);
-  const [showReferralConfirmModal, setShowReferralConfirmModal] = useState(false);
 
-  // ─── Header Search ─────────────────────────────────────────────────
-  const [headerSearchQuery, setHeaderSearchQuery] = useState('');
-  const [headerSearchResults, setHeaderSearchResults] = useState([]);
-  const [headerSearchLoading, setHeaderSearchLoading] = useState(false);
-  const [showHeaderSearchResults, setShowHeaderSearchResults] = useState(false);
+  // ─── Progressive Reveal ──────────────────────────────────────
+  // Step 0: mode toggle (always visible)
+  // Step 1: company (if specific) or job title (if open)
+  // Step 2: job title (if specific) / resume (if open)
+  // Step 3: resume + submit
+  const [currentStep, setCurrentStep] = useState(0);
+  const advanceTo = useCallback((s) => setCurrentStep((p) => (s > p ? s : p)), []);
 
-  // ─── Pricing ───────────────────────────────────────────────────────
+  // Auto-advance based on mode + selections
+  useEffect(() => { advanceTo(1); }, []); // mode is pre-selected, show next immediately
+
+  useEffect(() => {
+    if (openToAny) {
+      // Open: just need job title
+      if (jobTitle.trim().length >= 2) advanceTo(2);
+    } else {
+      // Specific: need company first
+      if (selectedCompany) advanceTo(2);
+    }
+  }, [openToAny, selectedCompany, jobTitle, advanceTo]);
+
+  useEffect(() => {
+    if (!openToAny && selectedCompany && jobTitle.trim().length >= 2) advanceTo(3);
+    if (openToAny && jobTitle.trim().length >= 2) advanceTo(2); // resume step
+  }, [openToAny, selectedCompany, jobTitle, advanceTo]);
+
+  // ─── Pricing ─────────────────────────────────────────────────
   const getEffectiveCost = () => {
-    if (openToAnyCompany) return pricing.openToAnyReferralCost;
+    if (openToAny) return pricing.openToAnyReferralCost;
     const tier = selectedCompany?.tier || 'Standard';
     if (tier === 'Elite') return pricing.eliteReferralCost || 199;
     if (tier === 'Premium') return pricing.premiumReferralCost || 99;
@@ -170,2161 +117,543 @@ export default function AskReferralScreen({ navigation, route }) {
   };
   const effectiveCost = getEffectiveCost();
 
-  // ═══════════════════════════════════════════════════════════════════
-  // EFFECTS
-  // ═══════════════════════════════════════════════════════════════════
+  // ─── Hide header ─────────────────────────────────────────────
+  useEffect(() => { navigation.setOptions({ headerShown: false }); }, [navigation]);
 
-  // Hide default navigation header
-  useEffect(() => {
-    navigation.setOptions({ headerShown: false });
-  }, [navigation]);
-
-  // ─── Header Search ─────────────────────────────────────────────────
-  const searchOrganizationsHeader = useCallback(async (query) => {
-    if (!query || query.trim().length < 2) {
-      setHeaderSearchResults([]);
-      setShowHeaderSearchResults(false);
-      return;
-    }
-    setHeaderSearchLoading(true);
-    try {
-      const result = await refopenAPI.getOrganizations(query.trim(), 10);
-      if (result.success && result.data) {
-        const filtered = result.data.filter(org => org.id !== 999999);
-        setHeaderSearchResults(filtered);
-        setShowHeaderSearchResults(filtered.length > 0);
-      } else {
-        setHeaderSearchResults([]);
-        setShowHeaderSearchResults(false);
-      }
-    } catch (error) {
-      console.error('Organization search error:', error);
-      setHeaderSearchResults([]);
-      setShowHeaderSearchResults(false);
-    } finally {
-      setHeaderSearchLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => searchOrganizationsHeader(headerSearchQuery), 300);
-    return () => clearTimeout(timer);
-  }, [headerSearchQuery, searchOrganizationsHeader]);
-
-  // ─── Initial Data Load (staggered for performance) ─────────────────
+  // ─── Data Loading ────────────────────────────────────────────
   useEffect(() => {
     if (isAuthenticated && user) {
       loadWalletBalance();
-      setTimeout(() => loadResumes(), 100);
+      loadResumes();
     } else {
       setLoadingWallet(false);
-      setLoadingResumes(false);
     }
-    setTimeout(() => loadCompanies(), 300);
-
-    // Auto-select organization if passed from route params
     if (preSelectedOrganization) {
       setSelectedCompany(preSelectedOrganization);
-      setOpenToAnyCompany(false);
-      setFormData(prev => ({ ...prev, companyName: preSelectedOrganization.name }));
+      setOpenToAny(false);
     }
   }, [preSelectedOrganization]);
-
-  // ─── Fortune 500 Rotation (social proof) ───────────────────────────
-  useEffect(() => {
-    const f500WithLogos = companies.filter(
-      org =>
-        (org.isFortune500 === 1 || org.isFortune500 === true ||
-         org.isFortune500 === '1' || org.isFortune500 === 'true') &&
-        org.logoURL
-    );
-    if (f500WithLogos.length === 0) return;
-
-    const checkActiveHours = () => {
-      const hour = new Date().getHours();
-      return hour >= 9 || hour <= 1;
-    };
-    if (!checkActiveHours()) return;
-
-    let rotationCompanies = fortune500Companies;
-    if (rotationCompanies.length === 0) {
-      rotationCompanies = [...f500WithLogos].sort(() => Math.random() - 0.5);
-      setFortune500Companies(rotationCompanies);
-    }
-
-    const getRandomDelayMs = () => Math.floor(Math.random() * 3000) + 3000; // 3-6s
-
-    const scheduleNextRotation = () => {
-      if (rotationTimeoutRef.current) clearTimeout(rotationTimeoutRef.current);
-      rotationTimeoutRef.current = setTimeout(rotateCompany, getRandomDelayMs());
-    };
-
-    const rotateCompany = () => {
-      if (!checkActiveHours() || !rotationCompanies?.length) return;
-
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }).start(() => {
-        setCurrentCompanyIndex(prev => (prev + 1) % rotationCompanies.length);
-
-        setShowRotationTick(true);
-        if (tickTimeoutRef.current) clearTimeout(tickTimeoutRef.current);
-        tickTimeoutRef.current = setTimeout(() => setShowRotationTick(false), 2000);
-
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-
-        scheduleNextRotation();
-      });
-    };
-
-    scheduleNextRotation();
-
-    return () => {
-      if (rotationTimeoutRef.current) clearTimeout(rotationTimeoutRef.current);
-      if (tickTimeoutRef.current) clearTimeout(tickTimeoutRef.current);
-    };
-  }, [companies, fortune500Companies, fadeAnim]);
-
-  // ═══════════════════════════════════════════════════════════════════
-  // DATA LOADERS
-  // ═══════════════════════════════════════════════════════════════════
 
   const loadResumes = async () => {
     setLoadingResumes(true);
     try {
-      const resumesRes = await refopenAPI.getUserResumes();
-      if (resumesRes?.success && resumesRes.data) {
-        const resumeList = resumesRes.data || [];
-        const sortedResumes = [...resumeList].sort((a, b) => {
+      const res = await refopenAPI.getUserResumes();
+      if (res?.success && res.data) {
+        const sorted = [...res.data].sort((a, b) => {
           if (a.IsPrimary && !b.IsPrimary) return -1;
           if (!a.IsPrimary && b.IsPrimary) return 1;
-          return (
-            new Date(b.UploadedAt || b.CreatedAt || 0) -
-            new Date(a.UploadedAt || a.CreatedAt || 0)
-          );
+          return new Date(b.UploadedAt || 0) - new Date(a.UploadedAt || 0);
         });
-        setResumes(sortedResumes);
-
-        // Auto-select most recent resume
-        const mostRecent = [...resumeList].sort(
-          (a, b) =>
-            new Date(b.UploadedAt || b.CreatedAt || 0) -
-            new Date(a.UploadedAt || a.CreatedAt || 0)
-        )[0];
-        if (mostRecent?.ResumeID) {
-          setFormData(prev => ({ ...prev, selectedResumeId: mostRecent.ResumeID }));
-        }
-      } else {
-        setResumes([]);
+        setResumes(sorted);
+        if (sorted[0]?.ResumeID) setSelectedResumeId(sorted[0].ResumeID);
       }
-    } catch (error) {
-      console.error('Error loading resumes:', error);
-      setResumes([]);
-      showToast('Failed to load resumes. Please try again.', 'error');
-    } finally {
-      setLoadingResumes(false);
-    }
-  };
-
-  const loadCompanies = async () => {
-    setLoadingCompanies(true);
-    try {
-      const result = await refopenAPI.getOrganizations('');
-      if (result?.success && result.data && Array.isArray(result.data)) {
-        setCompanies(result.data);
-      } else {
-        setCompanies([]);
-      }
-    } catch (error) {
-      console.error('Failed to load companies:', error);
-      setCompanies([]);
-    } finally {
-      setLoadingCompanies(false);
-    }
+    } catch (e) { console.error('Error loading resumes:', e); }
+    finally { setLoadingResumes(false); }
   };
 
   const loadWalletBalance = async () => {
     setLoadingWallet(true);
     try {
-      const result = await refopenAPI.getWalletBalance();
-      if (result?.success) {
-        setWalletBalance(result.data?.availableBalance ?? result.data?.balance ?? 0);
-      }
-    } catch (error) {
-      console.error('Failed to load wallet balance:', error);
-    } finally {
-      setLoadingWallet(false);
-    }
+      const res = await refopenAPI.getWalletBalance();
+      if (res?.success) setWalletBalance(res.data?.availableBalance ?? res.data?.balance ?? 0);
+    } catch (e) { console.error('Error loading wallet:', e); }
+    finally { setLoadingWallet(false); }
   };
 
-  // ═══════════════════════════════════════════════════════════════════
-  // HANDLERS
-  // ═══════════════════════════════════════════════════════════════════
+  // ─── Company Search ──────────────────────────────────────────
+  useEffect(() => {
+    if (!showCompanyDropdown) return;
+    (async () => {
+      setOrgLoading(true);
+      try {
+        const res = await refopenAPI.getOrganizations(debouncedCompanySearch || '', null);
+        const raw = res?.success && Array.isArray(res.data) ? res.data : [];
+        if (debouncedCompanySearch?.trim()) {
+          const s = debouncedCompanySearch.toLowerCase();
+          const matches = raw.filter((o) => o.name?.toLowerCase().includes(s));
+          // Sort: starts-with first
+          matches.sort((a, b) => {
+            const aS = a.name?.toLowerCase().startsWith(s) ? 0 : 1;
+            const bS = b.name?.toLowerCase().startsWith(s) ? 0 : 1;
+            return aS - bS;
+          });
+          setOrgResults(matches);
+        } else {
+          setOrgResults(raw);
+        }
+      } catch (e) { setOrgResults([]); }
+      finally { setOrgLoading(false); }
+    })();
+  }, [debouncedCompanySearch, showCompanyDropdown]);
 
-  const handleResumeSelected = async (resumeData) => {
-    setFormData(prev => ({ ...prev, selectedResumeId: resumeData.ResumeID }));
+  // ─── Handlers ────────────────────────────────────────────────
+  const handleSelectCompany = (org) => {
+    setSelectedCompany(org);
+    setCompanySearch('');
+    setShowCompanyDropdown(false);
+    if (errors.company) setErrors((p) => ({ ...p, company: null }));
+    advanceTo(2);
+  };
+
+  const handleResumeSelected = async (data) => {
+    setSelectedResumeId(data.ResumeID);
     await loadResumes();
     setShowResumeModal(false);
-    if (errors.resume) setErrors(prev => ({ ...prev, resume: null }));
-    showToast('Resume selected successfully', 'success');
+    if (errors.resume) setErrors((p) => ({ ...p, resume: null }));
+    showToast('Resume selected', 'success');
   };
 
-  const updateFormData = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
+  const switchMode = (isOpen) => {
+    setOpenToAny(isOpen);
+    if (isOpen) { setSelectedCompany(null); setJobId(''); setErrors({}); }
+    setCurrentStep(1); // reset progressive reveal
   };
 
-  const handleCompanySelect = (company) => {
-    setSelectedCompany(company);
-    setFormData(prev => ({ ...prev, companyName: company.name }));
-    setShowCompanyModal(false);
-    setCompanySearchTerm('');
-    if (errors.company) setErrors(prev => ({ ...prev, company: null }));
-  };
-
-  const resetForm = () => {
-    setFormData({
-      jobId: '',
-      jobTitle: '',
-      jobUrl: '',
-      referralMessage: '',
-      selectedResumeId: '',
-      minSalary: '',
-      salaryCurrency: 'INR',
-      salaryPeriod: 'Annual',
-      preferredLocations: '',
-    });
-    setSelectedCompany(null);
-    setOpenToAnyCompany(true);
-    setErrors({});
-    setShowOptionalFields(false);
-  };
-
-  const switchToMode = (isOpen) => {
-    setOpenToAnyCompany(isOpen);
-    if (isOpen) {
-      setSelectedCompany(null);
-      updateFormData('jobId', '');
-      setErrors(prev => ({ ...prev, company: null, jobId: null }));
-    }
-  };
-
-  // ─── Validation ────────────────────────────────────────────────────
+  // ─── Validation ──────────────────────────────────────────────
   const validateForm = () => {
-    const newErrors = {};
-    if (!openToAnyCompany && !selectedCompany) {
-      newErrors.company = 'Company selection is required';
-    }
-    if (!openToAnyCompany && (!formData.jobId || !formData.jobId.trim())) {
-      newErrors.jobId = 'Job ID is required';
-    }
-    if (!formData.jobTitle || !formData.jobTitle.trim()) {
-      newErrors.jobTitle = 'Job title is required';
-    }
-    if (!formData.selectedResumeId) {
-      newErrors.resume = 'Please select a resume';
-    }
-    if (formData.jobUrl && formData.jobUrl.trim()) {
-      try {
-        new URL(formData.jobUrl);
-      } catch {
-        newErrors.jobUrl = 'Please enter a valid URL';
-      }
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const e = {};
+    if (!openToAny && !selectedCompany) e.company = 'Select a company';
+    if (!jobTitle.trim()) e.jobTitle = 'Job title is required';
+    if (!openToAny && !jobId.trim()) e.jobId = 'Job ID is required';
+    if (!selectedResumeId) e.resume = 'Select a resume';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  // ─── Submit Flow ───────────────────────────────────────────────────
-  const handleAskReferralClick = () => {
+  const handleAskReferral = () => {
     if (!requireAuth('ask referral')) return;
     if (!validateForm()) return;
-    setShowReferralConfirmModal(true);
+    setShowConfirmModal(true);
   };
 
   const handleSubmit = async () => {
     const startTime = Date.now();
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-
       const requestData = {
         jobID: null,
-        extJobID: openToAnyCompany ? undefined : formData.jobId,
-        resumeID: formData.selectedResumeId,
-        jobTitle: formData.jobTitle,
+        extJobID: openToAny ? undefined : jobId,
+        resumeID: selectedResumeId,
+        jobTitle: jobTitle.trim(),
         companyName: selectedCompany?.name || undefined,
         organizationId: selectedCompany?.id?.toString() || undefined,
-        jobUrl: formData.jobUrl || undefined,
-        referralMessage: formData.referralMessage || undefined,
-        openToAnyCompany: openToAnyCompany || undefined,
-        minSalary:
-          openToAnyCompany && formData.minSalary
-            ? parseFloat(formData.minSalary)
-            : undefined,
-        salaryCurrency:
-          openToAnyCompany && formData.minSalary
-            ? formData.salaryCurrency
-            : undefined,
-        salaryPeriod:
-          openToAnyCompany && formData.minSalary
-            ? formData.salaryPeriod
-            : undefined,
-        preferredLocations:
-          openToAnyCompany && formData.preferredLocations?.trim()
-            ? formData.preferredLocations.trim()
-            : undefined,
+        referralMessage: referralMessage || undefined,
+        openToAnyCompany: openToAny || undefined,
       };
 
       const result = await refopenAPI.createReferralRequest(requestData);
 
       if (result?.success) {
         const broadcastTime = (Date.now() - startTime) / 1000;
-        setReferralCompanyName(
-          openToAnyCompany ? 'All Companies' : (selectedCompany?.name || '')
-        );
+        setReferralCompanyName(openToAny ? 'All Companies' : (selectedCompany?.name || ''));
         setReferralBroadcastTime(broadcastTime);
-        setShowReferralSuccessOverlay(true);
-
-        const amountHeld =
-          result.data?.amountHeld || result.data?.amountDeducted || effectiveCost;
-        const availableBalance = result.data?.availableBalanceAfter;
-
-        let message = 'Referral request submitted! Amount held until referral is completed.';
-        if (availableBalance !== undefined) {
-          message = `Referral sent! ₹${amountHeld} held. Available: ₹${availableBalance.toFixed(2)}`;
-        }
-        showToast(message, 'success');
-        invalidateCache(
-          CACHE_KEYS.REFERRER_REQUESTS,
-          CACHE_KEYS.WALLET_BALANCE,
-          CACHE_KEYS.DASHBOARD_STATS
-        );
-
-        if (availableBalance !== undefined) setWalletBalance(availableBalance);
-        resetForm();
+        setShowSuccessOverlay(true);
+        invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
+        if (result.data?.availableBalanceAfter !== undefined) setWalletBalance(result.data.availableBalanceAfter);
+        // Reset form
+        setJobTitle(''); setJobId(''); setReferralMessage(''); setSelectedCompany(null); setOpenToAny(true); setErrors({}); setCurrentStep(1);
+      } else if (result.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
+        setWalletModalData({ currentBalance: result.data?.currentBalance || 0, requiredAmount: result.data?.requiredAmount || effectiveCost });
+        setShowWalletModal(true);
       } else {
-        if (result.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
-          setWalletModalData({
-            currentBalance: result.data?.currentBalance || 0,
-            requiredAmount: result.data?.requiredAmount || effectiveCost,
-          });
-          setShowWalletModal(true);
-        } else {
-          showToast(
-            result?.error || result?.message || 'Failed to submit referral request',
-            'error'
-          );
-        }
+        showToast(result?.error || 'Failed to submit referral', 'error');
       }
     } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      showToast(
-        error?.message || 'An unexpected error occurred. Please try again.',
-        'error'
-      );
+      showToast(error?.message || 'An error occurred', 'error');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ─── Derived State ─────────────────────────────────────────────────
-  const isFormReady = !loadingWallet && !loadingResumes;
-  const selectedResume = resumes.find(r => r.ResumeID === formData.selectedResumeId);
+  // ─── Derived ─────────────────────────────────────────────────
+  const selectedResume = resumes.find((r) => r.ResumeID === selectedResumeId);
 
-  // ─── Access Gate ───────────────────────────────────────────────────
+  // ─── Access Gate ─────────────────────────────────────────────
   if (isAuthenticated && !isJobSeeker) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={styles.gateContainer}>
         <Ionicons name="lock-closed" size={64} color={colors.gray400} />
-        <Text style={styles.errorTitle}>Access Restricted</Text>
-        <Text style={styles.errorSubtext}>Only job seekers can request referrals.</Text>
+        <Text style={styles.gateTitle}>Access Restricted</Text>
+        <Text style={styles.gateSub}>Only job seekers can request referrals.</Text>
       </View>
     );
   }
 
-  // ═══════════════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════════════
-
+  // ─── RENDER ──────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <TabHeader
-        navigation={navigation}
-        showWallet
-        walletBalance={loadingWallet ? null : walletBalance}
-        centerContent={
-          <View style={styles.searchContainerMain}>
-            <View style={styles.searchInputWrapper}>
-              <Ionicons
-                name="search"
-                size={18}
-                color={colors.gray400}
-                style={{ marginRight: 8 }}
-              />
-              <TextInput
-                style={styles.headerSearchInput}
-                placeholder="Search companies..."
-                placeholderTextColor={colors.gray400}
-                value={headerSearchQuery}
-                onChangeText={setHeaderSearchQuery}
-                onFocus={() =>
-                  headerSearchQuery.trim().length >= 2 &&
-                  setShowHeaderSearchResults(true)
-                }
-                onBlur={() =>
-                  setTimeout(() => setShowHeaderSearchResults(false), 300)
-                }
-              />
-              {headerSearchLoading && (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primary}
-                  style={{ marginLeft: 8 }}
-                />
-              )}
-            </View>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <TabHeader navigation={navigation} showWallet walletBalance={loadingWallet ? null : walletBalance} />
 
-            {/* Search dropdown */}
-            {showHeaderSearchResults && headerSearchResults.length > 0 && (
-              <View style={styles.searchResultsDropdown}>
-                <FlatList
-                  data={headerSearchResults}
-                  keyExtractor={item => item.id.toString()}
-                  keyboardShouldPersistTaps="handled"
-                  style={{ maxHeight: 300 }}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.searchResultItem}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        if (!requireAuth('view company details')) return;
-                        navigation.navigate('OrganizationDetails', {
-                          organizationId: item.id,
-                        });
-                        setShowHeaderSearchResults(false);
-                        setHeaderSearchQuery('');
-                      }}
-                    >
-                      {item.logoURL ? (
-                        <CachedImage
-                          source={{ uri: item.logoURL }}
-                          style={styles.orgLogo}
-                        />
-                      ) : (
-                        <View style={styles.orgLogoPlaceholder}>
-                          <Ionicons
-                            name="business"
-                            size={20}
-                            color={colors.gray400}
-                          />
-                        </View>
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.orgName} numberOfLines={1}>
-                          {item.name}
-                        </Text>
-                        {item.industry && (
-                          <Text style={styles.orgIndustry} numberOfLines={1}>
-                            {item.industry}
-                          </Text>
-                        )}
-                      </View>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={16}
-                        color={colors.gray400}
-                      />
-                    </TouchableOpacity>
-                  )}
-                />
-              </View>
-            )}
+      <View style={styles.inner}>
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+
+          {/* Backdrop for dropdowns */}
+          {showCompanyDropdown && (
+            <Pressable
+              style={Platform.OS === 'web' ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9990 } : { position: 'absolute', top: -1000, left: -1000, right: -1000, bottom: -1000, zIndex: 9990 }}
+              onPress={() => {
+                if (companySearch.trim().length >= 2) {
+                  setSelectedCompany({ id: null, name: companySearch.trim() });
+                  advanceTo(2);
+                }
+                setShowCompanyDropdown(false);
+                setCompanySearch('');
+              }}
+            />
+          )}
+
+          {/* ── Header ──────────────────────────────────── */}
+          <View style={styles.header}>
+            <Text style={styles.headerEmoji}>🚀</Text>
+            <Text style={styles.headerTitle}>Get Referred</Text>
+            <Text style={styles.headerSub}>Choose how you want to be referred and we'll match you with the right people</Text>
           </View>
-        }
-      />
 
-      <View style={styles.innerContainer}>
-        <ScrollView
-          style={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* ── Ad ──────────────────────────────────────────────── */}
-          <AdCard variant="referral" />
-
-          {/* ── Live Social Proof — Fortune 500 Ticker ────────────── */}
-          {fortune500Companies.length > 0 && (
-            <View style={{ marginHorizontal: 16, marginBottom: 8 }}>
-              {/* Live counter */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 5, gap: 5 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
-                <Text style={{ fontSize: 11, color: colors.success, fontWeight: typography.weights.bold }}>
-                  {referrersOnline.toLocaleString('en-IN')}
-                </Text>
-                <Text style={{ fontSize: 11, color: colors.textMuted }}>referrers online</Text>
-                <Text style={{ fontSize: 10, color: colors.textMuted }}>·</Text>
-                <Text style={{ fontSize: 11, color: colors.primary, fontWeight: typography.weights.bold }}>
-                  {dailyRefCount}
-                </Text>
-                <Text style={{ fontSize: 11, color: colors.textMuted }}>referrals today</Text>
+          {/* ── Step 0: Mode Toggle ─────────────────────── */}
+          <View style={styles.modeToggle}>
+            <TouchableOpacity
+              style={[styles.modeBtn, openToAny && styles.modeBtnActive, openToAny && { borderColor: '#8B5CF6' }]}
+              onPress={() => switchMode(true)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="globe-outline" size={20} color={openToAny ? '#8B5CF6' : colors.gray400} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.modeBtnTitle, openToAny && { color: '#8B5CF6' }]}>Open to Any</Text>
+                <Text style={styles.modeBtnDesc}>Multiple companies can refer you</Text>
               </View>
+              <Text style={[styles.modePrice, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>
+            </TouchableOpacity>
 
-              {/* Ticker — company rotation */}
-              <Animated.View
-                style={[styles.socialProofBar, { opacity: fadeAnim, marginHorizontal: 0, marginBottom: 0 }]}
-              >
-                <View style={styles.socialProofContent}>
-                  <View style={styles.socialProofLogoBox}>
-                    <CachedImage
-                      source={{
-                        uri: fortune500Companies[currentCompanyIndex]?.logoURL,
-                      }}
-                      style={styles.socialProofLogo}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.socialProofText}>
-                      Someone just got referred at
-                    </Text>
-                    <Text style={styles.socialProofCompany}>
-                      {fortune500Companies[currentCompanyIndex]?.name}
-                    </Text>
-                  </View>
-                  <View style={styles.socialProofRight}>
-                    {showRotationTick && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color={colors.success}
-                      />
-                    )}
-                    <View style={styles.liveBadge}>
-                      <View style={styles.liveDot} />
-                      <Text style={styles.liveText}>LIVE</Text>
-                    </View>
-                  </View>
+            <TouchableOpacity
+              style={[styles.modeBtn, !openToAny && styles.modeBtnActive]}
+              onPress={() => switchMode(false)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="business-outline" size={20} color={!openToAny ? colors.primary : colors.gray400} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={[styles.modeBtnTitle, !openToAny && { color: colors.primary }]}>Specific Company</Text>
+                <Text style={styles.modeBtnDesc}>Target one company</Text>
+              </View>
+              <Text style={[styles.modePrice, !openToAny && { color: colors.primary }]}>₹{pricing.referralRequestCost}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Step 1: Company (if Specific) ───────────── */}
+          {!openToAny && currentStep >= 1 && (
+            <View style={[styles.fieldGroup, { zIndex: showCompanyDropdown ? 9999 : 1 }]}>
+              <Text style={styles.fieldLabel}>Which company? <Text style={styles.req}>*</Text></Text>
+              <View style={{ position: 'relative', zIndex: showCompanyDropdown ? 9999 : 1 }}>
+                <View style={[styles.searchWrap, selectedCompany && !showCompanyDropdown && styles.searchWrapCompleted]}>
+                  <Ionicons name="search" size={18} color={selectedCompany && !showCompanyDropdown ? colors.success : colors.gray400} style={{ marginRight: 10 }} />
+                  <TextInput
+                    style={styles.searchInner}
+                    placeholder="Search or type company name"
+                    placeholderTextColor={colors.gray500}
+                    value={showCompanyDropdown ? companySearch : (selectedCompany?.name || '')}
+                    onChangeText={(t) => {
+                      setCompanySearch(t);
+                      if (!showCompanyDropdown) { setShowCompanyDropdown(true); setSelectedCompany(null); }
+                    }}
+                    onFocus={() => { setShowCompanyDropdown(true); setCompanySearch(''); }}
+                    onBlur={() => {
+                      if (showCompanyDropdown && companySearch.trim().length >= 2 && !selectedCompany) {
+                        setSelectedCompany({ id: null, name: companySearch.trim() });
+                        setShowCompanyDropdown(false); setCompanySearch(''); advanceTo(2);
+                      }
+                    }}
+                    autoCorrect={false}
+                    autoCapitalize="words"
+                  />
                 </View>
-              </Animated.View>
+                {selectedCompany && !showCompanyDropdown && (
+                  <TouchableOpacity style={styles.clearBtn} onPress={() => { setSelectedCompany(null); setShowCompanyDropdown(true); setCompanySearch(''); }}>
+                    <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                  </TouchableOpacity>
+                )}
+
+                {showCompanyDropdown && (
+                  <View style={styles.dropdown}>
+                    {orgLoading ? (
+                      <View style={styles.dropdownLoading}><ActivityIndicator size="small" color={colors.primary} /><Text style={styles.dropdownLoadingText}>Searching...</Text></View>
+                    ) : orgResults.length > 0 ? (
+                      <ScrollView style={{ maxHeight: 250 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                        {orgResults.slice(0, 15).map((org) => (
+                          <TouchableOpacity key={org.id} style={styles.orgItem} onPress={() => handleSelectCompany(org)}>
+                            {org.logoURL ? (
+                              <CachedImage source={{ uri: org.logoURL }} style={styles.orgLogo} resizeMode="contain" />
+                            ) : (
+                              <View style={styles.orgLogoPlaceholder}><Ionicons name="business" size={16} color={colors.gray400} /></View>
+                            )}
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.orgName}>{org.name}</Text>
+                              {org.industry && org.industry !== 'Other' && <Text style={styles.orgIndustry}>{org.industry}</Text>}
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    ) : companySearch.length > 1 && !orgLoading ? (
+                      <View style={styles.dropdownEmpty}>
+                        <Ionicons name="checkmark-circle-outline" size={16} color={colors.success} />
+                        <Text style={styles.dropdownEmptyText}>Click outside to use "{companySearch.trim()}"</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                )}
+              </View>
+              {errors.company && <Text style={styles.fieldError}>{errors.company}</Text>}
             </View>
           )}
 
-          {/* ═══════════════════════════════════════════════════════
-              SECTION 1 — MODE SELECTOR (The Hero)
-              Two prominent cards: flagship "Open to Any" vs "Specific"
-              ═══════════════════════════════════════════════════════ */}
-          <View style={styles.modeSection}>
-
-            {/* ✨ Open Referral — Deal Banner (purple, matching Upgrade to Open) */}
-            <TouchableOpacity
-              onPress={() => switchToMode(true)}
-              activeOpacity={0.85}
-              style={{
-                flexDirection: 'row', alignItems: 'center',
-                backgroundColor: '#8B5CF6' + '12', borderWidth: 1, borderColor: '#8B5CF6' + '35',
-                borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14, gap: 10,
-              }}
-            >
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6' + '20', justifyContent: 'center', alignItems: 'center' }}>
-                <Ionicons name="globe-outline" size={18} color={'#8B5CF6'} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: typography.weights.bold, color: colors.text }}>
-                  Go Open{' · '}
-                  <Text style={{ textDecorationLine: 'line-through', color: colors.textMuted, fontWeight: typography.weights.medium, fontSize: 12 }}>₹499</Text>
-                  {' '}
-                  <Text style={{ color: '#8B5CF6', fontWeight: typography.weights.bold }}>₹{pricing.openToAnyReferralCost}</Text>
-                </Text>
-                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 1 }}>
-                  240+ referrers across all companies can refer you
-                </Text>
-              </View>
-              <View style={{ backgroundColor: '#8B5CF6' + '18', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                <Text style={{ fontSize: 9, fontWeight: typography.weights.bold, color: '#8B5CF6', letterSpacing: 0.4 }}>50% OFF</Text>
-              </View>
-            </TouchableOpacity>
-
-            <Text style={styles.modeHeading}>
-              How do you want to be referred?
-            </Text>
-
-            {/* Desktop: cards side by side */}
-            <View style={Platform.OS === 'web' && responsive.isDesktop ? { flexDirection: 'row', gap: 16 } : {}}>
-
-            {/* ── Open (Flagship) ─────────────────── */}
-            <TouchableOpacity
-              style={[
-                styles.modeCard,
-                Platform.OS === 'web' && responsive.isDesktop && { flex: 1 },
-                openToAnyCompany && styles.modeCardActive,
-                openToAnyCompany && { borderColor: '#8B5CF6', backgroundColor: '#8B5CF6' + '08' },
-              ]}
-              onPress={() => switchToMode(true)}
-              activeOpacity={0.8}
-            >
-              {/* RECOMMENDED badge */}
-              <View style={[styles.recommendedBadge, { backgroundColor: '#8B5CF6' }]}>
-                <Ionicons name="star" size={10} color={colors.white} />
-                <Text style={styles.recommendedText}>RECOMMENDED</Text>
-              </View>
-
-              <View style={styles.modeCardRow}>
-                <View
-                  style={[
-                    styles.modeIconBox,
-                    openToAnyCompany && {
-                      backgroundColor: '#8B5CF6' + '20',
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="globe-outline"
-                    size={28}
-                    color={openToAnyCompany ? '#8B5CF6' : colors.gray400}
-                  />
-                </View>
-
-                <View style={styles.modeCardContent}>
-                  <Text
-                    style={[
-                      styles.modeCardTitle,
-                      openToAnyCompany && { color: '#8B5CF6' },
-                    ]}
-                  >
-                    Open
-                  </Text>
-                  <Text style={styles.modeCardDesc}>
-                    Broadcast to all referrers. Multiple companies can
-                    refer you.
-                  </Text>
-                  <View style={styles.modeTagsRow}>
-                    <View
-                      style={[
-                        styles.modeTag,
-                        { backgroundColor: colors.successBg },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.modeTagText, { color: colors.success }]}
-                      >
-                        Full refund if no referral
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.modeTag,
-                        { backgroundColor: '#8B5CF6' + '15' },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.modeTagText, { color: '#8B5CF6' }]}
-                      >
-                        Multiple referrals
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.modePriceBox}>
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: colors.textMuted,
-                      textDecorationLine: 'line-through',
-                      fontWeight: typography.weights.medium,
-                    }}
-                  >
-                    ₹499
-                  </Text>
-                  <Text
-                    style={[
-                      styles.modePriceAmount,
-                      openToAnyCompany && { color: '#8B5CF6' },
-                    ]}
-                  >
-                    ₹{pricing.openToAnyReferralCost}
-                  </Text>
-                  <View style={{ backgroundColor: colors.error + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginTop: 2 }}>
-                    <Text style={{ fontSize: 9, fontWeight: typography.weights.bold, color: colors.error, letterSpacing: 0.3 }}>LIMITED TIME</Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Radio */}
-              <View
-                style={[
-                  styles.modeRadio,
-                  openToAnyCompany && { borderColor: '#8B5CF6' },
-                ]}
-              >
-                {openToAnyCompany && <View style={[styles.modeRadioInner, { backgroundColor: '#8B5CF6' }]} />}
-              </View>
-            </TouchableOpacity>
-
-            {/* ── Specific ────────────────────────────────── */}
-            <TouchableOpacity
-              style={[
-                styles.modeCard,
-                Platform.OS === 'web' && responsive.isDesktop && { flex: 1 },
-                !openToAnyCompany && styles.modeCardActive,
-                !openToAnyCompany && { borderColor: colors.primary },
-              ]}
-              onPress={() => switchToMode(false)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.modeCardRow}>
-                <View
-                  style={[
-                    styles.modeIconBox,
-                    !openToAnyCompany && {
-                      backgroundColor: colors.primary + '20',
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name="business-outline"
-                    size={28}
-                    color={!openToAnyCompany ? colors.primary : colors.gray400}
-                  />
-                </View>
-
-                <View style={styles.modeCardContent}>
-                  <Text
-                    style={[
-                      styles.modeCardTitle,
-                      !openToAnyCompany && { color: colors.primary },
-                    ]}
-                  >
-                    Specific
-                  </Text>
-                  <Text style={styles.modeCardDesc}>
-                    Target a specific company. One referrer claims your request.
-                  </Text>
-                  <View style={styles.modeTagsRow}>
-                    <View style={[styles.modeTag, { backgroundColor: colors.successBg }]}>
-                      <Text style={[styles.modeTagText, { color: colors.success }]}>Full refund if no referral</Text>
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.modePriceBox}>
-                  <Text
-                    style={[
-                      styles.modePriceAmount,
-                      !openToAnyCompany && { color: colors.primary },
-                    ]}
-                  >
-                    ₹{pricing.referralRequestCost}
-                  </Text>
-                  <Text style={styles.modePriceLabel}>onwards</Text>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.modeRadio,
-                  !openToAnyCompany && styles.modeRadioActive,
-                ]}
-              >
-                {!openToAnyCompany && <View style={styles.modeRadioInner} />}
-              </View>
-            </TouchableOpacity>
-
-            {/* Close desktop cards row wrapper */}
-            </View>
-          </View>
-
-          {/* ═══════════════════════════════════════════════════════
-              SECTION 2 — SMART FORM (Progressive Disclosure)
-              Only shows fields relevant to the chosen mode.
-              ═══════════════════════════════════════════════════════ */}
-          <View style={styles.formSection}>
-            {/* ── Job Title (Always required) ─────────────────────── */}
+          {/* ── Job Title ──────────────────────────────── */}
+          {currentStep >= (openToAny ? 1 : 2) && (
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>
-                What role are you looking for?{' '}
-                <Text style={styles.req}>*</Text>
-              </Text>
+              <Text style={styles.fieldLabel}>What role are you looking for? <Text style={styles.req}>*</Text></Text>
               <TextInput
-                style={[
-                  styles.fieldInput,
-                  errors.jobTitle && styles.fieldInputError,
-                ]}
-                placeholder="e.g., Senior Software Engineer, Product Manager"
+                style={[styles.fieldInput, errors.jobTitle && styles.fieldInputError]}
+                placeholder="e.g. Senior Software Engineer"
                 placeholderTextColor={colors.gray500}
-                value={formData.jobTitle}
-                onChangeText={v => updateFormData('jobTitle', v)}
+                value={jobTitle}
+                onChangeText={(t) => { setJobTitle(t); if (errors.jobTitle) setErrors((p) => ({ ...p, jobTitle: null })); }}
                 maxLength={200}
               />
-              {errors.jobTitle && (
-                <Text style={styles.fieldError}>{errors.jobTitle}</Text>
-              )}
+              {errors.jobTitle && <Text style={styles.fieldError}>{errors.jobTitle}</Text>}
             </View>
+          )}
 
-            {/* ── Company + Job ID (Specific mode only) ──────────── */}
-            {!openToAnyCompany && (
-              <>
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>
-                    Which company? <Text style={styles.req}>*</Text>
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.companySelector,
-                      errors.company && styles.fieldInputError,
-                    ]}
-                    onPress={() => setShowCompanyModal(true)}
-                  >
-                    {selectedCompany ? (
-                      <View style={styles.companySelectorInner}>
-                        {selectedCompany.logoURL ? (
-                          <CachedImage
-                            source={{ uri: selectedCompany.logoURL }}
-                            style={styles.companySelectorLogo}
-                            resizeMode="contain"
-                          />
-                        ) : (
-                          <View style={styles.companySelectorLogoPlaceholder}>
-                            <Ionicons
-                              name="business"
-                              size={16}
-                              color={colors.gray400}
-                            />
-                          </View>
-                        )}
-                        <Text style={styles.companySelectorName}>
-                          {selectedCompany.name}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.companySelectorPlaceholder}>
-                        Tap to select company
-                      </Text>
-                    )}
-                    <Ionicons
-                      name="chevron-down"
-                      size={20}
-                      color={colors.gray500}
-                    />
-                  </TouchableOpacity>
-                  {errors.company && (
-                    <Text style={styles.fieldError}>{errors.company}</Text>
-                  )}
-                </View>
-
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>
-                    Job ID / Reference <Text style={styles.req}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.fieldInput,
-                      errors.jobId && styles.fieldInputError,
-                    ]}
-                    placeholder="e.g., REQ-2024-001"
-                    placeholderTextColor={colors.gray500}
-                    value={formData.jobId}
-                    onChangeText={v => updateFormData('jobId', v)}
-                    maxLength={100}
-                  />
-                  {errors.jobId && (
-                    <Text style={styles.fieldError}>{errors.jobId}</Text>
-                  )}
-                  <Text style={styles.fieldHint}>
-                    Find this on the company's career page
-                  </Text>
-                </View>
-              </>
-            )}
-
-            {/* ── Resume (Compact pre-selected pill) ─────────────── */}
+          {/* ── Job ID (Specific only) ─────────────────── */}
+          {!openToAny && currentStep >= 2 && (
             <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>
-                Resume <Text style={styles.req}>*</Text>
-              </Text>
+              <Text style={styles.fieldLabel}>Job ID / Reference <Text style={styles.req}>*</Text></Text>
+              <TextInput
+                style={[styles.fieldInput, errors.jobId && styles.fieldInputError]}
+                placeholder="e.g. REQ-2024-001"
+                placeholderTextColor={colors.gray500}
+                value={jobId}
+                onChangeText={(t) => { setJobId(t); if (errors.jobId) setErrors((p) => ({ ...p, jobId: null })); }}
+                maxLength={100}
+              />
+              <Text style={styles.fieldHint}>Find this on the company's career page</Text>
+              {errors.jobId && <Text style={styles.fieldError}>{errors.jobId}</Text>}
+            </View>
+          )}
 
+          {/* ── Resume ─────────────────────────────────── */}
+          {currentStep >= 2 && (
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Resume <Text style={styles.req}>*</Text></Text>
               {loadingResumes ? (
-                <View style={styles.resumeLoading}>
-                  <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={styles.resumeLoadingText}>
-                    Loading resumes...
-                  </Text>
-                </View>
+                <View style={styles.resumeLoading}><ActivityIndicator size="small" color={colors.primary} /><Text style={styles.resumeLoadingText}>Loading...</Text></View>
               ) : selectedResume ? (
-                /* ✅ Pre-selected resume — compact pill with "Change" */
                 <View style={styles.resumePill}>
-                  <View style={styles.resumePillLeft}>
-                    <Ionicons
-                      name="document-text"
-                      size={18}
-                      color={colors.primary}
-                    />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={styles.resumePillName} numberOfLines={1}>
-                        {selectedResume.ResumeLabel}
-                      </Text>
-                      {selectedResume.IsPrimary && (
-                        <Text style={styles.resumePillPrimary}>Primary</Text>
-                      )}
-                    </View>
+                  <Ionicons name="document-text" size={18} color={colors.primary} />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={styles.resumeName} numberOfLines={1}>{selectedResume.ResumeLabel}</Text>
+                    {selectedResume.IsPrimary && <Text style={styles.resumePrimary}>Primary</Text>}
                   </View>
-                  <TouchableOpacity
-                    style={styles.resumeChangeBtn}
-                    onPress={() => {
-                      if (requireAuth('change resume'))
-                        setShowResumeModal(true);
-                    }}
-                  >
+                  <TouchableOpacity style={styles.resumeChangeBtn} onPress={() => { if (requireAuth('resume')) setShowResumeModal(true); }}>
                     <Text style={styles.resumeChangeBtnText}>Change</Text>
                   </TouchableOpacity>
                 </View>
               ) : resumes.length > 0 ? (
-                /* Has resumes but none auto-selected */
-                <View style={styles.resumeSelectList}>
-                  {resumes.slice(0, 3).map(resume => (
-                    <TouchableOpacity
-                      key={resume.ResumeID}
-                      style={[
-                        styles.resumeSelectItem,
-                        formData.selectedResumeId === resume.ResumeID &&
-                          styles.resumeSelectItemActive,
-                      ]}
-                      onPress={() =>
-                        updateFormData('selectedResumeId', resume.ResumeID)
-                      }
-                    >
-                      <Ionicons
-                        name="document-text"
-                        size={18}
-                        color={
-                          formData.selectedResumeId === resume.ResumeID
-                            ? colors.primary
-                            : colors.gray500
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.resumeSelectLabel,
-                          formData.selectedResumeId === resume.ResumeID && {
-                            color: colors.primary,
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {resume.ResumeLabel}
-                      </Text>
-                      {resume.IsPrimary && (
-                        <Text style={styles.resumePillPrimary}>Primary</Text>
-                      )}
-                      <View
-                        style={[
-                          styles.miniRadio,
-                          formData.selectedResumeId === resume.ResumeID &&
-                            styles.miniRadioActive,
-                        ]}
-                      >
-                        {formData.selectedResumeId === resume.ResumeID && (
-                          <View style={styles.miniRadioInner} />
-                        )}
+                <View style={styles.resumeList}>
+                  {resumes.slice(0, 3).map((r) => (
+                    <TouchableOpacity key={r.ResumeID} style={[styles.resumeItem, selectedResumeId === r.ResumeID && styles.resumeItemActive]} onPress={() => setSelectedResumeId(r.ResumeID)}>
+                      <Ionicons name="document-text" size={16} color={selectedResumeId === r.ResumeID ? colors.primary : colors.gray400} />
+                      <Text style={[styles.resumeItemLabel, selectedResumeId === r.ResumeID && { color: colors.primary }]} numberOfLines={1}>{r.ResumeLabel}</Text>
+                      <View style={[styles.radio, selectedResumeId === r.ResumeID && styles.radioActive]}>
+                        {selectedResumeId === r.ResumeID && <View style={styles.radioInner} />}
                       </View>
                     </TouchableOpacity>
                   ))}
-                  {resumes.length > 3 && (
-                    <TouchableOpacity
-                      onPress={() => setShowResumeModal(true)}
-                      style={styles.seeAllResumes}
-                    >
-                      <Text style={styles.seeAllResumesText}>
-                        See all ({resumes.length}) →
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               ) : (
-                /* No resumes — upload CTA */
-                <TouchableOpacity
-                  style={styles.resumeUploadCTA}
-                  onPress={() => {
-                    if (requireAuth('upload resume'))
-                      setShowResumeModal(true);
-                  }}
-                >
-                  <Ionicons
-                    name="cloud-upload-outline"
-                    size={24}
-                    color={colors.primary}
-                  />
-                  <Text style={styles.resumeUploadCTATitle}>
-                    Upload your resume
-                  </Text>
-                  <Text style={styles.resumeUploadCTADesc}>
-                    PDF or DOC, max 5MB
-                  </Text>
+                <TouchableOpacity style={styles.uploadCTA} onPress={() => { if (requireAuth('upload')) setShowResumeModal(true); }}>
+                  <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />
+                  <Text style={styles.uploadCTATitle}>Upload your resume</Text>
+                  <Text style={styles.uploadCTASub}>PDF or DOC, max 5MB</Text>
                 </TouchableOpacity>
               )}
-
-              {errors.resume && (
-                <Text style={styles.fieldError}>{errors.resume}</Text>
-              )}
+              {errors.resume && <Text style={styles.fieldError}>{errors.resume}</Text>}
             </View>
+          )}
 
-            {/* ── Optional Fields Toggle ─────────────────────────── */}
-            <TouchableOpacity
-              style={styles.optionalToggle}
-              onPress={() => setShowOptionalFields(!showOptionalFields)}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={showOptionalFields ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color={colors.textSecondary}
+          {/* ── Message (optional, always visible once resume shown) */}
+          {currentStep >= 2 && (
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Message to Referrer <Text style={styles.optional}>(optional)</Text></Text>
+              <TextInput
+                style={styles.textArea}
+                placeholder="Why you're a great fit..."
+                placeholderTextColor={colors.gray500}
+                value={referralMessage}
+                onChangeText={setReferralMessage}
+                multiline
+                numberOfLines={3}
+                maxLength={500}
+                textAlignVertical="top"
               />
-              <Text style={styles.optionalToggleText}>
-                {showOptionalFields ? 'Hide' : 'Show'} optional details
-              </Text>
-              {!showOptionalFields &&
-                (formData.referralMessage ||
-                  formData.jobUrl ||
-                  formData.minSalary ||
-                  formData.preferredLocations) && (
-                  <View style={styles.optionalFilledDot} />
-                )}
-            </TouchableOpacity>
-
-            {/* ── Optional Fields (Collapsible) ──────────────────── */}
-            {showOptionalFields && (
-              <View style={styles.optionalSection}>
-                {/* Salary + Locations — Open mode */}
-                {openToAnyCompany && (
-                  <>
-                    <View style={styles.fieldGroup}>
-                      <Text style={styles.fieldLabel}>Expected Salary</Text>
-                      <View style={styles.salaryRow}>
-                        <TouchableOpacity
-                          style={styles.salaryPrefix}
-                          onPress={() =>
-                            updateFormData(
-                              'salaryCurrency',
-                              formData.salaryCurrency === 'INR' ? 'USD' : 'INR'
-                            )
-                          }
-                        >
-                          <Text style={styles.salaryPrefixText}>
-                            {formData.salaryCurrency === 'INR' ? '₹' : '$'}
-                          </Text>
-                        </TouchableOpacity>
-                        <TextInput
-                          style={styles.salaryInput}
-                          placeholder={
-                            formData.salaryCurrency === 'INR'
-                              ? '15,00,000'
-                              : '120,000'
-                          }
-                          placeholderTextColor={colors.gray500}
-                          value={formData.minSalary}
-                          onChangeText={v =>
-                            updateFormData(
-                              'minSalary',
-                              v.replace(/[^0-9]/g, '')
-                            )
-                          }
-                          keyboardType="numeric"
-                          maxLength={10}
-                        />
-                        <TouchableOpacity
-                          style={styles.salarySuffix}
-                          onPress={() =>
-                            updateFormData(
-                              'salaryPeriod',
-                              formData.salaryPeriod === 'Annual'
-                                ? 'Monthly'
-                                : 'Annual'
-                            )
-                          }
-                        >
-                          <Text style={styles.salarySuffixText}>
-                            {formData.salaryPeriod === 'Annual' ? '/yr' : '/mo'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <View style={styles.fieldGroup}>
-                      <Text style={styles.fieldLabel}>Preferred Locations</Text>
-                      <TextInput
-                        style={styles.fieldInput}
-                        placeholder="e.g., Bangalore, Hyderabad, Remote"
-                        placeholderTextColor={colors.gray500}
-                        value={formData.preferredLocations}
-                        onChangeText={v =>
-                          updateFormData('preferredLocations', v)
-                        }
-                        maxLength={200}
-                      />
-                      <Text style={styles.fieldHint}>
-                        Comma-separated city preferences
-                      </Text>
-                    </View>
-                  </>
-                )}
-
-                {/* Job URL — Specific mode */}
-                {!openToAnyCompany && (
-                  <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Job URL</Text>
-                    <TextInput
-                      style={[
-                        styles.fieldInput,
-                        errors.jobUrl && styles.fieldInputError,
-                      ]}
-                      placeholder="https://careers.company.com/job/12345"
-                      placeholderTextColor={colors.gray500}
-                      value={formData.jobUrl}
-                      onChangeText={v => updateFormData('jobUrl', v)}
-                      keyboardType="url"
-                      autoCapitalize="none"
-                    />
-                    {errors.jobUrl && (
-                      <Text style={styles.fieldError}>{errors.jobUrl}</Text>
-                    )}
-                  </View>
-                )}
-
-                {/* Message — Both modes */}
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>Message to Referrer</Text>
-                  <TextInput
-                    style={[
-                      styles.textArea,
-                      errors.referralMessage && styles.fieldInputError,
-                    ]}
-                    placeholder="Why you're a great fit for this role..."
-                    placeholderTextColor={colors.gray500}
-                    value={formData.referralMessage}
-                    onChangeText={v => updateFormData('referralMessage', v)}
-                    multiline
-                    numberOfLines={3}
-                    maxLength={1000}
-                    textAlignVertical="top"
-                  />
-                  <Text style={styles.fieldHint}>
-                    {formData.referralMessage.length}/1000
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
+            </View>
+          )}
         </ScrollView>
 
-        {/* ═══════════════════════════════════════════════════════
-            STICKY BOTTOM CTA — Price + Wallet + Send Button
-            Always visible. GPay-style: user sees cost upfront.
-            ═══════════════════════════════════════════════════════ */}
+        {/* ── Sticky Bottom CTA ─────────────────────────── */}
         <View style={styles.stickyBottom}>
           <View style={styles.stickySummary}>
             <View>
-              <Text style={styles.stickyPriceLabel}>Total</Text>
-              <Text style={styles.stickyPrice}>₹{effectiveCost}</Text>
+              <Text style={styles.stickyLabel}>Total</Text>
+              <Text style={[styles.stickyPrice, openToAny && { color: '#8B5CF6' }]}>₹{effectiveCost}</Text>
             </View>
-            <View style={styles.stickyBalanceBox}>
-              <Ionicons
-                name="wallet-outline"
-                size={14}
-                color={colors.success}
-              />
-              <Text style={styles.stickyBalance}>
-                {loadingWallet ? '...' : `₹${walletBalance.toFixed(0)}`}
-              </Text>
+            <View style={styles.stickyWallet}>
+              <Ionicons name="wallet-outline" size={14} color={colors.success} />
+              <Text style={styles.stickyBalance}>{loadingWallet ? '...' : `₹${walletBalance.toFixed(0)}`}</Text>
             </View>
           </View>
-
           <TouchableOpacity
-            style={[
-              styles.stickyCTA,
-              openToAnyCompany && { backgroundColor: '#8B5CF6' },
-              submitting && styles.stickyCTADisabled,
-            ]}
-            onPress={handleAskReferralClick}
+            style={[styles.submitBtn, openToAny && { backgroundColor: '#8B5CF6' }, submitting && styles.submitBtnDisabled]}
+            onPress={handleAskReferral}
             disabled={submitting}
             activeOpacity={0.85}
           >
             {submitting ? (
-              <>
-                <ActivityIndicator size="small" color={colors.white} />
-                <Text style={styles.stickyCTAText}>Sending...</Text>
-              </>
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Ionicons
-                  name="paper-plane"
-                  size={18}
-                  color={colors.white}
-                />
-                <Text style={styles.stickyCTAText}>
-                  Send Referral Request
-                </Text>
+                <Ionicons name="paper-plane" size={18} color="#fff" />
+                <Text style={styles.submitBtnText}>Send Referral Request</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ═══════════════════════════════════════════════════════════
-          MODALS & OVERLAYS (all interfaces preserved)
-          ═══════════════════════════════════════════════════════════ */}
-
-      {/* Company Selection Modal */}
-      <Modal
-        visible={showCompanyModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowCompanyModal(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Company</Text>
-            <TouchableOpacity
-              style={styles.modalCloseBtn}
-              onPress={() => setShowCompanyModal(false)}
-            >
-              <Ionicons name="close" size={24} color={colors.gray600} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalSearch}>
-            <Ionicons name="search" size={20} color={colors.gray500} />
-            <TextInput
-              style={styles.modalSearchInput}
-              placeholder="Search companies..."
-              value={companySearchTerm}
-              onChangeText={setCompanySearchTerm}
-              placeholderTextColor={colors.gray500}
-              autoFocus
-            />
-            {companySearchTerm.length > 0 && (
-              <TouchableOpacity onPress={() => setCompanySearchTerm('')}>
-                <Ionicons
-                  name="close-circle"
-                  size={18}
-                  color={colors.gray400}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {loadingCompanies ? (
-            <View style={styles.modalLoading}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.modalLoadingText}>Loading companies...</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={companies.filter(c =>
-                c.name
-                  ?.toLowerCase()
-                  ?.includes(companySearchTerm.toLowerCase())
-              )}
-              keyExtractor={item => item.id.toString()}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.companyItem}
-                  onPress={() => handleCompanySelect(item)}
-                  activeOpacity={0.7}
-                >
-                  {item.logoURL ? (
-                    <CachedImage
-                      source={{ uri: item.logoURL }}
-                      style={styles.companyLogo}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <View style={styles.companyLogoPlaceholder}>
-                      <Ionicons
-                        name="business"
-                        size={20}
-                        color={colors.gray400}
-                      />
-                    </View>
-                  )}
-                  <View style={styles.companyInfo}>
-                    <Text style={styles.companyName}>{item.name}</Text>
-                    {item.industry && item.industry !== 'Other' && (
-                      <Text style={styles.companyIndustry}>
-                        {item.industry}
-                      </Text>
-                    )}
-                  </View>
-                  {item.id === 999999 && (
-                    <Ionicons
-                      name="add-circle"
-                      size={20}
-                      color={colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={() => (
-                <View style={styles.emptyContainer}>
-                  <Ionicons
-                    name="business"
-                    size={48}
-                    color={colors.gray400}
-                  />
-                  <Text style={styles.emptyText}>
-                    {companySearchTerm
-                      ? 'No companies found'
-                      : 'No companies available'}
-                  </Text>
-                  {companySearchTerm && (
-                    <Text style={styles.emptySubtext}>
-                      Try different keywords
-                    </Text>
-                  )}
-                </View>
-              )}
-            />
-          )}
-        </View>
-      </Modal>
-
-      {/* Resume Upload Modal */}
-      <ResumeUploadModal
-        visible={showResumeModal}
-        onClose={() => setShowResumeModal(false)}
-        onResumeSelected={handleResumeSelected}
-        user={user}
-        jobTitle={formData.jobTitle || 'External Job Application'}
-      />
-
-      {/* Wallet Recharge Modal */}
-      <WalletRechargeModal
-        visible={showWalletModal}
-        currentBalance={walletModalData.currentBalance}
-        requiredAmount={walletModalData.requiredAmount}
-        onAddMoney={() => {
-          setShowWalletModal(false);
-          navigation.navigate('WalletRecharge');
-        }}
-        onCancel={() => setShowWalletModal(false)}
-      />
-
-      {/* Confirm Purchase Modal */}
-      <ConfirmPurchaseModal
-        visible={showReferralConfirmModal}
-        currentBalance={walletBalance}
-        requiredAmount={effectiveCost}
-        contextType="referral"
-        itemName={formData.jobTitle || 'this job'}
-        onProceed={async () => {
-          setShowReferralConfirmModal(false);
-          await handleSubmit();
-        }}
-        onAddMoney={() => {
-          setShowReferralConfirmModal(false);
-          navigation.navigate('WalletRecharge');
-        }}
-        onCancel={() => setShowReferralConfirmModal(false)}
-      />
-
-      {/* Success Overlay (GPay-style green tick) */}
-      <ReferralSuccessOverlay
-        visible={showReferralSuccessOverlay}
-        onComplete={() => {
-          setShowReferralSuccessOverlay(false);
-          navigation.goBack();
-        }}
-        duration={3500}
-        companyName={referralCompanyName}
-        broadcastTime={referralBroadcastTime}
-        isOpenToAny={referralCompanyName === 'All Companies'}
-      />
+      {/* ── Modals ──────────────────────────────────────── */}
+      <ResumeUploadModal visible={showResumeModal} onClose={() => setShowResumeModal(false)} onResumeSelected={handleResumeSelected} user={user} jobTitle={jobTitle || 'Job Application'} />
+      <WalletRechargeModal visible={showWalletModal} currentBalance={walletModalData.currentBalance} requiredAmount={walletModalData.requiredAmount} onAddMoney={() => { setShowWalletModal(false); navigation.navigate('WalletRecharge'); }} onCancel={() => setShowWalletModal(false)} />
+      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle || 'this job'} onProceed={async () => { setShowConfirmModal(false); await handleSubmit(); }} onAddMoney={() => { setShowConfirmModal(false); navigation.navigate('WalletRecharge'); }} onCancel={() => setShowConfirmModal(false)} />
+      <ReferralSuccessOverlay visible={showSuccessOverlay} onComplete={() => { setShowSuccessOverlay(false); navigation.goBack(); }} duration={3500} companyName={referralCompanyName} broadcastTime={referralBroadcastTime} isOpenToAny={referralCompanyName === 'All Companies'} />
     </KeyboardAvoidingView>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // STYLES
-// ═══════════════════════════════════════════════════════════════════════
-
+// ═══════════════════════════════════════════════════════════════════
 const createStyles = (colors, responsive = {}) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-      ...(Platform.OS === 'web' && responsive.isDesktop
-        ? { alignItems: 'center' }
-        : {}),
-    },
-    innerContainer: {
-      width: '100%',
-      maxWidth:
-        Platform.OS === 'web' && responsive.isDesktop ? 800 : '100%',
-      flex: 1,
-    },
-    scrollContainer: {
-      flex: 1,
-    },
+    container: { flex: 1, backgroundColor: colors.background, ...(Platform.OS === 'web' && responsive.isDesktop ? { alignItems: 'center' } : {}) },
+    inner: { width: '100%', maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 640 : '100%', flex: 1 },
+    scroll: { flex: 1 },
 
-    // ── Header Search ──────────────────────────────────────────────
-    searchContainerMain: {
-      flex: 1,
-      position: 'relative',
-      zIndex: 9999,
-    },
-    searchInputWrapper: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-      borderRadius: 22,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 14,
-      height: 40,
-    },
-    headerSearchInput: {
-      flex: 1,
-      fontSize: typography.sizes.sm,
-      color: colors.text,
-      padding: 0,
-      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
-    },
-    searchResultsDropdown: {
-      position: 'absolute',
-      top: 44,
-      left: 0,
-      right: 0,
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      maxHeight: 300,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
-      elevation: 999,
-      zIndex: 9999,
-    },
-    searchResultItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      gap: 12,
-    },
-    orgLogo: {
-      width: 40,
-      height: 40,
-      borderRadius: 8,
-      backgroundColor: colors.background,
-    },
-    orgLogoPlaceholder: {
-      width: 40,
-      height: 40,
-      borderRadius: 8,
-      backgroundColor: colors.background,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    orgName: {
-      fontSize: typography.sizes.md,
-      fontWeight: typography.weights.semibold,
-      color: colors.text,
-      marginBottom: 2,
-    },
-    orgIndustry: {
-      fontSize: typography.sizes.xs,
-      color: colors.gray600,
-    },
+    /* Header */
+    header: { padding: 20, paddingTop: 16 },
+    headerEmoji: { fontSize: 36, marginBottom: 8 },
+    headerTitle: { fontSize: 28, fontWeight: '700', color: colors.text, letterSpacing: -0.4, marginBottom: 4 },
+    headerSub: { fontSize: 15, color: colors.textSecondary, lineHeight: 22 },
 
-    // ── Mode Selector (Hero) ───────────────────────────────────────
-    modeSection: {
-      padding: 16,
-      paddingBottom: 8,
-      ...(Platform.OS === 'web' && responsive.isDesktop ? {
-        paddingHorizontal: 0,
-      } : {}),
+    /* Mode Toggle */
+    modeToggle: { paddingHorizontal: 16, gap: 10, marginBottom: 24 },
+    modeBtn: {
+      flexDirection: 'row', alignItems: 'center',
+      padding: 16, borderRadius: 14, borderWidth: 1.5,
+      borderColor: colors.border, backgroundColor: colors.surface,
     },
-    modeHeading: {
-      fontSize: Platform.OS === 'web' && responsive.isDesktop ? 24 : typography.sizes.lg,
-      fontWeight: typography.weights.bold,
-      color: colors.textPrimary,
-      marginBottom: Platform.OS === 'web' && responsive.isDesktop ? 20 : 14,
-      textAlign: 'center',
-    },
-    modeCard: {
-      position: 'relative',
-      backgroundColor: colors.surface,
-      borderRadius: 14,
-      padding: 16,
-      marginBottom: 12,
-      borderWidth: 2,
-      borderColor: colors.border,
-    },
-    modeCardActive: {
-      backgroundColor: colors.primaryBg,
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.12,
-      shadowRadius: 8,
-      elevation: 4,
-    },
-    modeCardRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 12,
-    },
-    modeIconBox: {
-      width: 48,
-      height: 48,
-      borderRadius: 12,
-      backgroundColor: colors.gray100,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modeCardContent: {
-      flex: 1,
-    },
-    modeCardTitle: {
-      fontSize: typography.sizes.md,
-      fontWeight: typography.weights.bold,
-      color: colors.textPrimary,
-      marginBottom: 4,
-    },
-    modeCardDesc: {
-      fontSize: typography.sizes.sm,
-      color: colors.textSecondary,
-      lineHeight: 18,
-      marginBottom: 8,
-    },
-    modeTagsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    modeTag: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 6,
-    },
-    modeTagText: {
-      fontSize: 11,
-      fontWeight: typography.weights.semibold,
-    },
-    modePriceBox: {
-      alignItems: 'flex-end',
-      minWidth: 50,
-    },
-    modePriceAmount: {
-      fontSize: typography.sizes.lg,
-      fontWeight: typography.weights.bold,
-      color: colors.textPrimary,
-    },
-    modePriceLabel: {
-      fontSize: 10,
-      color: colors.textMuted,
-      marginTop: 1,
-    },
-    modeRadio: {
-      position: 'absolute',
-      bottom: 12,
-      right: 12,
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      borderWidth: 2,
-      borderColor: colors.gray400,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modeRadioActive: {
-      borderColor: colors.primary,
-    },
-    modeRadioInner: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: colors.primary,
-    },
-    recommendedBadge: {
-      position: 'absolute',
-      top: -1,
-      left: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.primary,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderBottomLeftRadius: 6,
-      borderBottomRightRadius: 6,
-      gap: 4,
-      zIndex: 2,
-    },
-    recommendedText: {
-      fontSize: 9,
-      fontWeight: typography.weights.bold,
-      color: colors.white,
-      letterSpacing: 0.8,
-    },
+    modeBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg || (colors.primary + '08') },
+    modeBtnTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+    modeBtnDesc: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+    modePrice: { fontSize: 18, fontWeight: '700', color: colors.text },
 
-    // ── Social Proof Bar ───────────────────────────────────────────
-    socialProofBar: {
-      marginHorizontal: 16,
-      marginBottom: 8,
-      backgroundColor: colors.surface,
-      borderRadius: 10,
-      padding: 10,
-      borderWidth: 1,
-      borderColor: colors.successBorder || colors.success + '30',
-    },
-    socialProofContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    socialProofLogoBox: {
-      width: 36,
-      height: 36,
-      borderRadius: 6,
-      backgroundColor: colors.background,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    socialProofLogo: {
-      width: 30,
-      height: 30,
-    },
-    socialProofText: {
-      fontSize: 11,
-      color: colors.textMuted,
-    },
-    socialProofCompany: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.semibold,
-      color: colors.textPrimary,
-    },
-    socialProofRight: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    liveBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 7,
-      paddingVertical: 3,
-      borderRadius: 999,
-      backgroundColor: colors.success + '15',
-      borderWidth: 1,
-      borderColor: colors.success + '40',
-    },
-    liveDot: {
-      width: 5,
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: colors.success,
-      marginRight: 5,
-    },
-    liveText: {
-      fontSize: 9,
-      fontWeight: typography.weights.bold,
-      color: colors.success,
-      letterSpacing: 0.6,
-    },
-
-    // ── Form Section ───────────────────────────────────────────────
-    formSection: {
-      paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 16,
-    },
-    fieldGroup: {
-      marginBottom: 20,
-    },
-    fieldLabel: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.semibold,
-      color: colors.textPrimary,
-      marginBottom: 8,
-    },
-    req: {
-      color: colors.danger,
-    },
+    /* Fields */
+    fieldGroup: { paddingHorizontal: 16, marginBottom: 20 },
+    fieldLabel: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8 },
+    req: { color: colors.danger || '#EF4444' },
+    optional: { color: colors.textMuted, fontWeight: '400', fontSize: 12 },
     fieldInput: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: typography.sizes.md,
-      color: colors.text,
-      backgroundColor: colors.surface,
+      borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+      paddingHorizontal: 16, paddingVertical: 14, fontSize: 15,
+      color: colors.text, backgroundColor: colors.surface,
     },
-    fieldInputError: {
-      borderColor: colors.danger,
-    },
-    fieldError: {
-      fontSize: typography.sizes.xs,
-      color: colors.danger,
-      marginTop: 4,
-    },
-    fieldHint: {
-      fontSize: 11,
-      color: colors.textMuted,
-      marginTop: 4,
-    },
+    fieldInputError: { borderColor: colors.danger || '#EF4444' },
+    fieldError: { fontSize: 12, color: colors.danger || '#EF4444', marginTop: 4 },
+    fieldHint: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
     textArea: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: typography.sizes.md,
-      color: colors.text,
-      backgroundColor: colors.surface,
-      minHeight: 80,
+      borderWidth: 1, borderColor: colors.border, borderRadius: 12,
+      paddingHorizontal: 16, paddingVertical: 14, fontSize: 15,
+      color: colors.text, backgroundColor: colors.surface, minHeight: 80,
     },
 
-    // ── Company Selector ───────────────────────────────────────────
-    companySelector: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 10,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      backgroundColor: colors.surface,
+    /* Company search */
+    searchWrap: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border,
+      borderRadius: 12, paddingHorizontal: 14, paddingVertical: 4,
     },
-    companySelectorInner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-      gap: 8,
-    },
-    companySelectorLogo: {
-      width: 28,
-      height: 28,
-      borderRadius: 6,
-      backgroundColor: colors.surface,
-    },
-    companySelectorLogoPlaceholder: {
-      width: 28,
-      height: 28,
-      borderRadius: 6,
-      backgroundColor: colors.gray100,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    companySelectorName: {
-      fontSize: typography.sizes.md,
-      fontWeight: typography.weights.medium,
-      color: colors.textPrimary,
-      flex: 1,
-    },
-    companySelectorPlaceholder: {
-      fontSize: typography.sizes.md,
-      color: colors.gray500,
-      flex: 1,
-    },
-    tierBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 6,
-    },
-    tierBadgeText: {
-      fontSize: 10,
-      fontWeight: typography.weights.bold,
-    },
+    searchWrapCompleted: { borderColor: (colors.success || '#22C55E') + '50', backgroundColor: (colors.success || '#22C55E') + '08' },
+    searchInner: { flex: 1, paddingVertical: 12, fontSize: 15, color: colors.text },
+    clearBtn: { position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' },
 
-    // ── Resume Styles ──────────────────────────────────────────────
-    resumeLoading: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: 20,
-      backgroundColor: colors.gray50,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    resumeLoadingText: {
-      marginLeft: 10,
-      fontSize: typography.sizes.sm,
-      color: colors.textMuted,
-    },
-    resumePill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.primaryBg,
-      borderRadius: 10,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: colors.primary + '30',
-    },
-    resumePillLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-    },
-    resumePillName: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.semibold,
-      color: colors.textPrimary,
-    },
-    resumePillPrimary: {
-      fontSize: 10,
-      fontWeight: typography.weights.bold,
-      color: colors.success,
-      marginTop: 1,
-    },
-    resumeChangeBtn: {
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 6,
-      backgroundColor: colors.textSecondary + '20',
-    },
-    resumeChangeBtnText: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.semibold,
-      color: colors.textSecondary,
-    },
-    resumeSelectList: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 10,
-      backgroundColor: colors.surface,
+    /* Dropdown */
+    dropdown: {
+      position: 'absolute', top: '100%', left: 0, right: 0,
+      backgroundColor: colors.surfaceElevated || '#2D2D2D', borderWidth: 1,
+      borderColor: colors.border, borderRadius: 12, marginTop: 6,
+      maxHeight: 260, zIndex: 9999, elevation: 10,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16,
       overflow: 'hidden',
     },
-    resumeSelectItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      gap: 10,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+    dropdownLoading: { padding: 20, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 },
+    dropdownLoadingText: { fontSize: 13, color: colors.textMuted },
+    dropdownEmpty: { padding: 16, alignItems: 'center', flexDirection: 'row', gap: 6, justifyContent: 'center' },
+    dropdownEmptyText: { fontSize: 13, color: colors.success || '#22C55E' },
+    orgItem: {
+      flexDirection: 'row', alignItems: 'center', padding: 14,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
     },
-    resumeSelectItemActive: {
-      backgroundColor: colors.primaryBg,
-    },
-    resumeSelectLabel: {
-      flex: 1,
-      fontSize: typography.sizes.sm,
-      color: colors.textPrimary,
-    },
-    miniRadio: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      borderWidth: 2,
-      borderColor: colors.gray400,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    miniRadioActive: {
-      borderColor: colors.primary,
-    },
-    miniRadioInner: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: colors.primary,
-    },
-    seeAllResumes: {
-      padding: 10,
-      alignItems: 'center',
-    },
-    seeAllResumesText: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.semibold,
-      color: colors.primary,
-    },
-    resumeUploadCTA: {
-      alignItems: 'center',
-      padding: 24,
-      backgroundColor: colors.surface,
-      borderRadius: 10,
-      borderWidth: 1.5,
-      borderColor: colors.primary + '40',
-      borderStyle: 'dashed',
-    },
-    resumeUploadCTATitle: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.semibold,
-      color: colors.primary,
-      marginTop: 8,
-    },
-    resumeUploadCTADesc: {
-      fontSize: 11,
-      color: colors.textMuted,
-      marginTop: 4,
-    },
+    orgLogo: { width: 32, height: 32, borderRadius: 8, marginRight: 12, backgroundColor: colors.background },
+    orgLogoPlaceholder: { width: 32, height: 32, borderRadius: 8, marginRight: 12, backgroundColor: colors.gray100 || '#2D2D2D', justifyContent: 'center', alignItems: 'center' },
+    orgName: { fontSize: 15, fontWeight: '600', color: colors.text },
+    orgIndustry: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
 
-    // ── Optional Fields ────────────────────────────────────────────
-    optionalToggle: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 10,
-      gap: 6,
-      marginBottom: 8,
-    },
-    optionalToggleText: {
-      fontSize: typography.sizes.sm,
-      fontWeight: typography.weights.medium,
-      color: colors.textSecondary,
-    },
-    optionalFilledDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.textSecondary,
-    },
-    optionalSection: {
-      backgroundColor: colors.surface,
-      borderRadius: 12,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
+    /* Resume */
+    resumeLoading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+    resumeLoadingText: { marginLeft: 10, fontSize: 13, color: colors.textMuted },
+    resumePill: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryBg || (colors.primary + '08'), borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.primary + '30' },
+    resumeName: { fontSize: 14, fontWeight: '600', color: colors.text },
+    resumePrimary: { fontSize: 10, fontWeight: '700', color: colors.success || '#22C55E', marginTop: 1 },
+    resumeChangeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.textSecondary + '20' },
+    resumeChangeBtnText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+    resumeList: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, overflow: 'hidden' },
+    resumeItem: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+    resumeItemActive: { backgroundColor: colors.primaryBg || (colors.primary + '08') },
+    resumeItemLabel: { flex: 1, fontSize: 14, color: colors.text },
+    radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.gray400, justifyContent: 'center', alignItems: 'center' },
+    radioActive: { borderColor: colors.primary },
+    radioInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
+    uploadCTA: { alignItems: 'center', padding: 24, borderWidth: 1, borderColor: colors.border, borderRadius: 12, borderStyle: 'dashed', backgroundColor: colors.surface },
+    uploadCTATitle: { fontSize: 15, fontWeight: '600', color: colors.primary, marginTop: 8 },
+    uploadCTASub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 
-    // ── Salary Row ─────────────────────────────────────────────────
-    salaryRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 10,
-      backgroundColor: colors.surface,
-      overflow: 'hidden',
-    },
-    salaryPrefix: {
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      backgroundColor: colors.textSecondary + '12',
-      borderRightWidth: 1,
-      borderRightColor: colors.border,
-    },
-    salaryPrefixText: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-    salaryInput: {
-      flex: 1,
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      fontSize: typography.sizes.md,
-      color: colors.text,
-    },
-    salarySuffix: {
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      backgroundColor: colors.textSecondary + '12',
-      borderLeftWidth: 1,
-      borderLeftColor: colors.border,
-    },
-    salarySuffixText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-
-    // ── Sticky Bottom CTA ──────────────────────────────────────────
+    /* Sticky Bottom */
     stickyBottom: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 12,
-      paddingHorizontal: 16,
-      backgroundColor: colors.surface,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      gap: 12,
-      ...(Platform.OS === 'ios' ? { paddingBottom: 28 } : {}),
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12,
+      borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface,
     },
-    stickySummary: {
-      gap: 2,
+    stickySummary: { gap: 2 },
+    stickyLabel: { fontSize: 11, color: colors.textMuted },
+    stickyPrice: { fontSize: 22, fontWeight: '700', color: colors.primary },
+    stickyWallet: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+    stickyBalance: { fontSize: 12, fontWeight: '600', color: colors.success || '#22C55E' },
+    submitBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: colors.primary, paddingVertical: 16, paddingHorizontal: 24,
+      borderRadius: 14,
+      shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
     },
-    stickyPriceLabel: {
-      fontSize: 10,
-      color: colors.textMuted,
-      fontWeight: typography.weights.medium,
-    },
-    stickyPrice: {
-      fontSize: typography.sizes.xl || 20,
-      fontWeight: typography.weights.bold,
-      color: colors.textPrimary,
-    },
-    stickyBalanceBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    stickyBalance: {
-      fontSize: 11,
-      fontWeight: typography.weights.semibold,
-      color: colors.success,
-    },
-    stickyCTA: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primary,
-      paddingVertical: 14,
-      borderRadius: 12,
-      gap: 8,
-    },
-    stickyCTADisabled: {
-      backgroundColor: colors.gray300,
-    },
-    stickyCTAText: {
-      color: colors.white,
-      fontSize: typography.sizes.md,
-      fontWeight: typography.weights.bold,
-    },
+    submitBtnDisabled: { opacity: 0.6 },
+    submitBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
 
-    // ── Company Modal ──────────────────────────────────────────────
-    modalContainer: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      backgroundColor: colors.surface,
-    },
-    modalTitle: {
-      fontSize: typography.sizes.lg,
-      fontWeight: typography.weights.bold,
-      color: colors.textPrimary,
-    },
-    modalCloseBtn: {
-      padding: 8,
-    },
-    modalSearch: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      margin: 16,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 22,
-      backgroundColor: colors.surface,
-    },
-    modalSearchInput: {
-      flex: 1,
-      marginLeft: 8,
-      fontSize: typography.sizes.md,
-      color: colors.text,
-      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
-    },
-    modalLoading: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalLoadingText: {
-      marginTop: 12,
-      fontSize: typography.sizes.md,
-      color: colors.textMuted,
-    },
-    companyItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      gap: 12,
-    },
-    companyLogo: {
-      width: 40,
-      height: 40,
-      borderRadius: 8,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    companyLogoPlaceholder: {
-      width: 40,
-      height: 40,
-      borderRadius: 8,
-      backgroundColor: colors.gray100,
-      borderWidth: 1,
-      borderColor: colors.border,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    companyInfo: {
-      flex: 1,
-    },
-    companyName: {
-      fontSize: typography.sizes.md,
-      fontWeight: typography.weights.medium,
-      color: colors.textPrimary,
-    },
-    companyIndustry: {
-      fontSize: typography.sizes.sm,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
-    emptyContainer: {
-      alignItems: 'center',
-      padding: 40,
-    },
-    emptyText: {
-      fontSize: typography.sizes.md,
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: 12,
-    },
-    emptySubtext: {
-      fontSize: typography.sizes.sm,
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: 4,
-    },
-
-    // ── Error Screen ───────────────────────────────────────────────
-    errorContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 40,
-      backgroundColor: colors.background,
-    },
-    errorTitle: {
-      fontSize: typography.sizes.lg,
-      fontWeight: typography.weights.bold,
-      color: colors.textPrimary,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    errorSubtext: {
-      fontSize: typography.sizes.sm,
-      color: colors.textSecondary,
-    },
+    /* Gate */
+    gateContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: colors.background },
+    gateTitle: { fontSize: 20, fontWeight: '700', color: colors.text, marginTop: 16 },
+    gateSub: { fontSize: 15, color: colors.textSecondary, marginTop: 4 },
   });
