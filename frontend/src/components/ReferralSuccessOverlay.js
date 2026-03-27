@@ -119,8 +119,8 @@ export default function ReferralSuccessOverlay({
   if (!visible) return null;
 
   const successMessage = isOpenToAny
-    ? 'Your request is live!'
-    : `Sent to ${companyName || 'company'}`;
+    ? 'Broadcast to all company referrers'
+    : `Referrers at ${companyName || 'the company'} will be notified`;
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
