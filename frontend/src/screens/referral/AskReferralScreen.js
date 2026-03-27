@@ -220,7 +220,7 @@ export default function AskReferralScreen({ navigation, route }) {
           </Text>
           <Text style={s.modeBadgeDesc}>
             {openToAny
-              ? 'Increase your chances \u2014 get referred by employees from multiple companies with a single request'
+              ? 'Increase your chances. Get referred by employees from multiple companies with a single request'
               : 'Targeted referral from a specific company employee'}
           </Text>
         </View>
@@ -319,14 +319,32 @@ export default function AskReferralScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
-      {/* Mode description + refund badge (mobile only — desktop shows in sidebar) */}
+      {/* Mode info cards (mobile only) */}
       {!isDesktop && (
-        <View style={s.modeInfo}>
-          <Text style={s.modeInfoText}>
-            {openToAny
-              ? 'Broadcast to all referrers — multiple companies can refer you'
-              : 'Target a specific company with your referral request'}
-          </Text>
+        <View style={s.modeInfoCards}>
+          {/* Open mode info */}
+          <View style={[s.modeInfoCard, openToAny && s.modeInfoCardActive, openToAny && { borderColor: '#8B5CF6' + '40' }]}>
+            <View style={[s.modeInfoIcon, { backgroundColor: '#8B5CF6' + '15' }]}>
+              <Ionicons name="globe-outline" size={18} color="#8B5CF6" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.modeInfoTitle, { color: '#8B5CF6' }]}>Open Referral</Text>
+              <Text style={s.modeInfoDesc}>Get referred by employees from multiple companies with a single request</Text>
+            </View>
+          </View>
+
+          {/* Specific mode info */}
+          <View style={[s.modeInfoCard, !openToAny && s.modeInfoCardActive, !openToAny && { borderColor: colors.primary + '40' }]}>
+            <View style={[s.modeInfoIcon, { backgroundColor: colors.primary + '15' }]}>
+              <Ionicons name="business-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.modeInfoTitle, { color: colors.primary }]}>Specific Company</Text>
+              <Text style={s.modeInfoDesc}>Targeted referral from an employee at a specific company</Text>
+            </View>
+          </View>
+
+          {/* Refund badge */}
           <View style={s.refundBadgeMobile}>
             <Ionicons name="shield-checkmark-outline" size={13} color={colors.success} />
             <Text style={s.refundTextMobile}>Full refund if no referral received</Text>
@@ -557,9 +575,17 @@ const createStyles = (c, r = {}) => {
     segBtnActive: { borderColor: c.primary, backgroundColor: c.primary+'10' },
     segBtnText: { fontSize: 14, fontWeight: '700', color: c.textMuted },
 
-    /* Mode info (mobile) */
-    modeInfo: { marginHorizontal: 16, marginTop: -16, marginBottom: 20 },
-    modeInfoText: { fontSize: 13, color: c.textSecondary, textAlign: 'center', lineHeight: 18, marginBottom: 8 },
+    /* Mode info cards (mobile) */
+    modeInfoCards: { marginHorizontal: 16, marginTop: -12, marginBottom: 20, gap: 8 },
+    modeInfoCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      padding: 12, borderRadius: 12, borderWidth: 1,
+      borderColor: c.border, backgroundColor: c.surface, opacity: 0.6,
+    },
+    modeInfoCardActive: { opacity: 1, backgroundColor: c.background },
+    modeInfoIcon: { width: 38, height: 38, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    modeInfoTitle: { fontSize: 14, fontWeight: '700', marginBottom: 2 },
+    modeInfoDesc: { fontSize: 12, color: c.textSecondary, lineHeight: 16 },
     refundBadgeMobile: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: (c.success||'#22C55E')+'08', borderRadius: 8, borderWidth: 1, borderColor: (c.success||'#22C55E')+'18' },
     refundTextMobile: { fontSize: 12, fontWeight: '600', color: c.success||'#22C55E' },
 
