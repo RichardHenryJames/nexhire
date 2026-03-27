@@ -83,6 +83,7 @@ export default function AskReferralScreen({ navigation, route }) {
   // Scroll-based sticky mode pill
   const [showStickyMode, setShowStickyMode] = useState(false);
   const stickyAnim = useRef(new Animated.Value(0)).current;
+  const tickerVisibility = useRef(new Animated.Value(1)).current;
   const segmentY = useRef(0);
 
   const handleScroll = useCallback((e) => {
@@ -90,7 +91,10 @@ export default function AskReferralScreen({ navigation, route }) {
     const shouldStick = y > segmentY.current + 50;
     if (shouldStick !== showStickyMode) {
       setShowStickyMode(shouldStick);
-      Animated.spring(stickyAnim, { toValue: shouldStick ? 1 : 0, useNativeDriver: true, tension: 80, friction: 10 }).start();
+      Animated.parallel([
+        Animated.spring(stickyAnim, { toValue: shouldStick ? 1 : 0, useNativeDriver: true, tension: 80, friction: 10 }),
+        Animated.timing(tickerVisibility, { toValue: shouldStick ? 0 : 1, duration: 250, useNativeDriver: true }),
+      ]).start();
     }
   }, [showStickyMode]);
 
@@ -209,8 +213,8 @@ export default function AskReferralScreen({ navigation, route }) {
   // ── Summary panel (desktop sidebar / mobile bottom) ──────────
   const summaryJSX = (
     <View style={s.summary}>
-      {/* Social proof ticker (top of sidebar) */}
-      {tickerCompany && (
+      {/* Social proof ticker (top of sidebar — hidden when sticky pill visible) */}
+      {tickerCompany && !showStickyMode && (
         <Animated.View style={[s.sideProof, { opacity: tickerFade, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginBottom: 16 }]}>
           <View style={s.proofDot} />
           <Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text>
@@ -286,7 +290,7 @@ export default function AskReferralScreen({ navigation, route }) {
 
       {/* Social proof (mobile only) */}
       {!isDesktop && tickerCompany && (
-        <Animated.View style={[s.proofBar, { opacity: tickerFade }]}>
+        <Animated.View style={[s.proofBar, { opacity: Animated.multiply(tickerFade, tickerVisibility) }]}>
           <View style={s.proofDot} />
           <Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text>
           <Text style={s.proofLabel}>online</Text>
@@ -465,6 +469,7 @@ export default function AskReferralScreen({ navigation, route }) {
               <Ionicons name={openToAny ? 'globe-outline' : 'business-outline'} size={16} color={openToAny ? '#8B5CF6' : colors.primary} />
               <Text style={[s.stickyModeText, { color: openToAny ? '#8B5CF6' : colors.primary }]}>{openToAny ? 'Open' : 'Specific'}</Text>
             </View>
+            {isDesktop && <Text style={s.stickyTitle}>Get Referred</Text>}
             <TouchableOpacity style={[s.stickyModeSwitch, { backgroundColor: openToAny ? colors.primary + '10' : '#8B5CF6' + '10' }]} onPress={() => switchMode(!openToAny)} activeOpacity={0.7}>
               <Ionicons name="swap-horizontal" size={14} color={openToAny ? colors.primary : '#8B5CF6'} />
               <Text style={[s.stickySwitchText, { color: openToAny ? colors.primary : '#8B5CF6' }]}>{openToAny ? 'Switch to Specific' : 'Switch to Open'}</Text>
@@ -529,6 +534,7 @@ const createStyles = (c, r = {}) => {
       borderWidth: 1,
     },
     stickyModeText: { fontSize: 13, fontWeight: '700' },
+    stickyTitle: { fontSize: 18, fontWeight: '700', color: c.text, letterSpacing: -0.3 },
     stickyModeSwitch: {
       flexDirection: 'row', alignItems: 'center', gap: 4,
       paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16,
