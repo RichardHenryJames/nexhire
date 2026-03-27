@@ -462,9 +462,9 @@ export default function AskReferralScreen({ navigation, route }) {
               <Ionicons name={openToAny ? 'globe-outline' : 'business-outline'} size={16} color={openToAny ? '#8B5CF6' : colors.primary} />
               <Text style={[s.stickyModeText, { color: openToAny ? '#8B5CF6' : colors.primary }]}>{openToAny ? 'Open' : 'Specific'} · ₹{effectiveCost}</Text>
             </View>
-            <TouchableOpacity style={s.stickyModeSwitch} onPress={() => switchMode(!openToAny)} activeOpacity={0.7}>
-              <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
-              <Text style={s.stickySwitchText}>{openToAny ? 'Switch to Specific' : 'Switch to Open'}</Text>
+            <TouchableOpacity style={[s.stickyModeSwitch, { backgroundColor: openToAny ? colors.primary + '10' : '#8B5CF6' + '10' }]} onPress={() => switchMode(!openToAny)} activeOpacity={0.7}>
+              <Ionicons name="swap-horizontal" size={14} color={openToAny ? colors.primary : '#8B5CF6'} />
+              <Text style={[s.stickySwitchText, { color: openToAny ? colors.primary : '#8B5CF6' }]}>{openToAny ? 'Switch to Specific' : 'Switch to Open'}</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
