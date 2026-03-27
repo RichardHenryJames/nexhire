@@ -60,6 +60,7 @@ export default function AskReferralScreen({ navigation, route }) {
   const [salaryPeriod, setSalaryPeriod] = useState('Annual');
   const [preferredLocations, setPreferredLocations] = useState('');
   const [showOptional, setShowOptional] = useState(false);
+  const [jobUrl, setJobUrl] = useState('');
   const [errors, setErrors] = useState({});
 
   // Modals
@@ -174,13 +175,13 @@ export default function AskReferralScreen({ navigation, route }) {
   const handleSubmit = async () => {
     const t0=Date.now(); setSubmitting(true);
     try {
-      const rd = { jobID:null, extJobID:openToAny?undefined:jobId, resumeID:selectedResumeId, jobTitle:jobTitle.trim(), companyName:selectedCompany?.name||undefined, organizationId:selectedCompany?.id?.toString()||undefined, referralMessage:referralMessage||undefined, openToAnyCompany:openToAny||undefined, ...(openToAny&&minSalary?{minSalary:parseFloat(minSalary),salaryCurrency,salaryPeriod}:{}), ...(openToAny&&preferredLocations?.trim()?{preferredLocations:preferredLocations.trim()}:{}) };
+      const rd = { jobID:null, extJobID:openToAny?undefined:jobId, resumeID:selectedResumeId, jobTitle:jobTitle.trim(), companyName:selectedCompany?.name||undefined, organizationId:selectedCompany?.id?.toString()||undefined, referralMessage:referralMessage||undefined, openToAnyCompany:openToAny||undefined, ...(!openToAny&&jobUrl?.trim()?{jobUrl:jobUrl.trim()}:{}), ...(openToAny&&minSalary?{minSalary:parseFloat(minSalary),salaryCurrency,salaryPeriod}:{}), ...(openToAny&&preferredLocations?.trim()?{preferredLocations:preferredLocations.trim()}:{}) };
       const result = await refopenAPI.createReferralRequest(rd);
       if (result?.success) {
         setReferralCompanyName(openToAny?'All Companies':(selectedCompany?.name||'')); setReferralBroadcastTime((Date.now()-t0)/1000); setShowSuccessOverlay(true);
         invalidateCache(CACHE_KEYS.REFERRER_REQUESTS,CACHE_KEYS.WALLET_BALANCE,CACHE_KEYS.DASHBOARD_STATS);
         if(result.data?.availableBalanceAfter!==undefined) setWalletBalance(result.data.availableBalanceAfter);
-        setJobTitle('');setJobId('');setReferralMessage('');setSelectedCompany(null);setOpenToAny(true);setMinSalary('');setPreferredLocations('');setErrors({});setStep(1);
+        setJobTitle('');setJobId('');setJobUrl('');setReferralMessage('');setSelectedCompany(null);setOpenToAny(true);setMinSalary('');setPreferredLocations('');setErrors({});setStep(1);
       } else if (result.errorCode==='INSUFFICIENT_WALLET_BALANCE') {
         setWalletModalData({currentBalance:result.data?.currentBalance||0,requiredAmount:result.data?.requiredAmount||effectiveCost}); setShowWalletModal(true);
       } else showToast(result?.error||'Failed','error');
@@ -338,7 +339,7 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       {/* Job Title */}
-      <AnimatedFormStep visible={step >= (openToAny ? 1 : 2)} question="What role are you looking for?" completed={jobTitle.trim().length>=2} style={{ paddingHorizontal: 16 }}>
+      <AnimatedFormStep visible={step >= (openToAny ? 1 : 2)} question="What job role are you looking for?" completed={jobTitle.trim().length>=2} style={{ paddingHorizontal: 16 }}>
         <TextInput style={[s.fieldInput, errors.jobTitle && s.fieldInputErr]} placeholder="e.g. Senior Software Engineer" placeholderTextColor={colors.gray500} value={jobTitle} onChangeText={t=>{setJobTitle(t);if(errors.jobTitle)setErrors(p=>({...p,jobTitle:null}));}} maxLength={200} />
         {errors.jobTitle && <Text style={s.fieldError}>{errors.jobTitle}</Text>}
       </AnimatedFormStep>
@@ -496,6 +497,7 @@ const createStyles = (c, r = {}) => {
     textArea: { borderWidth: 1, borderColor: c.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: c.text, backgroundColor: c.surface, minHeight: 80 },
     fg: { marginBottom: 16 },
     fLabel: { fontSize: 14, fontWeight: '600', color: c.text, marginBottom: 8 },
+    optLabel: { fontWeight: '400', fontSize: 12, color: c.textMuted },
 
     /* Company */
     searchWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 4 },
@@ -533,8 +535,7 @@ const createStyles = (c, r = {}) => {
     uploadCTASub: { fontSize:12,color:c.textMuted,marginTop:2 },
 
     /* Optional */
-    optToggle: { flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingVertical:12,marginBottom:8 },
-    optToggleText: { fontSize:13,color:c.textSecondary,fontWeight:'500' },
+    /* Salary */
     salaryRow: { flexDirection:'row',alignItems:'center' },
     salPre: { backgroundColor:c.surface,borderWidth:1,borderColor:c.border,borderTopLeftRadius:12,borderBottomLeftRadius:12,paddingHorizontal:14,paddingVertical:14 },
     salPreText: { fontSize:16,fontWeight:'700',color:c.text },
