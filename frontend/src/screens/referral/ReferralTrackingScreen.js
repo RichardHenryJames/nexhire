@@ -378,7 +378,7 @@ export default function ReferralTrackingScreen() {
                 const urgency = Math.max(0, 1 - daysLeft / 14); // 0 at 14 days, 1 at 0 days
                 const totalReferrers = Math.round(baseReferrers * (1 + urgency * 0.5));
                 const referrerDisplay = `${Math.round(totalReferrers / 10) * 10}+`;
-                const delta = Math.max(0, (pricing.openToAnyReferralCost || 249) - getReferralCostForJob(request || {}, pricing));
+                const delta = Math.max(0, (pricing.openToAnyReferralCost || 499) - getReferralCostForJob(request || {}, pricing));
                 return (
                   <TouchableOpacity 
                     style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6' + '10', borderRadius: 12, padding: 14, marginTop: 8, gap: 10, borderWidth: 1, borderColor: '#8B5CF6' + '30' }}
@@ -1012,7 +1012,7 @@ export default function ReferralTrackingScreen() {
             {/* Pricing Breakdown */}
             {(() => {
               const currentHold = getReferralCostForJob(request || {}, pricing);
-              const openCost = pricing.openToAnyReferralCost || 249;
+              const openCost = pricing.openToAnyReferralCost || 499;
               const delta = Math.max(0, openCost - currentHold);
               return (
                 <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.border }}>
@@ -1105,7 +1105,7 @@ export default function ReferralTrackingScreen() {
                     const errMsg = result?.error || result?.data?.error || '';
                     if (errMsg.toLowerCase().includes('insufficient')) {
                       const currentHold = getReferralCostForJob(request || {}, pricing);
-                      const openCost = pricing.openToAnyReferralCost || 249;
+                      const openCost = pricing.openToAnyReferralCost || 499;
                       const delta = Math.max(0, openCost - currentHold);
                       setShowConvertModal(false);
                       setWalletModalData({ currentBalance: 0, requiredAmount: delta });
@@ -1118,7 +1118,7 @@ export default function ReferralTrackingScreen() {
                   const errMsg = error?.message || error?.error || 'Failed to convert';
                   if (errMsg.toLowerCase().includes('insufficient')) {
                     const currentHold = getReferralCostForJob(request || {}, pricing);
-                    const openCost = pricing.openToAnyReferralCost || 249;
+                    const openCost = pricing.openToAnyReferralCost || 499;
                     const delta = Math.max(0, openCost - currentHold);
                     setShowConvertModal(false);
                     setWalletModalData({ currentBalance: 0, requiredAmount: delta });
@@ -1139,7 +1139,7 @@ export default function ReferralTrackingScreen() {
                 <Text style={{ color: colors.white, fontSize: 15, fontWeight: '700' }}>
                   {(() => {
                     const h = getReferralCostForJob(request || {}, pricing);
-                    const o = pricing.openToAnyReferralCost || 249;
+                    const o = pricing.openToAnyReferralCost || 499;
                     const d = Math.max(0, o - h);
                     return d > 0 ? `Go Open for ₹${d}` : 'Go Open (Free Upgrade)';
                   })()}
