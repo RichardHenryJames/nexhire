@@ -209,6 +209,21 @@ export default function AskReferralScreen({ navigation, route }) {
   // ── Summary panel (desktop sidebar / mobile bottom) ──────────
   const summaryJSX = (
     <View style={s.summary}>
+      {/* Social proof ticker (top of sidebar) */}
+      {tickerCompany && (
+        <Animated.View style={[s.sideProof, { opacity: tickerFade, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5, marginBottom: 16 }]}>
+          <View style={s.proofDot} />
+          <Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text>
+          <Text style={s.proofLabel}>online</Text>
+          <Text style={s.proofSep}>·</Text>
+          <Text style={s.proofCount}>{dailyRefCount}</Text>
+          <Text style={s.proofLabel}>today</Text>
+          <Text style={s.proofSep}>·</Text>
+          <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
+          <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
+        </Animated.View>
+      )}
+
       {/* Mode highlight badge */}
       <View style={[s.modeBadge, openToAny ? { backgroundColor: '#8B5CF6' + '12', borderColor: '#8B5CF6' + '30' } : { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
         <View style={[s.modeBadgeIcon, { backgroundColor: openToAny ? '#8B5CF6' + '20' : colors.primary + '20' }]}>
@@ -224,6 +239,12 @@ export default function AskReferralScreen({ navigation, route }) {
               : 'Targeted referral from an employee at a specific company'}
           </Text>
         </View>
+      </View>
+
+      {/* Refund badge (right after mode badge) */}
+      <View style={s.refundBadge}>
+        <Ionicons name="shield-checkmark-outline" size={14} color={colors.success} />
+        <Text style={s.refundText}>Full refund if no referral received</Text>
       </View>
 
       <Text style={s.summaryTitle}>Order Summary</Text>
@@ -253,27 +274,6 @@ export default function AskReferralScreen({ navigation, route }) {
       <TouchableOpacity style={[s.summaryBtn, openToAny && { backgroundColor: '#8B5CF6' }, submitting && { opacity: 0.6 }]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
         {submitting ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name="paper-plane" size={18} color="#fff" /><Text style={s.summaryBtnText}>Send Request</Text></>}
       </TouchableOpacity>
-
-      <View style={s.refundBadge}>
-        <Ionicons name="shield-checkmark-outline" size={14} color={colors.success} />
-        <Text style={s.refundText}>Full refund if no referral received</Text>
-      </View>
-
-      {/* Social proof in sidebar (desktop) */}
-      {tickerCompany && (
-        <Animated.View style={[s.sideProof, { opacity: tickerFade, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 5 }]}>
-          <View style={s.proofDot} />
-          <Text style={s.proofOnline}>{referrersOnline.toLocaleString('en-IN')}</Text>
-          <Text style={s.proofLabel}>online</Text>
-          <Text style={s.proofSep}>·</Text>
-          <Text style={s.proofCount}>{dailyRefCount}</Text>
-          <Text style={s.proofLabel}>today</Text>
-          <Text style={s.proofSep}>·</Text>
-          <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
-          <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
-          <View style={s.liveBadge}><View style={s.liveDot} /><Text style={s.liveText}>LIVE</Text></View>
-        </Animated.View>
-      )}
     </View>
   );
 
@@ -296,7 +296,6 @@ export default function AskReferralScreen({ navigation, route }) {
           <Text style={s.proofSep}>·</Text>
           <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
           <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
-          <View style={s.liveBadge}><View style={s.liveDot} /><Text style={s.liveText}>LIVE</Text></View>
         </Animated.View>
       )}
 
@@ -314,16 +313,19 @@ export default function AskReferralScreen({ navigation, route }) {
           <View style={s.segBtnRow}>
             <Ionicons name="globe-outline" size={18} color={openToAny ? '#8B5CF6' : colors.gray400} />
             <Text style={[s.segBtnTitle, openToAny && { color: '#8B5CF6' }]}>Open</Text>
+            {isDesktop && <Text style={[s.segBtnFromInline, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>}
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Get referred by employees from multiple companies with a single request</Text>}
+          {!isDesktop && <Text style={[s.segBtnFrom, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={[s.segBtn, !openToAny && s.segBtnActive]} onPress={() => switchMode(false)} activeOpacity={0.8}>
           <View style={s.segBtnRow}>
             <Ionicons name="business-outline" size={18} color={!openToAny ? colors.primary : colors.gray400} />
             <Text style={[s.segBtnTitle, !openToAny && { color: colors.primary }]}>Specific</Text>
+            {isDesktop && <Text style={[s.segBtnFromInline, !openToAny && { color: colors.primary }]}>from ₹{pricing.referralRequestCost}</Text>}
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Targeted referral from an employee at a specific company</Text>}
-          <Text style={s.segBtnFrom}>from ₹{pricing.referralRequestCost}</Text>
+          {!isDesktop && <Text style={s.segBtnFrom}>from ₹{pricing.referralRequestCost}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -543,9 +545,7 @@ const createStyles = (c, r = {}) => {
     proofCount: { fontSize: 11, color: c.primary, fontWeight: '700' },
     tickerLogo: { width: 18, height: 18, borderRadius: 4, backgroundColor: c.background },
     tickerCompany: { fontSize: 11, fontWeight: '700', color: c.text },
-    liveBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 99, backgroundColor: (c.success||'#22C55E')+'12', borderWidth: 1, borderColor: (c.success||'#22C55E')+'25' },
-    liveDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: c.success, marginRight: 3 },
-    liveText: { fontSize: 7, fontWeight: '700', color: c.success, letterSpacing: 0.5 },
+
 
     /* Header */
     header: { padding: 20, paddingTop: 16, paddingBottom: 8 },
@@ -553,13 +553,14 @@ const createStyles = (c, r = {}) => {
     headerSub: { fontSize: 14, color: c.textSecondary, lineHeight: 20 },
 
     /* Segmented control (expanded pills) */
-    segment: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, gap: 8 },
-    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, position: 'relative', overflow: 'hidden' },
+    segment: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, gap: 8, alignItems: 'stretch' },
+    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, position: 'relative', overflow: 'hidden', justifyContent: 'space-between' },
     segBtnActive: { borderColor: c.primary, backgroundColor: c.primary+'08' },
     segBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     segBtnTitle: { fontSize: 15, fontWeight: '700', color: c.textMuted, flex: 1 },
     segBtnDesc: { fontSize: 12, color: c.textSecondary, lineHeight: 16, marginTop: 6 },
-    segBtnFrom: { fontSize: 11, color: c.textMuted, marginTop: 4 },
+    segBtnFrom: { fontSize: 11, color: c.textMuted, marginTop: 'auto', paddingTop: 4, textAlign: 'right' },
+    segBtnFromInline: { fontSize: 12, fontWeight: '600', color: c.textMuted },
     recBadge: { position: 'absolute', top: 0, right: 0, backgroundColor: '#8B5CF6', paddingHorizontal: 8, paddingVertical: 3, borderBottomLeftRadius: 8 },
     recBadgeText: { fontSize: 8, fontWeight: '700', color: '#fff', letterSpacing: 0.8 },
 
