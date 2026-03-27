@@ -220,8 +220,8 @@ export default function AskReferralScreen({ navigation, route }) {
           </Text>
           <Text style={s.modeBadgeDesc}>
             {openToAny
-              ? 'Increase your chances. Get referred by employees from multiple companies with a single request'
-              : 'Targeted referral from a specific company employee'}
+              ? 'Get referred by employees from multiple companies with a single request'
+              : 'Targeted referral from an employee at a specific company'}
           </Text>
         </View>
       </View>
