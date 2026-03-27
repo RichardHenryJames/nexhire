@@ -37,20 +37,14 @@ export default function WorkExperienceScreen({ navigation, route }) {
 
   const { userType, experienceType, totalSteps = 4 } = route.params;
 
-  // ─── Form ──────────────────────────────────────────────────────
+  // ─── Form ────────────────────────────────────────────────────
+  const [companyName, setCompanyName] = useState('');
+  const [organizationId, setOrganizationId] = useState(null);
+  const [selectedOrg, setSelectedOrg] = useState(null);
   const [jobTitle, setJobTitle] = useState('');
   const [isCurrent, setIsCurrent] = useState(true);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [organizationId, setOrganizationId] = useState(null);
-  const [selectedOrg, setSelectedOrg] = useState(null);
-
-  // ─── Job role inline dropdown ────────────────────────────────
-  const [jobRoles, setJobRoles] = useState([]);
-  const [loadingJobRoles, setLoadingJobRoles] = useState(false);
-  const [showJobDropdown, setShowJobDropdown] = useState(false);
-  const [jobSearch, setJobSearch] = useState('');
 
   // ─── Company inline dropdown ─────────────────────────────────
   const [orgResults, setOrgResults] = useState([]);
@@ -59,22 +53,34 @@ export default function WorkExperienceScreen({ navigation, route }) {
   const [companySearch, setCompanySearch] = useState('');
   const debouncedCompanySearch = useDebounce(companySearch, 300);
 
+  // ─── Job role inline dropdown ────────────────────────────────
+  const [jobRoles, setJobRoles] = useState([]);
+  const [loadingJobRoles, setLoadingJobRoles] = useState(false);
+  const [showJobDropdown, setShowJobDropdown] = useState(false);
+  const [jobSearch, setJobSearch] = useState('');
+
   // ─── Progressive reveal ──────────────────────────────────────
+  // 0=company, 1=jobTitle, 2=toggle+startDate+endDate, 3=continue
   const scrollRef = useRef(null);
-  const [currentStep, setCurrentStep] = useState(0); // 0=jobTitle, 1=dates, 2=company+continue
+  const [currentStep, setCurrentStep] = useState(0);
 
   const advanceTo = useCallback((step) => {
     setCurrentStep((prev) => (step > prev ? step : prev));
   }, []);
 
-  // Job title selected → show dates
+  // Company selected → show job title
   useEffect(() => {
-    if (jobTitle.trim().length >= 2 && !showJobDropdown) advanceTo(1);
+    if (companyName.trim().length >= 2 && !showCompanyDropdown) advanceTo(1);
+  }, [companyName, showCompanyDropdown, advanceTo]);
+
+  // Job title filled → show dates
+  useEffect(() => {
+    if (jobTitle.trim().length >= 2 && !showJobDropdown) advanceTo(2);
   }, [jobTitle, showJobDropdown, advanceTo]);
 
-  // Start date filled → show company (if current, or if end date also filled)
+  // Start date filled (and end date if not current) → show continue
   useEffect(() => {
-    if (startDate && (isCurrent || endDate)) advanceTo(2);
+    if (startDate && (isCurrent || endDate)) advanceTo(3);
   }, [startDate, isCurrent, endDate, advanceTo]);
 
   // ─── Load job roles on mount ─────────────────────────────────
@@ -117,57 +123,47 @@ export default function WorkExperienceScreen({ navigation, route }) {
   }, [debouncedCompanySearch, showCompanyDropdown]);
 
   // ─── Handlers ────────────────────────────────────────────────
-  const handleSelectJob = (role) => {
-    setJobTitle(role.Value);
-    setJobSearch('');
-    setShowJobDropdown(false);
-    advanceTo(1);
-  };
-
   const handleSelectOrg = (org) => {
     setOrganizationId(org.id);
     setCompanyName(org.name);
     setSelectedOrg(org);
     setCompanySearch('');
     setShowCompanyDropdown(false);
+    advanceTo(1);
+  };
+
+  const handleSelectJob = (role) => {
+    setJobTitle(role.Value);
+    setJobSearch('');
+    setShowJobDropdown(false);
+    advanceTo(2);
   };
 
   const handleContinue = () => {
-    if (!jobTitle.trim()) {
-      showToast('Please enter your job title', 'error');
-      return;
-    }
-    if (!startDate) {
-      showToast('Please select a start date', 'error');
-      return;
-    }
-    if (!isCurrent && !endDate) {
-      showToast('Please select an end date', 'error');
-      return;
-    }
+    if (!companyName.trim()) { showToast('Please enter your company', 'error'); return; }
+    if (!jobTitle.trim()) { showToast('Please enter your job title', 'error'); return; }
+    if (!startDate) { showToast('Please select a start date', 'error'); return; }
+    if (!isCurrent && !endDate) { showToast('Please select an end date', 'error'); return; }
 
     const workExperienceData = [{
       jobTitle: jobTitle.trim(),
-      companyName: companyName?.trim() || null,
+      companyName: companyName.trim(),
       organizationId: organizationId || null,
-      startDate: startDate || null,
-      endDate: isCurrent ? null : (endDate || null),
+      startDate: startDate,
+      endDate: isCurrent ? null : endDate,
       isCurrentPosition: isCurrent,
     }];
 
     navigation.navigate('EducationDetailsScreen', {
-      userType,
-      experienceType,
-      totalSteps,
-      workExperienceData,
+      userType, experienceType, totalSteps, workExperienceData,
       fromGoogleAuth: route?.params?.fromGoogleAuth,
       googleUser: route?.params?.googleUser,
     });
   };
 
-  const isContinueEnabled = jobTitle.trim().length >= 2 && !!startDate && (isCurrent || !!endDate);
+  const isContinueEnabled = companyName.trim().length >= 2 && jobTitle.trim().length >= 2 && !!startDate && (isCurrent || !!endDate);
 
-  // Filtered job roles
+  // Filtered lists
   const filteredJobs = useMemo(() => {
     if (!jobSearch.trim()) return jobRoles;
     const s = jobSearch.toLowerCase();
@@ -189,169 +185,33 @@ export default function WorkExperienceScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          {/* Backdrop to close dropdowns on outside tap */}
+          {/* Backdrop to close dropdowns */}
           {(showJobDropdown || showCompanyDropdown) && (
             <Pressable
-              style={Platform.OS === 'web' ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9990 } : { position: 'absolute', top: -1000, left: -1000, right: -1000, bottom: -1000, zIndex: 9990 }}
+              style={Platform.OS === 'web'
+                ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9990 }
+                : { position: 'absolute', top: -1000, left: -1000, right: -1000, bottom: -1000, zIndex: 9990 }}
               onPress={() => { setShowJobDropdown(false); setShowCompanyDropdown(false); }}
             />
           )}
 
           <View style={styles.header}>
             <Text style={styles.emoji}>💼</Text>
-            <Text style={styles.title}>Where do you work?</Text>
-            <Text style={styles.subtitle}>Tell us about your role — we'll use this for matching</Text>
+            <Text style={styles.title}>Your work experience</Text>
+            <Text style={styles.subtitle}>Tell us about your current or most recent role</Text>
           </View>
 
-          {/* ── Step 0: Job Title (inline dropdown) ──── */}
+          {/* ── Step 0: Company (required, inline dropdown) ──── */}
           <AnimatedFormStep
             visible={currentStep >= 0}
-            question="What's your current role?"
-            completed={jobTitle.trim().length >= 2 && !showJobDropdown}
-            style={{ zIndex: showJobDropdown ? 9999 : 1 }}
-          >
-            <View style={{ position: 'relative', zIndex: showJobDropdown ? 9999 : 1 }}>
-              <TextInput
-                style={[styles.textInput, jobTitle.trim().length >= 2 && !showJobDropdown && styles.textInputCompleted]}
-                placeholder="e.g. Software Engineer, Marketing Manager"
-                placeholderTextColor={colors.textMuted}
-                value={showJobDropdown ? jobSearch : jobTitle}
-                onChangeText={(text) => {
-                  setJobSearch(text);
-                  if (!showJobDropdown) {
-                    setShowJobDropdown(true);
-                    setJobTitle(text);
-                  } else {
-                    setJobTitle(text);
-                  }
-                }}
-                onFocus={() => {
-                  setShowJobDropdown(true);
-                  setJobSearch('');
-                }}
-                autoCorrect={false}
-                spellCheck={false}
-              />
-              {jobTitle && !showJobDropdown && (
-                <TouchableOpacity
-                  style={styles.clearBtn}
-                  onPress={() => { setJobTitle(''); setShowJobDropdown(true); setJobSearch(''); }}
-                >
-                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
-                </TouchableOpacity>
-              )}
-
-              {showJobDropdown && (
-                <View style={styles.dropdownContainer}>
-                  {loadingJobRoles ? (
-                    <View style={styles.dropdownLoading}>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                      <Text style={styles.dropdownLoadingText}>Loading roles...</Text>
-                    </View>
-                  ) : filteredJobs.length > 0 ? (
-                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
-                      {filteredJobs.slice(0, 15).map((role) => (
-                        <TouchableOpacity
-                          key={role.ReferenceID}
-                          style={styles.dropdownItem}
-                          onPress={() => handleSelectJob(role)}
-                        >
-                          <Text style={styles.dropdownItemText}>{role.Value}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  ) : jobSearch.length > 0 ? (
-                    <View style={styles.dropdownEmpty}>
-                      <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                      <Text style={styles.dropdownEmptyText}>
-                        "{jobSearch}" will be used as your title
-                      </Text>
-                      <TouchableOpacity
-                        style={styles.dropdownUseBtn}
-                        onPress={() => {
-                          setJobTitle(jobSearch);
-                          setJobSearch('');
-                          setShowJobDropdown(false);
-                          advanceTo(1);
-                        }}
-                      >
-                        <Text style={styles.dropdownUseBtnText}>Use this title</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-                </View>
-              )}
-            </View>
-          </AnimatedFormStep>
-
-          {/* ── Step 1: Is Current + Start Date + End Date ──── */}
-          <AnimatedFormStep
-            visible={currentStep >= 1}
-            question="When did you start?"
-            completed={!!startDate}
-            style={{ zIndex: 1 }}
-          >
-            {/* Current / Not current toggle */}
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[styles.toggleBtn, isCurrent && styles.toggleBtnActive]}
-                onPress={() => setIsCurrent(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.toggleBtnText, isCurrent && styles.toggleBtnTextActive]}>
-                  Currently here
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggleBtn, !isCurrent && styles.toggleBtnActive]}
-                onPress={() => setIsCurrent(false)}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.toggleBtnText, !isCurrent && styles.toggleBtnTextActive]}>
-                  Past role
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ marginTop: 16 }}>
-              <DatePicker
-                label="Start Date"
-                value={startDate}
-                onChange={setStartDate}
-                placeholder="Select start date"
-                required
-                maximumDate={new Date()}
-                colors={colors}
-              />
-            </View>
-
-            {!isCurrent && (
-              <View style={{ marginTop: 12 }}>
-                <DatePicker
-                  label="End Date"
-                  value={endDate}
-                  onChange={setEndDate}
-                  placeholder="Select end date"
-                  required
-                  maximumDate={new Date()}
-                  colors={colors}
-                />
-              </View>
-            )}
-          </AnimatedFormStep>
-
-          {/* ── Step 2: Company (inline dropdown) + Continue ──── */}
-          <AnimatedFormStep
-            visible={currentStep >= 2}
-            question="Which company?"
-            helpText="Optional — you can skip this"
-            completed={!!companyName && !showCompanyDropdown}
-            style={{ zIndex: showCompanyDropdown ? 9998 : 1 }}
+            question="Which company do you work at?"
+            completed={companyName.trim().length >= 2 && !showCompanyDropdown}
+            style={{ zIndex: showCompanyDropdown ? 9999 : 1 }}
           >
             <View style={{ position: 'relative', zIndex: showCompanyDropdown ? 9999 : 1 }}>
               <TextInput
                 style={[styles.textInput, companyName && !showCompanyDropdown && styles.textInputCompleted]}
-                placeholder="Search company..."
+                placeholder="Search or type company name..."
                 placeholderTextColor={colors.textMuted}
                 value={showCompanyDropdown ? companySearch : companyName}
                 onChangeText={(text) => {
@@ -389,11 +249,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                   ) : orgResults.length > 0 ? (
                     <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
                       {orgResults.slice(0, 15).map((org) => (
-                        <TouchableOpacity
-                          key={org.id}
-                          style={styles.orgDropdownItem}
-                          onPress={() => handleSelectOrg(org)}
-                        >
+                        <TouchableOpacity key={org.id} style={styles.orgDropdownItem} onPress={() => handleSelectOrg(org)}>
                           {org.logoURL ? (
                             <Image source={{ uri: org.logoURL }} style={styles.orgDropdownLogo} resizeMode="contain" />
                           ) : (
@@ -412,6 +268,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                     </ScrollView>
                   ) : companySearch.length > 1 ? (
                     <View style={styles.dropdownEmpty}>
+                      <Text style={styles.dropdownEmptyHint}>Company not listed?</Text>
                       <TouchableOpacity
                         style={styles.dropdownUseBtn}
                         onPress={() => {
@@ -420,6 +277,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                           setSelectedOrg(null);
                           setCompanySearch('');
                           setShowCompanyDropdown(false);
+                          advanceTo(1);
                         }}
                       >
                         <Text style={styles.dropdownUseBtnText}>Use "{companySearch.trim()}"</Text>
@@ -431,8 +289,121 @@ export default function WorkExperienceScreen({ navigation, route }) {
             </View>
           </AnimatedFormStep>
 
-          {/* ── Continue Button ─────────────────────────── */}
-          {currentStep >= 2 && (
+          {/* ── Step 1: Job Title (inline dropdown) ──── */}
+          <AnimatedFormStep
+            visible={currentStep >= 1}
+            question="What's your role?"
+            helpText={companyName ? `At ${companyName}` : undefined}
+            completed={jobTitle.trim().length >= 2 && !showJobDropdown}
+            style={{ zIndex: showJobDropdown ? 9999 : 1 }}
+          >
+            <View style={{ position: 'relative', zIndex: showJobDropdown ? 9999 : 1 }}>
+              <TextInput
+                style={[styles.textInput, jobTitle.trim().length >= 2 && !showJobDropdown && styles.textInputCompleted]}
+                placeholder="e.g. Software Engineer, Marketing Manager"
+                placeholderTextColor={colors.textMuted}
+                value={showJobDropdown ? jobSearch : jobTitle}
+                onChangeText={(text) => {
+                  setJobSearch(text);
+                  if (!showJobDropdown) {
+                    setShowJobDropdown(true);
+                    setJobTitle(text);
+                  } else {
+                    setJobTitle(text);
+                  }
+                }}
+                onFocus={() => { setShowJobDropdown(true); setJobSearch(''); }}
+                autoCorrect={false}
+                spellCheck={false}
+              />
+              {jobTitle && !showJobDropdown && (
+                <TouchableOpacity style={styles.clearBtn} onPress={() => { setJobTitle(''); setShowJobDropdown(true); setJobSearch(''); }}>
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+
+              {showJobDropdown && (
+                <View style={styles.dropdownContainer}>
+                  {loadingJobRoles ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.dropdownLoadingText}>Loading roles...</Text>
+                    </View>
+                  ) : filteredJobs.length > 0 ? (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                      {filteredJobs.slice(0, 15).map((role) => (
+                        <TouchableOpacity key={role.ReferenceID} style={styles.dropdownItem} onPress={() => handleSelectJob(role)}>
+                          <Text style={styles.dropdownItemText}>{role.Value}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : jobSearch.length > 0 ? (
+                    <View style={styles.dropdownEmpty}>
+                      <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                      <Text style={styles.dropdownEmptyText}>"{jobSearch}" will be used</Text>
+                      <TouchableOpacity style={styles.dropdownUseBtn} onPress={() => { setJobTitle(jobSearch); setJobSearch(''); setShowJobDropdown(false); advanceTo(2); }}>
+                        <Text style={styles.dropdownUseBtnText}>Use this title</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+            </View>
+          </AnimatedFormStep>
+
+          {/* ── Step 2: Current toggle + Dates ──── */}
+          <AnimatedFormStep
+            visible={currentStep >= 2}
+            question="When did you start?"
+            completed={!!startDate && (isCurrent || !!endDate)}
+            style={{ zIndex: 0 }}
+          >
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                style={[styles.toggleBtn, isCurrent && styles.toggleBtnActive]}
+                onPress={() => { setIsCurrent(true); setEndDate(''); }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.toggleBtnText, isCurrent && styles.toggleBtnTextActive]}>Currently here</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleBtn, !isCurrent && styles.toggleBtnActive]}
+                onPress={() => setIsCurrent(false)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.toggleBtnText, !isCurrent && styles.toggleBtnTextActive]}>Past role</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ marginTop: 16 }}>
+              <DatePicker
+                label="Start Date"
+                value={startDate}
+                onChange={setStartDate}
+                placeholder="Select start date"
+                required
+                maximumDate={new Date()}
+                colors={colors}
+              />
+            </View>
+
+            {!isCurrent && (
+              <View style={{ marginTop: 12 }}>
+                <DatePicker
+                  label="End Date"
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="Select end date"
+                  required
+                  maximumDate={new Date()}
+                  colors={colors}
+                />
+              </View>
+            )}
+          </AnimatedFormStep>
+
+          {/* ── Continue ─────────────────────────── */}
+          {currentStep >= 3 && (
             <Animated.View style={styles.continueWrap}>
               <TouchableOpacity
                 style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}
@@ -440,9 +411,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
                 disabled={!isContinueEnabled}
                 activeOpacity={0.85}
               >
-                <Text style={[styles.continueButtonText, !isContinueEnabled && styles.continueButtonTextDisabled]}>
-                  Continue
-                </Text>
+                <Text style={[styles.continueButtonText, !isContinueEnabled && styles.continueButtonTextDisabled]}>Continue</Text>
                 <Ionicons name="arrow-forward" size={18} color={isContinueEnabled ? colors.white : colors.textMuted} />
               </TouchableOpacity>
             </Animated.View>
@@ -475,7 +444,7 @@ const createStyles = (colors, responsive = {}) =>
     textInputCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
     clearBtn: { position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' },
 
-    /* Dropdown (shared) */
+    /* Dropdown */
     dropdownContainer: {
       position: 'absolute', top: '100%', left: 0, right: 0,
       backgroundColor: '#2D2D2D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
@@ -486,8 +455,7 @@ const createStyles = (colors, responsive = {}) =>
     dropdownScroll: { maxHeight: 280 },
     dropdownItem: {
       paddingVertical: 14, paddingHorizontal: 18,
-      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
-      backgroundColor: '#2D2D2D',
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', backgroundColor: '#2D2D2D',
     },
     dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
     dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
@@ -495,6 +463,7 @@ const createStyles = (colors, responsive = {}) =>
     dropdownLoadingText: { fontSize: 13, color: colors.textMuted },
     dropdownEmpty: { padding: 20, alignItems: 'center', gap: 8, backgroundColor: '#2D2D2D' },
     dropdownEmptyText: { fontSize: 13, color: colors.success },
+    dropdownEmptyHint: { fontSize: 13, color: colors.textMuted, marginBottom: 4 },
     dropdownUseBtn: {
       backgroundColor: colors.primaryGlow, borderRadius: 10,
       paddingVertical: 10, paddingHorizontal: 18,
@@ -502,12 +471,11 @@ const createStyles = (colors, responsive = {}) =>
     },
     dropdownUseBtnText: { fontSize: 14, fontWeight: '600', color: colors.primary },
 
-    /* Org dropdown items */
+    /* Org dropdown */
     orgDropdownItem: {
       flexDirection: 'row', alignItems: 'center',
       paddingVertical: 12, paddingHorizontal: 16,
-      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
-      backgroundColor: '#2D2D2D',
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)', backgroundColor: '#2D2D2D',
     },
     orgDropdownLogo: {
       width: 32, height: 32, borderRadius: 8, marginRight: 12,
@@ -519,23 +487,15 @@ const createStyles = (colors, responsive = {}) =>
     },
 
     /* Toggle */
-    toggleRow: {
-      flexDirection: 'row', gap: 10,
-    },
+    toggleRow: { flexDirection: 'row', gap: 10 },
     toggleBtn: {
       flex: 1, paddingVertical: 12, borderRadius: 12,
       borderWidth: 1.5, borderColor: colors.border,
       backgroundColor: colors.inputBackground, alignItems: 'center',
     },
-    toggleBtnActive: {
-      borderColor: colors.primary, backgroundColor: colors.primaryGlow,
-    },
-    toggleBtnText: {
-      fontSize: 14, fontWeight: '600', color: colors.textMuted,
-    },
-    toggleBtnTextActive: {
-      color: colors.primary,
-    },
+    toggleBtnActive: { borderColor: colors.primary, backgroundColor: colors.primaryGlow },
+    toggleBtnText: { fontSize: 14, fontWeight: '600', color: colors.textMuted },
+    toggleBtnTextActive: { color: colors.primary },
 
     /* Continue */
     continueWrap: { marginTop: 24, position: 'relative', zIndex: 0 },
