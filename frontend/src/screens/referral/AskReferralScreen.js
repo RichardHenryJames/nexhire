@@ -324,7 +324,7 @@ export default function AskReferralScreen({ navigation, route }) {
 
       {/* Company (Specific only) */}
       {!openToAny && step >= 1 && (
-        <AnimatedFormStep visible question="Which company?" completed={!!selectedCompany && !showCompanyDD} style={{ zIndex: showCompanyDD ? 9999 : 1, paddingHorizontal: 16 }}>
+        <AnimatedFormStep visible question="Which company?" completed={!!selectedCompany && !showCompanyDD} colors={colors} style={{ zIndex: showCompanyDD ? 9999 : 1, paddingHorizontal: 16 }}>
           <View style={{ position:'relative', zIndex: showCompanyDD?9999:1 }}>
             <View style={[s.searchWrap, selectedCompany && !showCompanyDD && s.searchWrapDone]}>
               <Ionicons name="search" size={18} color={selectedCompany&&!showCompanyDD?colors.success:colors.gray400} style={{marginRight:10}} />
@@ -355,14 +355,14 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       {/* Job Title */}
-      <AnimatedFormStep visible={step >= (openToAny ? 1 : 2)} question="What job role are you looking for?" completed={jobTitle.trim().length>=2} style={{ paddingHorizontal: 16 }}>
+      <AnimatedFormStep visible={step >= (openToAny ? 1 : 2)} question="What job role are you looking for?" completed={jobTitle.trim().length>=2} colors={colors} style={{ paddingHorizontal: 16 }}>
         <TextInput style={[s.fieldInput, errors.jobTitle && s.fieldInputErr]} placeholder="e.g. Senior Software Engineer" placeholderTextColor={colors.gray500} value={jobTitle} onChangeText={t=>{setJobTitle(t);if(errors.jobTitle)setErrors(p=>({...p,jobTitle:null}));}} maxLength={200} />
         {errors.jobTitle && <Text style={s.fieldError}>{errors.jobTitle}</Text>}
       </AnimatedFormStep>
 
       {/* Job ID (Specific) */}
       {!openToAny && (
-        <AnimatedFormStep visible={step >= 3} question="Job ID / Reference" completed={jobId.trim().length>=2} style={{ paddingHorizontal: 16 }}>
+        <AnimatedFormStep visible={step >= 3} question="Job ID / Reference" completed={jobId.trim().length>=2} colors={colors} style={{ paddingHorizontal: 16 }}>
           <TextInput style={[s.fieldInput, errors.jobId && s.fieldInputErr]} placeholder="e.g. REQ-2024-001" placeholderTextColor={colors.gray500} value={jobId} onChangeText={t=>{setJobId(t);if(errors.jobId)setErrors(p=>({...p,jobId:null}));}} maxLength={100} />
           <Text style={s.fieldHint}>Find this on the company's career page</Text>
           {errors.jobId && <Text style={s.fieldError}>{errors.jobId}</Text>}
@@ -370,7 +370,7 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       {/* Resume */}
-      <AnimatedFormStep visible={step >= 2} question="Your resume" completed={!!selectedResumeId} style={{ paddingHorizontal: 16 }}>
+      <AnimatedFormStep visible={step >= 2} question="Your resume" completed={!!selectedResumeId} colors={colors} style={{ paddingHorizontal: 16 }}>
         {loadingResumes ? <View style={s.resumeLoad}><ActivityIndicator size="small" color={colors.primary}/><Text style={s.resumeLoadText}>Loading...</Text></View>
         : selectedResume ? (
           <View style={s.resumePill}>

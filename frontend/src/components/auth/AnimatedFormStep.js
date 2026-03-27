@@ -3,18 +3,13 @@ import { Animated, View, Text, StyleSheet, TouchableOpacity } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { authDarkColors } from '../../styles/authDarkColors';
 
-const colors = authDarkColors;
+const defaultColors = authDarkColors;
 
 /**
- * AnimatedFormStep — Progressive reveal wrapper for registration form fields.
+ * AnimatedFormStep — Progressive reveal wrapper for form fields.
  *
- * Shows a single form question at a time with a smooth spring entrance animation.
- * Completed fields display a subtle green checkmark.
- *
- * Usage:
- *   <AnimatedFormStep visible={step >= 2} question="What's your degree?" completed={!!degreeType}>
- *     <DegreeSelector ... />
- *   </AnimatedFormStep>
+ * Accepts optional `colors` prop for theme-aware screens (e.g. Ask Referral).
+ * Falls back to authDarkColors for auth/registration screens.
  */
 export default function AnimatedFormStep({
   visible = false,
@@ -26,7 +21,10 @@ export default function AnimatedFormStep({
   children,
   onLayout,
   style,
+  colors: themeColors,
 }) {
+  const c = themeColors || defaultColors;
+
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(32)).current;
   const hasAnimated = useRef(false);
@@ -34,25 +32,12 @@ export default function AnimatedFormStep({
   useEffect(() => {
     if (visible && !hasAnimated.current) {
       hasAnimated.current = true;
-
-      // Small delay so the user sees the entrance
       const timer = setTimeout(() => {
         Animated.parallel([
-          Animated.spring(opacity, {
-            toValue: 1,
-            useNativeDriver: true,
-            tension: 60,
-            friction: 10,
-          }),
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 60,
-            friction: 10,
-          }),
+          Animated.spring(opacity, { toValue: 1, useNativeDriver: true, tension: 60, friction: 10 }),
+          Animated.spring(translateY, { toValue: 0, useNativeDriver: true, tension: 60, friction: 10 }),
         ]).start();
       }, 120);
-
       return () => clearTimeout(timer);
     }
   }, [visible]);
@@ -61,38 +46,30 @@ export default function AnimatedFormStep({
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        { opacity, transform: [{ translateY }] },
-        style,
-      ]}
+      style={[styles.container, { opacity, transform: [{ translateY }] }, style]}
       onLayout={onLayout}
     >
-      {/* Question header */}
       {question && (
         <View style={styles.questionRow}>
           <View style={styles.questionLeft}>
-            <Text style={styles.question}>{question}</Text>
+            <Text style={[styles.question, { color: c.text || c.textPrimary || '#E0E0E0' }]}>{question}</Text>
           </View>
           {completed && (
-            <View style={styles.checkBadge}>
+            <View style={[styles.checkBadge, { backgroundColor: c.success || '#22C55E' }]}>
               <Ionicons name="checkmark" size={12} color="#fff" />
             </View>
           )}
         </View>
       )}
 
-      {/* Contextual help */}
-      {helpText && <Text style={styles.helpText}>{helpText}</Text>}
+      {helpText && <Text style={[styles.helpText, { color: c.textSecondary || c.textMuted || '#9D9D9D' }]}>{helpText}</Text>}
 
-      {/* The actual input / selector */}
       <View style={styles.fieldWrap}>{children}</View>
 
-      {/* Optional skip link */}
       {skippable && !completed && onSkip && (
         <TouchableOpacity style={styles.skipRow} onPress={onSkip} activeOpacity={0.7}>
-          <Text style={styles.skipText}>I'll add this later</Text>
-          <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
+          <Text style={[styles.skipText, { color: c.textMuted || '#6E6E6E' }]}>I'll add this later</Text>
+          <Ionicons name="arrow-forward" size={14} color={c.textMuted || '#6E6E6E'} />
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -117,13 +94,11 @@ const styles = StyleSheet.create({
   question: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
     letterSpacing: -0.2,
     lineHeight: 24,
   },
   helpText: {
     fontSize: 13,
-    color: colors.textSecondary,
     marginBottom: 14,
     lineHeight: 19,
   },
@@ -131,7 +106,6 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.success,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
@@ -149,7 +123,6 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 13,
-    color: colors.textMuted,
     fontWeight: '500',
   },
 });
