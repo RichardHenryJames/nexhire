@@ -185,13 +185,29 @@ export default function WorkExperienceScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          {/* Backdrop to close dropdowns */}
+          {/* Backdrop to close dropdowns — accepts typed text */}
           {(showJobDropdown || showCompanyDropdown) && (
             <Pressable
               style={Platform.OS === 'web'
                 ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9990 }
                 : { position: 'absolute', top: -1000, left: -1000, right: -1000, bottom: -1000, zIndex: 9990 }}
-              onPress={() => { setShowJobDropdown(false); setShowCompanyDropdown(false); }}
+              onPress={() => {
+                // Accept typed company text on outside click
+                if (showCompanyDropdown && companySearch.trim().length >= 2) {
+                  setCompanyName(companySearch.trim());
+                  setOrganizationId(null);
+                  setSelectedOrg(null);
+                  advanceTo(1);
+                }
+                if (showJobDropdown && jobSearch.trim().length >= 2) {
+                  setJobTitle(jobSearch.trim());
+                  advanceTo(2);
+                }
+                setShowJobDropdown(false);
+                setShowCompanyDropdown(false);
+                setCompanySearch('');
+                setJobSearch('');
+              }}
             />
           )}
 
@@ -209,27 +225,41 @@ export default function WorkExperienceScreen({ navigation, route }) {
             style={{ zIndex: showCompanyDropdown ? 9999 : 1 }}
           >
             <View style={{ position: 'relative', zIndex: showCompanyDropdown ? 9999 : 1 }}>
-              <TextInput
-                style={[styles.textInput, companyName && !showCompanyDropdown && styles.textInputCompleted]}
-                placeholder="Search or type company name..."
-                placeholderTextColor={colors.textMuted}
-                value={showCompanyDropdown ? companySearch : companyName}
-                onChangeText={(text) => {
-                  setCompanySearch(text);
-                  if (!showCompanyDropdown) {
+              <View style={[styles.searchInputWrap, companyName && !showCompanyDropdown && styles.searchInputWrapCompleted]}>
+                <Ionicons name="search" size={18} color={companyName && !showCompanyDropdown ? colors.success : colors.gray400} style={{ marginRight: 10 }} />
+                <TextInput
+                  style={styles.searchInputInner}
+                  placeholder="Search or type company name"
+                  placeholderTextColor={colors.textMuted}
+                  value={showCompanyDropdown ? companySearch : companyName}
+                  onChangeText={(text) => {
+                    setCompanySearch(text);
+                    if (!showCompanyDropdown) {
+                      setShowCompanyDropdown(true);
+                      setCompanyName('');
+                      setOrganizationId(null);
+                      setSelectedOrg(null);
+                    }
+                  }}
+                  onFocus={() => {
                     setShowCompanyDropdown(true);
-                    setCompanyName('');
-                    setOrganizationId(null);
-                    setSelectedOrg(null);
-                  }
-                }}
-                onFocus={() => {
-                  setShowCompanyDropdown(true);
-                  setCompanySearch('');
-                }}
-                autoCorrect={false}
-                autoCapitalize="words"
-              />
+                    setCompanySearch('');
+                  }}
+                  onBlur={() => {
+                    // Accept typed text on blur if no dropdown selection made
+                    if (showCompanyDropdown && companySearch.trim().length >= 2 && !companyName) {
+                      setCompanyName(companySearch.trim());
+                      setOrganizationId(null);
+                      setSelectedOrg(null);
+                      setShowCompanyDropdown(false);
+                      setCompanySearch('');
+                      advanceTo(1);
+                    }
+                  }}
+                  autoCorrect={false}
+                  autoCapitalize="words"
+                />
+              </View>
               {companyName && !showCompanyDropdown && (
                 <TouchableOpacity
                   style={styles.clearBtn}
@@ -266,22 +296,12 @@ export default function WorkExperienceScreen({ navigation, route }) {
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
-                  ) : companySearch.length > 1 ? (
+                  ) : companySearch.length > 1 && !orgLoading ? (
                     <View style={styles.dropdownEmpty}>
-                      <Text style={styles.dropdownEmptyHint}>Company not listed?</Text>
-                      <TouchableOpacity
-                        style={styles.dropdownUseBtn}
-                        onPress={() => {
-                          setCompanyName(companySearch.trim());
-                          setOrganizationId(null);
-                          setSelectedOrg(null);
-                          setCompanySearch('');
-                          setShowCompanyDropdown(false);
-                          advanceTo(1);
-                        }}
-                      >
-                        <Text style={styles.dropdownUseBtnText}>Use "{companySearch.trim()}"</Text>
-                      </TouchableOpacity>
+                      <Ionicons name="checkmark-circle-outline" size={18} color={colors.success} />
+                      <Text style={styles.dropdownEmptyText}>
+                        Click outside to use "{companySearch.trim()}"
+                      </Text>
                     </View>
                   ) : null}
                 </View>
@@ -443,6 +463,17 @@ const createStyles = (colors, responsive = {}) =>
     },
     textInputCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
     clearBtn: { position: 'absolute', right: 14, top: 0, bottom: 0, justifyContent: 'center' },
+
+    /* Search input with icon */
+    searchInputWrap: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: colors.inputBackground, borderWidth: 1.5, borderColor: colors.border,
+      borderRadius: 14, paddingVertical: 4, paddingHorizontal: 16,
+    },
+    searchInputWrapCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
+    searchInputInner: {
+      flex: 1, paddingVertical: 12, fontSize: 15, color: colors.text,
+    },
 
     /* Dropdown */
     dropdownContainer: {
