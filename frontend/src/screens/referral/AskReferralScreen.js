@@ -59,7 +59,8 @@ export default function AskReferralScreen({ navigation, route }) {
   const [salaryCurrency, setSalaryCurrency] = useState('INR');
   const [salaryPeriod, setSalaryPeriod] = useState('Annual');
   const [preferredLocations, setPreferredLocations] = useState('');
-  const [jobUrl, setJobUrl] = useState('');\n  const [errors, setErrors] = useState({});
+  const [jobUrl, setJobUrl] = useState('');
+  const [errors, setErrors] = useState({});
 
   // Modals
   const [showWalletModal, setShowWalletModal] = useState(false);
