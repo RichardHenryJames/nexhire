@@ -148,7 +148,7 @@ export default function AskReferralScreen({ navigation, route }) {
     if (preSelectedOrg) { setSelectedCompany(preSelectedOrg); setOpenToAny(false); }
   }, [preSelectedOrg]);
 
-  const loadResumes = async () => { setLoadingResumes(true); try { const r = await refopenAPI.getUserResumes(); if (r?.success&&r.data) { const sorted=[...r.data].sort((a,b)=>{if(a.IsPrimary&&!b.IsPrimary)return-1;if(!a.IsPrimary&&b.IsPrimary)return 1;return new Date(b.UploadedAt||0)-new Date(a.UploadedAt||0);}); setResumes(sorted); if(sorted[0]?.ResumeID) setSelectedResumeId(sorted[0].ResumeID); }}catch(e){}finally{setLoadingResumes(false);}};
+  const loadResumes = async (forceSelectId) => { setLoadingResumes(true); try { const r = await refopenAPI.getUserResumes(); if (r?.success&&r.data) { const sorted=[...r.data].sort((a,b)=>{if(a.IsPrimary&&!b.IsPrimary)return-1;if(!a.IsPrimary&&b.IsPrimary)return 1;return new Date(b.UploadedAt||0)-new Date(a.UploadedAt||0);}); setResumes(sorted); if(forceSelectId) setSelectedResumeId(forceSelectId); else if(!selectedResumeId&&sorted[0]?.ResumeID) setSelectedResumeId(sorted[0].ResumeID); }}catch(e){}finally{setLoadingResumes(false);}};
   const loadWalletBalance = async () => { setLoadingWallet(true); try { const r = await refopenAPI.getWalletBalance(); if(r?.success) setWalletBalance(r.data?.availableBalance??r.data?.balance??0); }catch(e){}finally{setLoadingWallet(false);}};
   const loadCompanies = async () => { try { const r = await refopenAPI.getOrganizations(''); if(r?.success&&Array.isArray(r.data)) setCompanies(r.data); }catch(e){} };
 
@@ -165,7 +165,7 @@ export default function AskReferralScreen({ navigation, route }) {
 
   // Handlers
   const handleSelectCompany = (org) => { setSelectedCompany(org); setCompanySearch(''); setShowCompanyDD(false); if(errors.company) setErrors(p=>({...p,company:null})); advance(2); };
-  const handleResumeSelected = async (d) => { setSelectedResumeId(d.ResumeID); await loadResumes(); setShowResumeModal(false); if(errors.resume) setErrors(p=>({...p,resume:null})); showToast('Resume selected','success'); };
+  const handleResumeSelected = async (d) => { setSelectedResumeId(d.ResumeID); await loadResumes(d.ResumeID); setShowResumeModal(false); if(errors.resume) setErrors(p=>({...p,resume:null})); showToast('Resume selected','success'); };
   const switchMode = (isOpen) => { setOpenToAny(isOpen); if(isOpen){setSelectedCompany(null);setJobId('');setErrors({});} setStep(1); };
 
   const validateForm = () => { const e={}; if(!openToAny&&!selectedCompany) e.company='Select a company'; if(!jobTitle.trim()) e.jobTitle='Required'; if(!openToAny&&!jobId.trim()) e.jobId='Required'; if(!selectedResumeId) e.resume='Select a resume'; setErrors(e); return Object.keys(e).length===0; };
