@@ -195,6 +195,23 @@ export default function AskReferralScreen({ navigation, route }) {
   // ── Summary panel (desktop sidebar / mobile bottom) ──────────
   const summaryJSX = (
     <View style={s.summary}>
+      {/* Mode highlight badge */}
+      <View style={[s.modeBadge, openToAny ? { backgroundColor: '#8B5CF6' + '12', borderColor: '#8B5CF6' + '30' } : { backgroundColor: colors.primary + '12', borderColor: colors.primary + '30' }]}>
+        <View style={[s.modeBadgeIcon, { backgroundColor: openToAny ? '#8B5CF6' + '20' : colors.primary + '20' }]}>
+          <Ionicons name={openToAny ? 'globe-outline' : 'business-outline'} size={20} color={openToAny ? '#8B5CF6' : colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.modeBadgeTitle, { color: openToAny ? '#8B5CF6' : colors.primary }]}>
+            {openToAny ? 'Open Referral' : 'Specific Company'}
+          </Text>
+          <Text style={s.modeBadgeDesc}>
+            {openToAny
+              ? 'Broadcast to 240+ referrers across all companies'
+              : 'Targeted referral from a specific company employee'}
+          </Text>
+        </View>
+      </View>
+
       <Text style={s.summaryTitle}>Order Summary</Text>
       <View style={s.summaryDivider} />
 
@@ -558,6 +575,10 @@ const createStyles = (c, r = {}) => {
 
     /* Summary panel (desktop sidebar) */
     summary: { padding: 24, position: 'sticky', top: 0 },
+    modeBadge: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 20, gap: 12 },
+    modeBadgeIcon: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    modeBadgeTitle: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+    modeBadgeDesc: { fontSize: 12, color: c.textSecondary, lineHeight: 16 },
     summaryTitle: { fontSize: 18, fontWeight: '700', color: c.text, marginBottom: 16 },
     summaryDivider: { height: 1, backgroundColor: c.border, marginVertical: 12 },
     summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
