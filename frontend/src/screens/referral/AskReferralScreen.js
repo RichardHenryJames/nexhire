@@ -80,6 +80,20 @@ export default function AskReferralScreen({ navigation, route }) {
   const [tickerIdx, setTickerIdx] = useState(0);
   const tickerFade = useRef(new Animated.Value(1)).current;
 
+  // Scroll-based sticky mode pill
+  const [showStickyMode, setShowStickyMode] = useState(false);
+  const stickyAnim = useRef(new Animated.Value(0)).current;
+  const segmentY = useRef(0);
+
+  const handleScroll = useCallback((e) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const shouldStick = y > segmentY.current + 50;
+    if (shouldStick !== showStickyMode) {
+      setShowStickyMode(shouldStick);
+      Animated.spring(stickyAnim, { toValue: shouldStick ? 1 : 0, useNativeDriver: true, tension: 80, friction: 10 }).start();
+    }
+  }, [showStickyMode]);
+
   const dailyRefCount = useMemo(() => {
     const d = new Date(); const seed = d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
     const hash = Math.abs(Math.floor(Math.sin(seed*2)*10000));
@@ -206,7 +220,7 @@ export default function AskReferralScreen({ navigation, route }) {
           </Text>
           <Text style={s.modeBadgeDesc}>
             {openToAny
-              ? 'Broadcast to 240+ referrers across all companies'
+              ? 'Increase your chances \u2014 get referred by employees from multiple companies with a single request'
               : 'Targeted referral from a specific company employee'}
           </Text>
         </View>
@@ -265,7 +279,7 @@ export default function AskReferralScreen({ navigation, route }) {
 
   // ── Form fields ──────────────────────────────────────────────
   const formJSX = (
-    <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 120 }} keyboardShouldPersistTaps="handled">
+    <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: isDesktop ? 40 : 120 }} keyboardShouldPersistTaps="handled" onScroll={handleScroll} scrollEventThrottle={16}>
 
       {/* Backdrop for company dropdown */}
       {showCompanyDD && <Pressable style={Platform.OS==='web'?{position:'fixed',top:0,left:0,right:0,bottom:0,zIndex:9990}:{position:'absolute',top:-1000,left:-1000,right:-1000,bottom:-1000,zIndex:9990}} onPress={() => { setShowCompanyDD(false); setCompanySearch(''); }} />}
@@ -294,7 +308,7 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       {/* Mode: segmented control */}
-      <View style={s.segment}>
+      <View style={s.segment} onLayout={(e) => { segmentY.current = e.nativeEvent.layout.y; }}>
         <TouchableOpacity style={[s.segBtn, openToAny && s.segBtnActive, openToAny && { backgroundColor: '#8B5CF6'+'18', borderColor: '#8B5CF6' }]} onPress={() => switchMode(true)} activeOpacity={0.8}>
           <Ionicons name="globe-outline" size={18} color={openToAny ? '#8B5CF6' : colors.gray400} />
           <Text style={[s.segBtnText, openToAny && { color: '#8B5CF6' }]}>Open · ₹{pricing.openToAnyReferralCost}</Text>
@@ -441,6 +455,20 @@ export default function AskReferralScreen({ navigation, route }) {
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS==='ios'?'padding':'height'}>
       <TabHeader navigation={navigation} title={!isDesktop ? 'Get Referred' : undefined} showWallet walletBalance={loadingWallet?null:walletBalance} />
 
+        {/* Sticky mode pill (appears on scroll) */}
+        {showStickyMode && (
+          <Animated.View style={[s.stickyModePill, { transform: [{ translateY: stickyAnim.interpolate({ inputRange: [0, 1], outputRange: [-50, 0] }) }] }]}>
+            <View style={[s.stickyModeActive, openToAny ? { backgroundColor: '#8B5CF6' + '15', borderColor: '#8B5CF6' + '40' } : { backgroundColor: colors.primary + '15', borderColor: colors.primary + '40' }]}>
+              <Ionicons name={openToAny ? 'globe-outline' : 'business-outline'} size={16} color={openToAny ? '#8B5CF6' : colors.primary} />
+              <Text style={[s.stickyModeText, { color: openToAny ? '#8B5CF6' : colors.primary }]}>{openToAny ? 'Open' : 'Specific'} · ₹{effectiveCost}</Text>
+            </View>
+            <TouchableOpacity style={s.stickyModeSwitch} onPress={() => switchMode(!openToAny)} activeOpacity={0.7}>
+              <Ionicons name="swap-horizontal" size={14} color={colors.primary} />
+              <Text style={s.stickySwitchText}>{openToAny ? 'Switch to Specific' : 'Switch to Open'}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
       {isDesktop ? (
         /* ── DESKTOP: Split layout ──────────────────────── */
         <View style={s.desktopLayout}>
@@ -485,6 +513,25 @@ const createStyles = (c, r = {}) => {
     /* Mobile */
     inner: { flex: 1 },
     scroll: { flex: 1 },
+
+    /* Sticky mode pill */
+    stickyModePill: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 8,
+      backgroundColor: c.surface, borderBottomWidth: 1, borderBottomColor: c.border,
+    },
+    stickyModeActive: {
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+      borderWidth: 1,
+    },
+    stickyModeText: { fontSize: 13, fontWeight: '700' },
+    stickyModeSwitch: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16,
+      backgroundColor: c.primary + '10',
+    },
+    stickySwitchText: { fontSize: 12, fontWeight: '600', color: c.primary },
 
     /* Social proof (mobile) */
     proofBar: { marginHorizontal: 16, marginTop: 8, marginBottom: 4, backgroundColor: c.surface, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: c.border },
