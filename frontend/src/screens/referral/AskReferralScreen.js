@@ -287,6 +287,21 @@ export default function AskReferralScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
+      {/* Mode description + refund badge (mobile only — desktop shows in sidebar) */}
+      {!isDesktop && (
+        <View style={s.modeInfo}>
+          <Text style={s.modeInfoText}>
+            {openToAny
+              ? 'Broadcast to all referrers — multiple companies can refer you'
+              : 'Target a specific company with your referral request'}
+          </Text>
+          <View style={s.refundBadgeMobile}>
+            <Ionicons name="shield-checkmark-outline" size={13} color={colors.success} />
+            <Text style={s.refundTextMobile}>Full refund if no referral received</Text>
+          </View>
+        </View>
+      )}
+
       {/* ── Fields (progressive reveal) ──────────────── */}
 
       {/* Company (Specific only) */}
@@ -465,6 +480,12 @@ const createStyles = (c, r = {}) => {
     segBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
     segBtnActive: { borderColor: c.primary, backgroundColor: c.primary+'10' },
     segBtnText: { fontSize: 14, fontWeight: '700', color: c.textMuted },
+
+    /* Mode info (mobile) */
+    modeInfo: { marginHorizontal: 16, marginTop: -16, marginBottom: 20 },
+    modeInfoText: { fontSize: 13, color: c.textSecondary, textAlign: 'center', lineHeight: 18, marginBottom: 8 },
+    refundBadgeMobile: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 6, paddingHorizontal: 12, backgroundColor: (c.success||'#22C55E')+'08', borderRadius: 8, borderWidth: 1, borderColor: (c.success||'#22C55E')+'18' },
+    refundTextMobile: { fontSize: 12, fontWeight: '600', color: c.success||'#22C55E' },
 
     /* Fields */
     fieldInput: { borderWidth: 1, borderColor: c.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, color: c.text, backgroundColor: c.surface },
