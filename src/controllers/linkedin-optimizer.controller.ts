@@ -40,6 +40,8 @@ async function parseMultipartFormData(req: HttpRequest): Promise<{
       const form = new multiparty.Form();
       const fields: Record<string, string> = {};
       const files: Array<{ fieldName: string; buffer: Buffer; filename: string; contentType: string }> = [];
+      const fileBuffers: Map<string, Buffer[]> = new Map();
+      const fileInfo: Map<string, { filename: string; contentType: string }> = new Map();
 
       form.on('field', (name: string, value: string) => {
         fields[name] = value;
@@ -50,22 +52,37 @@ async function parseMultipartFormData(req: HttpRequest): Promise<{
         const fieldName = part.name;
 
         if (part.filename) {
-          part.on('data', (chunk: Buffer) => chunks.push(chunk));
-          part.on('end', () => {
+          fileInfo.set(fieldName, {
+            filename: part.filename,
+            contentType: part.headers['content-type'] || 'application/octet-stream',
+          });
+          part.on('data', (chunk: Buffer) => { chunks.push(chunk); });
+          part.on('end', () => { fileBuffers.set(fieldName, chunks); });
+        } else {
+          let data = '';
+          part.on('data', (chunk: Buffer) => { data += chunk.toString(); });
+          part.on('end', () => { fields[fieldName] = data; });
+        }
+
+        part.on('error', (err: Error) => { console.error('Part error:', err); });
+      });
+
+      form.on('close', () => {
+        for (const [fieldName, chunks] of fileBuffers) {
+          const info = fileInfo.get(fieldName);
+          if (info) {
             files.push({
               fieldName,
               buffer: Buffer.concat(chunks),
-              filename: part.filename,
-              contentType: part.headers['content-type'] || 'application/octet-stream',
+              filename: info.filename,
+              contentType: info.contentType,
             });
-          });
-        } else {
-          part.resume();
+          }
         }
+        resolve({ fields, files });
       });
 
-      form.on('close', () => resolve({ fields, files }));
-      form.on('error', (err: Error) => reject(err));
+      form.on('error', (err: Error) => { console.error('Form parsing error:', err); reject(err); });
       form.parse(readable as any);
     } catch (error) {
       reject(error);
@@ -143,7 +160,9 @@ export async function analyzeLinkedIn(req: HttpRequest, context: InvocationConte
 
     if (contentType.includes('multipart/form-data')) {
       // Full audit mode (PDF upload)
+      context.log(`Parsing multipart form data...`);
       const parsed = await parseMultipartFormData(req);
+      context.log(`Parsed: ${parsed.files.length} files, fields: ${Object.keys(parsed.fields).join(',')}`);
       const pdfFile = parsed.files.find(f => f.fieldName === 'pdf' || f.fieldName === 'file');
 
       if (pdfFile) {
@@ -164,6 +183,13 @@ export async function analyzeLinkedIn(req: HttpRequest, context: InvocationConte
         mode = 'full';
         pdfBuffer = pdfFile.buffer;
         fileName = pdfFile.filename;
+      } else {
+        // Multipart request but no PDF found
+        return {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          jsonBody: { success: false, error: 'No PDF file found in upload. Please select your LinkedIn PDF and try again.' },
+        };
       }
       targetRole = parsed.fields.targetRole?.trim() || '';
     } else {

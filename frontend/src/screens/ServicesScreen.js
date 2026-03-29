@@ -54,6 +54,16 @@ const getServices = (colors) => [
     screen: 'ResumeBuilder',
   },
   {
+    id: 'linkedin-optimizer',
+    title: 'LinkedIn Optimizer',
+    subtitle: 'Stand out to recruiters',
+    description: 'AI audits your headline, summary, experience, and skills, then generates optimized versions you can copy-paste. Upload PDF or paste sections.',
+    icon: 'logo-linkedin',
+    gradient: ['#0A66C2', '#004182'],
+    ready: true,
+    screen: 'LinkedInOptimizer',
+  },
+  {
     id: 'interview-prep',
     title: 'Interview Prep',
     subtitle: 'Practice with real questions',
@@ -62,16 +72,6 @@ const getServices = (colors) => [
     gradient: [colors.successDark, colors.successLight],
     ready: false,
     screen: 'InterviewDecoded',
-  },
-  {
-    id: 'linkedin-optimizer',
-    title: 'LinkedIn Optimizer',
-    subtitle: 'Stand out to recruiters',
-    description: 'Paste your LinkedIn URL — AI audits your headline, summary, and skills, then generates an optimized profile in one click.',
-    icon: 'logo-linkedin',
-    gradient: [colors.primaryDark, colors.primary],
-    ready: false,
-    screen: 'LinkedInOptimizer',
   },
   {
     id: 'salary-spy',

@@ -197,10 +197,12 @@ export default function LinkedInOptimizerScreen({ navigation }) {
         }
         if (targetRole.trim()) formData.append('targetRole', targetRole.trim());
 
-        const token = await refopenAPI.getToken();
+        const token = await refopenAPI.getToken('refopen_token');
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
         const res = await fetch(`${refopenAPI.baseURL}/tools/linkedin-optimizer`, {
           method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` },
+          headers,
           body: formData,
         });
         response = await res.json();
