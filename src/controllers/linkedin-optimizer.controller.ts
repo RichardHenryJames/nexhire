@@ -96,7 +96,7 @@ export async function analyzeLinkedIn(req: HttpRequest, context: InvocationConte
     const userId = user.userId || user.sub;
 
     // ── Free-use / wallet check ─────────────────────────────
-    const freeUses = (await PricingService.getSetting('LINKEDIN_OPTIMIZER_FREE_USES')) || 2;
+    const freeUses = (await PricingService.getSetting('LINKEDIN_OPTIMIZER_FREE_USES')) || 1;
     const costPerUse = (await PricingService.getSetting('LINKEDIN_OPTIMIZER_COST')) || 29;
 
     const usageResult = await dbService.executeQuery(
