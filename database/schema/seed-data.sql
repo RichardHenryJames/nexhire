@@ -1291,7 +1291,7 @@ SET IDENTITY_INSERT ReferralPlans OFF;
 GO
 
 -- ============================================================
--- Seed Data: PricingSettings (24 rows)
+-- Seed Data: PricingSettings (26 rows)
 -- ============================================================
 
 SET IDENTITY_INSERT PricingSettings ON;
@@ -1319,6 +1319,8 @@ INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, I
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (20, N'AI_RESUME_FREE_USES', 2, N'Number of free AI resume analyses per user', 1, '2026-02-26T00:00:00.000Z', '2026-02-26T00:00:00.000Z');
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (22, N'RESUME_BUILDER_PREMIUM_COST', 49, N'Cost for Resume Builder Premium (watermark-free export) in INR', 1, '2026-03-04T00:00:00.000Z', '2026-03-04T00:00:00.000Z');
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (23, N'RESUME_BUILDER_PREMIUM_DURATION_HOURS', 168, N'Resume Builder Premium access duration in hours (7 days)', 1, '2026-03-04T00:00:00.000Z', '2026-03-04T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (24, N'LINKEDIN_OPTIMIZER_FREE_USES', 1, N'Free LinkedIn optimizer uses per user', 1, '2026-03-30T00:00:00.000Z', '2026-03-30T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (25, N'LINKEDIN_OPTIMIZER_COST', 29, N'Cost per LinkedIn optimization after free tier (INR)', 1, '2026-03-30T00:00:00.000Z', '2026-03-30T00:00:00.000Z');
 SET IDENTITY_INSERT PricingSettings OFF;
 GO
 
