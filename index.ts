@@ -2009,6 +2009,24 @@ app.http("tools-resume-analyzer", {
   handler: analyzeResume,
 });
 
+import { analyzeLinkedIn } from "./src/controllers/linkedin-optimizer.controller";
+
+/**
+ * LinkedIn Profile Optimizer - Analyze and optimize LinkedIn profiles
+ * POST /api/tools/linkedin-optimizer
+ * Auth required. First 2 uses free, then ₹29/use.
+ * 
+ * Accepts:
+ * - JSON body: { headline, about, currentRole, skills, targetRole } (quick mode)
+ * - Multipart form-data: PDF file + targetRole (full audit mode)
+ */
+app.http("tools-linkedin-optimizer", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/linkedin-optimizer",
+  handler: analyzeLinkedIn,
+});
+
 // ========================================================================
 // MESSAGING SYSTEM ENDPOINTS - NEW: Chat & Direct Messaging
 // ========================================================================
