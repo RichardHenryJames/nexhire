@@ -107,9 +107,8 @@ export class LinkedInOptimizerService {
     // Parse AI response
     const result = this.parseAIResponse(aiResult, request);
 
-    // Record usage in DB
-    const elapsed = Date.now() - startTime;
-    await this.recordUsage(request.userId, request.mode, result.overallScore, elapsed);
+    // Attach elapsed for controller to record usage
+    (result as any)._elapsedMs = Date.now() - startTime;
 
     return result;
   }
@@ -247,8 +246,10 @@ OPTIMIZATION RULES:
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 4096,
+              temperature: 0.3,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 8192,
               responseMimeType: 'application/json',
             },
           }),
@@ -289,8 +290,8 @@ OPTIMIZATION RULES:
             { role: 'system', content: 'You are a LinkedIn profile optimization expert. Always respond with valid JSON only.' },
             { role: 'user', content: prompt },
           ],
-          temperature: 0.7,
-          max_tokens: 4096,
+          temperature: 0.3,
+          max_tokens: 8192,
           response_format: { type: 'json_object' },
         }),
       });

@@ -126,14 +126,14 @@ export default function LinkedInOptimizerScreen({ navigation }) {
   // Animations
   const stepAnim = useRef(new Animated.Value(0)).current;
 
-  // Load wallet
+  // Load wallet + refresh after returning from WalletRecharge
   useEffect(() => {
     if (isAuthenticated) {
       refopenAPI.apiCall('/wallet/balance').then(r => {
         if (r?.balance !== undefined) setWalletBalance(r.balance);
       }).catch(() => {});
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, showPurchase]);
 
   // Analyzing animation
   useEffect(() => {
@@ -257,10 +257,11 @@ export default function LinkedInOptimizerScreen({ navigation }) {
     setView('input');
     setError('');
     setExpandedSection(null);
+    setPdfFile(null);
   }, []);
 
   const s = useMemo(() => makeStyles(colors, isDesktop), [colors, isDesktop]);
-  const costPerUse = pricing?.linkedinOptimizerCost || 29;
+  const costPerUse = usageInfo?.costPerUse || pricing?.linkedinOptimizerCost || 29;
   const freeRemaining = usageInfo ? usageInfo.freeRemaining : null;
 
   // ── Section Card ─────────────────────────────────────────
@@ -556,9 +557,9 @@ export default function LinkedInOptimizerScreen({ navigation }) {
         requiredAmount={costPerUse}
         contextType="tool"
         itemName="LinkedIn Profile Optimization"
-        onProceed={() => { setShowPurchase(false); handleAnalyze(); }}
+        onProceed={async () => { setShowPurchase(false); handleAnalyze(); }}
         onAddMoney={() => { setShowPurchase(false); navigation.navigate('WalletRecharge'); }}
-        onCancel={() => setShowPurchase(false)}
+        onCancel={() => { setShowPurchase(false); setView('input'); }}
       />
     </View>
   );

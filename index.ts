@@ -2014,7 +2014,7 @@ import { analyzeLinkedIn } from "./src/controllers/linkedin-optimizer.controller
 /**
  * LinkedIn Profile Optimizer - Analyze and optimize LinkedIn profiles
  * POST /api/tools/linkedin-optimizer
- * Auth required. First 2 uses free, then ₹29/use.
+ * Auth required. First 1 use free, then ₹29/use.
  * 
  * Accepts:
  * - JSON body: { headline, about, currentRole, skills, targetRole } (quick mode)

@@ -1009,7 +1009,9 @@ export class ResumeAnalyzerService {
       throw new Error('Gemini API key not configured');
     }
     
-    const prompt = `You are a senior technical recruiter with 15+ years of experience. Perform a deep analysis of this resume against the job description.
+    const prompt = `You are a brutally honest senior technical recruiter at a top-tier company (Google/Meta/Amazon). You've reviewed 50,000+ resumes. You do NOT sugarcoat. You score HARD. Most resumes are mediocre and you score them accordingly. A 70+ means genuinely impressive. 90+ is reserved for perfect matches only.
+
+Your job is to tell candidates the HARSH TRUTH so they can actually improve, not feel good about a bad resume.
 
 JOB TITLE: ${jobTitle || 'Not specified'}
 
@@ -1031,10 +1033,10 @@ Return ONLY valid JSON (no markdown, no code blocks). Use this exact structure:
   "matchedKeywords": [<keywords from the JD that ARE present in the resume>],
   "missingKeywords": [<important keywords from the JD that are MISSING from the resume>],
   "strengths": [<3-5 specific strengths, e.g. "4+ years React experience directly matches requirement">],
-  "weaknesses": [<2-4 specific gaps, e.g. "No mention of CI/CD experience which is listed as required">],
+  "weaknesses": [<3-6 specific gaps - be BLUNT, e.g. "Claims 'full-stack' but zero backend projects listed", "No metrics anywhere - reads like a task list, not achievements">],
   "atsIssues": [<ATS compatibility problems, e.g. "Resume uses tables which may confuse ATS parsers", "No clear section headers detected">],
   "bulletFeedback": {
-    "weak": [<2-3 actual weak bullet points from the resume that lack impact/metrics>],
+    "weak": [<3-4 actual weak bullet points from the resume that lack impact/metrics>],
     "improved": [<rewritten versions of those bullets with action verbs and quantified results>]
   },
   "tips": [
@@ -1045,19 +1047,36 @@ Return ONLY valid JSON (no markdown, no code blocks). Use this exact structure:
     "totalBullets": <total number of bullet points in the resume>
   },
   "weakVerbs": [<weak/passive action verbs found in resume bullets, e.g. "helped", "assisted", "worked on", "responsible for">],
-  "overallAssessment": "<3-4 sentence assessment: fit level, biggest gap, strongest qualification, recommended action>"
+  "overallAssessment": "<4-5 sentence BRUTALLY HONEST assessment. Start with the hard truth. What would make a recruiter skip this in 6 seconds? What's actually good? What MUST change before applying?>"
 }
 
-Rules:
-- matchedKeywords + missingKeywords should cover all important JD keywords
-- Each strength/weakness must reference specific resume content vs JD requirements  
-- bulletFeedback.weak must be ACTUAL bullets from the resume, bulletFeedback.improved must be rewritten versions
+STRICT SCORING RULES (do NOT inflate):
+- 90-100: Near-perfect match. Every JD requirement met with evidence. Metrics everywhere. Would instantly shortlist. RARE.
+- 75-89: Strong candidate. Most requirements met. Some metrics. Worth interviewing. Only ~15% of resumes reach here.
+- 60-74: Decent but gaps exist. Missing some key requirements. Few metrics. Maybe gets a call if applicant pool is weak.
+- 40-59: Below average for this role. Major skill gaps or experience mismatch. Would likely be filtered out.
+- 20-39: Poor fit. Resume needs significant rework before applying to this specific role.
+- 0-19: Wrong role entirely, or resume is nearly empty/incoherent.
+
+COMMON SCORING MISTAKES TO AVOID:
+- Do NOT give 70+ just because the candidate has "some" relevant experience
+- Do NOT give 80+ unless they match 80%+ of the JD requirements WITH evidence
+- A resume with zero metrics/numbers should NEVER score above 65 in experience
+- "Responsible for X" bullets are WEAK. Penalize heavily in experience score
+- If skills section is just a keyword dump with no project evidence, cap skills score at 60
+- Generic summaries like "passionate developer" or "team player" should be called out as filler
+
+ANALYSIS RULES:
+- matchedKeywords + missingKeywords should cover ALL important JD keywords (be thorough)
+- Each strength/weakness must reference SPECIFIC resume content vs JD requirements
+- bulletFeedback.weak must be ACTUAL bullets from the resume, bulletFeedback.improved must be rewritten versions with real metrics
 - atsIssues should flag formatting problems (tables, images, missing headers, unusual fonts, multi-column layouts)
-- tips: provide 4-6 specific actionable tips. Each tip must have text, priority (high/medium/low), and category
+- tips: provide 5-8 specific actionable tips. Each tip must have text, priority (high/medium/low), and category
 - tips.category must be one of: keywords, achievements, formatting, skills, experience
 - categoryScores.keywords = (matchedKeywords count / total important keywords) * 100
 - achievementMetrics: count resume bullet points with numbers/percentages/metrics vs total bullets
-- weakVerbs: list 3-6 weak/passive verbs actually used in resume (e.g. "helped", "responsible for", "worked on")`;
+- weakVerbs: list ALL weak/passive verbs found (e.g. "helped", "responsible for", "worked on", "assisted", "involved in", "participated")
+- weaknesses: find AT LEAST 3. Every resume has weaknesses. If you can't find any, you're not looking hard enough.`;
 
     // Try Gemini first, fallback to Groq on rate limit
     let useGroq = false;

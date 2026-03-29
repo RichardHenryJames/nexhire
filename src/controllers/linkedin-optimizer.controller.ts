@@ -218,6 +218,17 @@ export async function analyzeLinkedIn(req: HttpRequest, context: InvocationConte
       }
     }
 
+    // ── Record usage AFTER debit ────────────────────────────
+    try {
+      const elapsed = (result as any)?._elapsedMs || 0;
+      await dbService.executeQuery(
+        `INSERT INTO LinkedInOptimizerUsage (UserID, Mode, OverallScore, ElapsedMs, CreatedAt) VALUES (@param0, @param1, @param2, @param3, GETUTCDATE())`,
+        [userId, mode, result.overallScore, elapsed]
+      );
+    } catch (usageErr: any) {
+      context.error('Usage recording failed (non-critical):', usageErr.message);
+    }
+
     return {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
