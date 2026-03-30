@@ -5,7 +5,7 @@
  * Takes scraped job context (title, company, department, location, raw description)
  * and generates a professional, detailed JD using AI.
  * 
- * AI Strategy: Gemini 2.5 Flash (primary) → Groq Llama 3.3 70B (fallback)
+ * AI Strategy: Groq Llama 3.3 70B (primary) → Gemini 2.5 Flash (fallback)
  */
 
 import { dbService } from './database.service';
@@ -244,7 +244,7 @@ export class JobDescriptionEnricherService {
   /**
    * Generate structured enrichment data using AI.
    * Returns separate fields for description, responsibilities, benefits, and tags.
-   * Uses Gemini as primary, Groq as fallback.
+   * Uses Groq as primary, Gemini as fallback.
    */
   private static async generateStructuredEnrichment(job: JobToEnrich): Promise<EnrichedJobData> {
     const prompt = this.buildPrompt(job);
@@ -414,9 +414,6 @@ Return ONLY the content for each section separated by ---SECTION---. No labels, 
     return result;
   }
 
-  /**
-   * Call Gemini 2.5 Flash API
-   */
   /**
    * Clean AI output: remove markdown formatting, code blocks, extra whitespace
    */

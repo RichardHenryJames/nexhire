@@ -1,7 +1,7 @@
 /**
  * Resume Analyzer Service
  * 
- * Analyzes resumes against job descriptions using Google Gemini AI.
+ * Analyzes resumes against job descriptions using AI.
  * 
  * Features:
  * - PDF text extraction using pdf-parse

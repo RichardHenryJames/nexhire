@@ -99,7 +99,7 @@ export class LinkedInOptimizerService {
     // Build the AI prompt
     const prompt = this.buildPrompt(profileText, request.targetRole || '', request.mode);
 
-    // Call AI (Gemini primary, Groq fallback)
+    // Call AI (Groq primary, Gemini fallback)
     const aiResult = await this.callAI(prompt);
 
     // Parse AI response

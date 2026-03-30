@@ -5,7 +5,7 @@
  * - CRUD for projects, sections
  * - Template management
  * - Auto-fill from user profile data
- * - AI-powered summary, bullet rewriting, ATS scoring (Gemini)
+ * - AI-powered summary, bullet rewriting, ATS scoring
  * - Server-side HTML→PDF generation
  * 
  * @module ResumeBuilderService
@@ -571,7 +571,7 @@ export class ResumeBuilderService {
   }
 
   // ============================================================
-  // AI FEATURES (Gemini)
+  // AI FEATURES
   // ============================================================
 
   /**
