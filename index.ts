@@ -188,7 +188,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, getAdminDashboardResumeBuilder, getAdminDashboardLinkedInOptimizer, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -1900,6 +1900,20 @@ app.http("admin-dashboard-resume-analyzer", {
   authLevel: "anonymous",
   route: "management/dashboard/resume-analyzer",
   handler: withErrorHandling(getAdminDashboardResumeAnalyzer),
+});
+
+app.http("admin-dashboard-resume-builder", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/resume-builder",
+  handler: withErrorHandling(getAdminDashboardResumeBuilder),
+});
+
+app.http("admin-dashboard-linkedin-optimizer", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/linkedin-optimizer",
+  handler: withErrorHandling(getAdminDashboardLinkedInOptimizer),
 });
 
 // ========================================================================

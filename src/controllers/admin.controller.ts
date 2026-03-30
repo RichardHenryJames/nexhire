@@ -625,6 +625,102 @@ export const getAdminDashboardResumeAnalyzer = withAuth(async (
 });
 
 /**
+ * Get Admin Dashboard - Resume Builder Tab Data (Paginated)
+ */
+export const getAdminDashboardResumeBuilder = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const { dbService } = await import('../services/database.service');
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
+    const offset = (page - 1) * pageSize;
+
+    const [data, totalCount] = await Promise.all([
+      dbService.executeQuery(`
+        SELECT 
+          p.ProjectID, p.UserID, p.ProjectName, p.TemplateID,
+          p.IsPublished, p.PremiumExportUsed,
+          p.CreatedAt, p.UpdatedAt,
+          u.FirstName + ' ' + u.LastName AS UserName, u.Email AS UserEmail,
+          t.Name AS TemplateName
+        FROM ResumeProjects p
+        LEFT JOIN Users u ON p.UserID = u.UserID
+        LEFT JOIN ResumeTemplates t ON p.TemplateID = t.TemplateID
+        ORDER BY p.UpdatedAt DESC
+        OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY
+      `, [offset, pageSize]),
+      dbService.executeQuery(`SELECT COUNT(*) AS TotalCount FROM ResumeProjects`, [])
+    ]);
+
+    const total = totalCount.recordset[0]?.TotalCount || 0;
+
+    return {
+      status: 200,
+      jsonBody: successResponse({
+        resumeBuilder: data.recordset || [],
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize), hasNext: page < Math.ceil(total / pageSize), hasPrev: page > 1 }
+      }, 'Resume builder data loaded')
+    };
+  } catch (error) {
+    console.error('Error in getAdminDashboardResumeBuilder:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to load resume builder data' } };
+  }
+});
+
+/**
+ * Get Admin Dashboard - LinkedIn Optimizer Tab Data (Paginated)
+ */
+export const getAdminDashboardLinkedInOptimizer = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const { dbService } = await import('../services/database.service');
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
+    const offset = (page - 1) * pageSize;
+
+    const [data, totalCount] = await Promise.all([
+      dbService.executeQuery(`
+        SELECT 
+          l.ID, l.UserID, l.Mode, l.OverallScore, l.ElapsedMs, l.CreatedAt,
+          u.FirstName + ' ' + u.LastName AS UserName, u.Email AS UserEmail
+        FROM LinkedInOptimizerUsage l
+        LEFT JOIN Users u ON CAST(l.UserID AS NVARCHAR(100)) = CAST(u.UserID AS NVARCHAR(100))
+        ORDER BY l.CreatedAt DESC
+        OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY
+      `, [offset, pageSize]),
+      dbService.executeQuery(`SELECT COUNT(*) AS TotalCount FROM LinkedInOptimizerUsage`, [])
+    ]);
+
+    const total = totalCount.recordset[0]?.TotalCount || 0;
+
+    return {
+      status: 200,
+      jsonBody: successResponse({
+        linkedinOptimizer: data.recordset || [],
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize), hasNext: page < Math.ceil(total / pageSize), hasPrev: page > 1 }
+      }, 'LinkedIn optimizer data loaded')
+    };
+  } catch (error) {
+    console.error('Error in getAdminDashboardLinkedInOptimizer:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to load LinkedIn optimizer data' } };
+  }
+});
+
+/**
  * DELETE /api/admin/users/:userId - Delete a user and all their data
  * Same logic as scripts/delete-users.js but as an API endpoint
  */

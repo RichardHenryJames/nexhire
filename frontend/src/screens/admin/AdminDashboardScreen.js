@@ -28,7 +28,7 @@ import { useCustomAlert } from '../../components/CustomAlert';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Valid tab names for deep linking
-const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'companies', 'transactions', 'services', 'emailLogs', 'resumeAnalyzer'];
+const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'companies', 'transactions', 'services', 'emailLogs', 'resumeAnalyzer', 'resumeBuilder', 'linkedinOptimizer'];
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
@@ -68,6 +68,10 @@ export default function AdminDashboardScreen() {
   const [emailLogsPagination, setEmailLogsPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [resumeAnalyzerData, setResumeAnalyzerData] = useState(null);
   const [resumeAnalyzerPagination, setResumeAnalyzerPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [resumeBuilderData, setResumeBuilderData] = useState(null);
+  const [resumeBuilderPagination, setResumeBuilderPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [linkedinOptimizerData, setLinkedinOptimizerData] = useState(null);
+  const [linkedinOptimizerPagination, setLinkedinOptimizerPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   
   // Activity tracking data
   const [activityData, setActivityData] = useState(null);
@@ -272,6 +276,40 @@ export default function AdminDashboardScreen() {
     }
   }, []);
 
+  // Load resume builder data on demand (paginated)
+  const loadResumeBuilder = useCallback(async (page = 1) => {
+    try {
+      setTabLoading(prev => ({ ...prev, resumeBuilder: true }));
+      const response = await refopenAPI.apiCall(`/management/dashboard/resume-builder?page=${page}&pageSize=20`);
+      if (response.success) {
+        setResumeBuilderData(response.data.resumeBuilder);
+        setResumeBuilderPagination(response.data.pagination);
+        loadedTabs.current.resumeBuilder = true;
+      }
+    } catch (error) {
+      console.error('Error loading resume builder data:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, resumeBuilder: false }));
+    }
+  }, []);
+
+  // Load LinkedIn optimizer data on demand (paginated)
+  const loadLinkedinOptimizer = useCallback(async (page = 1) => {
+    try {
+      setTabLoading(prev => ({ ...prev, linkedinOptimizer: true }));
+      const response = await refopenAPI.apiCall(`/management/dashboard/linkedin-optimizer?page=${page}&pageSize=20`);
+      if (response.success) {
+        setLinkedinOptimizerData(response.data.linkedinOptimizer);
+        setLinkedinOptimizerPagination(response.data.pagination);
+        loadedTabs.current.linkedinOptimizer = true;
+      }
+    } catch (error) {
+      console.error('Error loading LinkedIn optimizer data:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, linkedinOptimizer: false }));
+    }
+  }, []);
+
   // Load activity analytics data
   const loadActivity = useCallback(async (days = 30, force = false) => {
     if (loadedTabs.current.activity && !force) return;
@@ -427,6 +465,12 @@ export default function AdminDashboardScreen() {
       case 'resumeAnalyzer':
         loadResumeAnalyzer();
         break;
+      case 'resumeBuilder':
+        loadResumeBuilder();
+        break;
+      case 'linkedinOptimizer':
+        loadLinkedinOptimizer();
+        break;
       case 'activity':
         loadActivity();
         break;
@@ -475,8 +519,14 @@ export default function AdminDashboardScreen() {
       case 'resumeAnalyzer':
         loadResumeAnalyzer(1);
         break;
+      case 'resumeBuilder':
+        loadResumeBuilder(1);
+        break;
+      case 'linkedinOptimizer':
+        loadLinkedinOptimizer(1);
+        break;
     }
-  }, [activeTab, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer]);
+  }, [activeTab, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadResumeBuilder, loadLinkedinOptimizer]);
 
   if (!isAdmin) {
     return (
@@ -563,6 +613,8 @@ export default function AdminDashboardScreen() {
           { key: 'services', label: 'Services', icon: 'rocket-outline' },
           { key: 'emailLogs', label: 'Emails', icon: 'mail-outline' },
           { key: 'resumeAnalyzer', label: 'Resume', icon: 'analytics-outline' },
+          { key: 'resumeBuilder', label: 'Builder', icon: 'create-outline' },
+          { key: 'linkedinOptimizer', label: 'LinkedIn', icon: 'logo-linkedin' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -2283,6 +2335,131 @@ export default function AdminDashboardScreen() {
   );
   };
 
+  // Resume Builder Tab
+  const renderResumeBuilderTab = () => {
+    if (tabLoading.resumeBuilder && !resumeBuilderData) return <TabLoadingSpinner />;
+    return (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Resume Builder Usage</Text>
+          <Text style={styles.sectionSubtitle}>
+            Page {resumeBuilderPagination.page} of {resumeBuilderPagination.totalPages} ({resumeBuilderPagination.total} total)
+          </Text>
+        </View>
+        {(resumeBuilderData || []).map((item, index) => (
+          <View key={item.ProjectID || index} style={styles.resumeAnalyzerCard}>
+            <View style={styles.resumeAnalyzerHeader}>
+              <View style={[styles.emailStatusBadge, { backgroundColor: item.PremiumExportUsed ? colors.accentBg : colors.surfaceSecondary }]}>
+                <Ionicons name={item.PremiumExportUsed ? 'star' : 'document-text'} size={14} color={item.PremiumExportUsed ? colors.accent : colors.textSecondary} />
+                <Text style={[styles.emailStatusText, { color: item.PremiumExportUsed ? colors.accent : colors.textSecondary }]}>
+                  {item.PremiumExportUsed ? 'Premium' : 'Free'}
+                </Text>
+              </View>
+              {item.IsPublished && (
+                <View style={[styles.scoreBadge, { backgroundColor: colors.success + '20' }]}>
+                  <Text style={[styles.scoreText, { color: colors.success }]}>Published</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.resumeFileName} numberOfLines={1}>{item.ProjectName || 'Untitled Resume'}</Text>
+            {item.TemplateName && (
+              <View style={styles.resumeInfoRow}>
+                <Ionicons name="color-palette-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.resumeInfoText}>Template: {item.TemplateName}</Text>
+              </View>
+            )}
+            {item.UserName && (
+              <View style={styles.resumeInfoRow}>
+                <Ionicons name="person-circle-outline" size={14} color={colors.primary} />
+                <Text style={[styles.resumeInfoText, { color: colors.primary }]}>{item.UserName}</Text>
+              </View>
+            )}
+            {item.UserEmail && (
+              <View style={styles.resumeInfoRow}>
+                <Ionicons name="mail-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.resumeInfoText}>{item.UserEmail}</Text>
+              </View>
+            )}
+            <View style={styles.resumeMetaRow}>
+              <Text style={styles.resumeMetaText}>Created {new Date(item.CreatedAt).toLocaleDateString()}</Text>
+              <Text style={styles.resumeMetaText}>Updated {new Date(item.UpdatedAt).toLocaleDateString()}</Text>
+            </View>
+          </View>
+        ))}
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity style={[styles.paginationButton, !resumeBuilderPagination.hasPrev && styles.paginationButtonDisabled]} onPress={() => resumeBuilderPagination.hasPrev && loadResumeBuilder(resumeBuilderPagination.page - 1)} disabled={!resumeBuilderPagination.hasPrev}>
+            <Ionicons name="chevron-back" size={20} color={resumeBuilderPagination.hasPrev ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.paginationButtonText, !resumeBuilderPagination.hasPrev && styles.paginationButtonTextDisabled]}>Previous</Text>
+          </TouchableOpacity>
+          <Text style={styles.paginationInfo}>Page {resumeBuilderPagination.page} / {resumeBuilderPagination.totalPages}</Text>
+          <TouchableOpacity style={[styles.paginationButton, !resumeBuilderPagination.hasNext && styles.paginationButtonDisabled]} onPress={() => resumeBuilderPagination.hasNext && loadResumeBuilder(resumeBuilderPagination.page + 1)} disabled={!resumeBuilderPagination.hasNext}>
+            <Text style={[styles.paginationButtonText, !resumeBuilderPagination.hasNext && styles.paginationButtonTextDisabled]}>Next</Text>
+            <Ionicons name="chevron-forward" size={20} color={resumeBuilderPagination.hasNext ? colors.primary : colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
+  // LinkedIn Optimizer Tab
+  const renderLinkedinOptimizerTab = () => {
+    if (tabLoading.linkedinOptimizer && !linkedinOptimizerData) return <TabLoadingSpinner />;
+    return (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>LinkedIn Optimizer Usage</Text>
+          <Text style={styles.sectionSubtitle}>
+            Page {linkedinOptimizerPagination.page} of {linkedinOptimizerPagination.totalPages} ({linkedinOptimizerPagination.total} total)
+          </Text>
+        </View>
+        {(linkedinOptimizerData || []).map((item, index) => (
+          <View key={item.ID || index} style={styles.resumeAnalyzerCard}>
+            <View style={styles.resumeAnalyzerHeader}>
+              <View style={[styles.emailStatusBadge, { backgroundColor: item.Mode === 'full' ? colors.primaryBg : colors.surfaceSecondary }]}>
+                <Ionicons name={item.Mode === 'full' ? 'document-text' : 'flash'} size={14} color={item.Mode === 'full' ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.emailStatusText, { color: item.Mode === 'full' ? colors.primary : colors.textSecondary }]}>
+                  {item.Mode === 'full' ? 'PDF Audit' : 'Quick Mode'}
+                </Text>
+              </View>
+              {item.OverallScore !== null && (
+                <View style={[styles.scoreBadge, { backgroundColor: getScoreColor(item.OverallScore) + '20' }]}>
+                  <Text style={[styles.scoreText, { color: getScoreColor(item.OverallScore) }]}>{item.OverallScore}%</Text>
+                </View>
+              )}
+            </View>
+            {item.UserName && (
+              <View style={styles.resumeInfoRow}>
+                <Ionicons name="person-circle-outline" size={14} color={colors.primary} />
+                <Text style={[styles.resumeInfoText, { color: colors.primary }]}>{item.UserName}</Text>
+              </View>
+            )}
+            {item.UserEmail && (
+              <View style={styles.resumeInfoRow}>
+                <Ionicons name="mail-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.resumeInfoText}>{item.UserEmail}</Text>
+              </View>
+            )}
+            <View style={styles.resumeMetaRow}>
+              <Text style={styles.resumeMetaText}>{item.ElapsedMs ? `${(item.ElapsedMs / 1000).toFixed(1)}s` : 'N/A'}</Text>
+              <Text style={styles.resumeMetaText}>{new Date(item.CreatedAt).toLocaleDateString()}</Text>
+            </View>
+          </View>
+        ))}
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity style={[styles.paginationButton, !linkedinOptimizerPagination.hasPrev && styles.paginationButtonDisabled]} onPress={() => linkedinOptimizerPagination.hasPrev && loadLinkedinOptimizer(linkedinOptimizerPagination.page - 1)} disabled={!linkedinOptimizerPagination.hasPrev}>
+            <Ionicons name="chevron-back" size={20} color={linkedinOptimizerPagination.hasPrev ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.paginationButtonText, !linkedinOptimizerPagination.hasPrev && styles.paginationButtonTextDisabled]}>Previous</Text>
+          </TouchableOpacity>
+          <Text style={styles.paginationInfo}>Page {linkedinOptimizerPagination.page} / {linkedinOptimizerPagination.totalPages}</Text>
+          <TouchableOpacity style={[styles.paginationButton, !linkedinOptimizerPagination.hasNext && styles.paginationButtonDisabled]} onPress={() => linkedinOptimizerPagination.hasNext && loadLinkedinOptimizer(linkedinOptimizerPagination.page + 1)} disabled={!linkedinOptimizerPagination.hasNext}>
+            <Text style={[styles.paginationButtonText, !linkedinOptimizerPagination.hasNext && styles.paginationButtonTextDisabled]}>Next</Text>
+            <Ionicons name="chevron-forward" size={20} color={linkedinOptimizerPagination.hasNext ? colors.primary : colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
   // Social Share Claims Tab - Review and approve social media posts
   const renderSocialShareTab = () => {
     if (tabLoading.socialShare && !socialShareData) {
@@ -2759,6 +2936,8 @@ export default function AdminDashboardScreen() {
           {activeTab === 'transactions' && renderTransactionsTab()}
           {activeTab === 'emailLogs' && renderEmailLogsTab()}
           {activeTab === 'resumeAnalyzer' && renderResumeAnalyzerTab()}
+          {activeTab === 'resumeBuilder' && renderResumeBuilderTab()}
+          {activeTab === 'linkedinOptimizer' && renderLinkedinOptimizerTab()}
         </ScrollView>
       </View>
     </View>
