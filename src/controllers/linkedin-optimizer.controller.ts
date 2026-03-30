@@ -287,6 +287,7 @@ export async function analyzeLinkedIn(req: HttpRequest, context: InvocationConte
       jsonBody: {
         success: false,
         error: isValidationError ? error.message : 'Something went wrong. Please try again.',
+        debug: error.message,
       },
     };
   }
