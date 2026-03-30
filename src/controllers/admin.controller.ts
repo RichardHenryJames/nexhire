@@ -645,18 +645,19 @@ export const getAdminDashboardResumeBuilder = withAuth(async (
     const [data, totalCount] = await Promise.all([
       dbService.executeQuery(`
         SELECT 
-          p.ProjectID, p.UserID, p.ProjectName, p.TemplateID,
-          p.IsPublished, p.PremiumExportUsed,
-          p.CreatedAt, p.UpdatedAt,
+          p.ProjectID, p.UserID, p.Title AS ProjectName, p.TemplateID,
+          p.Status, p.TargetJobTitle, p.MatchScore,
+          p.LastExportedAt, p.CreatedAt, p.UpdatedAt,
           u.FirstName + ' ' + u.LastName AS UserName, u.Email AS UserEmail,
-          t.Name AS TemplateName
-        FROM ResumeProjects p
+          t.Name AS TemplateName, t.IsPremium
+        FROM ResumeBuilderProjects p
         LEFT JOIN Users u ON p.UserID = u.UserID
-        LEFT JOIN ResumeTemplates t ON p.TemplateID = t.TemplateID
+        LEFT JOIN ResumeBuilderTemplates t ON p.TemplateID = t.TemplateID
+        WHERE p.IsDeleted = 0
         ORDER BY p.UpdatedAt DESC
         OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY
       `, [offset, pageSize]),
-      dbService.executeQuery(`SELECT COUNT(*) AS TotalCount FROM ResumeProjects`, [])
+      dbService.executeQuery(`SELECT COUNT(*) AS TotalCount FROM ResumeBuilderProjects WHERE IsDeleted = 0`, [])
     ]);
 
     const total = totalCount.recordset[0]?.TotalCount || 0;

@@ -2349,19 +2349,25 @@ export default function AdminDashboardScreen() {
         {(resumeBuilderData || []).map((item, index) => (
           <View key={item.ProjectID || index} style={styles.resumeAnalyzerCard}>
             <View style={styles.resumeAnalyzerHeader}>
-              <View style={[styles.emailStatusBadge, { backgroundColor: item.PremiumExportUsed ? colors.accentBg : colors.surfaceSecondary }]}>
-                <Ionicons name={item.PremiumExportUsed ? 'star' : 'document-text'} size={14} color={item.PremiumExportUsed ? colors.accent : colors.textSecondary} />
-                <Text style={[styles.emailStatusText, { color: item.PremiumExportUsed ? colors.accent : colors.textSecondary }]}>
-                  {item.PremiumExportUsed ? 'Premium' : 'Free'}
+              <View style={[styles.emailStatusBadge, { backgroundColor: item.IsPremium ? colors.accentBg : colors.surfaceSecondary }]}>
+                <Ionicons name={item.IsPremium ? 'star' : 'document-text'} size={14} color={item.IsPremium ? colors.accent : colors.textSecondary} />
+                <Text style={[styles.emailStatusText, { color: item.IsPremium ? colors.accent : colors.textSecondary }]}>
+                  {item.IsPremium ? 'Premium' : 'Free'}
                 </Text>
               </View>
-              {item.IsPublished && (
-                <View style={[styles.scoreBadge, { backgroundColor: colors.success + '20' }]}>
-                  <Text style={[styles.scoreText, { color: colors.success }]}>Published</Text>
+              {item.Status && (
+                <View style={[styles.scoreBadge, { backgroundColor: (item.Status === 'published' ? colors.success : colors.primary) + '20' }]}>
+                  <Text style={[styles.scoreText, { color: item.Status === 'published' ? colors.success : colors.primary }]}>{item.Status}</Text>
                 </View>
               )}
             </View>
             <Text style={styles.resumeFileName} numberOfLines={1}>{item.ProjectName || 'Untitled Resume'}</Text>
+            {item.TargetJobTitle && (
+              <View style={styles.resumeInfoRow}>
+                <Ionicons name="briefcase-outline" size={14} color={colors.textSecondary} />
+                <Text style={styles.resumeInfoText}>Target: {item.TargetJobTitle}</Text>
+              </View>
+            )}
             {item.TemplateName && (
               <View style={styles.resumeInfoRow}>
                 <Ionicons name="color-palette-outline" size={14} color={colors.textSecondary} />
