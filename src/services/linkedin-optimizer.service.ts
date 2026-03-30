@@ -234,79 +234,78 @@ OPTIMIZATION RULES:
   }
 
   /**
-   * Call AI - Gemini primary, Groq fallback
+   * Call AI - Groq primary, Gemini fallback
    */
   private static async callAI(prompt: string): Promise<string> {
-    // Try Gemini first
-    if (GEMINI_API_KEY) {
+    // Try Groq first (faster, more reliable rate limits)
+    if (GROQ_API_KEY) {
       try {
-        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        const groqResponse = await fetch(GROQ_API_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${GROQ_API_KEY}`,
+          },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.3,
-              topK: 40,
-              topP: 0.95,
-              maxOutputTokens: 8192,
-              responseMimeType: 'application/json',
-            },
+            model: 'llama-3.3-70b-versatile',
+            messages: [
+              { role: 'system', content: 'You are a LinkedIn profile optimization expert. Always respond with valid JSON only.' },
+              { role: 'user', content: prompt },
+            ],
+            temperature: 0.3,
+            max_tokens: 8192,
+            response_format: { type: 'json_object' },
           }),
         });
 
-        if (response.ok) {
-          const data: any = await response.json();
-          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (groqResponse.ok) {
+          const groqData: any = await groqResponse.json();
+          const text = groqData?.choices?.[0]?.message?.content;
           if (text) return text;
         }
 
-        // If 429 (rate limit), fall through to Groq
-        if (response.status === 429) {
-          console.log('Gemini rate limited, falling back to Groq');
+        if (groqResponse.status === 429) {
+          console.log('Groq rate limited, falling back to Gemini');
         } else {
-          console.error('Gemini error:', response.status, await response.text().catch(() => ''));
+          console.error('Groq error:', groqResponse.status, await groqResponse.text().catch(() => ''));
         }
       } catch (err: any) {
-        console.error('Gemini call failed:', err.message);
+        console.error('Groq call failed:', err.message);
       }
     }
 
-    // Groq fallback
-    if (!GROQ_API_KEY) {
+    // Gemini fallback
+    if (!GEMINI_API_KEY) {
       throw new Error('AI service temporarily unavailable. Please try again later.');
     }
 
     try {
-      const groqResponse = await fetch(GROQ_API_URL, {
+      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: 'You are a LinkedIn profile optimization expert. Always respond with valid JSON only.' },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.3,
-          max_tokens: 8192,
-          response_format: { type: 'json_object' },
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.3,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 8192,
+            responseMimeType: 'application/json',
+          },
         }),
       });
 
-      if (!groqResponse.ok) {
-        throw new Error(`Groq API error: ${groqResponse.status}`);
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`);
       }
 
-      const groqData: any = await groqResponse.json();
-      const text = groqData?.choices?.[0]?.message?.content;
+      const data: any = await response.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (text) return text;
 
       throw new Error('Empty response from AI');
     } catch (err: any) {
-      console.error('Groq call failed:', err.message);
+      console.error('Gemini fallback failed:', err.message);
       throw new Error('AI analysis failed. Please try again in a moment.');
     }
   }

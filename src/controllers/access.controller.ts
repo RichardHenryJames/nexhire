@@ -11,7 +11,7 @@ import { AIJobRecommendationService } from '../services/ai-job-recommendation.se
 import { MessagingService } from '../services/messaging.service';
 
 // Supported access types
-type AccessType = 'ai_jobs' | 'profile_views' | 'resume_template' | 'resume_analysis';
+type AccessType = 'ai_jobs' | 'profile_views' | 'resume_template' | 'resume_analysis' | 'linkedin_optimization';
 
 interface AccessStatusResult {
   type: AccessType;
@@ -31,7 +31,7 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
     const url = new URL(req.url);
     const accessType = url.searchParams.get('type') as AccessType;
 
-    if (!accessType || !['ai_jobs', 'profile_views', 'resume_template', 'resume_analysis'].includes(accessType)) {
+    if (!accessType || !['ai_jobs', 'profile_views', 'resume_template', 'resume_analysis', 'linkedin_optimization'].includes(accessType)) {
       return {
         status: 400,
         jsonBody: {
@@ -162,6 +162,35 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
           totalUsed: raUsageCount,
           freeUses: raFreeUses,
           freeRemaining: Math.max(0, raFreeUses - raUsageCount),
+        } as any;
+        break;
+
+      case 'linkedin_optimization':
+        const liCost = (await PricingService.getSetting('LINKEDIN_OPTIMIZER_COST')) || 29;
+        const liFreeUses = (await PricingService.getSetting('LINKEDIN_OPTIMIZER_FREE_USES')) || 1;
+        let liUsageCount = 0;
+        try {
+          const liResult = await (await import('../services/database.service')).dbService.executeQuery(
+            `SELECT COUNT(*) AS cnt FROM LinkedInOptimizerUsage WHERE UserID = @param0`,
+            [user.userId]
+          );
+          liUsageCount = liResult.recordset?.[0]?.cnt || 0;
+        } catch (e) {
+          liUsageCount = 0;
+        }
+        const liIsFree = liUsageCount < liFreeUses;
+        result = {
+          type: 'linkedin_optimization',
+          hasActiveAccess: liIsFree,
+          requiresPayment: !liIsFree,
+          cost: liCost,
+          durationDays: 0,
+          message: liIsFree
+            ? `${liFreeUses - liUsageCount} free optimization remaining`
+            : `Each optimization costs ₹${liCost}`,
+          totalUsed: liUsageCount,
+          freeUses: liFreeUses,
+          freeRemaining: Math.max(0, liFreeUses - liUsageCount),
         } as any;
         break;
 

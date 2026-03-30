@@ -653,7 +653,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
             <>
               <Text style={{ fontSize: 16 }}>✨</Text>
               <Text style={styles.analyzeBtnText}>
-                {!user ? 'Analyze Resume' : !isFreeUse ? `Analyze Resume (₹${costPerUse})` : 'Analyze Resume'}
+                {!user ? 'Analyze Resume' : !isFreeUse ? `Analyze Resume (₹${analysisCost})` : 'Analyze Resume'}
               </Text>
             </>
           )}

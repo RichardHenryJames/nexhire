@@ -272,19 +272,21 @@ export async function analyzeLinkedIn(req: HttpRequest, context: InvocationConte
       },
     };
   } catch (error: any) {
-    context.error('LinkedIn optimizer error:', error);
+    context.error('LinkedIn optimizer error:', error.message, error.stack?.substring(0, 300));
 
+    // Only 400 for actual input validation errors (not AI/DB failures)
     const isValidationError =
-      error.message?.includes('required') ||
-      error.message?.includes('provide') ||
-      error.message?.includes('Please');
+      error.message?.includes('provide at least') ||
+      error.message?.includes('upload a PDF') ||
+      error.message?.includes('No PDF file found') ||
+      error.message?.includes('too large');
 
     return {
       status: isValidationError ? 400 : 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       jsonBody: {
         success: false,
-        error: error.message || 'Failed to analyze LinkedIn profile. Please try again.',
+        error: isValidationError ? error.message : 'Something went wrong. Please try again.',
       },
     };
   }

@@ -117,23 +117,38 @@ export default function LinkedInOptimizerScreen({ navigation }) {
   const [copied, setCopied] = useState('');
   const [expandedSection, setExpandedSection] = useState(null);
 
-  // Wallet
+  // Wallet + usage tracking
   const [walletBalance, setWalletBalance] = useState(0);
   const [showSignIn, setShowSignIn] = useState(false);
   const [showPurchase, setShowPurchase] = useState(false);
   const [usageInfo, setUsageInfo] = useState(null);
+  const [usageCount, setUsageCount] = useState(0);
+  const [optimizerCost, setOptimizerCost] = useState(29);
+  const [freeUses, setFreeUses] = useState(1);
+  const isFreeUse = usageCount < freeUses;
 
   // Animations
   const stepAnim = useRef(new Animated.Value(0)).current;
 
-  // Load wallet + refresh after returning from WalletRecharge
+  // Load wallet + usage on mount (same pattern as ResumeAnalyzer)
   useEffect(() => {
-    if (isAuthenticated) {
-      refopenAPI.apiCall('/wallet/balance').then(r => {
-        if (r?.balance !== undefined) setWalletBalance(r.balance);
-      }).catch(() => {});
-    }
-  }, [isAuthenticated, showPurchase]);
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const [balResult, usageResult] = await Promise.all([
+          refopenAPI.apiCall('/wallet/balance'),
+          refopenAPI.apiCall('/access/status?type=linkedin_optimization'),
+        ]);
+        if (balResult?.balance !== undefined) setWalletBalance(balResult.balance);
+        if (usageResult?.success && usageResult.data) {
+          const d = usageResult.data;
+          if (d.totalUsed !== undefined) setUsageCount(d.totalUsed);
+          if (d.freeUses !== undefined) setFreeUses(d.freeUses);
+          if (d.cost !== undefined) setOptimizerCost(d.cost);
+        }
+      } catch (e) { /* silent */ }
+    })();
+  }, [isAuthenticated]);
 
   // Analyzing animation
   useEffect(() => {
@@ -179,6 +194,21 @@ export default function LinkedInOptimizerScreen({ navigation }) {
       return;
     }
 
+    // Pre-check: if free tier exhausted, show purchase modal first (same as ResumeAnalyzer)
+    if (!isFreeUse) {
+      try {
+        const b = await refopenAPI.apiCall('/wallet/balance');
+        if (b?.balance !== undefined) setWalletBalance(b.balance);
+      } catch (e) { /* use cached */ }
+      setShowPurchase(true);
+      return;
+    }
+
+    await executeOptimization();
+  }, [mode, headline, about, currentRole, skills, pdfFile, isAuthenticated, isFreeUse]);
+
+  // Actual optimization call (called directly for free tier, or after purchase confirmation)
+  const executeOptimization = useCallback(async () => {
     setError('');
     setAnalyzing(true);
     setAnalyzeStep(0);
@@ -223,11 +253,17 @@ export default function LinkedInOptimizerScreen({ navigation }) {
       if (response?.success) {
         setResult(response.data);
         setUsageInfo(response.usageInfo);
+        if (response.usageInfo?.totalUsed !== undefined) setUsageCount(response.usageInfo.totalUsed);
+        // Refresh wallet after paid analysis
+        if (response.usageInfo?.wasFree === false) {
+          refopenAPI.apiCall('/wallet/balance').then(r => { if (r?.balance !== undefined) setWalletBalance(r.balance); }).catch(() => {});
+        }
         setView('results');
         setExpandedSection('headline');
       } else if (response?.requiresPayment) {
         setShowPurchase(true);
         setView('input');
+        return;
       } else {
         setError(response?.error || 'Analysis failed. Please try again.');
         setView('input');
@@ -263,8 +299,8 @@ export default function LinkedInOptimizerScreen({ navigation }) {
   }, []);
 
   const s = useMemo(() => makeStyles(colors, isDesktop), [colors, isDesktop]);
-  const costPerUse = usageInfo?.costPerUse || pricing?.linkedinOptimizerCost || 29;
-  const freeRemaining = usageInfo ? usageInfo.freeRemaining : null;
+  const costPerUse = optimizerCost;
+  const freeRemaining = Math.max(0, freeUses - usageCount);
 
   // ── Section Card ─────────────────────────────────────────
   const renderSectionCard = (section, data) => {
@@ -425,16 +461,10 @@ export default function LinkedInOptimizerScreen({ navigation }) {
           ) : (
             <>
               <Ionicons name="sparkles" size={18} color="#fff" />
-              <Text style={s.ctaBtnText}>Optimize My Profile</Text>
+              <Text style={s.ctaBtnText}>{!isFreeUse ? `Optimize My Profile (₹${costPerUse})` : 'Optimize My Profile'}</Text>
             </>
           )}
         </TouchableOpacity>
-        {freeRemaining !== null && freeRemaining > 0 && (
-          <Text style={s.freeLabel}>{freeRemaining} free {freeRemaining === 1 ? 'use' : 'uses'} remaining</Text>
-        )}
-        {freeRemaining !== null && freeRemaining <= 0 && (
-          <Text style={s.freeLabel}>₹{costPerUse} per analysis</Text>
-        )}
       </View>
     </ScrollView>
   );
@@ -556,10 +586,10 @@ export default function LinkedInOptimizerScreen({ navigation }) {
       <ConfirmPurchaseModal
         visible={showPurchase}
         currentBalance={walletBalance}
-        requiredAmount={costPerUse}
+        requiredAmount={optimizerCost}
         contextType="tool"
         itemName="LinkedIn Profile Optimization"
-        onProceed={async () => { setShowPurchase(false); handleAnalyze(); }}
+        onProceed={async () => { setShowPurchase(false); await executeOptimization(); }}
         onAddMoney={() => { setShowPurchase(false); navigation.navigate('WalletRecharge'); }}
         onCancel={() => { setShowPurchase(false); setView('input'); }}
       />
