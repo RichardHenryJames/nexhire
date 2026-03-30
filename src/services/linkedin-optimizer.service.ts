@@ -11,11 +11,11 @@
 import { dbService } from './database.service';
 
 // ── AI API Config ──────────────────────────────────────────────
-// Uses dedicated keys if available, falls back to resume keys, then shared keys
-const GEMINI_API_KEY = process.env.GEMINI_LINKEDIN_API_KEY || process.env.GEMINI_RESUME_API_KEY || process.env.GEMINI_API_KEY || '';
+// Uses dedicated LinkedIn API keys (separate quota from resume analyzer and scraper)
+const GEMINI_API_KEY = process.env.GEMINI_LINKEDIN_API_KEY || '';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-const GROQ_API_KEY = process.env.GROQ_LINKEDIN_API_KEY || process.env.GROQ_RESUME_API_KEY || process.env.GROQ_API_KEY || '';
+const GROQ_API_KEY = process.env.GROQ_LINKEDIN_API_KEY || '';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // ── Interfaces ─────────────────────────────────────────────────
