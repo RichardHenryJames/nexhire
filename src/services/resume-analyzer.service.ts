@@ -997,8 +997,8 @@ export class ResumeAnalyzerService {
     jobDescription: string,
     jobTitle?: string
   ): Promise<ResumeAnalysisResult> {
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
+    if (!GEMINI_API_KEY && !GROQ_API_KEY) {
+      throw new Error('AI service not configured. Please contact support.');
     }
     
     const prompt = `You are a brutally honest senior technical recruiter at a top-tier company (Google/Meta/Amazon). You've reviewed 50,000+ resumes. You do NOT sugarcoat. You score HARD. Most resumes are mediocre and you score them accordingly. A 70+ means genuinely impressive. 90+ is reserved for perfect matches only.

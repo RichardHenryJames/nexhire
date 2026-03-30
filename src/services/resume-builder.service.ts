@@ -596,7 +596,7 @@ Total experience entries: ${experiences.length}
 
 Write ONLY the summary text. No quotes, no labels, no explanations. Make it punchy, specific, and achievement-oriented.`;
 
-    const summary = await this.callGemini(prompt);
+    const summary = await this.callAI(prompt);
 
     // Save to project
     await this.updateProject(projectId, userId, { summary });
@@ -618,7 +618,7 @@ ${bullets.map((b, i) => `${i + 1}. ${b}`).join('\n')}
 Return ONLY the rewritten bullets as a JSON array of strings. No markdown, no explanation.
 Example output: ["Led cross-functional team of 8...", "Reduced deployment time by 40%..."]`;
 
-    const response = await this.callGemini(prompt);
+    const response = await this.callAI(prompt);
 
     try {
       // Try to parse JSON from response
@@ -663,7 +663,7 @@ Return a JSON object with exactly this structure (no markdown, no explanation):
 
 Score criteria: keyword match (40%), experience relevance (30%), skills alignment (20%), formatting (10%).`;
 
-    const response = await this.callGemini(prompt);
+    const response = await this.callAI(prompt);
 
     try {
       // Robust JSON parsing (same approach as Resume Analyzer)
@@ -935,7 +935,7 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
     return '';
   }
 
-  private static async callGemini(prompt: string): Promise<string> {
+  private static async callAI(prompt: string): Promise<string> {
     const result = await AIService.call({
       prompt,
       groqApiKey: GROQ_API_KEY,
