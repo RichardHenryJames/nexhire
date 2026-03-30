@@ -136,10 +136,10 @@ export default function LinkedInOptimizerScreen({ navigation }) {
     (async () => {
       try {
         const [balResult, usageResult] = await Promise.all([
-          refopenAPI.apiCall('/wallet/balance'),
+          refopenAPI.getWalletBalance(),
           refopenAPI.apiCall('/access/status?type=linkedin_optimization'),
         ]);
-        if (balResult?.balance !== undefined) setWalletBalance(balResult.balance);
+        if (balResult?.success) setWalletBalance(balResult.data?.availableBalance ?? balResult.data?.balance ?? 0);
         if (usageResult?.success && usageResult.data) {
           const d = usageResult.data;
           if (d.totalUsed !== undefined) setUsageCount(d.totalUsed);
@@ -197,8 +197,8 @@ export default function LinkedInOptimizerScreen({ navigation }) {
     // Pre-check: if free tier exhausted, show purchase modal first (same as ResumeAnalyzer)
     if (!isFreeUse) {
       try {
-        const b = await refopenAPI.apiCall('/wallet/balance');
-        if (b?.balance !== undefined) setWalletBalance(b.balance);
+        const b = await refopenAPI.getWalletBalance();
+        if (b?.success) setWalletBalance(b.data?.availableBalance ?? b.data?.balance ?? 0);
       } catch (e) { /* use cached */ }
       setShowPurchase(true);
       return;
@@ -256,7 +256,7 @@ export default function LinkedInOptimizerScreen({ navigation }) {
         if (response.usageInfo?.totalUsed !== undefined) setUsageCount(response.usageInfo.totalUsed);
         // Refresh wallet after paid analysis
         if (response.usageInfo?.wasFree === false) {
-          refopenAPI.apiCall('/wallet/balance').then(r => { if (r?.balance !== undefined) setWalletBalance(r.balance); }).catch(() => {});
+          refopenAPI.getWalletBalance().then(r => { if (r?.success) setWalletBalance(r.data?.availableBalance ?? r.data?.balance ?? 0); }).catch(() => {});
         }
         setView('results');
         setExpandedSection('headline');
