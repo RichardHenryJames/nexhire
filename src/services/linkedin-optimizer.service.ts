@@ -5,18 +5,15 @@
  * 1. Quick mode: User pastes headline + about + role text
  * 2. Full audit: User uploads LinkedIn "Save to PDF" export
  * 
- * Uses Gemini 2.5 Flash (primary) with Groq Llama 3.3 70B fallback.
+ * Uses common AIService layer (Groq primary, Gemini fallback).
  */
 
 import { dbService } from './database.service';
+import { AIService } from './ai.service';
 
-// ── AI API Config ──────────────────────────────────────────────
-// Uses dedicated LinkedIn API keys (separate quota from resume analyzer and scraper)
-const GEMINI_API_KEY = process.env.GEMINI_LINKEDIN_API_KEY || '';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
+// ── AI API Keys (dedicated LinkedIn keys, separate quota) ──────
 const GROQ_API_KEY = process.env.GROQ_LINKEDIN_API_KEY || '';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GEMINI_API_KEY = process.env.GEMINI_LINKEDIN_API_KEY || '';
 
 // ── Interfaces ─────────────────────────────────────────────────
 
@@ -238,77 +235,19 @@ OPTIMIZATION RULES:
    * Call AI - Groq primary, Gemini fallback
    */
   private static async callAI(prompt: string): Promise<string> {
-    // Try Groq first (faster, more reliable rate limits)
-    if (GROQ_API_KEY) {
-      try {
-        const groqResponse = await fetch(GROQ_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROQ_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: [
-              { role: 'system', content: 'You are a LinkedIn profile optimization expert. Always respond with valid JSON only.' },
-              { role: 'user', content: prompt },
-            ],
-            temperature: 0.3,
-            max_tokens: 8192,
-            response_format: { type: 'json_object' },
-          }),
-        });
-
-        if (groqResponse.ok) {
-          const groqData: any = await groqResponse.json();
-          const text = groqData?.choices?.[0]?.message?.content;
-          if (text) return text;
-        }
-
-        if (groqResponse.status === 429) {
-          console.log('Groq rate limited, falling back to Gemini');
-        } else {
-          console.error('Groq error:', groqResponse.status);
-        }
-      } catch (err: any) {
-        console.error('Groq call failed:', err.message);
-      }
-    }
-
-    // Gemini fallback
-    if (!GEMINI_API_KEY) {
-      throw new Error('AI service is temporarily busy. Please try again in a few minutes.');
-    }
-
-    try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-            responseMimeType: 'application/json',
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status}`);
-      }
-
-      const data: any = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (text) return text;
-
-      throw new Error('Empty response from AI');
-    } catch (err: any) {
-      console.error('Gemini fallback failed:', err.message);
-      throw new Error('AI service is temporarily busy due to high demand. Please try again in a few minutes.');
-    }
+    const result = await AIService.call({
+      prompt,
+      groqApiKey: GROQ_API_KEY,
+      geminiApiKey: GEMINI_API_KEY,
+      options: {
+        temperature: 0.3,
+        maxTokens: 8192,
+        jsonMode: true,
+        systemMessage: 'You are a LinkedIn profile optimization expert. Always respond with valid JSON only.',
+        timeoutMs: 60000,
+      },
+    });
+    return result.text;
   }
 
   /**
