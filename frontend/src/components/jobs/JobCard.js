@@ -85,8 +85,10 @@ const JobCard = ({
   // ✅ NEW: Check if we should show any actions row
   const showActions = !hideApply || !hideSave || !hideReferral || showPublish || showDelete || showShare;
 
+  const isDirect = job.ExternalJobID?.startsWith('direct_');
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={styles.card}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={styles.card}>
       <View style={styles.titleRow}>
         {/* Company Logo */}
         <View style={styles.logoContainer}>
@@ -97,45 +99,40 @@ const JobCard = ({
             />
           ) : (
             <View style={styles.logoPlaceholder}>
-              <Ionicons name="business" size={20} color={colors.primary} />
+              <Ionicons name="business" size={22} color={colors.primary} />
             </View>
           )}
         </View>
         
         {/* Job Details */}
         <View style={styles.titleContent}>
-          <View style={styles.titleHeader}>
-            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text style={styles.title} numberOfLines={2}>{title}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+            <Text style={styles.company} numberOfLines={1}>{org}</Text>
+            {isDirect && <Ionicons name="shield-checkmark" size={12} color="#10b981" />}
           </View>
-          <Text style={styles.company} numberOfLines={1}>{org}</Text>
+          {/* Single-line meta: location · experience */}
           <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={12} color={colors.gray500 || colors.textSecondary} />
-              <Text style={styles.metaText} numberOfLines={1}>{loc}</Text>
-            </View>
+            <Ionicons name="location-outline" size={12} color={colors.gray500 || colors.textSecondary} />
+            <Text style={styles.metaText} numberOfLines={1}>
+              {loc}
+              {(job.ExperienceMin != null || job.ExperienceMax != null) && (
+                `  ·  ${job.ExperienceMin != null && job.ExperienceMax != null
+                  ? `${job.ExperienceMin}-${job.ExperienceMax} yrs exp`
+                  : job.ExperienceMin != null
+                    ? `${job.ExperienceMin}+ yrs exp`
+                    : `0-${job.ExperienceMax} yrs exp`}`
+              )}
+            </Text>
           </View>
-          {(job.ExperienceMin != null || job.ExperienceMax != null) && (
-            <View style={styles.metaRow}>
-              <View style={styles.metaItem}>
-                <Ionicons name="briefcase-outline" size={12} color={colors.gray500 || colors.textSecondary} />
-                <Text style={styles.metaText} numberOfLines={1}>
-                  {job.ExperienceMin != null && job.ExperienceMax != null
-                    ? `${job.ExperienceMin} - ${job.ExperienceMax} years exp`
-                    : job.ExperienceMin != null
-                      ? `${job.ExperienceMin}+ years exp`
-                      : `Up to ${job.ExperienceMax} years exp`}
-                </Text>
-              </View>
-            </View>
-          )}
-          {/* Job type & workplace badges — below experience */}
+          {/* Badges row: job type + workplace */}
           {(jobTypeName || workplaceName) && (
             <View style={styles.badgeRow}>
               {jobTypeName ? (<Text style={styles.metaBadge}>{jobTypeName}</Text>) : null}
               {workplaceName ? (<Text style={styles.metaBadge}>{workplaceName}</Text>) : null}
             </View>
           )}
-          {/* FOMO insight — contextual urgency/social proof */}
+          {/* FOMO insight */}
           {(() => {
             const ds = job.PublishedAt || job.CreatedAt;
             const hoursAgo = ds ? Math.floor((Date.now() - new Date(ds).getTime()) / (1000 * 60 * 60)) : 999;
@@ -269,21 +266,17 @@ const JobCard = ({
 const createStyles = (colors, isDesktop = false) => StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    paddingVertical: isDesktop ? 18 : 14,
-    paddingHorizontal: isDesktop ? 16 : 12,
-    borderBottomWidth: isDesktop ? 0 : 1,
-    borderBottomColor: colors.gray200 || colors.border,
-    // Desktop: elevated cards with rounded corners
-    ...(isDesktop ? {
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.border + '60',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      elevation: 3,
-    } : {}),
+    paddingVertical: isDesktop ? 20 : 16,
+    paddingHorizontal: isDesktop ? 18 : 14,
+    borderRadius: 12,
+    marginHorizontal: isDesktop ? 0 : 4,
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.border + '40',
+  },
+  cardDirect: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#10b981',
   },
   titleRow: {
     flexDirection: 'row',
@@ -294,18 +287,22 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
     marginTop: 2,
   },
   logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.border + '30',
   },
   logoPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: colors.primary + '15',
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: colors.primary + '12',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
   },
   titleContent: {
     flex: 1,
@@ -318,20 +315,22 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
   },
   title: {
     fontSize: isDesktop ? 16 : 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
-    flex: 1,
+    lineHeight: isDesktop ? 22 : 20,
+    marginBottom: 2,
   },
   company: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
     color: colors.gray600 || colors.textSecondary,
-    marginBottom: 6,
+    flexShrink: 1,
   },
   metaRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 4,
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
   },
   metaItem: {
     flexDirection: 'row',
@@ -341,36 +340,38 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
     minWidth: 0,
   },
   metaText: {
-    fontSize: isDesktop ? 13 : 12,
-    color: isDesktop ? (colors.gray400 || colors.textMuted) : (colors.gray500 || colors.textSecondary),
+    fontSize: 12,
+    color: colors.gray500 || colors.textSecondary,
     flexShrink: 1,
   },
   badgeRow: {
     flexDirection: 'row',
     gap: 6,
-    marginTop: 4,
+    marginTop: 2,
   },
   fomoText: {
     fontSize: 11,
     fontStyle: 'italic',
     marginTop: 6,
+    fontWeight: '500',
   },
   metaBadge: {
     fontSize: 11,
-    color: isDesktop ? (colors.textSecondary || colors.gray500) : colors.primary,
-    backgroundColor: isDesktop ? (colors.gray100 || colors.background) : (colors.primaryLight + '30'),
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    fontWeight: '600',
+    color: colors.primary,
+    backgroundColor: colors.primary + '14',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     overflow: 'hidden',
   },
   actionsRow: {
-    marginTop: 6,
-    marginLeft: 52,
+    marginTop: 10,
+    marginLeft: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 6,
+    gap: 8,
   },
   saveBtn: {
     flexDirection: 'row',
@@ -395,12 +396,12 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
   referralBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: isDesktop ? 6 : 5,
-    paddingHorizontal: isDesktop ? 10 : 8,
-    borderRadius: 6,
+    paddingVertical: isDesktop ? 7 : 6,
+    paddingHorizontal: isDesktop ? 12 : 10,
+    borderRadius: 20,
     backgroundColor: colors.primary,
   },
-  referralText: { color: colors.white, marginLeft: 4, fontWeight: '600', fontSize: isDesktop ? 12 : 11 },
+  referralText: { color: colors.white, marginLeft: 4, fontWeight: '700', fontSize: isDesktop ? 12 : 11 },
   referredPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -469,23 +470,23 @@ const createStyles = (colors, isDesktop = false) => StyleSheet.create({
   applyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: isDesktop ? 6 : 5,
-    paddingHorizontal: isDesktop ? 10 : 8,
-    borderRadius: 6,
+    paddingVertical: isDesktop ? 7 : 6,
+    paddingHorizontal: isDesktop ? 12 : 10,
+    borderRadius: 20,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: colors.primary + '80',
   },
   applyText: { color: colors.primary, marginLeft: 4, fontWeight: '700', fontSize: isDesktop ? 12 : 11 },
   appliedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: isDesktop ? 6 : 5,
-    paddingHorizontal: isDesktop ? 10 : 8,
-    borderRadius: 6,
-    backgroundColor: colors.success + '15',
+    paddingVertical: isDesktop ? 7 : 6,
+    paddingHorizontal: isDesktop ? 12 : 10,
+    borderRadius: 20,
+    backgroundColor: colors.success + '12',
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: colors.success + '40',
   },
   appliedText: { color: colors.success, marginLeft: 4, fontWeight: '700', fontSize: isDesktop ? 12 : 11 },
 });

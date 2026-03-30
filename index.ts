@@ -188,7 +188,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, getAdminDashboardResumeBuilder, getAdminDashboardLinkedInOptimizer, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -1902,6 +1902,20 @@ app.http("admin-dashboard-resume-analyzer", {
   handler: withErrorHandling(getAdminDashboardResumeAnalyzer),
 });
 
+app.http("admin-dashboard-resume-builder", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/resume-builder",
+  handler: withErrorHandling(getAdminDashboardResumeBuilder),
+});
+
+app.http("admin-dashboard-linkedin-optimizer", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/linkedin-optimizer",
+  handler: withErrorHandling(getAdminDashboardLinkedInOptimizer),
+});
+
 // ========================================================================
 // USER ACTIVITY TRACKING ENDPOINTS
 // ========================================================================
@@ -2007,6 +2021,24 @@ app.http("tools-resume-analyzer", {
   authLevel: "anonymous",
   route: "tools/resume-analyzer",
   handler: analyzeResume,
+});
+
+import { analyzeLinkedIn } from "./src/controllers/linkedin-optimizer.controller";
+
+/**
+ * LinkedIn Profile Optimizer - Analyze and optimize LinkedIn profiles
+ * POST /api/tools/linkedin-optimizer
+ * Auth required. First 1 use free, then ₹29/use.
+ * 
+ * Accepts:
+ * - JSON body: { headline, about, currentRole, skills, targetRole } (quick mode)
+ * - Multipart form-data: PDF file + targetRole (full audit mode)
+ */
+app.http("tools-linkedin-optimizer", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/linkedin-optimizer",
+  handler: analyzeLinkedIn,
 });
 
 // ========================================================================
@@ -2680,7 +2712,13 @@ app.http("direct-scraper-trigger", {
       console.log("🎯 Direct career scraping triggered by admin:", payload.userId);
 
       const { DirectCareerScraperService } = await import("./src/services/direct-career-scraper.service");
-      const result = await DirectCareerScraperService.scrapeDirectJobs();
+      
+      // Optional: pass ?ats=greenhouse,lever to scrape specific ATS types only
+      const url = new URL(req.url);
+      const atsParam = url.searchParams.get('ats');
+      const atsTypes = atsParam ? atsParam.split(',').map(s => s.trim()) : undefined;
+      
+      const result = await DirectCareerScraperService.scrapeDirectJobs(atsTypes ? { atsTypes: atsTypes as any } : undefined);
 
       // Run AI enrichment on newly scraped direct jobs
       let enrichmentSummary: any = null;
@@ -4206,65 +4244,97 @@ app.timer("jobScraperTimer", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - DIRECT CAREER SITE SCRAPER (Once daily at 3 AM UTC)
-// Scrapes directly from company career pages (Workday, Greenhouse, etc.)
+// TIMER TRIGGERS - DIRECT CAREER SITE SCRAPERS (Split by ATS type)
+// Two triggers, 30 min apart, 2x daily for freshness
+// Trigger 1: Greenhouse/Lever/Ashby/SmartRecruiters (86 companies, 1 API call each, parallel)
+// Trigger 2: Workday/Amazon/Netflix (10 companies, multi-call, sequential)
 // ========================================================================
 
-app.timer("directCareerScraperTimer", {
-  schedule: "0 0 3 * * *", // Daily at 3 AM UTC (1 hour after Adzuna scraper)
-  handler: async (myTimer: Timer, context: InvocationContext) => {
-    context.log(`[DirectScraper] Timer fired at ${new Date().toISOString()}`);
+// Helper: run direct scraper with logging
+async function runDirectScraper(
+  atsTypes: string[],
+  triggerName: string,
+  myTimer: Timer,
+  context: InvocationContext
+) {
+  context.log(`[${triggerName}] Timer fired at ${new Date().toISOString()}`);
 
-    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
-    if (appEnv !== 'production' && appEnv !== 'prod') {
-      context.log(`[DirectScraper] Skipping — not production (env: ${appEnv})`);
-      return;
-    }
+  const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+  if (appEnv !== 'production' && appEnv !== 'prod') {
+    context.log(`[${triggerName}] Skipping — not production (env: ${appEnv})`);
+    return;
+  }
 
+  try {
+    const { DirectCareerScraperService } = await import("./src/services/direct-career-scraper.service");
+    const result = await DirectCareerScraperService.scrapeDirectJobs({ atsTypes: atsTypes as any });
+
+    context.log(`✅ ${triggerName}: ${result.jobsAdded} jobs from ${result.summary.companiesScraped} companies in ${Math.round(result.summary.executionTime / 1000)}s`);
+    
+    const top5 = Object.entries(result.summary.companyBreakdown)
+      .filter(([,v]) => v > 0).sort((a,b) => b[1] - a[1]).slice(0, 5)
+      .map(([k,v]) => `${k}(${v})`).join(', ');
+    if (top5) context.log(`   Top: ${top5}`);
+    if (result.errors.length > 0) context.warn(`   Errors: ${result.errors.slice(0, 3).join('; ')}`);
+
+    // Log to ScrapingLogs
     try {
-      context.log("🎯 Direct Career Site Scraper — Timer Trigger Started");
-      const { DirectCareerScraperService } = await import("./src/services/direct-career-scraper.service");
-      const result = await DirectCareerScraperService.scrapeDirectJobs();
-
-      context.log(`🎯 Direct scraper complete: ${result.jobsAdded} jobs from ${result.summary.companiesScraped} companies`);
-      context.log(`   Companies: ${Object.entries(result.summary.companyBreakdown).map(([k,v]) => `${k}(${v})`).join(', ')}`);
-      context.log(`   Time: ${Math.round(result.summary.executionTime / 1000)}s`);
-
-      if (result.errors.length > 0) {
-        context.warn(`   Errors: ${result.errors.slice(0, 5).join('; ')}`);
-      }
-
-      // Log to ScrapingLogs table (same table as Adzuna scraper)
-      try {
-        const { dbService } = await import("./src/services/database.service");
-        await dbService.executeQuery(`
-          INSERT INTO ScrapingLogs (
-            RunId, StartTime, EndTime, Success, JobsAdded, IndiaJobs,
-            TotalScraped, Sources, ErrorCount, Errors, TriggerType, WasPastDue
-          )
-          VALUES (@param0, @param1, @param2, @param3, @param4, @param5,
-                  @param6, @param7, @param8, @param9, @param10, @param11)
-        `, [
-          `direct_${Date.now()}`,
-          new Date(Date.now() - result.summary.executionTime).toISOString(),
-          new Date().toISOString(),
-          result.success,
-          result.jobsAdded,
-          0, // India jobs (not tracked separately for direct scraper)
-          result.summary.totalJobsScraped,
-          JSON.stringify(result.summary.companyBreakdown),
-          result.errors.length,
-          result.errors.slice(0, 5).join('; '),
-          'DirectCareerTimer',
-          myTimer.isPastDue,
-        ]);
-        context.log('📝 Logged to ScrapingLogs');
-      } catch (logErr: any) {
-        context.warn(`⚠️ Failed to log: ${logErr.message}`);
-      }
-    } catch (error: any) {
-      context.error(`🎯 Direct scraper failed: ${error.message}`);
+      const { dbService } = await import("./src/services/database.service");
+      await dbService.executeQuery(`
+        INSERT INTO ScrapingLogs (
+          RunId, StartTime, EndTime, Success, JobsAdded, IndiaJobs,
+          TotalScraped, Sources, ErrorCount, Errors, TriggerType, WasPastDue
+        )
+        VALUES (@param0, @param1, @param2, @param3, @param4, @param5,
+                @param6, @param7, @param8, @param9, @param10, @param11)
+      `, [
+        `direct_${triggerName}_${Date.now()}`,
+        new Date(Date.now() - result.summary.executionTime).toISOString(),
+        new Date().toISOString(),
+        result.success,
+        result.jobsAdded,
+        0,
+        result.summary.totalJobsScraped,
+        // Truncate to 500 chars — Sources column is nvarchar(500)
+        JSON.stringify(result.summary.companyBreakdown).substring(0, 490),
+        result.errors.length,
+        result.errors.slice(0, 3).join('; ').substring(0, 500),
+        triggerName,
+        myTimer.isPastDue,
+      ]);
+    } catch (logErr: any) {
+      context.warn(`⚠️ Log failed: ${logErr.message}`);
     }
+  } catch (error: any) {
+    context.error(`❌ ${triggerName} failed: ${error.message}`);
+  }
+}
+
+// Trigger 1: Fast APIs (Greenhouse, Lever, Ashby, SmartRecruiters) — 86 companies, parallel
+// Runs at 3:00 AM and 3:00 PM UTC (2x daily)
+app.timer("directScraperFastTimer", {
+  schedule: "0 0 3,15 * * *",
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    await runDirectScraper(
+      ['greenhouse', 'lever', 'ashby', 'smartrecruiters'],
+      'DirectFast',
+      myTimer,
+      context
+    );
+  },
+});
+
+// Trigger 2: Slow/undocumented APIs (Workday, Amazon, Netflix) — 10 companies, sequential
+// Runs at 3:30 AM and 3:30 PM UTC (2x daily, 30 min after fast trigger)
+app.timer("directScraperSlowTimer", {
+  schedule: "0 30 3,15 * * *",
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    await runDirectScraper(
+      ['workday', 'amazon', 'netflix'],
+      'DirectSlow',
+      myTimer,
+      context
+    );
   },
 });
 
@@ -4540,11 +4610,11 @@ app.timer("unreadMessageReminderTimer", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - JOB RECOMMENDATION EMAILS (9:20 AM IST = 3:50 AM UTC, Every 2 Days)
+// TIMER TRIGGER - JOB RECOMMENDATION EMAILS (Daily at 9:20 AM IST = 3:50 AM UTC)
 // ========================================================================
 
 app.timer("dailyJobRecommendationEmail", {
-  schedule: "0 50 3 */2 * *", // 3:50 AM UTC = 9:20 AM IST every 2 days
+  schedule: "0 50 3 * * *", // Daily at 3:50 AM UTC = 9:20 AM IST
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `daily_email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -5137,4 +5207,68 @@ app.http("rb-preview", {
   authLevel: "anonymous",
   route: "resume-builder/projects/{projectId}/preview",
   handler: withErrorHandling(rbPreviewResume),
+});
+
+// ========================================================================
+// ENGAGEMENT TIMER TRIGGERS
+// ========================================================================
+
+// Weekly Digest: Every Monday at 10:00 AM IST (4:30 AM UTC)
+app.timer("weeklyDigestTimer", {
+  schedule: "0 30 4 * * 1", // Monday 4:30 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[WeeklyDigest] Timer fired");
+    try {
+      const { sendWeeklyDigest } = await import("./src/services/engagement.service");
+      const result = await sendWeeklyDigest();
+      context.log(`[WeeklyDigest] ${result.sent} sent, ${result.failed} failed`);
+    } catch (e: any) { context.error(`[WeeklyDigest] Failed: ${e.message}`); }
+  },
+});
+
+// Saved Job Expiring Nudge: Daily at 8:00 AM IST (2:30 AM UTC)
+app.timer("savedJobExpiringTimer", {
+  schedule: "0 30 2 * * *", // Daily 2:30 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[SavedJobExpiring] Timer fired");
+    try {
+      const { sendSavedJobExpiringNudges } = await import("./src/services/engagement.service");
+      const result = await sendSavedJobExpiringNudges();
+      context.log(`[SavedJobExpiring] ${result.sent} users notified`);
+    } catch (e: any) { context.error(`[SavedJobExpiring] Failed: ${e.message}`); }
+  },
+});
+
+// Onboarding Drip Emails: Daily at 11:00 AM IST (5:30 AM UTC)
+app.timer("onboardingDripTimer", {
+  schedule: "0 30 5 * * *", // Daily 5:30 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[OnboardingDrip] Timer fired");
+    try {
+      const { sendOnboardingDripEmails } = await import("./src/services/engagement.service");
+      const result = await sendOnboardingDripEmails();
+      context.log(`[OnboardingDrip] ${result.sent} emails sent`);
+    } catch (e: any) { context.error(`[OnboardingDrip] Failed: ${e.message}`); }
+  },
+});
+
+// Similar Jobs Notifications: Daily at 12:30 PM IST (7:00 AM UTC)
+app.timer("similarJobsTimer", {
+  schedule: "0 0 7 * * *", // Daily 7:00 AM UTC
+  handler: async (myTimer: Timer, context: InvocationContext) => {
+    const appEnv = process.env.RefOpen_ENV || process.env.NODE_ENV || 'development';
+    if (appEnv !== 'production' && appEnv !== 'prod') return;
+    context.log("[SimilarJobs] Timer fired");
+    try {
+      const { sendSimilarJobNotifications } = await import("./src/services/engagement.service");
+      const result = await sendSimilarJobNotifications();
+      context.log(`[SimilarJobs] ${result.sent} notifications sent`);
+    } catch (e: any) { context.error(`[SimilarJobs] Failed: ${e.message}`); }
+  },
 });

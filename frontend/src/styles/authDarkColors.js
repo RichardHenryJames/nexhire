@@ -121,6 +121,19 @@ export const authDarkColors = {
   /* ── Primary glow variants ──────────────────────── */
   primaryGlowStrong: 'rgba(59, 130, 246, 0.2)',
 
+  /* ── Step indicator ─────────────────────────────── */
+  stepCompleted: '#22C55E',
+  stepActive: '#3B82F6',
+  stepUpcoming: 'rgba(255, 255, 255, 0.12)',
+  stepLine: 'rgba(255, 255, 255, 0.08)',
+  stepLineCompleted: 'rgba(34, 197, 94, 0.5)',
+  stepLineActive: 'rgba(59, 130, 246, 0.3)',
+
+  /* ── Enhanced card ──────────────────────────────── */
+  cardGlow: 'rgba(59, 130, 246, 0.08)',
+  cardGlowBorder: 'rgba(59, 130, 246, 0.25)',
+  cardHover: 'rgba(255, 255, 255, 0.03)',
+
   /* ── Gradient presets (arrays for LinearGradient) ── */
   gradientBackground: ['#1E1E1E', '#222222', '#1E1E1E'],
 };

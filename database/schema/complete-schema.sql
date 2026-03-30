@@ -3290,3 +3290,28 @@ BEGIN
     PRINT 'Created table CareerApplications';
 END
 GO
+
+-- ============================================================
+-- Table: LinkedInOptimizerUsage
+-- ============================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LinkedInOptimizerUsage')
+BEGIN
+    CREATE TABLE LinkedInOptimizerUsage (
+        UsageID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
+        UserID UNIQUEIDENTIFIER NOT NULL,
+        Mode NVARCHAR(20) NOT NULL DEFAULT 'quick',
+        OverallScore INT NULL,
+        ElapsedMs INT NULL,
+        CreatedAt DATETIMEOFFSET NOT NULL DEFAULT (SYSDATETIMEOFFSET()),
+        CONSTRAINT PK_LinkedInOptimizerUsage PRIMARY KEY (UsageID),
+        CONSTRAINT FK_LinkedInOptimizerUsage_User FOREIGN KEY (UserID) REFERENCES Users(UserID)
+    );
+    PRINT 'Created table LinkedInOptimizerUsage';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_LinkedInOptimizerUsage_UserID')
+BEGIN
+    CREATE NONCLUSTERED INDEX IX_LinkedInOptimizerUsage_UserID ON LinkedInOptimizerUsage(UserID);
+END
+GO

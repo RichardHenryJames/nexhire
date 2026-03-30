@@ -4,1157 +4,458 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Modal,
-  FlatList,
   TextInput,
   ActivityIndicator,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../../../contexts/ThemeContext';
-import { typography } from '../../../../styles/theme';
 import { authDarkColors } from '../../../../styles/authDarkColors';
 import useResponsive from '../../../../hooks/useResponsive';
 import refopenAPI from '../../../../services/api';
 import { showToast } from '../../../../components/Toast';
 import RegistrationWrapper from '../../../../components/auth/RegistrationWrapper';
+import AnimatedFormStep from '../../../../components/auth/AnimatedFormStep';
 
-// Add debounce hook for smooth search
-const useDebounce = (value, delay) => {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-};
-
-// Degree types and fields of study are fetched from ReferenceMetadata.
-// RefType values:
-//  - DegreeType (Category = degreeKey, Description = group/category label)
-//  - FieldOfStudy (Category = degreeKey)
+/** Strip dots, slashes, spaces for fuzzy matching: "btech" matches "B.Tech / B.E" */
+const normalize = (s) => (s || '').toLowerCase().replace(/[.\s/\-_,()&]+/g, '');
 
 export default function EducationDetailsScreen({ navigation, route }) {
-  const colors = authDarkColors; // Always use dark colors for auth screens
+  const colors = authDarkColors;
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
-  const [formData, setFormData] = useState({
-    college: null,
-    customCollege: '',
-    degreeType: '',
-    degreeTypeKey: '',
-    fieldOfStudy: '',
-    yearInCollege: '',
-    selectedCountry: 'India',
-    graduationYear: '',  // NEW: Add graduation year
-    gpa: '',            // NEW: Add GPA
-  });
 
+  const { userType, experienceType, workExperienceData, totalSteps = 3 } = route.params;
+
+  // ─── Form state ──────────────────────────────────────────────
+  const [degreeType, setDegreeType] = useState('');
+  const [degreeTypeKey, setDegreeTypeKey] = useState('');
+  const [fieldOfStudy, setFieldOfStudy] = useState('');
+  const [graduationYear, setGraduationYear] = useState('');
+
+  // ─── Degree dropdown ─────────────────────────────────────────
   const [degreeTypes, setDegreeTypes] = useState([]);
+  const [loadingDegrees, setLoadingDegrees] = useState(true);
+  const [degreeSearch, setDegreeSearch] = useState('');
+  const [showDegreeDropdown, setShowDegreeDropdown] = useState(false);
+
+  // ─── Field of study dropdown ─────────────────────────────────
   const [fieldsOfStudy, setFieldsOfStudy] = useState([]);
-  const [yearsInCollege, setYearsInCollege] = useState([]);
-  const [loadingDegrees, setLoadingDegrees] = useState(false);
   const [loadingFields, setLoadingFields] = useState(false);
-  const [loadingYears, setLoadingYears] = useState(false);
-  
-  const [allColleges, setAllColleges] = useState([]);
-  const [countries, setCountries] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingCountries, setLoadingCountries] = useState(false);
-  const [error, setError] = useState(null);
-  
-  // CRITICAL FIX: Single search term with modal type tracking
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeModal, setActiveModal] = useState(null); // 'college', 'country', 'degree', 'field', 'year'
-  
-  // CRITICAL FIX: Debounce search term
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [fieldSearch, setFieldSearch] = useState('');
+  const [showFieldDropdown, setShowFieldDropdown] = useState(false);
 
-  // CRITICAL FIX: Prevent modal state conflicts
-  const modalRefs = useRef({
-    college: false,
-    country: false,
-    degree: false,
-    field: false,
-    year: false
-  });
-  
-  const { userType, experienceType, workExperienceData } = route.params;
+  // ─── Progressive reveal ──────────────────────────────────────
+  const scrollRef = useRef(null);
+  const [currentStep, setCurrentStep] = useState(0); // 0=degree, 1=field, 2=gradYear
 
-  useEffect(() => {
-    loadCountries();
-    loadColleges();
-    loadEducationReferenceData();
+  const advanceTo = useCallback((step) => {
+    setCurrentStep((prev) => (step > prev ? step : prev));
   }, []);
 
+  // Degree selected → show field
   useEffect(() => {
-    if (formData.selectedCountry) {
-      loadColleges();
-    }
-  }, [formData.selectedCountry]);
+    if (degreeTypeKey) advanceTo(1);
+  }, [degreeTypeKey, advanceTo]);
 
-  const loadReferenceTypes = async (types) => {
-    const wantsDegrees = Array.isArray(types) && types.includes('DegreeType');
-    const wantsYears = Array.isArray(types) && types.includes('YearInCollege');
+  // Field selected → show gradYear
+  useEffect(() => {
+    if (fieldOfStudy) advanceTo(2);
+  }, [fieldOfStudy, advanceTo]);
 
-    try {
-      if (wantsDegrees) setLoadingDegrees(true);
-      if (wantsYears) setLoadingYears(true);
-
-      // ✅ OPTIMIZED: Use bulk endpoint to fetch multiple types in one call
-      const response = await refopenAPI.getBulkReferenceMetadata(types);
-
-      if (!response?.success || !response?.data) {
-        throw new Error(response?.error || 'Failed to load reference metadata');
+  // ─── Load degree types on mount ──────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingDegrees(true);
+        const response = await refopenAPI.getBulkReferenceMetadata(['DegreeType']);
+        if (response?.success && response.data?.DegreeType) {
+          setDegreeTypes(
+            response.data.DegreeType.filter((i) => i?.Value).map((i) => ({
+              id: i.Category || String(i.ReferenceID),
+              name: i.Value,
+              category: i.Description || 'Others',
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('Error loading degrees:', err);
+      } finally {
+        setLoadingDegrees(false);
       }
+    })();
+  }, []);
 
-      if (wantsDegrees) {
-        const items = Array.isArray(response.data.DegreeType) ? response.data.DegreeType : [];
-        const transformed = items
-          .filter(item => item && item.Value)
-          .map(item => ({
-            id: item.Category || String(item.ReferenceID),
-            name: item.Value,
-            category: item.Description || 'Others',
-          }));
-        setDegreeTypes(transformed);
-      }
-
-      if (wantsYears) {
-        const items = Array.isArray(response.data.YearInCollege) ? response.data.YearInCollege : [];
-        const transformed = items
-          .filter(item => item && item.Value)
-          .map(item => item.Value);
-        setYearsInCollege(transformed);
-      }
-    } catch (error) {
-      console.error('Error loading reference metadata:', error);
-      if (wantsDegrees) setDegreeTypes([]);
-      if (wantsYears) setYearsInCollege([]);
-    } finally {
-      if (wantsDegrees) setLoadingDegrees(false);
-      if (wantsYears) setLoadingYears(false);
-    }
-  };
-
-  const loadEducationReferenceData = async () => {
-    return loadReferenceTypes(['DegreeType', 'YearInCollege']);
-  };
-
-  const loadDegreeTypes = async () => {
-    return loadReferenceTypes(['DegreeType']);
-  };
-
-  const loadFieldsOfStudy = async (degreeKey) => {
-    if (!degreeKey) {
-      setFieldsOfStudy([]);
-      return;
-    }
-
+  // ─── Load fields when degree changes ─────────────────────────
+  const loadFieldsOfStudy = async (key) => {
+    if (!key) { setFieldsOfStudy([]); return; }
     try {
       setLoadingFields(true);
-      const response = await refopenAPI.getReferenceMetadata('FieldOfStudy', degreeKey);
-
+      const response = await refopenAPI.getReferenceMetadata('FieldOfStudy', key);
       if (response.success && Array.isArray(response.data)) {
-        const transformed = response.data
-          .filter(item => item && item.Value)
-          .map(item => item.Value);
-        setFieldsOfStudy(transformed);
-      } else {
-        throw new Error(response.error || 'Failed to load fields of study');
+        setFieldsOfStudy(response.data.filter((i) => i?.Value).map((i) => i.Value));
       }
-    } catch (error) {
-      console.error('Error loading fields of study:', error);
+    } catch (err) {
       setFieldsOfStudy([]);
     } finally {
       setLoadingFields(false);
     }
   };
 
-  const loadYearsInCollege = async () => {
-    return loadReferenceTypes(['YearInCollege']);
+  // ─── Filtered lists ──────────────────────────────────────────
+  const filteredDegrees = useMemo(() => {
+    if (!degreeSearch.trim()) return degreeTypes;
+    const s = normalize(degreeSearch);
+    const matches = degreeTypes.filter((d) => normalize(d.name).includes(s) || normalize(d.category).includes(s));
+    matches.sort((a, b) => {
+      const aStarts = normalize(a.name).startsWith(s) ? 0 : 1;
+      const bStarts = normalize(b.name).startsWith(s) ? 0 : 1;
+      return aStarts - bStarts;
+    });
+    return matches;
+  }, [degreeSearch, degreeTypes]);
+
+  const filteredFields = useMemo(() => {
+    if (!fieldSearch.trim()) return fieldsOfStudy;
+    const s = normalize(fieldSearch);
+    const matches = fieldsOfStudy.filter((f) => normalize(f).includes(s));
+    matches.sort((a, b) => {
+      const aStarts = normalize(a).startsWith(s) ? 0 : 1;
+      const bStarts = normalize(b).startsWith(s) ? 0 : 1;
+      return aStarts - bStarts;
+    });
+    return matches;
+  }, [fieldSearch, fieldsOfStudy]);
+
+  // ─── Handlers ────────────────────────────────────────────────
+  const handleSelectDegree = (item) => {
+    setDegreeType(item.name);
+    setDegreeTypeKey(item.id);
+    setDegreeSearch('');
+    setShowDegreeDropdown(false);
+    // Reset field since it depends on degree
+    setFieldOfStudy('');
+    setFieldSearch('');
+    setFieldsOfStudy([]);
+    loadFieldsOfStudy(item.id);
+    advanceTo(1);
   };
 
-  const loadCountries = async () => {
-    try {
-      setLoadingCountries(true);
-      
-      
-      const response = await refopenAPI.getCountries();
-      
-      if (response.success && response.data.countries) {
-        const transformedCountries = response.data.countries.map(country => ({
-          code: country.name,
-          name: country.name,
-          flag: country.flag,
-          region: country.region,
-          id: country.id
-        }));
-        
-        setCountries(transformedCountries);
-        
-      } else {
-        throw new Error(response.error || 'Failed to load countries');
-      }
-    } catch (error) {
-      console.error('Error loading countries:', error);
-      
-      const fallbackCountries = [
-        { code: 'India', name: 'India', flag: '????', region: 'Asia' },
-        { code: 'United States', name: 'United States', flag: '????', region: 'Americas' },
-        { code: 'United Kingdom', name: 'United Kingdom', flag: '????', region: 'Europe' },
-        { code: 'Canada', name: 'Canada', flag: '????', region: 'Americas' },
-        { code: 'Australia', name: 'Australia', flag: '????', region: 'Oceania' },
-        { code: 'Germany', name: 'Germany', flag: '????', region: 'Europe' },
-        { code: 'France', name: 'France', flag: '????', region: 'Europe' },
-        { code: 'Singapore', name: 'Singapore', flag: '????', region: 'Asia' },
-      ];
-      
-      setCountries(fallbackCountries);
-      
-    } finally {
-      setLoadingCountries(false);
-    }
+  const handleSelectField = (item) => {
+    setFieldOfStudy(item);
+    setFieldSearch('');
+    setShowFieldDropdown(false);
+    advanceTo(2);
   };
 
-  const loadColleges = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      
-      const response = await refopenAPI.getColleges(formData.selectedCountry);
-      
-      if (response.success) {
-        const transformedColleges = response.data.map(institution => ({
-          id: institution.id,
-          name: institution.name,
-          type: institution.type,
-          country: institution.country,
-          state: institution.state,
-          city: institution.city,
-          website: institution.website,
-          domains: institution.domains || [],
-          establishedYear: institution.establishedYear,
-          globalRanking: institution.globalRanking,
-          description: institution.description,
-          alpha_two_code: institution.alpha_two_code
-        }));
-        
-        setAllColleges(transformedColleges);
-        
-      } else {
-        throw new Error(response.error || 'Failed to load educational institutions');
-      }
-    } catch (error) {
-      console.error('Error loading colleges:', error);
-      setError(error.message);
-      
-      const fallbackColleges = [
-        { id: 999999, name: 'Other', type: 'Other', country: 'Various' }
-      ];
-      setAllColleges(fallbackColleges);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const isGradYearValid = /^\d{4}$/.test(String(graduationYear || '').trim());
+  const isContinueEnabled = Boolean(degreeTypeKey && fieldOfStudy && isGradYearValid);
 
-  // CRITICAL FIX: Memoized filtering with proper dependencies
-  const filteredData = React.useMemo(() => {
-    if (activeModal === 'college') {
-      if (!debouncedSearchTerm.trim()) return allColleges;
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      const matched = allColleges.filter(college => 
-        college.id === 999999 || // Always keep "Other" option visible
-        college.name.toLowerCase().includes(searchLower) ||
-        (college.country && college.country.toLowerCase().includes(searchLower)) ||
-        (college.state && college.state.toLowerCase().includes(searchLower)) ||
-        (college.type && college.type.toLowerCase().includes(searchLower))
-      );
-      return matched;
-    } else if (activeModal === 'country') {
-      if (!debouncedSearchTerm.trim()) return countries;
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      return countries.filter(country =>
-        country.name.toLowerCase().includes(searchLower) ||
-        (country.region && country.region.toLowerCase().includes(searchLower))
-      );
-    } else if (activeModal === 'degree') {
-      if (!debouncedSearchTerm.trim()) {
-        // Group degrees by category for better organization
-        const groupedDegrees = degreeTypes.reduce((acc, degree) => {
-          if (!acc[degree.category]) {
-            acc[degree.category] = [];
-          }
-          acc[degree.category].push(degree);
-          return acc;
-        }, {});
-        
-        // Flatten with category headers
-        const result = [];
-        Object.keys(groupedDegrees).forEach(category => {
-          result.push({ type: 'header', category });
-          result.push(...groupedDegrees[category]);
-        });
-        return result;
-      }
-      
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      return degreeTypes.filter(degree => 
-        degree.name.toLowerCase().includes(searchLower) ||
-        degree.category.toLowerCase().includes(searchLower)
-      );
-    } else if (activeModal === 'field') {
-      const availableFields = fieldsOfStudy;
+  const handleContinue = () => {
+    if (!degreeType) { showToast('Please select your degree type', 'error'); return; }
+    if (!fieldOfStudy) { showToast('Please select your field of study', 'error'); return; }
+    if (!isGradYearValid) { showToast('Enter a valid graduation year (YYYY)', 'error'); return; }
 
-      if (!debouncedSearchTerm.trim()) return availableFields;
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      return availableFields.filter(field => field.toLowerCase().includes(searchLower));
-    } else if (activeModal === 'year') {
-      if (!debouncedSearchTerm.trim()) return yearsInCollege;
-      const searchLower = debouncedSearchTerm.toLowerCase();
-      return yearsInCollege.filter(year => year.toLowerCase().includes(searchLower));
-    }
-    return [];
-  }, [activeModal, debouncedSearchTerm, allColleges, countries, degreeTypes, fieldsOfStudy, yearsInCollege]);
-
-  const isCollegeProvided = (() => {
-    const customCollege = String(formData.customCollege || '').trim();
-    if (!formData.college) return !!customCollege;
-    if (formData.college?.name === 'Other') return !!customCollege;
-    return true;
-  })();
-
-  const isGraduationYearValid = (() => {
-    const year = String(formData.graduationYear || '').trim();
-    return /^\d{4}$/.test(year);
-  })();
-
-  const isContinueEnabled = Boolean(
-      formData.degreeTypeKey &&
-      formData.degreeType &&
-      formData.fieldOfStudy &&
-      (experienceType !== 'Student' || formData.yearInCollege) &&
-      isGraduationYearValid
-  );
-
-  const handleContinue = async () => {
-    const customCollege = String(formData.customCollege || '').trim();
-
-    if (formData.college?.name === 'Other' && !customCollege) {
-      showToast('Please enter your college/school name', 'error');
-      return;
-    }
-    if (!formData.degreeType) {
-      showToast('Please select your degree type', 'error');
-      return;
-    }
-    if (!formData.fieldOfStudy) {
-      showToast('Please select your field of study', 'error');
-      return;
-    }
-    if (experienceType === 'Student' && !formData.yearInCollege) {
-      showToast('Please select your current year', 'error');
-      return;
-    }
-    if (!/^\d{4}$/.test(String(formData.graduationYear || '').trim())) {
-      showToast('Please enter a valid graduation year (YYYY)', 'error');
-      return;
-    }
-
-    // Resolve the institution name: use customCollege when "Other" is selected
-    const resolvedInstitution = formData.college?.name === 'Other'
-      ? customCollege
-      : (formData.college?.name || customCollege || '');
-
-    // Enhanced: Include graduation year and GPA in the final data
-    const finalFormData = {
-      ...formData,
-      // Send resolved institution name so backend doesn't store "Other"
-      institution: resolvedInstitution,
-      yearInCollege: experienceType === 'Student' ? formData.yearInCollege : 'Recently Graduated (0-1 year)',
-      graduationYear: formData.graduationYear || '',
-      gpa: formData.gpa || '',
-    };
-
-    
-    navigation.navigate('PersonalDetailsScreenDirect', { 
-      userType, 
+    navigation.navigate('PersonalDetailsScreenDirect', {
+      userType,
       experienceType,
+      totalSteps,
       workExperienceData,
-      educationData: finalFormData,
+      educationData: { degreeType, degreeTypeKey, fieldOfStudy, graduationYear },
       fromGoogleAuth: route?.params?.fromGoogleAuth,
       googleUser: route?.params?.googleUser,
     });
   };
 
-  // CRITICAL FIX: Unified modal control functions
-  const openModal = (modalType) => {
-    setActiveModal(modalType);
-    setSearchTerm('');
-    modalRefs.current[modalType] = true;
-  };
+  const stepNumber = experienceType === 'Student' ? 2 : 3;
 
-  const closeModal = () => {
-    const currentModal = activeModal;
-    setActiveModal(null);
-    setSearchTerm('');
-    if (currentModal) {
-      modalRefs.current[currentModal] = false;
-    }
-  };
-
-  // CRITICAL FIX: Safe selection handlers
-  const handleSelection = (item, type) => {
-    switch (type) {
-      case 'country':
-        setFormData({ 
-          ...formData, 
-          selectedCountry: item.code,
-          college: null,
-          customCollege: ''
-        });
-        break;
-      case 'college':
-        // If "Other" is selected, auto-fill customCollege with the search term the user already typed
-        if (item.name === 'Other' && searchTerm.trim()) {
-          setFormData({ ...formData, college: item, customCollege: searchTerm.trim() });
-        } else {
-          setFormData({ ...formData, college: item, customCollege: '' });
-        }
-        break;
-      case 'degree':
-        // Reset field of study when degree changes since fields are degree-dependent
-        if (typeof item === 'string') {
-          setFormData({ 
-            ...formData, 
-            degreeType: item,
-            degreeTypeKey: '',
-            fieldOfStudy: ''
-          });
-          setFieldsOfStudy([]);
-        } else {
-          setFormData({ 
-            ...formData, 
-            degreeType: item.name,
-            degreeTypeKey: item.id,
-            fieldOfStudy: '' // Reset field when degree changes
-          });
-          setFieldsOfStudy([]);
-          loadFieldsOfStudy(item.id);
-        }
-        break;
-      case 'field':
-        setFormData({ ...formData, fieldOfStudy: item });
-        break;
-      case 'year':
-        setFormData({ ...formData, yearInCollege: item });
-        break;
-    }
-    closeModal();
-  };
-
-  // CRITICAL FIX: Render item function with proper keys
-  const renderModalItem = ({ item, index }) => {
-    // Handle category headers for degree types
-    if (item.type === 'header') {
-      return (
-        <View key={`header-${item.category}`} style={styles.categoryHeader}>
-          <Text style={styles.categoryHeaderText}>{item.category}</Text>
-        </View>
-      );
-    }
-
-    const isCountry = activeModal === 'country';
-    const isCollege = activeModal === 'college';
-    const isDegree = activeModal === 'degree';
-    const isString = typeof item === 'string';
-
-    return (
-      <TouchableOpacity
-        key={`${activeModal}-${isString ? item : item.id || item.code}-${index}`}
-        style={styles.modalItem}
-        onPress={() => handleSelection(item, activeModal)}
-        activeOpacity={0.7}
-      >
-        <View style={styles.modalItemContent}>
-          <Text style={styles.modalItemText}>
-            {isCountry ? `${item.flag} ${item.name}` : 
-             isDegree ? item.name :
-             isString ? item : 
-             (isCollege && item.id === 999999) ? "Can't find your college? Add it" : item.name}
-          </Text>
-          {isDegree && item.category && (
-            <Text style={styles.modalItemType}>{item.category}</Text>
-          )}
-          {isCollege && item.type && item.id !== 999999 && (
-            <Text style={styles.modalItemType}>{item.type}</Text>
-          )}
-          {isCollege && item.state && item.country && (
-            <Text style={styles.modalItemLocation}>
-              {item.state}, {item.country}
-            </Text>
-          )}
-          {isCollege && item.website && (
-            <Text style={styles.modalItemWebsite} numberOfLines={1}>
-              {item.website}
-            </Text>
-          )}
-          {isCountry && item.region && (
-            <Text style={styles.modalItemRegion}>{item.region}</Text>
-          )}
-        </View>
-        {isCollege && item.id === 999999 && (
-          <Ionicons name="add-circle" size={20} color={colors.primary} />
-        )}
-      </TouchableOpacity>
-    );
-  };
-
-  const SelectionButton = ({ label, value, onPress, placeholder, disabled = false, required = false }) => (
-    <TouchableOpacity 
-      style={[
-        styles.selectionButton,
-        disabled && styles.selectionButtonDisabled
-      ]} 
-      onPress={disabled ? null : onPress}
-      disabled={disabled}
-    >
-      <Text style={[
-        styles.selectionLabel,
-        disabled && styles.selectionLabelDisabled
-      ]}>
-        {label} {required && <Text style={styles.requiredAsterisk}>*</Text>}
-      </Text>
-      <View style={styles.selectionValueContainer}>
-        <Text style={[
-          styles.selectionValue,
-          !value && styles.selectionPlaceholder,
-          disabled && styles.selectionValueDisabled
-        ]}>
-          {value || placeholder}
-        </Text>
-        <Ionicons 
-          name="chevron-down" 
-          size={20} 
-          color={disabled ? colors.gray300 : colors.gray500} 
-        />
-      </View>
-    </TouchableOpacity>
-  );
-
-  const getCollegeDisplayText = () => {
-    if (formData.college) {
-      // If "Other" is selected, show the custom college name instead of "Other"
-      if (formData.college.name === 'Other') {
-        return formData.customCollege || 'Enter your college name below';
-      }
-      let text = formData.college.name;
-      if (formData.college.state && formData.college.country !== 'Various') {
-        text += ` (${formData.college.state}, ${formData.college.country})`;
-      } else if (formData.college.country && formData.college.country !== 'Various') {
-        text += ` (${formData.college.country})`;
-      }
-      return text;
-    }
-    return formData.customCollege || null;
-  };
-
-  const getSelectedCountryDisplay = () => {
-    const country = countries.find(c => c.code === formData.selectedCountry);
-    return country ? `${country.flag} ${country.name}` : formData.selectedCountry;
-  };
-
-  const getModalTitle = () => {
-    switch (activeModal) {
-      case 'country': return 'Select Country/Region';
-      case 'college': return `Universities in ${formData.selectedCountry}`;
-      case 'degree': return 'Select Degree Type';
-      case 'field': return 'Select Field of Study';
-      case 'year': return 'Select Current Year';
-      default: return '';
-    }
-  };
-
-  const getSearchPlaceholder = () => {
-    switch (activeModal) {
-      case 'country': return 'Search countries...';
-      case 'college': return 'Search universities...';
-      case 'degree': return 'Search degree types...';
-      case 'field': return 'Search fields...';
-      case 'year': return 'Search years...';
-      default: return 'Search...';
-    }
-  };
-
-  const shouldShowSearch = () => {
-    return activeModal === 'country' || activeModal === 'college' || activeModal === 'degree' || activeModal === 'field' || activeModal === 'year';
-  };
-
+  // ─── RENDER ──────────────────────────────────────────────────
   return (
     <RegistrationWrapper
-      currentStep={experienceType === 'Student' ? 2 : 3}
-      totalSteps={4}
-      stepLabel="Education details"
+      currentStep={stepNumber}
+      totalSteps={totalSteps}
+      stepLabel="Education"
       onBack={() => navigation.goBack()}
     >
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Your education</Text>
-            <Text style={styles.subtitle}>
-              Search from thousands of universities worldwide
-            </Text>
-          </View>
-
-          <View style={styles.form}>
-            <SelectionButton
-              label="Country / Region"
-              value={getSelectedCountryDisplay()}
-              placeholder="Select country"
-              onPress={() => openModal('country')}
-              required={false}
-            />
-
-            <SelectionButton
-              label="College / University"
-              value={getCollegeDisplayText()}
-              placeholder="Search and select your institution"
-              onPress={() => openModal('college')}
-              required={false}
-            />
-
-            <SelectionButton
-              label="Degree Type"
-              value={formData.degreeType}
-              placeholder="Select degree type"
-              onPress={() => openModal('degree')}
-              required={true}
-            />
-
-            {!!formData.degreeTypeKey && (
-              <SelectionButton
-                label="Field of Study"
-                value={formData.fieldOfStudy}
-                placeholder={`Select field for ${formData.degreeType || 'your degree'}`}
-                onPress={() => {
-                  if (!fieldsOfStudy.length && !loadingFields) {
-                    loadFieldsOfStudy(formData.degreeTypeKey);
-                  }
-                  openModal('field');
-                }}
-                required={true}
-              />
-            )}
-
-            {experienceType === 'Student' && (
-              <SelectionButton
-                label="Current Year"
-                value={formData.yearInCollege}
-                placeholder="Select your current year"
-                onPress={() => {
-                  if (!yearsInCollege.length && !loadingYears) {
-                    loadYearsInCollege();
-                  }
-                  openModal('year');
-                }}
-                required={true}
-              />
-            )}
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>
-                Graduation Year <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder={experienceType === 'Student' ? "e.g., 2025 (expected)" : "e.g., 2022"}
-                placeholderTextColor={colors.textMuted}
-                value={formData.graduationYear}
-                onChangeText={(text) => setFormData({ ...formData, graduationYear: text })}
-                keyboardType="numeric"
-                maxLength={6}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>GPA / Grade</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g., 3.8/4.0, 85%, First Class"
-                placeholderTextColor={colors.textMuted}
-                value={formData.gpa}
-                onChangeText={(text) => setFormData({ ...formData, gpa: text })}
-              />
-            </View>
-
-            {formData.college?.name === 'Other' && !formData.customCollege && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>
-                  College/School Name <Text style={styles.required}>*</Text>
-                </Text>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="Enter your college/school name"
-                  placeholderTextColor={colors.textMuted}
-                  value={formData.customCollege}
-                  onChangeText={(text) => setFormData({ ...formData, customCollege: text })}
-                />
-              </View>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}
-            onPress={handleContinue}
-            disabled={!isContinueEnabled}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.continueButtonText}>Continue</Text>
-            <Ionicons name="arrow-forward" size={18} color={isContinueEnabled ? colors.white : colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-
-      {/* CRITICAL FIX: Single Universal Modal */}
-      <Modal
-        visible={activeModal !== null}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={closeModal}
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalInnerContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={closeModal}>
-              <Ionicons name="close" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>{getModalTitle()}</Text>
-            {activeModal === 'college' && (
-              <TouchableOpacity onPress={loadColleges} disabled={loading}>
-                <Ionicons 
-                  name="refresh" 
-                  size={24} 
-                  color={loading ? colors.gray400 : colors.primary} 
-                />
-              </TouchableOpacity>
-            )}
-            {activeModal === 'country' && (
-              <TouchableOpacity onPress={loadCountries} disabled={loadingCountries}>
-                <Ionicons 
-                  name="refresh" 
-                  size={24} 
-                  color={loadingCountries ? colors.gray400 : colors.primary} 
-                />
-              </TouchableOpacity>
-            )}
-            {activeModal !== 'college' && activeModal !== 'country' && (
-              <View style={{ width: 24 }} />
-            )}
+        <View style={styles.content}>
+          {/* Backdrop to close dropdowns on outside tap */}
+          {(showDegreeDropdown || showFieldDropdown) && (
+            <Pressable
+              style={Platform.OS === 'web' ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9990 } : { position: 'absolute', top: -1000, left: -1000, right: -1000, bottom: -1000, zIndex: 9990 }}
+              onPress={() => { setShowDegreeDropdown(false); setShowFieldDropdown(false); }}
+            />
+          )}
+
+          <View style={styles.header}>
+            <Text style={styles.emoji}>🎓</Text>
+            <Text style={styles.title}>Your education</Text>
+            <Text style={styles.subtitle}>Just 3 quick questions</Text>
           </View>
 
-          {shouldShowSearch() && (
-            <View style={styles.searchContainer}>
-              <Ionicons name="search" size={20} color={colors.gray500} />
+          {/* ── Step 0: Degree Type (inline dropdown) ──── */}
+          <AnimatedFormStep
+            visible={currentStep >= 0}
+            question="What degree are you pursuing?"
+            completed={!!degreeType && !showDegreeDropdown}
+            style={{ zIndex: showDegreeDropdown ? 9999 : 1 }}
+          >
+            <View style={{ position: 'relative', zIndex: showDegreeDropdown ? 9999 : 1 }}>
               <TextInput
-                style={styles.searchInput}
-                placeholder={getSearchPlaceholder()}
-                placeholderTextColor={colors.gray400}
-                value={searchTerm}
-                onChangeText={setSearchTerm}
+                style={[styles.textInput, degreeType && !showDegreeDropdown && styles.textInputCompleted]}
+                placeholder="Search degree type..."
+                placeholderTextColor={colors.textMuted}
+                value={showDegreeDropdown ? degreeSearch : degreeType}
+                onChangeText={(text) => {
+                  setDegreeSearch(text);
+                  if (!showDegreeDropdown) {
+                    setShowDegreeDropdown(true);
+                    setDegreeType('');
+                    setDegreeTypeKey('');
+                  }
+                }}
+                onFocus={() => {
+                  setShowDegreeDropdown(true);
+                  setDegreeSearch('');
+                }}
                 autoCorrect={false}
-                autoCapitalize="none"
-                autoFocus={false}
               />
-              {searchTerm.length > 0 && (
-                <TouchableOpacity 
-                  onPress={() => setSearchTerm('')}
-                  style={styles.clearButton}
+              {degreeType && !showDegreeDropdown && (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => { setDegreeType(''); setDegreeTypeKey(''); setShowDegreeDropdown(true); setDegreeSearch(''); }}
                 >
-                  <Ionicons name="close-circle" size={20} color={colors.gray400} />
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
                 </TouchableOpacity>
               )}
-            </View>
-          )}
 
-          {((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country') || (loadingDegrees && activeModal === 'degree') || (loadingFields && activeModal === 'field') || (loadingYears && activeModal === 'year')) && (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>
-                {activeModal === 'country' ? 'Loading countries with flag emojis...' :
-                 activeModal === 'college' ? `Loading universities from ${formData.selectedCountry}...` :
-                 activeModal === 'degree' ? 'Loading degree types...' :
-                 activeModal === 'year' ? 'Loading years...' :
-                 'Loading fields of study...'}
-              </Text>
-            </View>
-          )}
-
-          {error && activeModal === 'college' && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="warning" size={24} color={colors.danger} />
-              <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={loadColleges}>
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {!((loading && activeModal === 'college') || (loadingCountries && activeModal === 'country')) && !error && (
-            <FlatList
-              data={filteredData}
-              keyExtractor={(item, index) => `${activeModal}-${typeof item === 'string' ? item : item.id || item.code}-${index}`}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              renderItem={renderModalItem}
-              ListEmptyComponent={() => (
-                <View style={styles.emptyContainer}>
-                  <Ionicons 
-                    name={activeModal === 'country' ? "earth" : "school"} 
-                    size={48} 
-                    color={colors.gray400} 
-                  />
-                  <Text style={styles.emptyText}>
-                    {debouncedSearchTerm ? `No items found for "${debouncedSearchTerm}"` : 'No items available'}
-                  </Text>
-                  {debouncedSearchTerm && (
-                    <Text style={styles.emptySubtext}>
-                      {activeModal === 'college'
-                        ? 'Scroll down and select "Other" to enter your college name manually'
-                        : 'Try searching with different keywords'}
-                    </Text>
+              {showDegreeDropdown && (
+                <View style={styles.dropdownContainer}>
+                  {loadingDegrees ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.dropdownLoadingText}>Loading degrees...</Text>
+                    </View>
+                  ) : filteredDegrees.length > 0 ? (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                      {filteredDegrees.slice(0, 20).map((item, idx) => (
+                        <TouchableOpacity
+                          key={`deg-${item.id}-${idx}`}
+                          style={styles.dropdownItem}
+                          onPress={() => handleSelectDegree(item)}
+                        >
+                          <Text style={styles.dropdownItemText}>{item.name}</Text>
+                          <Text style={styles.dropdownItemSub}>{item.category}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.dropdownEmpty}>
+                      <Text style={styles.dropdownEmptyText}>
+                        {degreeSearch ? `No results for "${degreeSearch}"` : 'No degree types available'}
+                      </Text>
+                    </View>
                   )}
                 </View>
               )}
-              initialNumToRender={20}
-              maxToRenderPerBatch={10}
-              windowSize={5}
-              removeClippedSubviews={true}
-              getItemLayout={(data, index) => ({
-                length: 80,
-                offset: 80 * index,
-                index,
-              })}
+            </View>
+          </AnimatedFormStep>
+
+          {/* ── Step 1: Field of Study (inline dropdown) ── */}
+          <AnimatedFormStep
+            visible={currentStep >= 1}
+            question="What's your field of study?"
+            helpText={degreeType ? `Within ${degreeType}` : undefined}
+            completed={!!fieldOfStudy && !showFieldDropdown}
+            style={{ zIndex: showFieldDropdown ? 9998 : 1 }}
+          >
+            <View style={{ position: 'relative', zIndex: showFieldDropdown ? 9999 : 1 }}>
+              <TextInput
+                style={[styles.textInput, fieldOfStudy && !showFieldDropdown && styles.textInputCompleted]}
+                placeholder={`Search field for ${degreeType || 'your degree'}...`}
+                placeholderTextColor={colors.textMuted}
+                value={showFieldDropdown ? fieldSearch : fieldOfStudy}
+                onChangeText={(text) => {
+                  setFieldSearch(text);
+                  if (!showFieldDropdown) {
+                    setShowFieldDropdown(true);
+                    setFieldOfStudy('');
+                  }
+                }}
+                onFocus={() => {
+                  setShowFieldDropdown(true);
+                  setFieldSearch('');
+                  if (!fieldsOfStudy.length && degreeTypeKey && !loadingFields) {
+                    loadFieldsOfStudy(degreeTypeKey);
+                  }
+                }}
+                autoCorrect={false}
+              />
+              {fieldOfStudy && !showFieldDropdown && (
+                <TouchableOpacity
+                  style={styles.clearBtn}
+                  onPress={() => { setFieldOfStudy(''); setShowFieldDropdown(true); setFieldSearch(''); }}
+                >
+                  <Ionicons name="close-circle" size={18} color={colors.gray400} />
+                </TouchableOpacity>
+              )}
+
+              {showFieldDropdown && (
+                <View style={styles.dropdownContainer}>
+                  {loadingFields ? (
+                    <View style={styles.dropdownLoading}>
+                      <ActivityIndicator size="small" color={colors.primary} />
+                      <Text style={styles.dropdownLoadingText}>Loading fields...</Text>
+                    </View>
+                  ) : filteredFields.length > 0 ? (
+                    <ScrollView style={styles.dropdownScroll} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+                      {filteredFields.slice(0, 20).map((item, idx) => (
+                        <TouchableOpacity
+                          key={`field-${item}-${idx}`}
+                          style={styles.dropdownItem}
+                          onPress={() => handleSelectField(item)}
+                        >
+                          <Text style={styles.dropdownItemText}>{item}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <View style={styles.dropdownEmpty}>
+                      <Text style={styles.dropdownEmptyText}>
+                        {fieldSearch ? `No results for "${fieldSearch}"` : 'No fields available'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          </AnimatedFormStep>
+
+          {/* ── Step 2: Graduation Year ─────────────────── */}
+          <AnimatedFormStep
+            visible={currentStep >= 2}
+            question="Expected graduation year?"
+            style={{ zIndex: 0 }}
+            completed={isGradYearValid}
+          >
+            <TextInput
+              style={[styles.textInput, isGradYearValid && styles.textInputCompleted]}
+              placeholder={experienceType === 'Student' ? 'e.g. 2025 (expected)' : 'e.g. 2022'}
+              placeholderTextColor={colors.textMuted}
+              value={graduationYear}
+              onChangeText={setGraduationYear}
+              keyboardType="numeric"
+              maxLength={6}
             />
+          </AnimatedFormStep>
+
+          {/* ── Continue ────────────────────────────────── */}
+          {isGradYearValid && (
+            <Animated.View style={styles.continueWrap}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryChip}>
+                  <Text style={styles.summaryChipText}>{degreeType}</Text>
+                </View>
+                <View style={styles.summaryChip}>
+                  <Text style={styles.summaryChipText}>{fieldOfStudy}</Text>
+                </View>
+                <View style={styles.summaryChip}>
+                  <Text style={styles.summaryChipText}>{graduationYear}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.continueButton, !isContinueEnabled && styles.continueButtonDisabled]}
+                onPress={handleContinue}
+                disabled={!isContinueEnabled}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.continueButtonText, !isContinueEnabled && styles.continueButtonTextDisabled]}>
+                  Continue
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color={isContinueEnabled ? colors.white : colors.textMuted} />
+              </TouchableOpacity>
+            </Animated.View>
           )}
-          </View>
         </View>
-      </Modal>
+      </ScrollView>
     </RegistrationWrapper>
   );
 }
 
-const createStyles = (colors, responsive = {}) => StyleSheet.create({
-  scrollContainer: {
-    flex: 1,
-  },
-  content: {
-    width: '100%',
-    maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%',
-    padding: 24,
-    paddingTop: 8,
-    alignSelf: 'center',
-  },
-  header: {
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    lineHeight: 22,
-  },
-  form: {
-    gap: 16,
-    marginBottom: 28,
-  },
-  selectionButton: {
-    backgroundColor: colors.inputBackground,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  selectionButtonDisabled: {
-    backgroundColor: colors.surfaceOverlay,
-    borderColor: colors.borderFaint,
-  },
-  selectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  selectionLabelDisabled: {
-    color: colors.gray200,
-  },
-  requiredAsterisk: {
-    color: colors.error,
-    fontWeight: '700',
-  },
-  selectionValueContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  selectionValue: {
-    fontSize: 15,
-    color: colors.text,
-    flex: 1,
-  },
-  selectionValueDisabled: {
-    color: colors.gray200,
-  },
-  selectionPlaceholder: {
-    color: colors.textMuted,
-  },
-  inputContainer: {
-    gap: 8,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  required: {
-    color: colors.error,
-  },
-  textInput: {
-    backgroundColor: colors.inputBackground,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 15,
-    color: colors.text,
-  },
-  continueButton: {
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 14,
-    gap: 8,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  continueButtonDisabled: {
-    backgroundColor: colors.surfaceElevated,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  // Modal styles — kept functional, modernized colors
-  modalContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.background,
-      zIndex: 9999,
-    } : {}),
-  },
-  modalInnerContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      flex: 'none',
+// ─── Styles ──────────────────────────────────────────────────────
+const createStyles = (colors, responsive = {}) =>
+  StyleSheet.create({
+    scrollContainer: { flex: 1 },
+    scrollContent: { flexGrow: 1, paddingBottom: 60 },
+    content: {
       width: '100%',
-      maxWidth: 600,
-      height: '80vh',
-      borderRadius: 16,
+      maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 560 : '100%',
+      padding: 24, paddingTop: 12, alignSelf: 'center',
+    },
+    header: { marginBottom: 36 },
+    emoji: { fontSize: 36, marginBottom: 12 },
+    title: { fontSize: 28, fontWeight: '700', color: colors.text, letterSpacing: -0.4, marginBottom: 6 },
+    subtitle: { fontSize: 15, color: colors.textSecondary, lineHeight: 22 },
+
+    textInput: {
+      backgroundColor: colors.inputBackground, borderWidth: 1.5, borderColor: colors.border,
+      borderRadius: 14, paddingVertical: 16, paddingHorizontal: 18,
+      paddingRight: 44, // room for clear button
+      fontSize: 15, color: colors.text,
+    },
+    textInputCompleted: { borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.05)' },
+    clearBtn: {
+      position: 'absolute', right: 14, top: 0, bottom: 0,
+      justifyContent: 'center',
+    },
+
+    /* Dropdown */
+    dropdownContainer: {
+      position: 'absolute', top: '100%', left: 0, right: 0,
+      backgroundColor: '#2D2D2D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+      borderRadius: 14, marginTop: 6, maxHeight: 280, zIndex: 9999, elevation: 10,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.5, shadowRadius: 20,
       overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-    } : {}),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderThin,
-  },
-  modalTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-    flex: 1,
-    textAlign: 'center',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    margin: 16,
-    backgroundColor: colors.inputBackground,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  searchInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 15,
-    color: colors.text,
-    marginLeft: 8,
-  },
-  clearButton: {
-    padding: 4,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  errorText: {
-    fontSize: 14,
-    color: colors.error,
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  retryButtonText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderFaint,
-    minHeight: 72,
-  },
-  modalItemContent: {
-    flex: 1,
-  },
-  modalItemText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.text,
-    marginBottom: 3,
-  },
-  modalItemType: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginBottom: 2,
-  },
-  modalItemLocation: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  modalItemWebsite: {
-    fontSize: 13,
-    color: colors.primary,
-    marginBottom: 2,
-  },
-  modalItemRegion: {
-    fontSize: 13,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 16,
-  },
-  emptySubtext: {
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  categoryHeader: {
-    backgroundColor: colors.primaryGlow,
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderFaint,
-  },
-  categoryHeaderText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  fieldHelpContainer: {
-    backgroundColor: colors.surfaceOverlay,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderFaint,
-  },
-  fieldHelpText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-});
+    },
+    dropdownScroll: { maxHeight: 280 },
+    dropdownItem: {
+      paddingVertical: 14, paddingHorizontal: 18,
+      borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)',
+      backgroundColor: '#2D2D2D',
+    },
+    dropdownItemText: { fontSize: 15, fontWeight: '500', color: colors.text },
+    dropdownItemSub: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+    dropdownLoading: {
+      padding: 24, alignItems: 'center', gap: 8, backgroundColor: '#2D2D2D',
+    },
+    dropdownLoadingText: { fontSize: 13, color: colors.textMuted },
+    dropdownEmpty: { padding: 24, alignItems: 'center', backgroundColor: '#2D2D2D' },
+    dropdownEmptyText: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
+
+    /* Summary + Continue */
+    continueWrap: { marginTop: 8, position: 'relative', zIndex: 0 },
+    summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
+    summaryChip: {
+      backgroundColor: colors.primaryGlow, borderRadius: 20,
+      paddingVertical: 6, paddingHorizontal: 14,
+      borderWidth: 1, borderColor: colors.primaryGlowStrong,
+    },
+    summaryChipText: { fontSize: 12, fontWeight: '600', color: colors.primaryLight },
+    continueButton: {
+      backgroundColor: colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      paddingVertical: 18, paddingHorizontal: 24, borderRadius: 16, gap: 8,
+      shadowColor: colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
+    },
+    continueButtonDisabled: { backgroundColor: colors.surfaceElevated, shadowOpacity: 0, elevation: 0 },
+    continueButtonText: { color: colors.white, fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
+    continueButtonTextDisabled: { color: colors.textMuted },
+  });

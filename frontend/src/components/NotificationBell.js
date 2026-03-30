@@ -180,6 +180,8 @@ export default function NotificationBell() {
       navigation.navigate('ResumeBuilder');
     } else if (url.startsWith('/resume-analyzer')) {
       navigation.navigate('ResumeAnalyzer');
+    } else if (url.startsWith('/services/linkedin-optimizer')) {
+      navigation.navigate('LinkedInOptimizer');
     }
   };
 

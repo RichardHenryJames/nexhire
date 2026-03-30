@@ -118,9 +118,9 @@ const COMPANIES = [
 const TESTIMONIALS = [
   { quote: "Spent ₹49 on a referral request. Got a call from Google in 4 days. Now earning ₹45 LPA. Best ₹49 I ever spent.", name: "Priya S.", role: "Software Engineer", company: "Google", avatar: "P" },
   { quote: "Made ₹8,*** last month just referring people from my company. It takes 2 minutes per referral. Easiest side income ever.", name: "Rahul M.", role: "Senior PM", company: "Microsoft", avatar: "R" },
-  { quote: "The free Resume Analyzer caught 12 issues my resume had — including broken ATS formatting. Fixed them, got referred via RefOpen, hired at Amazon in 3 weeks.", name: "Amit K.", role: "Data Scientist", company: "Amazon", avatar: "A" },
+  { quote: "The free Resume Analyzer caught 12 issues my resume had, including broken ATS formatting. Fixed them, got referred via RefOpen, hired at Amazon in 3 weeks.", name: "Amit K.", role: "Data Scientist", company: "Amazon", avatar: "A" },
   { quote: "I'm from a Tier 2 college. Nobody on LinkedIn responded to my DMs. On RefOpen, a Flipkart engineer claimed my request in 6 hours. Got the offer within 2 weeks.", name: "Sneha V.", role: "Frontend Developer", company: "Flipkart", avatar: "S" },
-  { quote: "Cold DMs on LinkedIn felt desperate. RefOpen made referrals feel professional — like a marketplace, not begging. Got 3 referrals in my first week.", name: "Neha T.", role: "Product Designer", company: "CRED", avatar: "N" },
+  { quote: "Cold DMs on LinkedIn felt desperate. RefOpen made referrals feel professional, like a marketplace, not begging. Got 3 referrals in my first week.", name: "Neha T.", role: "Product Designer", company: "CRED", avatar: "N" },
   { quote: "Hired 4 engineers through RefOpen referrals this quarter. The quality of candidates is noticeably higher when they come through trusted connections.", name: "Jason L.", role: "Engineering Manager", company: "Stripe", avatar: "J" },
 ];
 
@@ -417,7 +417,7 @@ export default function AboutScreenNew() {
             >
               Stop cold-applying. Referred candidates are{' '}
               <Text style={{ color: C.accent, fontWeight: '700' }}>15x more likely</Text> to get hired.
-              Get referrals from employees at top companies — plus AI-powered resume analyzer, interview prep, salary insights, and 7 more career tools. All in one app.
+              Get referrals from employees at top companies, plus AI-powered resume analyzer, interview prep, salary insights, and 7 more career tools. All in one app.
             </Text>
 
             {/* CTA Buttons */}
@@ -513,7 +513,7 @@ export default function AboutScreenNew() {
               </LinearGradient>
               <Text style={{ fontSize: 20, fontWeight: '700', color: C.text, marginBottom: 8 }}>Ask for Referral</Text>
               <Text style={{ fontSize: 14, color: C.textSub, lineHeight: 22 }}>
-                Pick a company — your request reaches all verified employees there. Works for jobs on our platform or any external job URL.
+                Pick a company and your request reaches all verified employees there. Works for jobs on our platform or any external job URL.
               </Text>
             </BentoCard>
 
@@ -527,7 +527,7 @@ export default function AboutScreenNew() {
               </View>
               <Text style={{ fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 10 }}>Open to Any Company</Text>
               <Text style={{ fontSize: 15, color: 'rgba(255,255,255,0.9)', lineHeight: 24 }}>
-                Don't know which company? One request reaches referrers everywhere. Multiple people from different companies can refer you — you pay just once.
+                Don't know which company? One request reaches referrers everywhere. Multiple people from different companies can refer you. You pay just once.
               </Text>
             </BentoCard>
 
@@ -576,7 +576,7 @@ export default function AboutScreenNew() {
 
             <View style={{ flexDirection: isLg ? 'row' : 'column', gap: 12, width: '100%' }}>
               {[
-                { icon: 'lock-closed', title: 'Money Held, Not Charged', desc: '₹49 held — only charged when a referrer actually submits.' },
+                { icon: 'lock-closed', title: 'Money Held, Not Charged', desc: '₹49 held, only charged when a referrer actually submits.' },
                 { icon: 'refresh', title: 'Auto-Refund in 14 Days', desc: 'No referrer? Full automatic refund. No forms, no emails.' },
                 { icon: 'close-circle', title: 'Cancel Anytime', desc: 'Changed your mind? Cancel anytime with ease.' },
               ].map((item, i) => (
@@ -647,7 +647,7 @@ export default function AboutScreenNew() {
               9+ AI-Powered Career Tools.{"\n"}One Platform.
             </Text>
             <Text style={{ fontSize: 14, color: C.textSub, textAlign: 'center', marginTop: 12, maxWidth: 520 }}>
-              The most complete career toolkit — no more paying for 5 different subscriptions.
+              The most complete career toolkit. No more paying for 5 different subscriptions.
             </Text>
           </View>
 
@@ -712,7 +712,7 @@ export default function AboutScreenNew() {
               Turn LinkedIn DMs{'\n'}Into Real Income
             </Text>
             <Text style={{ fontSize: 14, color: C.textSub, marginTop: 12, textAlign: 'center', maxWidth: 500 }}>
-              Get paid for every single referral — not just when they get hired.
+              Get paid for every single referral, not just when they get hired.
             </Text>
           </View>
 

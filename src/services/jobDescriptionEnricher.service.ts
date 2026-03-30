@@ -5,18 +5,15 @@
  * Takes scraped job context (title, company, department, location, raw description)
  * and generates a professional, detailed JD using AI.
  * 
- * AI Strategy: Gemini 2.5 Flash (primary) → Groq Llama 3.3 70B (fallback)
+ * AI Strategy: Groq Llama 3.3 70B (primary) → Gemini 2.5 Flash (fallback)
  */
 
 import { dbService } from './database.service';
+import { AIService } from './ai.service';
 
-/** Gemini API config */
+// ── AI Keys (shared keys for job enrichment) ──────────────────
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
-/** Groq API config (fallback) */
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 /** Enrichment config */
 const ENRICHMENT_CONFIG = {
@@ -247,38 +244,28 @@ export class JobDescriptionEnricherService {
   /**
    * Generate structured enrichment data using AI.
    * Returns separate fields for description, responsibilities, benefits, and tags.
-   * Uses Gemini as primary, Groq as fallback.
+   * Uses Groq as primary, Gemini as fallback.
    */
   private static async generateStructuredEnrichment(job: JobToEnrich): Promise<EnrichedJobData> {
     const prompt = this.buildPrompt(job);
 
-    let rawText = '';
+    // Call AI via common layer (Groq primary for enrichment - higher free tier)
+    const aiResult = await AIService.call({
+      prompt,
+      groqApiKey: GROQ_API_KEY,
+      geminiApiKey: GEMINI_API_KEY,
+      options: {
+        temperature: 0.4,
+        maxTokens: 2048,
+        timeoutMs: 30000,
+        providerOrder: ['groq', 'gemini'],
+      },
+    });
 
-    // Try Groq first (14,400 RPD free tier — 10x more generous than Gemini)
-    if (GROQ_API_KEY) {
-      try {
-        const result = await this.callGroq(prompt);
-        if (result && result.length >= 200) rawText = result;
-      } catch (error: any) {
-        if (error.message?.includes('429') || error.message?.includes('rate')) {
-          console.log('🔄 Groq rate limited, falling back to Gemini');
-        } else {
-          console.warn(`⚠️  Groq error: ${error.message}, trying Gemini fallback`);
-        }
-      }
+    const rawText = aiResult.text;
+    if (!rawText || rawText.length < 200) {
+      throw new Error('AI returned insufficient content');
     }
-
-    // Fallback to Gemini (1,500 RPD free tier)
-    if (!rawText && GEMINI_API_KEY) {
-      try {
-        const result = await this.callGemini(prompt);
-        if (result && result.length >= 200) rawText = result;
-      } catch (error: any) {
-        throw new Error(`Both AI providers failed. Gemini: ${error.message}`);
-      }
-    }
-
-    if (!rawText) throw new Error('No AI provider available or both returned empty results');
 
     return this.parseStructuredResponse(rawText);
   }
@@ -425,82 +412,6 @@ Return ONLY the content for each section separated by ---SECTION---. No labels, 
     }
 
     return result;
-  }
-
-  /**
-   * Call Gemini 2.5 Flash API
-   */
-  private static async callGemini(prompt: string): Promise<string> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.4,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const status = response.status;
-      if (status === 429) throw new Error('429 rate limited');
-      throw new Error(`Gemini API error: ${status}`);
-    }
-
-    const data: any = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('Empty Gemini response');
-
-    return this.cleanAIOutput(text);
-    } finally {
-      clearTimeout(timeoutId);
-    }
-  }
-
-  /**
-   * Call Groq API (Llama 3.3 70B)
-   */
-  private static async callGroq(prompt: string): Promise<string> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-    try {
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${GROQ_API_KEY}`
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.4,
-        max_tokens: 2048,
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Groq API error: ${response.status}`);
-    }
-
-    const data: any = await response.json();
-    const text = data.choices?.[0]?.message?.content;
-    if (!text) throw new Error('Empty Groq response');
-
-    return this.cleanAIOutput(text);
-    } finally {
-      clearTimeout(timeoutId);
-    }
   }
 
   /**

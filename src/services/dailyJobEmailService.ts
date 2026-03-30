@@ -10,6 +10,7 @@ import { EmailService } from './emailService';
 import { TemplateService } from './templateService';
 import { AIJobRecommendationService } from './ai-job-recommendation.service';
 import { JobService } from './job.service';
+import { InAppNotificationService } from './inAppNotification.service';
 
 const APP_URL = process.env.APP_URL || 'https://www.refopen.com';
 
@@ -57,8 +58,7 @@ export class DailyJobEmailService {
             FROM Users u
             INNER JOIN Applicants a ON u.UserID = a.UserID
             LEFT JOIN NotificationPreferences np ON u.UserID = np.UserID
-            WHERE u.CreatedAt >= '2025-12-15 19:47:35.3700000'
-              AND u.LastLoginAt >= DATEADD(MONTH, -1, GETUTCDATE())
+            WHERE u.LastLoginAt >= DATEADD(MONTH, -1, GETUTCDATE())
               AND u.IsActive = 1
               AND u.Email IS NOT NULL
               AND u.Email != ''
@@ -98,37 +98,13 @@ export class DailyJobEmailService {
             const params = {
                 page: 1,
                 pageSize: 10,
-                excludeUserApplications: userId, // This triggers personalization ranking
-                excludeAppliedJobs: true, // Internal service: exclude applied jobs (no HasApplied flag)
-                postedWithinDays: 30
+                excludeUserApplications: userId,
+                excludeAppliedJobs: true,
+                postedWithinDays: 7
             };
             
             const result = await JobService.getJobs(params);
-            if (result.jobs && result.jobs.length > 0) {
-                return result.jobs as unknown as JobForEmail[];
-            }
-            
-            // Fallback: Get latest 5 published jobs if no personalized results
-            const fallbackQuery = `
-                SELECT TOP 5
-                    j.JobID, j.Title,
-                    o.Name as OrganizationName,
-                    ISNULL(o.LogoURL, '') as OrganizationLogo,
-                    j.Location, j.City, j.Country,
-                    j.SalaryRangeMin, j.SalaryRangeMax,
-                    jt.Value as JobTypeName,
-                    wt.Value as WorkplaceTypeName,
-                    j.PublishedAt
-                FROM Jobs j
-                INNER JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-                INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
-                LEFT JOIN ReferenceMetadata wt ON j.WorkplaceTypeID = wt.ReferenceID AND wt.RefType = 'WorkplaceType'
-                WHERE j.Status = 'Published'
-                  AND j.PublishedAt >= DATEADD(DAY, -7, GETDATE())
-                ORDER BY j.PublishedAt DESC
-            `;
-            const fallbackResult = await dbService.executeQuery(fallbackQuery, []);
-            return fallbackResult.recordset || [];
+            return (result.jobs || []) as unknown as JobForEmail[];
         } catch (error: any) {
             console.warn(`Failed to get jobs for user ${userId}:`, error.message);
             return [];
@@ -213,11 +189,8 @@ export class DailyJobEmailService {
      */
     static async sendEmailToUser(user: UserForEmail): Promise<boolean> {
         try {
-            // Get total job count and top jobs in parallel
-            const [totalJobs, jobs] = await Promise.all([
-                this.getTotalJobCountForUser(user.UserID),
-                this.getTopJobsForUser(user.UserID)
-            ]);
+            // Get top jobs for user
+            const jobs = await this.getTopJobsForUser(user.UserID);
             
             // Skip if no jobs found
             if (!jobs || jobs.length === 0) {
@@ -233,7 +206,7 @@ export class DailyJobEmailService {
                 firstName: user.FirstName || 'there',
                 jobCardsHtml,
                 jobCount: jobs.length,
-                totalJobs: totalJobs || jobs.length
+                totalJobs: jobs.length
             });
             
             // Send email
@@ -245,6 +218,15 @@ export class DailyJobEmailService {
                 userId: user.UserID,
                 emailType: 'daily_job_recommendations'
             });
+            
+            // Also create in-app notification (shows in Notifications tab)
+            if (result.success) {
+                await InAppNotificationService.notifyJobRecommendations(
+                    user.UserID,
+                    user.FirstName || 'there',
+                    jobs.length
+                ).catch(() => {}); // Non-fatal — don't fail email if notification fails
+            }
             
             return result.success;
             

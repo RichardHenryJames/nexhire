@@ -80,7 +80,8 @@ const EMPTY_FILTERS = {
   experienceMax: '',
   postedWithinDays: null,
   department: '',
-  postedByType: null
+  postedByType: null,
+  directOnly: null
 };
 
 // Helper: detect if any filters are active (compared to EMPTY_FILTERS)
@@ -258,7 +259,24 @@ export default function JobsScreen({ navigation, route }) {
 
   const [jobs, setJobs] = useState(() => getCached(CACHE_KEYS.JOBS_LIST) || []);
   const [loading, setLoading] = useState(!hasCached(CACHE_KEYS.JOBS_LIST));
+  const [filterLoading, setFilterLoading] = useState(false); // loading after quick filter pill tap
   const [refreshing, setRefreshing] = useState(false);
+
+  // Rotating loading messages (same style as JobsLandingScreen)
+  const loadingMessages = useMemo(() => [
+    'Curating jobs for you...',
+    'Finding the best matches...',
+    'Scanning top companies...',
+    'Personalizing recommendations...',
+    'Almost there...',
+  ], []);
+  const [loadingMsgIdx, setLoadingMsgIdx] = useState(0);
+  useEffect(() => {
+    if (!loading && !filterLoading) return;
+    setLoadingMsgIdx(0);
+    const timer = setInterval(() => setLoadingMsgIdx(i => (i + 1) % loadingMessages.length), 2000);
+    return () => clearInterval(timer);
+  }, [loading, filterLoading, loadingMessages]);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || '');
   const debouncedQuery = useDebounce(searchQuery, 350);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 30, hasMore: true });
@@ -309,7 +327,24 @@ export default function JobsScreen({ navigation, route }) {
 
   // Manual reload trigger
   const [reloadKey, setReloadKey] = useState(0);
-  const triggerReload = useCallback(() => setReloadKey(k => k + 1), []);
+  const triggerReload = useCallback(() => { setFilterLoading(true); setReloadKey(k => k + 1); }, []);
+
+  // Dynamic header title based on active filters
+  const dynamicTitle = useMemo(() => {
+    if (filterF500) return 'Top MNC Jobs';
+    if (debouncedQuery) return `Results for "${debouncedQuery}"`;
+    
+    const parts = [];
+    if (filters.experienceMin === 0 && filters.experienceMax === 2) parts.push('Fresher / Entry Level');
+    else if (filters.experienceMin === 3 && filters.experienceMax === 5) parts.push('Mid Level');
+    else if (filters.experienceMin === 6) parts.push('Senior');
+    if (filters.directOnly) parts.push('Company Direct');
+    if ((filters.workplaceTypeIds || []).length > 0) parts.push('Remote');
+    if (filters.postedWithinDays === 1) parts.push('Last 24h');
+    
+    if (parts.length > 0) return parts.join(' · ') + ' Jobs';
+    return screenTitle || 'Browse Jobs';
+  }, [filters, filterF500, debouncedQuery, screenTitle]);
 
   // Draft for modal
   const [filterDraft, setFilterDraft] = useState({ ...EMPTY_FILTERS });
@@ -861,6 +896,7 @@ if (filters.jobTypeIds?.length) apiFilters.jobTypeIds = filters.jobTypeIds.join(
         if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
     if (filters.department) apiFilters.department = filters.department;
         if (filters.postedByType !== null && filters.postedByType !== undefined) apiFilters.postedByType = filters.postedByType;
+        if (filters.directOnly) apiFilters.directOnly = true;
     
         // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
         if (filterF500) apiFilters.isFortune500 = true;
@@ -955,6 +991,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
+          setFilterLoading(false);
           setRefreshing(false);
         }
       }
@@ -999,6 +1036,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (filters.postedWithinDays) apiFilters.postedWithinDays = filters.postedWithinDays;
       if (filters.department) apiFilters.department = filters.department;
       if (filters.postedByType !== null && filters.postedByType !== undefined) apiFilters.postedByType = filters.postedByType;
+      if (filters.directOnly) apiFilters.directOnly = true;
       
       // 🏢 Filter by Fortune 500 companies when navigating from Top MNCs section
       if (filterF500) apiFilters.isFortune500 = true;
@@ -1282,14 +1320,14 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
   const renderList = () => {
     const data = jobs; // Always show openings
 
-    // 🔧 NEW: Show loader while initially loading OR when searching/filtering (loading=true and no jobs yet)
+    // Full-screen loader when no jobs cached (initial load)
     if (loading && data.length === 0) {
       return (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primaryDark} />
-       <Text style={[styles.loadingText, { marginTop: 12 }]}>Curating jobs for you...</Text>
+          <Text style={[styles.loadingText, { marginTop: 12 }]}>{loadingMessages[loadingMsgIdx]}</Text>
         </View>
-   );
+      );
     }
 
     if (smartPaginating && data.length === 0) {
@@ -1743,12 +1781,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           <View style={{ maxWidth: 1200, width: '100%', alignSelf: 'center', paddingHorizontal: 16 }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
               {[
-                { label: 'Fresher', active: filters.experienceMin === 0 && filters.experienceMax === 1, onPress: () => {
-                  const a = filters.experienceMin === 0 && filters.experienceMax === 1;
-                  setFilters(prev => ({ ...prev, experienceMin: a ? '' : 0, experienceMax: a ? '' : 1 }));
-                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
-                }},
-                { label: 'Entry Level', active: filters.experienceMin === 0 && filters.experienceMax === 2, onPress: () => {
+                { label: 'Fresher / Entry Level', active: filters.experienceMin === 0 && filters.experienceMax === 2, onPress: () => {
                   const a = filters.experienceMin === 0 && filters.experienceMax === 2;
                   setFilters(prev => ({ ...prev, experienceMin: a ? '' : 0, experienceMax: a ? '' : 2 }));
                   setPagination(p => ({ ...p, page: 1 })); triggerReload();
@@ -1756,6 +1789,10 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                 { label: 'Mid Level', active: filters.experienceMin === 3 && filters.experienceMax === 5, onPress: () => {
                   const a = filters.experienceMin === 3 && filters.experienceMax === 5;
                   setFilters(prev => ({ ...prev, experienceMin: a ? '' : 3, experienceMax: a ? '' : 5 }));
+                  setPagination(p => ({ ...p, page: 1 })); triggerReload();
+                }},
+                { label: 'Company Direct', active: filters.directOnly === true, onPress: () => {
+                  setFilters(prev => ({ ...prev, directOnly: prev.directOnly ? null : true }));
                   setPagination(p => ({ ...p, page: 1 })); triggerReload();
                 }},
               ].concat(
@@ -1778,6 +1815,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                   onPress={chip.onPress}
                 >
                   <Text style={[styles.quickFilterText, chip.active && styles.quickFilterActiveText]}>{chip.label}</Text>
+                  {chip.active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                 </TouchableOpacity>
               ))}
               {isFiltersDirty(filters) && (
@@ -1794,7 +1832,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
             {/* LinkedIn-style list header — height matches right pane sticky header */}
             <View style={{ paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>
-                {screenTitle || (filterF500 ? 'Top MNC Jobs' : debouncedQuery ? `Results for "${debouncedQuery}"` : 'Recommended for you')}
+                {dynamicTitle}
               </Text>
               <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
                 {filterF500 ? 'Fortune 500 & top companies' : debouncedQuery ? 'Matching your search' : 'Based on your profile and preferences'}
@@ -1904,7 +1942,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       {/* Stack screen mode or Fortune 500 Mode: SubScreenHeader with back button */}
       {(isStackScreen || filterF500) ? (
         <SubScreenHeader 
-          title={screenTitle || (filterF500 ? "Jobs by Top MNCs" : "Browse Jobs")} 
+          title={dynamicTitle} 
           directBack="Jobs"
           rightContent={
             <TouchableOpacity style={styles.filterButton} onPress={openFilters}>
@@ -1975,8 +2013,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
 
                 {/* Experience — direct toggle (single-select) */}
                 {[
-                  { label: 'Fresher', min: 0, max: 1 },
-                  { label: 'Entry Level', min: 0, max: 2 },
+                  { label: 'Fresher / Entry Level', min: 0, max: 2 },
                   { label: 'Mid Level', min: 3, max: 5 },
                 ].map(lvl => {
                   const active = filters.experienceMin === lvl.min && filters.experienceMax === lvl.max;
@@ -1995,10 +2032,31 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                         }}
                       >
                         <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>{lvl.label}</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                       </TouchableOpacity>
                     </View>
                   );
                 })}
+
+                {/* Company Direct — show only direct career site jobs */}
+                {(() => {
+                  const active = filters.directOnly === true;
+                  return (
+                    <View style={styles.quickFilterItem}>
+                      <TouchableOpacity
+                        style={[styles.quickFilterDropdown, active && styles.quickFilterActive]}
+                        onPress={() => {
+                          setFilters(prev => ({ ...prev, directOnly: active ? null : true }));
+                          setPagination(p => ({ ...p, page: 1 }));
+                          triggerReload();
+                        }}
+                      >
+                        <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Company Direct</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
 
                 {/* Remote — direct toggle (find Remote workplace type) */}
                 {(() => {
@@ -2012,6 +2070,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                         onPress={() => { onQuickToggleWorkplace(remoteWt.WorkplaceTypeID); }}
                       >
                         <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Remote</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                       </TouchableOpacity>
                     </View>
                   );
@@ -2031,6 +2090,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
                         }}
                       >
                         <Text style={[styles.quickFilterText, active && styles.quickFilterActiveText]}>Last 24h</Text>
+                        {active && filterLoading && <ActivityIndicator size={12} color={colors.primaryDark} style={{ marginLeft: 4 }} />}
                       </TouchableOpacity>
                     </View>
                   );

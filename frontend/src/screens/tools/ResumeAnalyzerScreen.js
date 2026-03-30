@@ -494,7 +494,6 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
       <View style={styles.heroStatsRow}>
         {[
           { value: '50K+', label: 'Resumes Analyzed' },
-          { value: '2 Free', label: 'No Card Needed' },
           { value: '🔒', label: 'Zero Data Stored' },
         ].map((stat, i) => (
           <View key={i} style={styles.heroStat}>
@@ -654,7 +653,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
             <>
               <Text style={{ fontSize: 16 }}>✨</Text>
               <Text style={styles.analyzeBtnText}>
-                {!user ? 'Analyze Resume' : isFreeUse ? `Analyze Resume (${freeUses - usageCount} free left)` : 'Analyze Resume'}
+                {!user ? 'Analyze Resume' : !isFreeUse ? `Analyze Resume (₹${analysisCost})` : 'Analyze Resume'}
               </Text>
             </>
           )}

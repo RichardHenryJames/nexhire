@@ -1142,6 +1142,50 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     
     'stripe inc': 'Stripe',
     
+    // Direct-scraped companies — prevent Adzuna duplicates
+    'roblox corporation': 'Roblox',
+    'roblox corp': 'Roblox',
+    'spacex': 'SpaceX',
+    'space exploration technologies': 'SpaceX',
+    'space exploration technologies corp': 'SpaceX',
+    'anthropic': 'Anthropic',
+    'anthropic inc': 'Anthropic',
+    'toast inc': 'Toast',
+    'toast tab': 'Toast',
+    'reddit inc': 'Reddit',
+    'discord inc': 'Discord',
+    'figma inc': 'Figma',
+    'coinbase inc': 'Coinbase',
+    'coinbase global': 'Coinbase',
+    'datadog inc': 'Datadog',
+    'zscaler inc': 'Zscaler',
+    'elastic nv': 'Elastic',
+    'elasticsearch': 'Elastic',
+    'gitlab inc': 'GitLab',
+    'instacart': 'Instacart',
+    'maplebear inc': 'Instacart',
+    'asana inc': 'Asana',
+    'robinhood markets': 'Robinhood',
+    'robinhood financial': 'Robinhood',
+    'palantir technologies': 'Palantir',
+    'palantir inc': 'Palantir',
+    'riot games inc': 'Riot Games',
+    'epic games inc': 'Epic Games',
+    'plaid inc': 'Plaid',
+    'brex inc': 'Brex',
+    'sofi technologies': 'SoFi',
+    'sofi': 'SoFi',
+    'grammarly inc': 'Grammarly',
+    'vercel inc': 'Vercel',
+    'canva pty': 'Canva',
+    'canva inc': 'Canva',
+    'freshworks inc': 'Freshworks',
+    'lucid motors inc': 'Lucid Motors',
+    'lucid group': 'Lucid Motors',
+    'waymo llc': 'Waymo',
+    'spotify technology': 'Spotify',
+    'spotify ab': 'Spotify',
+    
     // Square/Block - ALL VARIATIONS
     'square inc': 'Square',
     'block inc': 'Block Inc',
@@ -2923,7 +2967,7 @@ Apply now to join a dynamic team that's building the future! 🌟`;
       FROM Jobs j
       JOIN Organizations o ON j.OrganizationID = o.OrganizationID
       WHERE j.Status = 'Published' AND j.IsArchived = 0
-        AND j.CreatedAt >= DATEADD(day, -60, GETUTCDATE())
+        AND j.CreatedAt >= DATEADD(day, -30, GETUTCDATE())
     `;
     const result = await dbService.executeQuery(query);
     return new Set(result.recordset.map((row: any) => row.fingerprint));

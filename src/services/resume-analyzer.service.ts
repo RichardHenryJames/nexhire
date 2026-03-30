@@ -1,7 +1,7 @@
 /**
  * Resume Analyzer Service
  * 
- * Analyzes resumes against job descriptions using Google Gemini AI.
+ * Analyzes resumes against job descriptions using AI.
  * 
  * Features:
  * - PDF text extraction using pdf-parse
@@ -18,21 +18,13 @@
  */
 
 import { dbService } from './database.service';
+import { AIService } from './ai.service';
 
 const pdfParse = require('pdf-parse');
 
-/** Gemini API key — dedicated key for resume services so job enrichment doesn't consume all tokens */
+// ── AI Keys (dedicated keys for resume services) ──────────────
 const GEMINI_API_KEY = process.env.GEMINI_RESUME_API_KEY || process.env.GEMINI_API_KEY || '';
-
-/** Gemini API endpoint - using Gemini 2.5 Flash for best price-performance */
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
-/** Groq API key from environment (fallback when Gemini rate limited) */
-/** Uses dedicated GROQ_RESUME_API_KEY so job enrichment doesn't consume all tokens */
 const GROQ_API_KEY = process.env.GROQ_RESUME_API_KEY || process.env.GROQ_API_KEY || '';
-
-/** Groq API endpoint - using Llama 3.3 70B */
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 /** Jina AI Reader URL for extracting content from web pages */
 const JINA_READER_URL = 'https://r.jina.ai/';
@@ -1005,11 +997,13 @@ export class ResumeAnalyzerService {
     jobDescription: string,
     jobTitle?: string
   ): Promise<ResumeAnalysisResult> {
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
+    if (!GEMINI_API_KEY && !GROQ_API_KEY) {
+      throw new Error('AI service not configured. Please contact support.');
     }
     
-    const prompt = `You are a senior technical recruiter with 15+ years of experience. Perform a deep analysis of this resume against the job description.
+    const prompt = `You are a brutally honest senior technical recruiter at a top-tier company (Google/Meta/Amazon). You've reviewed 50,000+ resumes. You do NOT sugarcoat. You score HARD. Most resumes are mediocre and you score them accordingly. A 70+ means genuinely impressive. 90+ is reserved for perfect matches only.
+
+Your job is to tell candidates the HARSH TRUTH so they can actually improve, not feel good about a bad resume.
 
 JOB TITLE: ${jobTitle || 'Not specified'}
 
@@ -1031,10 +1025,10 @@ Return ONLY valid JSON (no markdown, no code blocks). Use this exact structure:
   "matchedKeywords": [<keywords from the JD that ARE present in the resume>],
   "missingKeywords": [<important keywords from the JD that are MISSING from the resume>],
   "strengths": [<3-5 specific strengths, e.g. "4+ years React experience directly matches requirement">],
-  "weaknesses": [<2-4 specific gaps, e.g. "No mention of CI/CD experience which is listed as required">],
+  "weaknesses": [<3-6 specific gaps - be BLUNT, e.g. "Claims 'full-stack' but zero backend projects listed", "No metrics anywhere - reads like a task list, not achievements">],
   "atsIssues": [<ATS compatibility problems, e.g. "Resume uses tables which may confuse ATS parsers", "No clear section headers detected">],
   "bulletFeedback": {
-    "weak": [<2-3 actual weak bullet points from the resume that lack impact/metrics>],
+    "weak": [<3-4 actual weak bullet points from the resume that lack impact/metrics>],
     "improved": [<rewritten versions of those bullets with action verbs and quantified results>]
   },
   "tips": [
@@ -1045,117 +1039,52 @@ Return ONLY valid JSON (no markdown, no code blocks). Use this exact structure:
     "totalBullets": <total number of bullet points in the resume>
   },
   "weakVerbs": [<weak/passive action verbs found in resume bullets, e.g. "helped", "assisted", "worked on", "responsible for">],
-  "overallAssessment": "<3-4 sentence assessment: fit level, biggest gap, strongest qualification, recommended action>"
+  "overallAssessment": "<4-5 sentence BRUTALLY HONEST assessment. Start with the hard truth. What would make a recruiter skip this in 6 seconds? What's actually good? What MUST change before applying?>"
 }
 
-Rules:
-- matchedKeywords + missingKeywords should cover all important JD keywords
-- Each strength/weakness must reference specific resume content vs JD requirements  
-- bulletFeedback.weak must be ACTUAL bullets from the resume, bulletFeedback.improved must be rewritten versions
+STRICT SCORING RULES (do NOT inflate):
+- 90-100: Near-perfect match. Every JD requirement met with evidence. Metrics everywhere. Would instantly shortlist. RARE.
+- 75-89: Strong candidate. Most requirements met. Some metrics. Worth interviewing. Only ~15% of resumes reach here.
+- 60-74: Decent but gaps exist. Missing some key requirements. Few metrics. Maybe gets a call if applicant pool is weak.
+- 40-59: Below average for this role. Major skill gaps or experience mismatch. Would likely be filtered out.
+- 20-39: Poor fit. Resume needs significant rework before applying to this specific role.
+- 0-19: Wrong role entirely, or resume is nearly empty/incoherent.
+
+COMMON SCORING MISTAKES TO AVOID:
+- Do NOT give 70+ just because the candidate has "some" relevant experience
+- Do NOT give 80+ unless they match 80%+ of the JD requirements WITH evidence
+- A resume with zero metrics/numbers should NEVER score above 65 in experience
+- "Responsible for X" bullets are WEAK. Penalize heavily in experience score
+- If skills section is just a keyword dump with no project evidence, cap skills score at 60
+- Generic summaries like "passionate developer" or "team player" should be called out as filler
+
+ANALYSIS RULES:
+- matchedKeywords + missingKeywords should cover ALL important JD keywords (be thorough)
+- Each strength/weakness must reference SPECIFIC resume content vs JD requirements
+- bulletFeedback.weak must be ACTUAL bullets from the resume, bulletFeedback.improved must be rewritten versions with real metrics
 - atsIssues should flag formatting problems (tables, images, missing headers, unusual fonts, multi-column layouts)
-- tips: provide 4-6 specific actionable tips. Each tip must have text, priority (high/medium/low), and category
+- tips: provide 5-8 specific actionable tips. Each tip must have text, priority (high/medium/low), and category
 - tips.category must be one of: keywords, achievements, formatting, skills, experience
 - categoryScores.keywords = (matchedKeywords count / total important keywords) * 100
 - achievementMetrics: count resume bullet points with numbers/percentages/metrics vs total bullets
-- weakVerbs: list 3-6 weak/passive verbs actually used in resume (e.g. "helped", "responsible for", "worked on")`;
+- weakVerbs: list ALL weak/passive verbs found (e.g. "helped", "responsible for", "worked on", "assisted", "involved in", "participated")
+- weaknesses: find AT LEAST 3. Every resume has weaknesses. If you can't find any, you're not looking hard enough.`;
 
-    // Try Gemini first, fallback to Groq on rate limit
-    let useGroq = false;
-    
-    try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        // If rate limited (429), try Groq as fallback
-        if (response.status === 429) {
-          useGroq = true;
-        } else if (response.status === 401 || response.status === 403) {
-          throw new Error('AI service configuration error. Please contact support.');
-        } else if (response.status >= 500) {
-          throw new Error('AI service is temporarily unavailable. Please try again later.');
-        } else {
-          throw new Error('Unable to analyze resume at this time. Please try again.');
-        }
-      }
-      
-      if (!useGroq) {
-        const data: any = await response.json();
-        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (!textResponse) {
-          throw new Error('Empty response from Gemini');
-        }
-        
-        // Parse and return with Gemini model tag
-        const result = this.parseAIResponse(textResponse);
-        result.aiModel = 'gemini-2.5-flash';
-        return result;
-      }
-    } catch (error: any) {
-      // If Gemini fails with rate limit, try Groq
-      if (error.message?.includes('429') || useGroq) {
-        useGroq = true;
-      } else if (!useGroq) {
-        throw error;
-      }
-    }
-    
-    // Fallback to Groq
-    if (useGroq) {
-      if (!GROQ_API_KEY) {
-        throw new Error('We\'re experiencing high demand right now. Please try again in sometime.');
-      }
-      
-      const groqResponse = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
-          max_tokens: 4096,
-        })
-      });
-      
-      if (!groqResponse.ok) {
-        throw new Error('We\'re experiencing high demand right now. Please try again in sometime.');
-      }
-      
-      const groqData: any = await groqResponse.json();
-      const groqText = groqData.choices?.[0]?.message?.content;
-      
-      if (!groqText) {
-        throw new Error('Empty response from AI');
-      }
-      
-      // Parse and return with Groq model tag
-      const result = this.parseAIResponse(groqText);
-      result.aiModel = 'llama-3.3-70b';
-      return result;
-    }
-    
-    throw new Error('AI analysis failed. Please try again.');
+    // Call AI via common layer (Gemini primary for resume analysis, Groq fallback)
+    const aiResult = await AIService.call({
+      prompt,
+      groqApiKey: GROQ_API_KEY,
+      geminiApiKey: GEMINI_API_KEY,
+      options: {
+        temperature: 0.3,
+        maxTokens: 8192,
+        providerOrder: ['gemini', 'groq'],
+      },
+    });
+
+    const result = this.parseAIResponse(aiResult.text);
+    result.aiModel = aiResult.model;
+    return result;
   }
   
   /**

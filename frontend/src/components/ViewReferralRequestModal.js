@@ -388,8 +388,30 @@ export default function ViewReferralRequestModal({
                 </Text>
               </View>
 
-              {/* Job title — large & prominent */}
-              <Text style={{ fontSize: 17, fontWeight: '800', color: colors.text, lineHeight: 23, marginBottom: 10 }}>{jobTitle}</Text>
+              {/* Job title — large & prominent, clickable when navigable */}
+              {(() => {
+                const isInternal = referralRequest?.JobID && !referralRequest?.ExtJobID;
+                const isExternalWithUrl = referralRequest?.ExtJobID && referralRequest?.JobURL;
+                const isClickable = isInternal || isExternalWithUrl;
+                
+                const handleTitlePress = () => {
+                  if (isInternal) {
+                    onClose();
+                    navigation.navigate('JobDetails', { jobId: referralRequest.JobID, fromReferralRequest: true });
+                  } else if (isExternalWithUrl) {
+                    if (Platform.OS === 'web') { window.open(referralRequest.JobURL, '_blank'); }
+                    else { Linking.openURL(referralRequest.JobURL).catch(() => {}); }
+                  }
+                };
+                
+                return isClickable ? (
+                  <TouchableOpacity onPress={handleTitlePress} activeOpacity={0.7} style={{ marginBottom: 10 }}>
+                    <Text style={{ fontSize: 17, fontWeight: '800', color: colors.primary, lineHeight: 23, textDecorationLine: 'underline', textDecorationColor: colors.primary + '40' }}>{jobTitle}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={{ fontSize: 17, fontWeight: '800', color: colors.text, lineHeight: 23, marginBottom: 10 }}>{jobTitle}</Text>
+                );
+              })()}
 
               {/* Open-to-any-company context for referrer */}
               {referralRequest?.OpenToAnyCompany && (

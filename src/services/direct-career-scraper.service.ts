@@ -56,6 +56,10 @@ interface DirectScrapingResult {
 export class DirectCareerScraperService {
 
   // ─── Workday Adapter ─────────────────────────────────────────
+  // NOTE: Workday's /wday/cxs/ API is undocumented (not a public API).
+  // We only use the listing endpoint (1 call per search term) — NOT individual detail fetches.
+  // This keeps requests minimal (~5 per company) to avoid bot detection.
+  // Descriptions come from AI enricher later.
   
   private static async scrapeWorkday(config: CompanyCareerConfig): Promise<DirectScrapedJob[]> {
     const jobs: DirectScrapedJob[] = [];
@@ -65,107 +69,44 @@ export class DirectCareerScraperService {
       return jobs;
     }
     
-    const wdBase = `https://${config.tenant}.wd${config.wdNumber}.myworkdayjobs.com`;
-    const listUrl = `${wdBase}/wday/cxs/${config.tenant}/${config.site}/jobs`;
-    const detailBase = `${wdBase}/wday/cxs/${config.tenant}/${config.site}`;
+    const listUrl = `https://${config.tenant}.wd${config.wdNumber}.myworkdayjobs.com/wday/cxs/${config.tenant}/${config.site}/jobs`;
     
-    // Workday API returns max 20 per page. Use search terms + pagination.
+    // Rotate through search terms across daily runs (4 runs/day × 4 terms = all 16 terms covered)
     const allSearchTerms = DIRECT_SCRAPER_CONFIG.workdaySearchTerms;
     const rotationIndex = Math.floor(new Date().getUTCHours() / 6); // 0-3
     const termsCount = DIRECT_SCRAPER_CONFIG.workdaySearchTermsPerCompany;
     const startIdx = (rotationIndex * termsCount) % allSearchTerms.length;
-    const searchTerms = allSearchTerms.slice(startIdx, startIdx + termsCount);
+    const searchTerms = ['', ...allSearchTerms.slice(startIdx, startIdx + termsCount)];
     
-    // Also do one blank search to get latest jobs regardless of title
-    const allTerms = ['', ...searchTerms];
     const seenIds = new Set<string>();
     
-    for (const term of allTerms) {
+    for (const term of searchTerms) {
       if (jobs.length >= config.maxJobs) break;
       
       try {
-        const body = {
-          appliedFacets: {},
-          limit: 20,
-          offset: 0,
-          searchText: term,
-        };
-        
-        const response = await axios.post(listUrl, body, {
+        const response = await axios.post(listUrl, {
+          appliedFacets: {}, limit: 20, offset: 0, searchText: term,
+        }, {
           timeout: DIRECT_SCRAPER_CONFIG.requestTimeoutMs,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0',
-          },
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0' },
           validateStatus: (s) => s === 200,
         });
         
-        const postings = response.data?.jobPostings || [];
-        
-        for (const posting of postings) {
+        for (const posting of (response.data?.jobPostings || [])) {
           if (jobs.length >= config.maxJobs) break;
           
           const jobId = (posting.bulletFields || [])[0] || posting.externalPath?.split('/')?.pop() || '';
           if (!jobId || seenIds.has(jobId)) continue;
           seenIds.add(jobId);
           
-          const directUrl = config.jobUrlTemplate
-            .replace('{externalPath}', posting.externalPath || '')
-            .replace('{jobId}', jobId);
-          
-          // Extract location
           const location = posting.locationsText || posting.location || '';
-          
-          // Parse posted date
           let postedDate: Date | undefined;
           if (posting.postedOn) {
             const daysMatch = posting.postedOn.match(/(\d+)\s*(?:days?|d)/i);
-            if (daysMatch) {
-              postedDate = new Date(Date.now() - parseInt(daysMatch[1]) * 86400000);
-            } else if (/today/i.test(posting.postedOn)) {
-              postedDate = new Date();
-            } else if (/yesterday/i.test(posting.postedOn)) {
-              postedDate = new Date(Date.now() - 86400000);
-            }
-          }
-          
-          // Fetch full job description from detail endpoint
-          // Listing endpoint only returns title/location — no description
-          let description = '';
-          let department = posting.category || undefined;
-          try {
-            const detailResp = await axios.get(`${detailBase}${posting.externalPath}`, {
-              timeout: 10000,
-              headers: { 'Accept': 'application/json' },
-              validateStatus: (s) => s === 200,
-            });
-            const info = detailResp.data?.jobPostingInfo;
-            if (info?.jobDescription) {
-              // Clean HTML from Workday job description
-              description = info.jobDescription
-                .replace(/<[^>]+>/g, ' ')
-                .replace(/&nbsp;/g, ' ')
-                .replace(/&amp;/g, '&')
-                .replace(/&lt;/g, '<')
-                .replace(/&gt;/g, '>')
-                .replace(/&#39;/g, "'")
-                .replace(/&quot;/g, '"')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .substring(0, 3000);
-            }
-            // Get more accurate location from detail
-            if (info?.location) {
-              // Detail endpoint has full location, listing just says "2 Locations"
-            }
-            await this.delay(300); // Small delay between detail fetches
-          } catch {
-            // Detail fetch failed — use fallback description
-          }
-          
-          if (!description) {
-            description = this.generateWorkdayDescription(posting.title, config.name, location, department);
+            if (daysMatch) postedDate = new Date(Date.now() - parseInt(daysMatch[1]) * 86400000);
+            else if (/today/i.test(posting.postedOn)) postedDate = new Date();
+            else if (/yesterday/i.test(posting.postedOn)) postedDate = new Date(Date.now() - 86400000);
           }
           
           jobs.push({
@@ -174,24 +115,21 @@ export class DirectCareerScraperService {
             title: (posting.title || '').substring(0, 200),
             company: config.name,
             location: location.substring(0, 200),
-            description,
-            applicationUrl: directUrl,
+            // Listing endpoint has NO description — AI enricher will fill this
+            description: this.generateWorkdayDescription(posting.title, config.name, location, posting.category),
+            applicationUrl: config.jobUrlTemplate.replace('{externalPath}', posting.externalPath || '').replace('{jobId}', jobId),
             careerPageUrl: config.careerPageUrl,
             postedDate,
             jobType: this.detectJobType(posting.title, posting.employmentType),
             workplaceType: this.detectWorkplaceType(location, posting.title),
-            department,
+            department: posting.category || undefined,
             source: 'workday',
           });
         }
         
         await this.delay(DIRECT_SCRAPER_CONFIG.requestDelayMs);
-        
       } catch (error: any) {
-        if (error.response?.status === 429) {
-          console.warn(`⚠️ ${config.name} (Workday): Rate limited, stopping`);
-          break;
-        }
+        if (error.response?.status === 429) { console.warn(`⚠️ ${config.name} (Workday): Rate limited`); break; }
         console.warn(`⚠️ ${config.name} (Workday) search="${term}": ${error.message}`);
       }
     }
@@ -698,8 +636,15 @@ export class DirectCareerScraperService {
   }
 
   // ─── Main Orchestrator ───────────────────────────────────────
+  // Designed for Azure Functions 10-min timeout:
+  // - Greenhouse/Lever/Ashby/SmartRecruiters: 1 API call each → run in parallel batches
+  // - Workday: ~5 calls each → run sequentially (undocumented API, be gentle)
+  // - Amazon/Netflix: ~4 calls each → run sequentially
+  // Total: ~94 companies in ~3-5 minutes
   
-  static async scrapeDirectJobs(): Promise<DirectScrapingResult> {
+  private static readonly MAX_EXECUTION_MS = 8 * 60 * 1000; // 8 min hard limit (2 min buffer for DB inserts)
+  
+  static async scrapeDirectJobs(options?: { atsTypes?: ATSPlatform[] }): Promise<DirectScrapingResult> {
     const startTime = Date.now();
     
     const result: DirectScrapingResult = {
@@ -719,55 +664,113 @@ export class DirectCareerScraperService {
       return result;
     }
     
-    console.log('🎯 Direct Career Site Scraper Started');
-    console.log(`📋 ${CAREER_SITE_CONFIGS.filter(c => c.enabled).length} companies configured`);
+    let enabledConfigs = CAREER_SITE_CONFIGS.filter(c => c.enabled);
+    
+    // Filter by ATS type if specified (for split timer triggers)
+    if (options?.atsTypes?.length) {
+      enabledConfigs = enabledConfigs.filter(c => options.atsTypes!.includes(c.ats));
+      console.log(`🎯 Direct Scraper [${options.atsTypes.join(', ')}] — ${enabledConfigs.length} companies`);
+    } else {
+      console.log(`🎯 Direct Career Site Scraper — ALL ${enabledConfigs.length} companies`);
+    }
     
     // Load existing job IDs for dedup
     const existingIds = await this.getExistingDirectJobIds();
     console.log(`📊 ${existingIds.size} existing direct jobs in database`);
     
-    const enabledConfigs = CAREER_SITE_CONFIGS.filter(c => c.enabled);
+    // Split by ATS type for optimal execution
+    const singleCallATS: ATSPlatform[] = ['greenhouse', 'lever', 'ashby', 'smartrecruiters'];
+    const multiCallATS: ATSPlatform[] = ['workday', 'amazon', 'netflix'];
+    
+    const fastCompanies = enabledConfigs.filter(c => singleCallATS.includes(c.ats));
+    const slowCompanies = enabledConfigs.filter(c => multiCallATS.includes(c.ats));
+    
+    console.log(`⚡ Fast (1 API call): ${fastCompanies.length} companies | 🐢 Slow (multi-call): ${slowCompanies.length} companies`);
+    
     let totalAdded = 0;
     
-    for (const config of enabledConfigs) {
-      if (totalAdded >= DIRECT_SCRAPER_CONFIG.maxJobsPerRun) {
-        console.log(`🏁 Reached max jobs per run: ${DIRECT_SCRAPER_CONFIG.maxJobsPerRun}`);
+    // PHASE 1: Fast companies in parallel batches of 10
+    // Each makes 1 API call → 10 parallel = 10 calls, takes ~2s per batch
+    const PARALLEL_BATCH = 10;
+    for (let i = 0; i < fastCompanies.length; i += PARALLEL_BATCH) {
+      if (Date.now() - startTime > this.MAX_EXECUTION_MS) {
+        console.log(`⏰ Time limit reached after ${Math.round((Date.now() - startTime) / 1000)}s — stopping`);
         break;
       }
+      if (totalAdded >= DIRECT_SCRAPER_CONFIG.maxJobsPerRun) break;
       
-      try {
-        console.log(`\n🔍 Scraping ${config.name} (${config.ats})...`);
-        const jobs = await this.scrapeCompany(config);
+      const batch = fastCompanies.slice(i, i + PARALLEL_BATCH);
+      const batchResults = await Promise.allSettled(
+        batch.map(config => this.scrapeCompany(config).catch(err => {
+          result.errors.push(`${config.name}: ${err.message}`);
+          return [] as DirectScrapedJob[];
+        }))
+      );
+      
+      for (let j = 0; j < batch.length; j++) {
+        const config = batch[j];
+        const settled = batchResults[j];
+        const jobs = settled.status === 'fulfilled' ? (settled.value || []) : [];
         
-        // Filter duplicates
         const newJobs = jobs.filter(j => !existingIds.has(j.externalJobId));
-        
-        console.log(`📈 ${config.name}: ${jobs.length} scraped, ${newJobs.length} new`);
         result.summary.companyBreakdown[config.name] = newJobs.length;
         result.summary.totalJobsScraped += jobs.length;
         result.summary.companiesScraped++;
         
-        // Insert new jobs
         let inserted = 0;
         for (const job of newJobs) {
           if (totalAdded >= DIRECT_SCRAPER_CONFIG.maxJobsPerRun) break;
-          
           try {
             await this.insertJob(job);
             existingIds.add(job.externalJobId);
             inserted++;
             totalAdded++;
           } catch (error: any) {
-            // Skip duplicates silently (unique constraint)
             if (!error.message?.includes('UNIQUE') && !error.message?.includes('duplicate')) {
-              console.warn(`⚠️ Insert failed: ${job.title} — ${error.message}`);
               result.errors.push(`${config.name}: ${error.message}`);
             }
           }
         }
         
-        console.log(`✅ ${config.name}: ${inserted} jobs added to database`);
+        if (inserted > 0) console.log(`✅ ${config.name}: ${inserted} jobs added`);
+      }
+      
+      console.log(`📈 Batch ${Math.floor(i / PARALLEL_BATCH) + 1}: ${totalAdded} total jobs so far (${Math.round((Date.now() - startTime) / 1000)}s)`);
+    }
+    
+    // PHASE 2: Slow companies sequentially (Workday, Amazon, Netflix)
+    for (const config of slowCompanies) {
+      if (Date.now() - startTime > this.MAX_EXECUTION_MS) {
+        console.log(`⏰ Time limit reached — skipping remaining slow companies`);
+        break;
+      }
+      if (totalAdded >= DIRECT_SCRAPER_CONFIG.maxJobsPerRun) break;
+      
+      try {
+        console.log(`🔍 Scraping ${config.name} (${config.ats})...`);
+        const jobs = await this.scrapeCompany(config);
         
+        const newJobs = jobs.filter(j => !existingIds.has(j.externalJobId));
+        result.summary.companyBreakdown[config.name] = newJobs.length;
+        result.summary.totalJobsScraped += jobs.length;
+        result.summary.companiesScraped++;
+        
+        let inserted = 0;
+        for (const job of newJobs) {
+          if (totalAdded >= DIRECT_SCRAPER_CONFIG.maxJobsPerRun) break;
+          try {
+            await this.insertJob(job);
+            existingIds.add(job.externalJobId);
+            inserted++;
+            totalAdded++;
+          } catch (error: any) {
+            if (!error.message?.includes('UNIQUE') && !error.message?.includes('duplicate')) {
+              result.errors.push(`${config.name}: ${error.message}`);
+            }
+          }
+        }
+        
+        if (inserted > 0) console.log(`✅ ${config.name}: ${inserted} jobs added`);
       } catch (error: any) {
         console.error(`❌ ${config.name}: ${error.message}`);
         result.errors.push(`${config.name}: ${error.message}`);
@@ -778,8 +781,7 @@ export class DirectCareerScraperService {
     result.summary.executionTime = Date.now() - startTime;
     
     console.log(`\n🎊 Direct scraping completed!`);
-    console.log(`📊 ${totalAdded} jobs added from ${result.summary.companiesScraped} companies`);
-    console.log(`⏱️ ${Math.round(result.summary.executionTime / 1000)}s`);
+    console.log(`📊 ${totalAdded} jobs added from ${result.summary.companiesScraped} companies in ${Math.round(result.summary.executionTime / 1000)}s`);
     
     return result;
   }
