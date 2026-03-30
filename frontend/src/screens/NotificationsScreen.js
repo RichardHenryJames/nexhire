@@ -255,6 +255,8 @@ export default function NotificationsScreen() {
       navigation.navigate('ResumeBuilder');
     } else if (url.startsWith('/resume-analyzer')) {
       navigation.navigate('ResumeAnalyzer');
+    } else if (url.startsWith('/services/linkedin-optimizer')) {
+      navigation.navigate('LinkedInOptimizer');
     }
   };
 
@@ -284,7 +286,7 @@ export default function NotificationsScreen() {
           n.NotificationID === item.NotificationID ? { ...n, IsRead: true } : n
         ));
       }
-      navigation.navigate('MyReferralRequests');
+      navigation.navigate('MyReferralRequests', { initialTab: 'action' });
     };
 
     const notificationContent = (
