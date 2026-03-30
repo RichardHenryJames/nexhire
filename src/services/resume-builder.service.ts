@@ -13,13 +13,11 @@
  */
 
 import { dbService } from './database.service';
+import { AIService } from './ai.service';
 
-// ── AI Config (dedicated keys for resume services) ─────────
+// ── AI Keys (dedicated keys for resume services) ───────────
 const GEMINI_API_KEY = process.env.GEMINI_RESUME_API_KEY || process.env.GEMINI_API_KEY || '';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-// Dedicated Groq key for resume services — job enrichment uses its own GROQ_API_KEY
 const GROQ_API_KEY = process.env.GROQ_RESUME_API_KEY || process.env.GROQ_API_KEY || '';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -938,60 +936,16 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
   }
 
   private static async callGemini(prompt: string): Promise<string> {
-    // Try Gemini first, fallback to Groq on rate limit or if key missing
-    if (GEMINI_API_KEY) {
-      try {
-        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-          }),
-        });
-
-        if (response.ok) {
-          const data: any = await response.json();
-          const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-          if (text) return text;
-        }
-
-        // If rate limited (429), fall through to Groq
-        if (response.status !== 429) {
-          const errorText = await response.text();
-          console.error('Gemini API error:', response.status, errorText);
-        }
-      } catch (err) {
-        console.error('Gemini call failed, trying Groq fallback:', err);
-      }
-    }
-
-    // Fallback to Groq (Llama 3.3 70B)
-    if (GROQ_API_KEY) {
-      const groqResponse = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
-          max_tokens: 2048,
-        }),
-      });
-
-      if (!groqResponse.ok) {
-        const errorText = await groqResponse.text();
-        console.error('Groq API error:', errorText);
-        throw new Error('AI service temporarily unavailable. Please try again.');
-      }
-
-      const groqData: any = await groqResponse.json();
-      return groqData.choices?.[0]?.message?.content?.trim() || '';
-    }
-
-    throw new Error('No AI service configured. Please contact support.');
+    const result = await AIService.call({
+      prompt,
+      groqApiKey: GROQ_API_KEY,
+      geminiApiKey: GEMINI_API_KEY,
+      options: {
+        temperature: 0.7,
+        maxTokens: 2048,
+        providerOrder: ['gemini', 'groq'],
+      },
+    });
+    return result.text;
   }
 }

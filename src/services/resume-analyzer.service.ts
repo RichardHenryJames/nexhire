@@ -18,21 +18,13 @@
  */
 
 import { dbService } from './database.service';
+import { AIService } from './ai.service';
 
 const pdfParse = require('pdf-parse');
 
-/** Gemini API key — dedicated key for resume services so job enrichment doesn't consume all tokens */
+// ── AI Keys (dedicated keys for resume services) ──────────────
 const GEMINI_API_KEY = process.env.GEMINI_RESUME_API_KEY || process.env.GEMINI_API_KEY || '';
-
-/** Gemini API endpoint - using Gemini 2.5 Flash for best price-performance */
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
-/** Groq API key from environment (fallback when Gemini rate limited) */
-/** Uses dedicated GROQ_RESUME_API_KEY so job enrichment doesn't consume all tokens */
 const GROQ_API_KEY = process.env.GROQ_RESUME_API_KEY || process.env.GROQ_API_KEY || '';
-
-/** Groq API endpoint - using Llama 3.3 70B */
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 /** Jina AI Reader URL for extracting content from web pages */
 const JINA_READER_URL = 'https://r.jina.ai/';
@@ -1078,103 +1070,21 @@ ANALYSIS RULES:
 - weakVerbs: list ALL weak/passive verbs found (e.g. "helped", "responsible for", "worked on", "assisted", "involved in", "participated")
 - weaknesses: find AT LEAST 3. Every resume has weaknesses. If you can't find any, you're not looking hard enough.`;
 
-    // Try Gemini first, fallback to Groq on rate limit
-    let useGroq = false;
-    
-    try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: prompt
-            }]
-          }],
-          generationConfig: {
-            temperature: 0.3,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 8192,
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        // If rate limited (429), try Groq as fallback
-        if (response.status === 429) {
-          useGroq = true;
-        } else if (response.status === 401 || response.status === 403) {
-          throw new Error('AI service configuration error. Please contact support.');
-        } else if (response.status >= 500) {
-          throw new Error('AI service is temporarily unavailable. Please try again later.');
-        } else {
-          throw new Error('Unable to analyze resume at this time. Please try again.');
-        }
-      }
-      
-      if (!useGroq) {
-        const data: any = await response.json();
-        const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (!textResponse) {
-          throw new Error('Empty response from Gemini');
-        }
-        
-        // Parse and return with Gemini model tag
-        const result = this.parseAIResponse(textResponse);
-        result.aiModel = 'gemini-2.5-flash';
-        return result;
-      }
-    } catch (error: any) {
-      // If Gemini fails with rate limit, try Groq
-      if (error.message?.includes('429') || useGroq) {
-        useGroq = true;
-      } else if (!useGroq) {
-        throw error;
-      }
-    }
-    
-    // Fallback to Groq
-    if (useGroq) {
-      if (!GROQ_API_KEY) {
-        throw new Error('We\'re experiencing high demand right now. Please try again in sometime.');
-      }
-      
-      const groqResponse = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
-          max_tokens: 4096,
-        })
-      });
-      
-      if (!groqResponse.ok) {
-        throw new Error('We\'re experiencing high demand right now. Please try again in sometime.');
-      }
-      
-      const groqData: any = await groqResponse.json();
-      const groqText = groqData.choices?.[0]?.message?.content;
-      
-      if (!groqText) {
-        throw new Error('Empty response from AI');
-      }
-      
-      // Parse and return with Groq model tag
-      const result = this.parseAIResponse(groqText);
-      result.aiModel = 'llama-3.3-70b';
-      return result;
-    }
-    
-    throw new Error('AI analysis failed. Please try again.');
+    // Call AI via common layer (Gemini primary for resume analysis, Groq fallback)
+    const aiResult = await AIService.call({
+      prompt,
+      groqApiKey: GROQ_API_KEY,
+      geminiApiKey: GEMINI_API_KEY,
+      options: {
+        temperature: 0.3,
+        maxTokens: 8192,
+        providerOrder: ['gemini', 'groq'],
+      },
+    });
+
+    const result = this.parseAIResponse(aiResult.text);
+    result.aiModel = aiResult.model;
+    return result;
   }
   
   /**
