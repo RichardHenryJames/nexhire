@@ -11,10 +11,11 @@
 import { dbService } from './database.service';
 
 // ── AI API Config ──────────────────────────────────────────────
-const GEMINI_API_KEY = process.env.GEMINI_LINKEDIN_API_KEY || process.env.GEMINI_API_KEY || '';
+// Uses dedicated keys if available, falls back to resume keys, then shared keys
+const GEMINI_API_KEY = process.env.GEMINI_LINKEDIN_API_KEY || process.env.GEMINI_RESUME_API_KEY || process.env.GEMINI_API_KEY || '';
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
-const GROQ_API_KEY = process.env.GROQ_LINKEDIN_API_KEY || process.env.GROQ_API_KEY || '';
+const GROQ_API_KEY = process.env.GROQ_LINKEDIN_API_KEY || process.env.GROQ_RESUME_API_KEY || process.env.GROQ_API_KEY || '';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // ── Interfaces ─────────────────────────────────────────────────
@@ -267,7 +268,7 @@ OPTIMIZATION RULES:
         if (groqResponse.status === 429) {
           console.log('Groq rate limited, falling back to Gemini');
         } else {
-          console.error('Groq error:', groqResponse.status, await groqResponse.text().catch(() => ''));
+          console.error('Groq error:', groqResponse.status);
         }
       } catch (err: any) {
         console.error('Groq call failed:', err.message);
@@ -276,7 +277,7 @@ OPTIMIZATION RULES:
 
     // Gemini fallback
     if (!GEMINI_API_KEY) {
-      throw new Error('AI service temporarily unavailable. Please try again later.');
+      throw new Error('AI service is temporarily busy. Please try again in a few minutes.');
     }
 
     try {
@@ -306,7 +307,7 @@ OPTIMIZATION RULES:
       throw new Error('Empty response from AI');
     } catch (err: any) {
       console.error('Gemini fallback failed:', err.message);
-      throw new Error('AI analysis failed. Please try again in a moment.');
+      throw new Error('AI service is temporarily busy due to high demand. Please try again in a few minutes.');
     }
   }
 
