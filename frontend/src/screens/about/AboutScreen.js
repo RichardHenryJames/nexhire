@@ -225,7 +225,7 @@ const getColors = (colors, isDark) => ({
   violet: colors.accentLight,
   
   // Gradients — rich and vibrant
-  gradHero: ['#1A1A1A', '#1E1E1E', '#252526', '#2D2D2D'],
+  gradHero: ['#1A1A1A', '#1A1A1A', '#1A1A1A', '#1A1A1A'],
   gradPrimary: [colors.indigo, colors.primaryLight],
   gradAccent: [colors.cyan, colors.cyanLight],
   gradEmerald: [colors.successDark, colors.success],
