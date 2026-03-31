@@ -202,6 +202,9 @@ const ManualRechargeScreen = ({ navigation, route }) => {
 
   // Ref to track latest amount for stale-closure-safe access
   const amountRef = useRef('');
+  // Pending pack restore (set when returning from PromoCodes before packs load)
+  const pendingPackIdRef = useRef(null);
+  const pendingPromoRef = useRef(null);
 
   // Handle incoming promo code from PromoCodesScreen (without resetting other state)
   useEffect(() => {
@@ -210,7 +213,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
       setPromoCode(incoming);
       setShowPromoInput(true);
 
-      // Restore amount + pack if passed back (survives remount)
+      // Restore amount if passed back
       const returnAmt = route?.params?.returnAmount;
       const returnPackId = route?.params?.returnPackId;
       if (returnAmt) {
@@ -218,23 +221,43 @@ const ManualRechargeScreen = ({ navigation, route }) => {
         amountRef.current = returnAmt;
       }
 
+      // Store pack ID for restore (will be picked up by bonusPacks effect)
+      if (returnPackId) pendingPackIdRef.current = String(returnPackId);
+      pendingPromoRef.current = incoming;
+
       // Clear params so they don't re-trigger
       navigation.setParams({ promoCode: undefined, returnAmount: undefined, returnPackId: undefined });
 
-      // Restore pack selection after bonusPacks load, then validate
-      setTimeout(() => {
-        if (returnPackId) {
-          // Use functional update so we read latest bonusPacks
-          setSelectedPack(prev => {
-            const packs = bonusPacks;
-            return packs.find(p => String(p.PackID) === String(returnPackId)) || prev;
-          });
+      // Try to restore pack immediately if bonusPacks already loaded
+      if (returnPackId && bonusPacks.length > 0) {
+        const found = bonusPacks.find(p => String(p.PackID) === String(returnPackId));
+        if (found) {
+          setSelectedPack(found);
+          pendingPackIdRef.current = null;
         }
-        const amt = parseFloat(returnAmt || amountRef.current) || 0;
-        handleValidatePromo(incoming, amt);
-      }, 200);
+      }
+
+      // Validate promo with correct amount
+      const amt = parseFloat(returnAmt || amountRef.current) || 0;
+      handleValidatePromo(incoming, amt);
     }
   }, [route?.params?.promoCode]);
+
+  // Restore pending pack selection once bonusPacks finish loading
+  useEffect(() => {
+    if (pendingPackIdRef.current && bonusPacks.length > 0) {
+      const found = bonusPacks.find(p => String(p.PackID) === String(pendingPackIdRef.current));
+      if (found) {
+        setSelectedPack(found);
+        pendingPackIdRef.current = null;
+        // Re-validate promo with correct amount if pending
+        if (pendingPromoRef.current) {
+          handleValidatePromo(pendingPromoRef.current, found.PayAmount);
+          pendingPromoRef.current = null;
+        }
+      }
+    }
+  }, [bonusPacks]);
 
   // Form state
   const [amount, setAmount] = useState('');
