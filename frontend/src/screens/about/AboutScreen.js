@@ -120,7 +120,7 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30,
       <div
         ref={wrapperRef}
         className={`anim-reveal ${dirClass} ${visible ? 'anim-visible' : ''}`}
-        style={{ animationDelay: `${delay}ms`, ...(style || {}) }}
+        style={{ animationDelay: `${delay}ms`, width: '100%', ...(style || {}) }}
       >
         {children}
       </div>
