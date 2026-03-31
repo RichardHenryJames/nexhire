@@ -106,7 +106,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   }
 }
 
-const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30, style, type }) => {
+const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30, style, type, center }) => {
   const wrapperRef = useRef(null);
   const [visible, setVisible] = useState(false);
 
@@ -156,7 +156,7 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30,
       <div
         ref={wrapperRef}
         className={`anim-reveal ${dirClass} ${visible ? 'anim-visible' : ''}`}
-        style={{ animationDelay: `${delay}ms`, width: '100%', ...(style || {}) }}
+        style={{ animationDelay: `${delay}ms`, width: '100%', ...(center ? { display: 'flex', flexDirection: 'column', alignItems: 'center' } : {}), ...(style || {}) }}
       >
         {children}
       </div>
@@ -558,7 +558,7 @@ export default function AboutScreenNew() {
         <View style={{ paddingTop: isLg ? 32 : 20, paddingBottom: 24, ...containerStyle }}>
           <View style={{ alignItems: 'center' }}>
             {/* Badge */}
-            <AnimateOnScroll delay={100} direction="down" distance={20}>
+            <AnimateOnScroll delay={100} direction="down" distance={20} center>
             <View
               style={{
                 flexDirection: 'row',
@@ -581,7 +581,7 @@ export default function AboutScreenNew() {
             </AnimateOnScroll>
 
             {/* Main headline with gradient glow */}
-            <AnimateOnScroll delay={300} distance={40} type="hero">
+            <AnimateOnScroll delay={300} distance={40} type="hero" center>
             <View style={{ alignItems: 'center', marginBottom: 16, position: 'relative' }}>
               {/* Gradient glow orbs (web only) */}
               {Platform.OS === 'web' && (
@@ -609,7 +609,7 @@ export default function AboutScreenNew() {
             </AnimateOnScroll>
 
             {/* Subheadline — tight, centered */}
-            <AnimateOnScroll delay={500} distance={25} type="hero">
+            <AnimateOnScroll delay={500} distance={25} type="hero" center>
             <View style={{ alignItems: 'center', maxWidth: 540, marginBottom: 20 }}>
               <Text style={{ fontSize: isLg ? 20 : 16, color: C.textSub, textAlign: 'center', lineHeight: isLg ? 32 : 26 }}>
                 Stop cold applying. <Text style={{ color: C.accent, fontWeight: '700' }}>Start getting referred.</Text>
@@ -622,7 +622,7 @@ export default function AboutScreenNew() {
             </AnimateOnScroll>
 
             {/* CTA Buttons */}
-            <AnimateOnScroll delay={700} distance={20} type="cta">
+            <AnimateOnScroll delay={700} distance={20} type="cta" center>
             <View style={{ flexDirection: isLg ? 'row' : 'column', alignItems: 'center', gap: 16 }}>
               <GlowButton
                 title="Browse 125K+ Jobs"
