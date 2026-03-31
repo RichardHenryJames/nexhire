@@ -139,6 +139,7 @@ export default function ConfirmPurchaseModal({
   itemName = '',
   accessDays = null,
   isFree = false,
+  extraInfo = '',
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -193,8 +194,9 @@ export default function ConfirmPurchaseModal({
                 <View style={styles.amountRow}>
                   <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                   <Text style={styles.amountText}>
-                    ₹{requiredAmount} will be {config.amountVerb}{' '}
-                    {config.amountNote ? <Text style={styles.amountLight}>{config.amountNote}</Text> : null}
+                    ₹{requiredAmount} will be {config.amountVerb}
+                    {extraInfo ? <Text style={styles.amountLight}> ({extraInfo})</Text> : null}
+                    {config.amountNote ? <Text style={styles.amountLight}> {config.amountNote}</Text> : null}
                   </Text>
                 </View>
 

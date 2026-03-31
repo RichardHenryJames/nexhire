@@ -265,18 +265,8 @@ export default function AskReferralScreen({ navigation, route }) {
 
       <View style={s.summaryDivider} />
 
-      <View style={s.summaryPriceRow}>
-        <Text style={s.summaryPriceLabel}>Total</Text>
-        <Text style={[s.summaryPrice, openToAny && { color: '#8B5CF6' }]}>₹{effectiveCost}</Text>
-      </View>
-
-      <View style={s.summaryWalletRow}>
-        <Ionicons name="wallet-outline" size={14} color={colors.success} />
-        <Text style={s.summaryWalletText}>{loadingWallet?'...': `₹${walletBalance.toFixed(0)} available`}</Text>
-      </View>
-
       <TouchableOpacity style={[s.summaryBtn, openToAny && { backgroundColor: '#8B5CF6' }, submitting && { opacity: 0.6 }]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
-        {submitting ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name="paper-plane" size={18} color="#fff" /><Text style={s.summaryBtnText}>Send Request</Text></>}
+        {submitting ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name="paper-plane" size={18} color="#fff" /><Text style={s.summaryBtnText}>Send</Text></>}
       </TouchableOpacity>
     </View>
   );
@@ -317,19 +307,15 @@ export default function AskReferralScreen({ navigation, route }) {
           <View style={s.segBtnRow}>
             <Ionicons name="globe-outline" size={18} color={openToAny ? '#8B5CF6' : colors.gray400} />
             <Text style={[s.segBtnTitle, openToAny && { color: '#8B5CF6' }]}>Open</Text>
-            {isDesktop && <Text style={[s.segBtnFromInline, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>}
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Get referred by employees from multiple companies with a single request</Text>}
-          {!isDesktop && <Text style={[s.segBtnFrom, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={[s.segBtn, !openToAny && s.segBtnActive]} onPress={() => switchMode(false)} activeOpacity={0.8}>
           <View style={s.segBtnRow}>
             <Ionicons name="business-outline" size={18} color={!openToAny ? colors.primary : colors.gray400} />
             <Text style={[s.segBtnTitle, !openToAny && { color: colors.primary }]}>Specific</Text>
-            {isDesktop && <Text style={[s.segBtnFromInline, !openToAny && { color: colors.primary }]}>from ₹{pricing.referralRequestCost}</Text>}
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Targeted referral from an employee at a specific company</Text>}
-          {!isDesktop && <Text style={s.segBtnFrom}>from ₹{pricing.referralRequestCost}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -488,12 +474,7 @@ export default function AskReferralScreen({ navigation, route }) {
         <View style={s.inner}>
           {formJSX}
           <View style={s.stickyBottom}>
-            <View style={s.stickySummary}>
-              <Text style={s.stickyLabel}>Total</Text>
-              <Text style={[s.stickyPrice, openToAny&&{color:'#8B5CF6'}]}>₹{effectiveCost}</Text>
-            </View>
-            <TouchableOpacity style={s.stickyWallet} onPress={() => navigation.navigate('WalletRecharge')} activeOpacity={0.7}><Ionicons name="wallet-outline" size={14} color={colors.success}/><Text style={s.stickyBalance}>{loadingWallet?'...': `₹${walletBalance.toFixed(0)}`}</Text></TouchableOpacity>
-            <TouchableOpacity style={[s.stickyBtn, openToAny&&{backgroundColor:'#8B5CF6'}, submitting&&{opacity:0.6}]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
+            <TouchableOpacity style={[s.stickyBtn, { flex: 1 }, openToAny&&{backgroundColor:'#8B5CF6'}, submitting&&{opacity:0.6}]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
               {submitting ? <ActivityIndicator size="small" color="#fff"/> : <><Ionicons name="paper-plane" size={16} color="#fff"/><Text style={s.stickyBtnText}>Send</Text></>}
             </TouchableOpacity>
           </View>
@@ -501,7 +482,7 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       <ResumeUploadModal visible={showResumeModal} onClose={()=>setShowResumeModal(false)} onResumeSelected={handleResumeSelected} user={user} jobTitle={jobTitle||'Job Application'}/>
-      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
+      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} extraInfo={openToAny ? 'Open Mode' : 'Specific Mode'} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
       <ReferralSuccessOverlay visible={showSuccessOverlay} onComplete={()=>{setShowSuccessOverlay(false);navigation.goBack();}} duration={3500} companyName={referralCompanyName} broadcastTime={referralBroadcastTime} isOpenToAny={referralCompanyName==='All Companies'}/>
     </KeyboardAvoidingView>
   );
