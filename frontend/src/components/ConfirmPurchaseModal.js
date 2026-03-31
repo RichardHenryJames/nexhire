@@ -13,15 +13,14 @@ const getContextConfig = (colors) => ({
     headerIcon: 'lock-closed',
     headerTitle: 'Request Referral',
     itemPrefix: 'Request referral for',
-    // Trust-first messaging (money is held, not charged)
+    // Trust-first messaging
     trustTitle: 'You only pay if you get referred',
-    trustPoints: ['Money is held, not charged', 'Auto-released in 14 days'],
+    trustPoints: ['Money is held, not charged upfront', 'Auto-released in 14 days if no referral'],
     amountVerb: 'reserved',
     amountNote: '(not charged now)',
     steps: [
-      { icon: 'notifications-outline', text: 'Employees are notified', color: colors.primary },
-      { icon: 'checkmark-done-outline', text: 'Charged only if referred', color: colors.success },
-      { icon: 'time-outline', text: 'Auto-release in 14 days', color: colors.warning || '#F59E0B' },
+      { icon: 'notifications-outline', text: 'All verified employees are notified', color: colors.primary },
+      { icon: 'shield-checkmark-outline', text: 'Cancel anytime before referral', color: colors.success },
     ],
     safetyNote: 'Money stays in RefOpen if unused (can be reused anytime)',
     proceedIcon: 'paper-plane',
