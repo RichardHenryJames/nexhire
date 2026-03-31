@@ -615,7 +615,7 @@ export default function AboutScreenNew() {
                 Stop cold applying. <Text style={{ color: C.accent, fontWeight: '700' }}>Start getting referred.</Text>
               </Text>
               <Text style={{ fontSize: isLg ? 16 : 14, color: C.textMuted, textAlign: 'center', lineHeight: isLg ? 26 : 22, marginTop: 12 }}>
-                Most people don't get rejected because they're bad — they just never get seen.{'\n'}RefOpen connects you with verified employees who are actually open to referring you.
+                Most people don't get rejected because they're not good enough. They just never get seen.{'\n'}RefOpen connects you with verified employees who are actually open to referring you.
               </Text>
             </View>
 
