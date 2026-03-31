@@ -68,7 +68,7 @@ export default function DesktopNavBar() {
     if (p.includes('/messages') || p.includes('/chat')) return 'Messages';
     if (p.includes('/notifications')) return 'Notifications';
     if (p.includes('/ask-for-referral') || p.includes('/ask-referral')) return 'AskReferral';
-    if (p.includes('/services')) return 'Services';
+    if (p.includes('/services') || p.includes('/resume-builder') || p.includes('/resume-analyzer') || p.includes('/linkedin-optimizer')) return 'Services';
     if (p.includes('/profile') || p.includes('/settings')) return 'Profile';
     if (p === '/' || p.includes('/home')) return 'Home';
     return null;
