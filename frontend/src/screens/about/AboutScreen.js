@@ -857,18 +857,6 @@ export default function AboutScreenNew() {
                   >
                     <Ionicons name={tool.icon} size={20} color="#FFFFFF" />
                   </LinearGradient>
-                  {tool.ready && (
-                    <View
-                      style={{
-                        backgroundColor: tool.free ? 'rgba(34,211,238,0.15)' : 'rgba(52,211,153,0.15)',
-                        paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
-                      }}
-                    >
-                      <Text style={{ fontSize: 9, fontWeight: '700', color: tool.free ? C.accent : C.emerald, letterSpacing: 0.5 }}>
-                        {tool.free ? '🆓 FREE' : '✅ LIVE'}
-                      </Text>
-                    </View>
-                  )}
                 </View>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 4 }}>{tool.title}</Text>
                 <Text style={{ fontSize: 12, color: C.textSub, lineHeight: 18 }}>{tool.desc}</Text>
