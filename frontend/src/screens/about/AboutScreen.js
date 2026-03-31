@@ -905,7 +905,7 @@ export default function AboutScreenNew() {
               </Text>
               <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 14, padding: 16 }}>
                 <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 2 }}>Top referrers earn</Text>
-                <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>$3K+/month</Text>
+                <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>₹5K+/month</Text>
               </View>
             </BentoCard>
 
