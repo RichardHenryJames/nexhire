@@ -24,6 +24,7 @@ export default function WalletTransactionsScreen({ navigation }) {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filterLoading, setFilterLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [filter, setFilter] = useState('all'); // 'all', 'Credit', 'Debit'
@@ -54,6 +55,7 @@ export default function WalletTransactionsScreen({ navigation }) {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setFilterLoading(false);
     }
   }, [filter]);
 
@@ -73,9 +75,11 @@ export default function WalletTransactionsScreen({ navigation }) {
   };
 
   const handleFilterChange = (newFilter) => {
+    if (newFilter === filter) return;
     setFilter(newFilter);
     setPage(1);
-    loadTransactions(1, newFilter);
+    setFilterLoading(true);
+    loadTransactions(1, newFilter, false);
   };
 
   const renderTransaction = ({ item }) => {
@@ -206,17 +210,26 @@ export default function WalletTransactionsScreen({ navigation }) {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Ionicons name="receipt-outline" size={80} color={colors.gray300} />
-      <Text style={styles.emptyText}>No transactions found</Text>
-      <Text style={styles.emptySubtext}>
-        {filter === 'all'
-          ? 'Add money to your wallet to see transactions'
-          : `No ${filter.toLowerCase()} transactions yet`}
-      </Text>
+      {filterLoading ? (
+        <>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.emptySubtext}>Loading...</Text>
+        </>
+      ) : (
+        <>
+          <Ionicons name="receipt-outline" size={80} color={colors.gray300} />
+          <Text style={styles.emptyText}>No transactions found</Text>
+          <Text style={styles.emptySubtext}>
+            {filter === 'all'
+              ? 'Add money to your wallet to see transactions'
+              : `No ${filter.toLowerCase()} transactions yet`}
+          </Text>
+        </>
+      )}
     </View>
   );
 
-  if (loading && page === 1) {
+  if (loading && page === 1 && !currentBalance && transactions.length === 0) {
     return (
       <View style={styles.container}>
         <View style={styles.innerContainer}>
