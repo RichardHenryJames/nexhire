@@ -43,16 +43,24 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
     style.id = styleId;
     style.textContent = `
       @keyframes fadeSlideUp {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; transform: translateY(30px); filter: blur(4px); }
+        to { opacity: 1; transform: translateY(0); filter: blur(0); }
       }
       @keyframes fadeSlideLeft {
-        from { opacity: 0; transform: translateX(40px); }
-        to { opacity: 1; transform: translateX(0); }
+        from { opacity: 0; transform: translateX(40px); filter: blur(4px); }
+        to { opacity: 1; transform: translateX(0); filter: blur(0); }
       }
       @keyframes fadeSlideDown {
-        from { opacity: 0; transform: translateY(-20px); }
-        to { opacity: 1; transform: translateY(0); }
+        from { opacity: 0; transform: translateY(-20px); filter: blur(4px); }
+        to { opacity: 1; transform: translateY(0); filter: blur(0); }
+      }
+      @keyframes heroReveal {
+        from { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(8px); }
+        to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+      }
+      @keyframes ctaReveal {
+        from { opacity: 0; transform: translateY(20px) scale(0.9); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
       }
       .anim-reveal {
         opacity: 0;
@@ -60,11 +68,13 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
         animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
       }
       .anim-reveal.anim-visible {
-        animation-duration: 0.8s;
+        animation-duration: 0.9s;
       }
       .anim-up.anim-visible { animation-name: fadeSlideUp; }
       .anim-down.anim-visible { animation-name: fadeSlideDown; }
       .anim-left.anim-visible { animation-name: fadeSlideLeft; }
+      .anim-hero.anim-visible { animation-name: heroReveal; animation-duration: 1.1s; }
+      .anim-cta.anim-visible { animation-name: ctaReveal; animation-duration: 0.7s; }
 
       @keyframes glowPulse {
         0%, 100% { opacity: 0.4; transform: scale(1); }
@@ -96,7 +106,7 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
   }
 }
 
-const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30, style }) => {
+const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30, style, type }) => {
   const wrapperRef = useRef(null);
   const [visible, setVisible] = useState(false);
 
@@ -141,7 +151,7 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30,
 
   if (Platform.OS === 'web') {
     // Web: use CSS class-based animation (most reliable)
-    const dirClass = direction === 'down' ? 'anim-down' : direction === 'left' ? 'anim-left' : 'anim-up';
+    const dirClass = type === 'hero' ? 'anim-hero' : type === 'cta' ? 'anim-cta' : direction === 'down' ? 'anim-down' : direction === 'left' ? 'anim-left' : 'anim-up';
     return (
       <div
         ref={wrapperRef}
@@ -571,7 +581,7 @@ export default function AboutScreenNew() {
             </AnimateOnScroll>
 
             {/* Main headline with gradient glow */}
-            <AnimateOnScroll delay={250} distance={30}>
+            <AnimateOnScroll delay={300} distance={40} type="hero">
             <View style={{ alignItems: 'center', marginBottom: 16, position: 'relative' }}>
               {/* Gradient glow orbs (web only) */}
               {Platform.OS === 'web' && (
@@ -599,7 +609,7 @@ export default function AboutScreenNew() {
             </AnimateOnScroll>
 
             {/* Subheadline — tight, centered */}
-            <AnimateOnScroll delay={400} distance={25}>
+            <AnimateOnScroll delay={500} distance={25} type="hero">
             <View style={{ alignItems: 'center', maxWidth: 540, marginBottom: 20 }}>
               <Text style={{ fontSize: isLg ? 20 : 16, color: C.textSub, textAlign: 'center', lineHeight: isLg ? 32 : 26 }}>
                 Stop cold applying. <Text style={{ color: C.accent, fontWeight: '700' }}>Start getting referred.</Text>
@@ -612,7 +622,7 @@ export default function AboutScreenNew() {
             </AnimateOnScroll>
 
             {/* CTA Buttons */}
-            <AnimateOnScroll delay={550} distance={20}>
+            <AnimateOnScroll delay={700} distance={20} type="cta">
             <View style={{ flexDirection: isLg ? 'row' : 'column', alignItems: 'center', gap: 16 }}>
               <GlowButton
                 title="Browse 125K+ Jobs"
