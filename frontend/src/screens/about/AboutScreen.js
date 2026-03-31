@@ -904,8 +904,8 @@ export default function AboutScreenNew() {
                 Instant rewards for every referral. Plus your company's bonus if they get hired!
               </Text>
               <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 14, padding: 16 }}>
-                <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 2 }}>Top referrers earn</Text>
-                <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>₹5K+/month</Text>
+                <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 2 }}>Top referrers earn more than</Text>
+                <Text style={{ fontSize: 32, fontWeight: '800', color: '#FFFFFF' }}>₹5,000/month</Text>
               </View>
             </BentoCard>
 
