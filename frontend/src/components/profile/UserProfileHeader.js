@@ -6,7 +6,9 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   Platform,
-  Modal
+  Modal,
+  Pressable,
+  Dimensions,
 } from 'react-native';
 import CachedImage from '../CachedImage';
 import { showToast } from '../Toast';
@@ -99,6 +101,7 @@ export default function UserProfileHeader({
   const { showAlert } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
+  const [showPicViewer, setShowPicViewer] = useState(false);
   const [profileCompleteness, setProfileCompleteness] = useState(0);
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
   const [verifyingReferrer, setVerifyingReferrer] = useState(false);
@@ -563,9 +566,8 @@ export default function UserProfileHeader({
               
               <TouchableOpacity 
                 style={styles.profileImageTouchable}
-                onPress={onProfileUpdate ? showImagePicker : undefined}
-                activeOpacity={onProfileUpdate ? 0.8 : 1}
-                disabled={!onProfileUpdate}
+                onPress={onProfileUpdate ? showImagePicker : (profile?.profilePictureURL ? () => setShowPicViewer(true) : undefined)}
+                activeOpacity={0.8}
               >
                 <View style={styles.profileImageInner}>
                   {profile?.profilePictureURL ? (
@@ -598,9 +600,8 @@ export default function UserProfileHeader({
           ) : (
             <TouchableOpacity 
               style={styles.profileImageStandalone}
-              onPress={onProfileUpdate ? showImagePicker : undefined}
-              activeOpacity={onProfileUpdate ? 0.8 : 1}
-              disabled={!onProfileUpdate}
+              onPress={onProfileUpdate ? showImagePicker : (profile?.profilePictureURL ? () => setShowPicViewer(true) : undefined)}
+              activeOpacity={0.8}
             >
               {profile?.profilePictureURL ? (
                 <CachedImage 
@@ -759,6 +760,36 @@ export default function UserProfileHeader({
           </View>
         )}
       </View>
+
+      {/* ═══ PROFILE PIC FULLSCREEN VIEWER ═══ */}
+      {profile?.profilePictureURL && (
+        <Modal
+          visible={showPicViewer}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPicViewer(false)}
+        >
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => setShowPicViewer(false)}
+          >
+            <Pressable onPress={() => {}} style={{ alignItems: 'center' }}>
+              <View style={{ borderRadius: 999, overflow: 'hidden', borderWidth: 3, borderColor: 'rgba(255,255,255,0.2)' }}>
+                <CachedImage
+                  source={{ uri: profile.profilePictureURL }}
+                  style={{ width: Math.min(Dimensions.get('window').width - 80, 320), height: Math.min(Dimensions.get('window').width - 80, 320), borderRadius: 999 }}
+                />
+              </View>
+              <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 16 }}>
+                {profile?.firstName || user?.FirstName || ''} {profile?.lastName || user?.LastName || ''}
+              </Text>
+            </Pressable>
+            <TouchableOpacity onPress={() => setShowPicViewer(false)} style={{ marginTop: 24 }}>
+              <Ionicons name="close-circle" size={40} color="rgba(255,255,255,0.9)" />
+            </TouchableOpacity>
+          </Pressable>
+        </Modal>
+      )}
 
     </View>
   );
