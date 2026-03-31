@@ -153,7 +153,7 @@ const PromoCard = ({ promo, colors, onApply }) => {
 };
 
 // ─── Main Screen ─────────────────────────────────────────────────
-const PromoCodesScreen = ({ navigation }) => {
+const PromoCodesScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
   const { maxWidth } = useResponsive();
   const styles = createStyles(colors);
@@ -189,7 +189,7 @@ const PromoCodesScreen = ({ navigation }) => {
   };
 
   const handleApply = (code) => {
-    navigation.navigate({ name: 'WalletRecharge', params: { promoCode: code }, merge: true });
+    navigation.navigate({ name: 'WalletRecharge', params: { promoCode: code, returnAmount: route?.params?.returnAmount, returnPackId: route?.params?.returnPackId }, merge: true });
   };
 
   const recommended = promoCodes.filter(p => p.recommended && p.eligible);

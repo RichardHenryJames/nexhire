@@ -209,12 +209,30 @@ const ManualRechargeScreen = ({ navigation, route }) => {
     if (incoming) {
       setPromoCode(incoming);
       setShowPromoInput(true);
-      // Clear the param so it doesn't re-trigger
-      navigation.setParams({ promoCode: undefined });
-      // Validate after a tick — use ref to get latest amount (avoids stale closure)
+
+      // Restore amount + pack if passed back (survives remount)
+      const returnAmt = route?.params?.returnAmount;
+      const returnPackId = route?.params?.returnPackId;
+      if (returnAmt) {
+        setAmount(returnAmt);
+        amountRef.current = returnAmt;
+      }
+
+      // Clear params so they don't re-trigger
+      navigation.setParams({ promoCode: undefined, returnAmount: undefined, returnPackId: undefined });
+
+      // Restore pack selection after bonusPacks load, then validate
       setTimeout(() => {
-        handleValidatePromo(incoming, parseFloat(amountRef.current) || 0);
-      }, 100);
+        if (returnPackId) {
+          // Use functional update so we read latest bonusPacks
+          setSelectedPack(prev => {
+            const packs = bonusPacks;
+            return packs.find(p => String(p.PackID) === String(returnPackId)) || prev;
+          });
+        }
+        const amt = parseFloat(returnAmt || amountRef.current) || 0;
+        handleValidatePromo(incoming, amt);
+      }, 200);
     }
   }, [route?.params?.promoCode]);
 
@@ -457,7 +475,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                 <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, marginLeft: 5 }}>Got a promo code?</Text>
               </TouchableOpacity>
               <Text style={{ color: colors.gray500, marginHorizontal: 8, fontSize: 12 }}>|</Text>
-              <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes')} fontSize={12} />
+              <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes', { returnAmount: amount, returnPackId: selectedPack?.PackID })} fontSize={12} />
             </View>
           ) : (
             <View>
@@ -498,7 +516,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                 </View>
               )}
               <View style={{ alignSelf: 'center', marginTop: 6 }}>
-                <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes')} fontSize={11} />
+                <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes', { returnAmount: amount, returnPackId: selectedPack?.PackID })} fontSize={11} />
               </View>
             </View>
           )}
