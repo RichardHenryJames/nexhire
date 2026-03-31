@@ -35,61 +35,17 @@ import ComplianceFooter from '../../components/ComplianceFooter';
 
 const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40, duration = 600, style }) => {
   const animValue = useRef(new Animated.Value(0)).current;
-  const hasAnimated = useRef(false);
-  const viewRef = useRef(null);
 
-  const onViewLayout = useCallback(() => {
-    if (hasAnimated.current || Platform.OS !== 'web') return;
-    // On web, use IntersectionObserver for precise viewport detection
-    if (typeof IntersectionObserver !== 'undefined' && viewRef.current) {
-      const node = viewRef.current;
-      // React Native Web stores the DOM node directly or under _nativeTag
-      const domNode = node.measure ? node : node;
-      try {
-        // For RNW, get the actual DOM element
-        const el = domNode._nativeTag ? document.getElementById(String(domNode._nativeTag)) : (domNode.getNode ? domNode.getNode() : domNode);
-        if (!el || !el.getBoundingClientRect) {
-          // Fallback: just animate after delay
-          setTimeout(() => triggerAnimation(), 200 + delay);
-          return;
-        }
-        const observer = new IntersectionObserver(
-          ([entry]) => {
-            if (entry.isIntersecting && !hasAnimated.current) {
-              hasAnimated.current = true;
-              observer.disconnect();
-              triggerAnimation();
-            }
-          },
-          { threshold: 0.15 }
-        );
-        observer.observe(el);
-      } catch {
-        setTimeout(() => triggerAnimation(), 200 + delay);
-      }
-    } else {
-      // Fallback for non-web: animate on mount with delay
-      setTimeout(() => triggerAnimation(), 100 + delay);
-    }
-  }, []);
-
-  // For non-web platforms, trigger on mount
   useEffect(() => {
-    if (Platform.OS !== 'web') {
-      setTimeout(() => triggerAnimation(), 100 + delay);
-    }
+    const timer = setTimeout(() => {
+      Animated.timing(animValue, {
+        toValue: 1,
+        duration,
+        useNativeDriver: true,
+      }).start();
+    }, delay + 100);
+    return () => clearTimeout(timer);
   }, []);
-
-  const triggerAnimation = () => {
-    if (hasAnimated.current && Platform.OS === 'web') return;
-    hasAnimated.current = true;
-    Animated.timing(animValue, {
-      toValue: 1,
-      duration,
-      delay: Platform.OS === 'web' ? delay : 0,
-      useNativeDriver: true,
-    }).start();
-  };
 
   const translateY = direction === 'up'
     ? animValue.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] })
@@ -105,8 +61,6 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40,
 
   return (
     <Animated.View
-      ref={viewRef}
-      onLayout={onViewLayout}
       style={[
         { opacity: animValue, transform: [{ translateY }, { translateX }] },
         style,
@@ -120,56 +74,34 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40,
 // Animated counter that counts up from 0
 const AnimatedCounter = ({ value, suffix = '', color, style }) => {
   const [display, setDisplay] = useState('0');
-  const animRef = useRef(new Animated.Value(0)).current;
   const hasRun = useRef(false);
-  const viewRef = useRef(null);
-
-  const startCounting = useCallback(() => {
-    if (hasRun.current) return;
-    hasRun.current = true;
-    const numericVal = parseInt(value.replace(/[^0-9]/g, ''), 10) || 0;
-    const dur = 1500;
-    const steps = 40;
-    const interval = dur / steps;
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      const progress = step / steps;
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const current = Math.round(numericVal * eased);
-      // Format with original suffix/prefix
-      if (value.includes('K+')) setDisplay(current >= 1000 ? `${(current / 1000).toFixed(current >= 10000 ? 0 : 1)}K+` : `${current}`);
-      else if (value.includes('+')) setDisplay(`${current.toLocaleString()}+`);
-      else if (value.includes('x')) setDisplay(`${current}x`);
-      else setDisplay(current.toLocaleString());
-      if (step >= steps) { clearInterval(timer); setDisplay(value); }
-    }, interval);
-  }, [value]);
-
-  const onViewLayout = useCallback(() => {
-    if (Platform.OS === 'web' && typeof IntersectionObserver !== 'undefined' && viewRef.current) {
-      try {
-        const el = viewRef.current;
-        const domEl = el._nativeTag ? document.getElementById(String(el._nativeTag)) : (el.getNode ? el.getNode() : el);
-        if (domEl && domEl.getBoundingClientRect) {
-          const observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) { observer.disconnect(); startCounting(); }
-          }, { threshold: 0.5 });
-          observer.observe(domEl);
-          return;
-        }
-      } catch {}
-    }
-    setTimeout(startCounting, 300);
-  }, [startCounting]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web') setTimeout(startCounting, 500);
-  }, []);
+    const timer = setTimeout(() => {
+      if (hasRun.current) return;
+      hasRun.current = true;
+      const numericVal = parseInt(value.replace(/[^0-9]/g, ''), 10) || 0;
+      const dur = 1500;
+      const steps = 40;
+      const interval = dur / steps;
+      let step = 0;
+      const countTimer = setInterval(() => {
+        step++;
+        const progress = step / steps;
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = Math.round(numericVal * eased);
+        if (value.includes('K+')) setDisplay(current >= 1000 ? `${(current / 1000).toFixed(current >= 10000 ? 0 : 1)}K+` : `${current}`);
+        else if (value.includes('+')) setDisplay(`${current.toLocaleString()}+`);
+        else if (value.includes('x')) setDisplay(`${current}x`);
+        else setDisplay(current.toLocaleString());
+        if (step >= steps) { clearInterval(countTimer); setDisplay(value); }
+      }, interval);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [value]);
 
   return (
-    <Text ref={viewRef} onLayout={onViewLayout} style={[style, { color }]}>{display}</Text>
+    <Text style={[style, { color }]}>{display}</Text>
   );
 };
 
