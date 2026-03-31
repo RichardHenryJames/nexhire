@@ -33,61 +33,40 @@ import ComplianceFooter from '../../components/ComplianceFooter';
 // Professional Stripe/Linear style: elements fade+slide in
 // only when they enter the viewport as user scrolls down
 // ============================================
-const ScrollContext = React.createContext({ scrollY: { current: 0 }, registerChecker: () => () => {} });
+// Registry: parent stores refs, scroll handler checks getBoundingClientRect
+const ScrollContext = React.createContext({ register: () => () => {} });
 
 const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40, style }) => {
   const animValue = useRef(new Animated.Value(0)).current;
   const hasAnimated = useRef(false);
-  const elementY = useRef(0);
-  const viewRef = useRef(null);
-  const { scrollY, registerChecker } = React.useContext(ScrollContext);
-  const windowH = Dimensions.get('window').height;
+  const wrapperRef = useRef(null);
+  const { register } = React.useContext(ScrollContext);
 
-  const checkVisibility = useCallback(() => {
+  const animate = useCallback(() => {
     if (hasAnimated.current) return;
-    if (elementY.current > 0 && scrollY.current + windowH * 0.85 > elementY.current) {
-      hasAnimated.current = true;
-      setTimeout(() => {
-        Animated.spring(animValue, {
-          toValue: 1,
-          tension: 50,
-          friction: 12,
-          useNativeDriver: true,
-        }).start();
-      }, delay);
-    }
-  }, [delay, windowH]);
+    hasAnimated.current = true;
+    setTimeout(() => {
+      Animated.spring(animValue, {
+        toValue: 1,
+        tension: 50,
+        friction: 12,
+        useNativeDriver: true,
+      }).start();
+    }, delay);
+  }, [delay]);
 
-  // Register with parent scroll handler
+  // Register this element with the parent scroll tracker
   useEffect(() => {
-    const unregister = registerChecker(checkVisibility);
+    const entry = { ref: wrapperRef, animate, animated: hasAnimated };
+    const unregister = register(entry);
     return unregister;
-  }, [registerChecker, checkVisibility]);
+  }, [register, animate]);
 
-  const onLayout = useCallback((e) => {
-    // Use measureInWindow to get absolute position
-    if (viewRef.current?.measureInWindow) {
-      viewRef.current.measureInWindow((x, y) => {
-        if (y != null) {
-          elementY.current = y + scrollY.current;
-          checkVisibility();
-        }
-      });
-    } else {
-      // Fallback
-      elementY.current = e.nativeEvent.layout.y;
-      checkVisibility();
-    }
-  }, [checkVisibility]);
-
-  // Failsafe: if element never measured, animate after timeout
+  // Failsafe: animate after 3s if scroll detection fails
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!hasAnimated.current) {
-        hasAnimated.current = true;
-        Animated.spring(animValue, { toValue: 1, tension: 50, friction: 12, useNativeDriver: true }).start();
-      }
-    }, delay + 2000);
+      if (!hasAnimated.current) animate();
+    }, delay + 3000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -103,17 +82,18 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40,
     ? animValue.interpolate({ inputRange: [0, 1], outputRange: [-distance, 0] })
     : 0;
 
+  // Wrap in a plain View so we get a reliable DOM ref on web
   return (
-    <Animated.View
-      ref={viewRef}
-      onLayout={onLayout}
-      style={[
-        { opacity: animValue, transform: [{ translateY }, { translateX }] },
-        style,
-      ]}
-    >
-      {children}
-    </Animated.View>
+    <View ref={wrapperRef} collapsable={false}>
+      <Animated.View
+        style={[
+          { opacity: animValue, transform: [{ translateY }, { translateX }] },
+          style,
+        ]}
+      >
+        {children}
+      </Animated.View>
+    </View>
   );
 };
 
@@ -430,22 +410,54 @@ export default function AboutScreenNew() {
   const isLg = isDesktop;
   const isMd = isTablet;
 
-  // Scroll-triggered animation tracking
-  const scrollYRef = useRef(0);
-  const scrollCtx = useMemo(() => ({ scrollY: scrollYRef }), []);
-  // Registry of animation check functions
-  const animCheckers = useRef([]);
-  const registerChecker = useCallback((fn) => {
-    animCheckers.current.push(fn);
-    return () => { animCheckers.current = animCheckers.current.filter(f => f !== fn); };
-  }, []);
-  const scrollContextValue = useMemo(() => ({ scrollY: scrollYRef, registerChecker }), [registerChecker]);
+  // Scroll-triggered animation: registry + viewport check
+  const elementsRef = useRef([]);
+  const windowH = Dimensions.get('window').height;
 
-  const handleScroll = useCallback((e) => {
-    scrollYRef.current = e.nativeEvent.contentOffset.y;
-    // Check all registered animation elements
-    animCheckers.current.forEach(fn => fn());
+  const register = useCallback((entry) => {
+    elementsRef.current.push(entry);
+    return () => { elementsRef.current = elementsRef.current.filter(e => e !== entry); };
   }, []);
+
+  const scrollContextValue = useMemo(() => ({ register }), [register]);
+
+  // Check which elements are in viewport
+  const checkElements = useCallback(() => {
+    elementsRef.current.forEach((entry) => {
+      if (entry.animated.current) return;
+      const node = entry.ref.current;
+      if (!node) return;
+
+      if (Platform.OS === 'web') {
+        // RNW View ref: use measureInWindow which works on View (not Animated.View)
+        if (node.measureInWindow) {
+          node.measureInWindow((x, y, w, h) => {
+            if (y != null && y < windowH * 0.88 && y > -h) {
+              entry.animate();
+            }
+          });
+        }
+      } else {
+        if (node.measureInWindow) {
+          node.measureInWindow((x, y) => {
+            if (y != null && y < windowH * 0.88) {
+              entry.animate();
+            }
+          });
+        }
+      }
+    });
+  }, [windowH]);
+
+  const handleScroll = useCallback(() => {
+    checkElements();
+  }, [checkElements]);
+
+  // Initial check after mount (for hero elements already visible)
+  useEffect(() => {
+    const timer = setTimeout(checkElements, 300);
+    return () => clearTimeout(timer);
+  }, [checkElements]);
 
   const containerStyle = {
     maxWidth: 1200,
