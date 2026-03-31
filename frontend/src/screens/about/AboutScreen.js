@@ -65,6 +65,32 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
       .anim-up.anim-visible { animation-name: fadeSlideUp; }
       .anim-down.anim-visible { animation-name: fadeSlideDown; }
       .anim-left.anim-visible { animation-name: fadeSlideLeft; }
+
+      @keyframes glowPulse {
+        0%, 100% { opacity: 0.4; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.05); }
+      }
+      .hero-glow {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        border-radius: 50%;
+        filter: blur(120px);
+        animation: glowPulse 6s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .hero-glow-1 {
+        background: radial-gradient(circle, rgba(99,102,241,0.35) 0%, transparent 70%);
+        top: -200px;
+        left: -100px;
+      }
+      .hero-glow-2 {
+        background: radial-gradient(circle, rgba(34,211,238,0.25) 0%, transparent 70%);
+        top: -100px;
+        right: -150px;
+        animation-delay: 3s;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -544,17 +570,26 @@ export default function AboutScreenNew() {
 
             </AnimateOnScroll>
 
-            {/* Main headline with gradient text effect */}
+            {/* Main headline with gradient glow */}
             <AnimateOnScroll delay={250} distance={30}>
-            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ alignItems: 'center', marginBottom: 16, position: 'relative' }}>
+              {/* Gradient glow orbs (web only) */}
+              {Platform.OS === 'web' && (
+                <>
+                  <div className="hero-glow hero-glow-1" />
+                  <div className="hero-glow hero-glow-2" />
+                </>
+              )}
               <Text
                 style={{
-                  fontSize: isLg ? 72 : isMd ? 52 : 38,
+                  fontSize: isLg ? 72 : isMd ? 52 : 32,
                   fontWeight: '800',
                   textAlign: 'center',
-                  lineHeight: isLg ? 82 : isMd ? 62 : 46,
+                  lineHeight: isLg ? 82 : isMd ? 62 : 40,
                   letterSpacing: -2,
                   color: C.text,
+                  position: 'relative',
+                  zIndex: 1,
                 }}
               >
                 Get <Text style={{ color: C.primary }}>referred</Text>. Get <Text style={{ color: C.accent }}>noticed</Text>.{'\n'}Get <Text style={{ color: C.emerald }}>hired</Text>.
@@ -563,17 +598,14 @@ export default function AboutScreenNew() {
 
             </AnimateOnScroll>
 
-            {/* Subheadline */}
+            {/* Subheadline — tight, centered */}
             <AnimateOnScroll delay={400} distance={25}>
-            <View style={{ alignItems: 'center', maxWidth: 640, marginBottom: 40 }}>
+            <View style={{ alignItems: 'center', maxWidth: 540, marginBottom: 20 }}>
               <Text style={{ fontSize: isLg ? 20 : 16, color: C.textSub, textAlign: 'center', lineHeight: isLg ? 32 : 26 }}>
                 Stop cold applying. <Text style={{ color: C.accent, fontWeight: '700' }}>Start getting referred.</Text>
               </Text>
-              <Text style={{ fontSize: isLg ? 17 : 15, color: C.textMuted, textAlign: 'center', lineHeight: isLg ? 28 : 24, marginTop: 16 }}>
+              <Text style={{ fontSize: isLg ? 16 : 14, color: C.textMuted, textAlign: 'center', lineHeight: isLg ? 26 : 22, marginTop: 12 }}>
                 Most people don't get rejected because they're bad — they just never get seen.{'\n'}RefOpen connects you with verified employees who are actually open to referring you.
-              </Text>
-              <Text style={{ fontSize: isLg ? 17 : 15, color: C.textSub, textAlign: 'center', lineHeight: isLg ? 28 : 24, marginTop: 16 }}>
-                Browse real jobs. Get direct referrals. Track your progress.{'\n'}All in one place, without the guesswork.
               </Text>
             </View>
 
