@@ -540,7 +540,7 @@ const createStyles = (c, r = {}) => {
 
     /* Segmented control (expanded pills) */
     segment: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, gap: 8, alignItems: 'stretch' },
-    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, position: 'relative', overflow: 'hidden', justifyContent: 'space-between' },
+    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, position: 'relative', overflow: 'hidden' },
     segBtnActive: { borderColor: c.primary, backgroundColor: c.primary+'08' },
     segBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     segBtnTitle: { fontSize: 15, fontWeight: '700', color: c.textMuted, flex: 1 },
