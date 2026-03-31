@@ -173,9 +173,12 @@ export default function WalletScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading wallet...</Text>
+      <View style={styles.container}>
+        <SubScreenHeader title="My Wallet" directBack="Home" />
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading wallet...</Text>
+        </View>
       </View>
     );
   }
