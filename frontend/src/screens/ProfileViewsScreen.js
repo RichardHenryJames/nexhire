@@ -19,7 +19,6 @@ import { usePricing } from '../contexts/PricingContext';
 import { typography } from '../styles/theme';
 import messagingApi from '../services/messagingApi';
 import refopenAPI from '../services/api';
-import WalletRechargeModal from '../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../components/ConfirmPurchaseModal';
 import { showToast } from '../components/Toast';
 
@@ -528,7 +527,7 @@ export default function ProfileViewsScreen({ navigation }) {
       />
 
       {/* Wallet Recharge Modal */}
-      <WalletRechargeModal
+      <ConfirmPurchaseModal
         visible={showWalletModal}
         currentBalance={walletBalance}
         requiredAmount={pricing.profileViewCost}

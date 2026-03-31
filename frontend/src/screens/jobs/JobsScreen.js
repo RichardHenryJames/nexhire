@@ -13,7 +13,6 @@ import JobCard from '../../components/jobs/JobCard';
 import AdCard from '../../components/ads/AdCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { createStyles } from './JobsScreen.styles';
@@ -2272,11 +2271,13 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         jobTitle={pendingJobForApplication?.Title}
       />
 
-      {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
-      <WalletRechargeModal
+      {/* Wallet Recharge Modal */}
+      <ConfirmPurchaseModal
         visible={showWalletModal}
         currentBalance={walletModalData.currentBalance}
         requiredAmount={walletModalData.requiredAmount}
+        contextType="referral"
+        itemName="Referral request"
         onAddMoney={() => {
           setShowWalletModal(false);
           navigation.navigate('WalletRecharge');

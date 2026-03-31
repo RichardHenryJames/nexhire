@@ -25,7 +25,6 @@ import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import { usePricing } from '../../contexts/PricingContext';
 import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { showToast } from '../../components/Toast';
@@ -1447,11 +1446,13 @@ const { jobId, fromReferralRequest } = route.params || {};
         jobTitle={job?.Title}
       />
       
-      {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
-      <WalletRechargeModal
+      {/* Wallet Recharge Modal */}
+      <ConfirmPurchaseModal
         visible={showWalletModal}
         currentBalance={walletModalData.currentBalance}
         requiredAmount={walletModalData.requiredAmount}
+        contextType="referral"
+        itemName={job?.Title || 'Referral request'}
         onAddMoney={() => {
           setShowWalletModal(false);
           navigation.navigate('WalletRecharge');

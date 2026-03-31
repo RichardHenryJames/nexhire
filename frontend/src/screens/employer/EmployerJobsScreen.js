@@ -6,7 +6,6 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import JobCard from '../../components/jobs/JobCard';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import { createStyles as createJobStyles } from '../jobs/JobsScreen.styles';
 import { showToast } from '../../components/Toast';
@@ -390,10 +389,12 @@ export default function EmployerJobsScreen({ navigation, route }) {
       </ScrollView>
       </View>
 
-      <WalletRechargeModal
+      <ConfirmPurchaseModal
         visible={showWalletModal}
         currentBalance={walletModalData.currentBalance}
         requiredAmount={walletModalData.requiredAmount}
+        contextType="publish-job"
+        itemName="Job posting"
         onAddMoney={() => {
           setShowWalletModal(false);
           navigation.navigate('WalletRecharge');

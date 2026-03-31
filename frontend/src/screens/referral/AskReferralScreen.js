@@ -12,7 +12,7 @@ import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
+// WalletRechargeModal removed - ConfirmPurchaseModal handles both states
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
@@ -200,7 +200,7 @@ export default function AskReferralScreen({ navigation, route }) {
         if(result.data?.availableBalanceAfter!==undefined) setWalletBalance(result.data.availableBalanceAfter);
         setJobTitle('');setJobId('');setJobUrl('');setReferralMessage('');setSelectedCompany(null);setOpenToAny(true);setMinSalary('');setPreferredLocations('');setErrors({});setStep(1);
       } else if (result.errorCode==='INSUFFICIENT_WALLET_BALANCE') {
-        setWalletModalData({currentBalance:result.data?.currentBalance||0,requiredAmount:result.data?.requiredAmount||effectiveCost}); setShowWalletModal(true);
+        setWalletBalance(result.data?.currentBalance||0); setShowConfirmModal(true);
       } else showToast(result?.error||'Failed','error');
     }catch(e){showToast(e?.message||'Error','error');}finally{setSubmitting(false);}
   };
@@ -501,7 +501,6 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       <ResumeUploadModal visible={showResumeModal} onClose={()=>setShowResumeModal(false)} onResumeSelected={handleResumeSelected} user={user} jobTitle={jobTitle||'Job Application'}/>
-      <WalletRechargeModal visible={showWalletModal} currentBalance={walletModalData.currentBalance} requiredAmount={walletModalData.requiredAmount} onAddMoney={()=>{setShowWalletModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowWalletModal(false)}/>
       <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
       <ReferralSuccessOverlay visible={showSuccessOverlay} onComplete={()=>{setShowSuccessOverlay(false);navigation.goBack();}} duration={3500} companyName={referralCompanyName} broadcastTime={referralBroadcastTime} isOpenToAny={referralCompanyName==='All Companies'}/>
     </KeyboardAvoidingView>
