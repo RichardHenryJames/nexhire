@@ -7,7 +7,7 @@
  * Route: /about
  */
 
-import React, { useMemo, useEffect } from 'react';
+import React, { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import {
   Platform,
   Linking,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useResponsive from '../../hooks/useResponsive';
@@ -26,6 +27,151 @@ import { useAuth } from '../../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import ComplianceFooter from '../../components/ComplianceFooter';
+
+// ============================================
+// SCROLL ANIMATION — Fade + slide in on scroll
+// Inspired by Stripe/Linear/Vercel landing pages
+// ============================================
+
+const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40, duration = 600, style }) => {
+  const animValue = useRef(new Animated.Value(0)).current;
+  const hasAnimated = useRef(false);
+  const viewRef = useRef(null);
+
+  const onViewLayout = useCallback(() => {
+    if (hasAnimated.current || Platform.OS !== 'web') return;
+    // On web, use IntersectionObserver for precise viewport detection
+    if (typeof IntersectionObserver !== 'undefined' && viewRef.current) {
+      const node = viewRef.current;
+      // React Native Web stores the DOM node directly or under _nativeTag
+      const domNode = node.measure ? node : node;
+      try {
+        // For RNW, get the actual DOM element
+        const el = domNode._nativeTag ? document.getElementById(String(domNode._nativeTag)) : (domNode.getNode ? domNode.getNode() : domNode);
+        if (!el || !el.getBoundingClientRect) {
+          // Fallback: just animate after delay
+          setTimeout(() => triggerAnimation(), 200 + delay);
+          return;
+        }
+        const observer = new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting && !hasAnimated.current) {
+              hasAnimated.current = true;
+              observer.disconnect();
+              triggerAnimation();
+            }
+          },
+          { threshold: 0.15 }
+        );
+        observer.observe(el);
+      } catch {
+        setTimeout(() => triggerAnimation(), 200 + delay);
+      }
+    } else {
+      // Fallback for non-web: animate on mount with delay
+      setTimeout(() => triggerAnimation(), 100 + delay);
+    }
+  }, []);
+
+  // For non-web platforms, trigger on mount
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      setTimeout(() => triggerAnimation(), 100 + delay);
+    }
+  }, []);
+
+  const triggerAnimation = () => {
+    if (hasAnimated.current && Platform.OS === 'web') return;
+    hasAnimated.current = true;
+    Animated.timing(animValue, {
+      toValue: 1,
+      duration,
+      delay: Platform.OS === 'web' ? delay : 0,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const translateY = direction === 'up'
+    ? animValue.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] })
+    : direction === 'down'
+    ? animValue.interpolate({ inputRange: [0, 1], outputRange: [-distance, 0] })
+    : 0;
+
+  const translateX = direction === 'left'
+    ? animValue.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] })
+    : direction === 'right'
+    ? animValue.interpolate({ inputRange: [0, 1], outputRange: [-distance, 0] })
+    : 0;
+
+  return (
+    <Animated.View
+      ref={viewRef}
+      onLayout={onViewLayout}
+      style={[
+        { opacity: animValue, transform: [{ translateY }, { translateX }] },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+};
+
+// Animated counter that counts up from 0
+const AnimatedCounter = ({ value, suffix = '', color, style }) => {
+  const [display, setDisplay] = useState('0');
+  const animRef = useRef(new Animated.Value(0)).current;
+  const hasRun = useRef(false);
+  const viewRef = useRef(null);
+
+  const startCounting = useCallback(() => {
+    if (hasRun.current) return;
+    hasRun.current = true;
+    const numericVal = parseInt(value.replace(/[^0-9]/g, ''), 10) || 0;
+    const dur = 1500;
+    const steps = 40;
+    const interval = dur / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      const progress = step / steps;
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = Math.round(numericVal * eased);
+      // Format with original suffix/prefix
+      if (value.includes('K+')) setDisplay(current >= 1000 ? `${(current / 1000).toFixed(current >= 10000 ? 0 : 1)}K+` : `${current}`);
+      else if (value.includes('+')) setDisplay(`${current.toLocaleString()}+`);
+      else if (value.includes('x')) setDisplay(`${current}x`);
+      else setDisplay(current.toLocaleString());
+      if (step >= steps) { clearInterval(timer); setDisplay(value); }
+    }, interval);
+  }, [value]);
+
+  const onViewLayout = useCallback(() => {
+    if (Platform.OS === 'web' && typeof IntersectionObserver !== 'undefined' && viewRef.current) {
+      try {
+        const el = viewRef.current;
+        const domEl = el._nativeTag ? document.getElementById(String(el._nativeTag)) : (el.getNode ? el.getNode() : el);
+        if (domEl && domEl.getBoundingClientRect) {
+          const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) { observer.disconnect(); startCounting(); }
+          }, { threshold: 0.5 });
+          observer.observe(domEl);
+          return;
+        }
+      } catch {}
+    }
+    setTimeout(startCounting, 300);
+  }, [startCounting]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') setTimeout(startCounting, 500);
+  }, []);
+
+  return (
+    <Text ref={viewRef} onLayout={onViewLayout} style={[style, { color }]}>{display}</Text>
+  );
+};
 
 // Fast logo — native <img> on web for instant cached render, RN Image on native
 const RefOpenLogo = require('../../../assets/refopen-logo.png');
@@ -277,7 +423,7 @@ const TestimonialCard = ({ item, index, C, colors }) => {
 // ============================================
 const StatItem = ({ value, label, color, C, isLg }) => (
   <View style={{ alignItems: 'center', paddingHorizontal: isLg ? 32 : 16 }}>
-    <Text style={{ fontSize: isLg ? 56 : 36, fontWeight: '800', color, letterSpacing: -2 }}>{value}</Text>
+    <AnimatedCounter value={value} color={color} style={{ fontSize: isLg ? 56 : 36, fontWeight: '800', letterSpacing: -2 }} />
     <View style={{ height: 3, backgroundColor: color, borderRadius: 2, marginVertical: 8, width: '100%' }} />
     <Text style={{ fontSize: isLg ? 14 : 12, color: C.textSub, textAlign: 'center' }}>{label}</Text>
   </View>
@@ -367,6 +513,7 @@ export default function AboutScreenNew() {
         <View style={{ paddingTop: isLg ? 32 : 20, paddingBottom: 24, ...containerStyle }}>
           <View style={{ alignItems: 'center' }}>
             {/* Badge */}
+            <AnimateOnScroll delay={100} direction="down" distance={20}>
             <View
               style={{
                 flexDirection: 'row',
@@ -386,7 +533,10 @@ export default function AboutScreenNew() {
               </Text>
             </View>
 
+            </AnimateOnScroll>
+
             {/* Main headline with gradient text effect */}
+            <AnimateOnScroll delay={250} distance={30}>
             <View style={{ alignItems: 'center', marginBottom: 16 }}>
               <Text
                 style={{
@@ -404,7 +554,10 @@ export default function AboutScreenNew() {
               </Text>
             </View>
 
+            </AnimateOnScroll>
+
             {/* Subheadline */}
+            <AnimateOnScroll delay={400} distance={25}>
             <Text
               style={{
                 fontSize: isLg ? 20 : 16,
@@ -420,7 +573,10 @@ export default function AboutScreenNew() {
               Get referrals from employees at top companies, plus AI-powered resume analyzer, interview prep, salary insights, and 7 more career tools. All in one app.
             </Text>
 
+            </AnimateOnScroll>
+
             {/* CTA Buttons */}
+            <AnimateOnScroll delay={550} distance={20}>
             <View style={{ flexDirection: isLg ? 'row' : 'column', alignItems: 'center', gap: 16 }}>
               <GlowButton
                 title="Browse 125K+ Jobs"
@@ -437,7 +593,10 @@ export default function AboutScreenNew() {
               />
             </View>
 
+            </AnimateOnScroll>
+
             {/* Trust indicators */}
+            <AnimateOnScroll delay={650} distance={15}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, opacity: 0.6 }}>
               {[1, 2, 3, 4, 5].map((i) => (
                 <Ionicons key={i} name="star" size={16} color={C.amber} style={{ marginRight: 2 }} />
@@ -450,6 +609,7 @@ export default function AboutScreenNew() {
         {/* ============================================ */}
         {/* STATS SECTION — Immediate social proof */}
         {/* ============================================ */}
+        <AnimateOnScroll delay={0} distance={30}>
         <View style={{ paddingVertical: 32, ...containerStyle }}>
           <View
             style={{
@@ -469,6 +629,7 @@ export default function AboutScreenNew() {
             <StatItem value="15x" label="Higher Hiring Rate" color={C.rose} C={C} isLg={isLg} />
           </View>
         </View>
+        </AnimateOnScroll>
 
         {/* ============================================ */}
         {/* BENTO GRID - FOR JOB SEEKERS */}
@@ -492,8 +653,10 @@ export default function AboutScreenNew() {
               Your Dream Job is{'\n'}One Referral Away
             </Text>
           </View>
+          </AnimateOnScroll>
 
           {/* Bento Grid */}
+          <AnimateOnScroll delay={100} distance={40}>
           <View style={{ flexDirection: isLg ? 'row' : 'column', flexWrap: 'wrap' }}>
             {/* Large feature card */}
             <BentoCard span={isLg ? 2 : 1} height={280} gradient={C.gradPrimary} C={C}>
@@ -551,11 +714,13 @@ export default function AboutScreenNew() {
               </Text>
             </BentoCard>
           </View>
+          </AnimateOnScroll>
         </View>
 
         {/* ============================================ */}
         {/* ZERO RISK GUARANTEE */}
         {/* ============================================ */}
+        <AnimateOnScroll delay={0} distance={35}>
         <View style={{ paddingVertical: 32, ...containerStyle }}>
           <LinearGradient
             colors={['rgba(52,211,153,0.12)', 'rgba(16,185,129,0.06)', 'rgba(52,211,153,0.02)']}
@@ -595,11 +760,13 @@ export default function AboutScreenNew() {
             </View>
           </LinearGradient>
         </View>
+        </AnimateOnScroll>
 
         {/* ============================================ */}
         {/* TESTIMONIALS */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 36 }}>
+          <AnimateOnScroll delay={0} distance={30}>
           <View style={{ alignItems: 'center', marginBottom: 24, ...containerStyle }}>
             <Text style={{ fontSize: isLg ? 32 : 24, fontWeight: '800', color: C.text, textAlign: 'center', letterSpacing: -1 }}>
               Real People. Real Results.
@@ -613,22 +780,26 @@ export default function AboutScreenNew() {
               <TestimonialCard key={index} item={item} index={index} C={C} colors={colors} />
             ))}
           </ScrollView>
+          </AnimateOnScroll>
         </View>
 
         {/* ============================================ */}
         {/* COMPANIES MARQUEE */}
         {/* ============================================ */}
+        <AnimateOnScroll delay={0} distance={20}>
         <View style={{ paddingVertical: 28, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.border }}>
           <Text style={{ textAlign: 'center', fontSize: 11, color: C.textMuted, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase' }}>
             Employees from these companies are on RefOpen
           </Text>
           <CompanyMarquee companies={COMPANIES} C={C} />
         </View>
+        </AnimateOnScroll>
 
         {/* ============================================ */}
         {/* CAREER TOOLS                                */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 40, ...containerStyle }}>
+          <AnimateOnScroll delay={0} distance={30}>
           <View style={{ alignItems: 'center', marginBottom: 28 }}>
             <View
               style={{
@@ -650,7 +821,9 @@ export default function AboutScreenNew() {
               The most complete career toolkit. No more paying for 5 different subscriptions.
             </Text>
           </View>
+          </AnimateOnScroll>
 
+          <AnimateOnScroll delay={100} distance={30}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
             {getCareerTools(colors).map((tool) => (
               <TouchableOpacity
@@ -688,12 +861,14 @@ export default function AboutScreenNew() {
               </TouchableOpacity>
             ))}
           </View>
+          </AnimateOnScroll>
         </View>
 
         {/* ============================================ */}
         {/* BENTO GRID - FOR REFERRERS */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 40, backgroundColor: 'rgba(16,185,129,0.03)', ...containerStyle }}>
+          <AnimateOnScroll delay={0} distance={30}>
           <View style={{ alignItems: 'center', marginBottom: 32 }}>
             <View
               style={{
@@ -715,7 +890,9 @@ export default function AboutScreenNew() {
               Get paid for every single referral, not just when they get hired.
             </Text>
           </View>
+          </AnimateOnScroll>
 
+          <AnimateOnScroll delay={100} distance={35}>
           <View style={{ flexDirection: isLg ? 'row' : 'column', flexWrap: 'wrap' }}>
             {/* Earning card */}
             <BentoCard span={isLg ? 1.5 : 1} height={320} gradient={C.gradEmerald} C={C}>
@@ -749,12 +926,14 @@ export default function AboutScreenNew() {
               <GlowButton title="Start Earning" gradient={C.gradEmerald} onPress={() => goToApp()} size="small" colors={colors} />
             </BentoCard>
           </View>
+          </AnimateOnScroll>
         </View>
 
         {/* ============================================ */}
         {/* FOR EMPLOYERS */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 40, ...containerStyle }}>
+          <AnimateOnScroll delay={0} distance={30}>
           <View style={{ alignItems: 'center', marginBottom: 32 }}>
             <View
               style={{
@@ -773,7 +952,9 @@ export default function AboutScreenNew() {
               Hire Better, Faster
             </Text>
           </View>
+          </AnimateOnScroll>
 
+          <AnimateOnScroll delay={100} distance={30}>
           <View style={{ flexDirection: isLg ? 'row' : 'column' }}>
             {[
               { icon: 'create', title: 'Post Jobs Free', desc: 'Reach 50K+ qualified professionals instantly.', gradient: ['#4F46E5', '#6366F1'] },
@@ -787,11 +968,13 @@ export default function AboutScreenNew() {
               </BentoCard>
             ))}
           </View>
+          </AnimateOnScroll>
         </View>
 
         {/* ============================================ */}
         {/* FINAL CTA */}
         {/* ============================================ */}
+        <AnimateOnScroll delay={0} distance={40}>
         <View style={{ paddingVertical: 48, ...containerStyle }}>
           <LinearGradient
             colors={['rgba(99,102,241,0.15)', 'rgba(34,211,238,0.08)', 'rgba(52,211,153,0.05)']}
@@ -818,6 +1001,7 @@ export default function AboutScreenNew() {
             </Text>
           </LinearGradient>
         </View>
+        </AnimateOnScroll>
 
         {/* ============================================ */}
         {/* FOOTER */}
