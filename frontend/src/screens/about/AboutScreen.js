@@ -29,21 +29,65 @@ import { Ionicons } from '@expo/vector-icons';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 // ============================================
-// SCROLL ANIMATION — Fade + slide in on scroll
-// Inspired by Stripe/Linear/Vercel landing pages
+// SCROLL-TRIGGERED ANIMATION — Reveal on scroll
+// Professional Stripe/Linear style: elements fade+slide in
+// only when they enter the viewport as user scrolls down
 // ============================================
+const ScrollContext = React.createContext({ scrollY: { current: 0 }, registerChecker: () => () => {} });
 
-const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40, duration = 600, style }) => {
+const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40, style }) => {
   const animValue = useRef(new Animated.Value(0)).current;
+  const hasAnimated = useRef(false);
+  const elementY = useRef(0);
+  const viewRef = useRef(null);
+  const { scrollY, registerChecker } = React.useContext(ScrollContext);
+  const windowH = Dimensions.get('window').height;
 
+  const checkVisibility = useCallback(() => {
+    if (hasAnimated.current) return;
+    if (elementY.current > 0 && scrollY.current + windowH * 0.85 > elementY.current) {
+      hasAnimated.current = true;
+      setTimeout(() => {
+        Animated.spring(animValue, {
+          toValue: 1,
+          tension: 50,
+          friction: 12,
+          useNativeDriver: true,
+        }).start();
+      }, delay);
+    }
+  }, [delay, windowH]);
+
+  // Register with parent scroll handler
+  useEffect(() => {
+    const unregister = registerChecker(checkVisibility);
+    return unregister;
+  }, [registerChecker, checkVisibility]);
+
+  const onLayout = useCallback((e) => {
+    // Use measureInWindow to get absolute position
+    if (viewRef.current?.measureInWindow) {
+      viewRef.current.measureInWindow((x, y) => {
+        if (y != null) {
+          elementY.current = y + scrollY.current;
+          checkVisibility();
+        }
+      });
+    } else {
+      // Fallback
+      elementY.current = e.nativeEvent.layout.y;
+      checkVisibility();
+    }
+  }, [checkVisibility]);
+
+  // Failsafe: if element never measured, animate after timeout
   useEffect(() => {
     const timer = setTimeout(() => {
-      Animated.timing(animValue, {
-        toValue: 1,
-        duration,
-        useNativeDriver: true,
-      }).start();
-    }, delay + 100);
+      if (!hasAnimated.current) {
+        hasAnimated.current = true;
+        Animated.spring(animValue, { toValue: 1, tension: 50, friction: 12, useNativeDriver: true }).start();
+      }
+    }, delay + 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -61,6 +105,8 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40,
 
   return (
     <Animated.View
+      ref={viewRef}
+      onLayout={onLayout}
       style={[
         { opacity: animValue, transform: [{ translateY }, { translateX }] },
         style,
@@ -384,6 +430,23 @@ export default function AboutScreenNew() {
   const isLg = isDesktop;
   const isMd = isTablet;
 
+  // Scroll-triggered animation tracking
+  const scrollYRef = useRef(0);
+  const scrollCtx = useMemo(() => ({ scrollY: scrollYRef }), []);
+  // Registry of animation check functions
+  const animCheckers = useRef([]);
+  const registerChecker = useCallback((fn) => {
+    animCheckers.current.push(fn);
+    return () => { animCheckers.current = animCheckers.current.filter(f => f !== fn); };
+  }, []);
+  const scrollContextValue = useMemo(() => ({ scrollY: scrollYRef, registerChecker }), [registerChecker]);
+
+  const handleScroll = useCallback((e) => {
+    scrollYRef.current = e.nativeEvent.contentOffset.y;
+    // Check all registered animation elements
+    animCheckers.current.forEach(fn => fn());
+  }, []);
+
   const containerStyle = {
     maxWidth: 1200,
     width: '100%',
@@ -438,7 +501,12 @@ export default function AboutScreenNew() {
         )}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollContext.Provider value={scrollContextValue}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {/* ============================================ */}
         {/* HERO SECTION */}
         {/* ============================================ */}
@@ -967,6 +1035,7 @@ export default function AboutScreenNew() {
           <ComplianceFooter currentPage="about" />
         </View>
       </ScrollView>
+      </ScrollContext.Provider>
     </View>
   );
 }
