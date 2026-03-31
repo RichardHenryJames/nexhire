@@ -603,6 +603,7 @@ export default function AboutScreenNew() {
               ))}
               <Text style={{ fontSize: 13, color: C.textMuted, marginLeft: 8 }}>4.9 rating · 10,000+ reviews</Text>
             </View>
+            </AnimateOnScroll>
           </View>
         </View>
 
