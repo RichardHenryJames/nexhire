@@ -130,30 +130,27 @@ const linking = {
       PrivacyPolicy: "privacy",
       AboutUs: "about",
       Disclaimer: "disclaimer",
-      FAQ: "faq",
       Pricing: "pricing",
-      Support: "support",
       
-      // Public Tools screens - accessible without auth
-      // Primary SEO-friendly path (short and memorable)
-      ResumeAnalyzer: "resume-analyzer",
-      ResumeBuilder: "resume-builder",
-      
-      // Service sub-screens (public Stack.Screens at root)
-      ATSBeatSheet: "services/ats-beat-sheet",
-      InterviewDecoded: "services/interview-prep",
-      SalarySpy: "services/salary-spy",
-      OfferCoach: "services/offer-coach",
-      LinkedInOptimizer: "services/linkedin-optimizer",
-      BlindReview: "services/blind-review",
-      CareerSimulator: "services/career-simulator",
-      MarketPulse: "services/market-pulse",
-      Careers: "careers",
-      CareerJobDetail: "careers/job/:jobId",
-      
-      // Public Blog screens - accessible without auth
-      Blog: "blog",
-      BlogArticle: "blog/:articleId",
+      // Public variants of screens that also exist inside MainStack.
+      // When authenticated, Main.screens paths match first (with DesktopNavBar).
+      // When unauthenticated, Main isn't registered so these root-level fallbacks match.
+      FAQPublic: "faq",
+      SupportPublic: "support",
+      ResumeAnalyzerPublic: "resume-analyzer",
+      ResumeBuilderPublic: "resume-builder",
+      ATSBeatSheetPublic: "services/ats-beat-sheet",
+      InterviewDecodedPublic: "services/interview-prep",
+      SalarySpyPublic: "services/salary-spy",
+      OfferCoachPublic: "services/offer-coach",
+      LinkedInOptimizerPublic: "services/linkedin-optimizer",
+      BlindReviewPublic: "services/blind-review",
+      CareerSimulatorPublic: "services/career-simulator",
+      MarketPulsePublic: "services/market-pulse",
+      CareersPublic: "careers",
+      CareerJobDetailPublic: "careers/job/:jobId",
+      BlogPublic: "blog",
+      BlogArticlePublic: "blog/:articleId",
       
       // Public Job Details screen - accessible without auth but actions require login
       JobDetailsPublic: "job/:jobId",
@@ -999,7 +996,7 @@ export default function AppNavigator() {
         options={{ headerShown: false, title: 'Disclaimer' }}
       />
       <Stack.Screen
-        name="FAQ"
+        name="FAQPublic"
         component={FAQScreen}
         options={{ headerShown: false, title: 'Frequently Asked Questions' }}
       />
@@ -1012,62 +1009,21 @@ export default function AppNavigator() {
           headerBackTitleVisible: false,
         }}
       />
-      <Stack.Screen
-        name="Blog"
-        component={BlogListScreen}
-        options={{
-          headerShown: false,
-          title: "Career Blog - Job Search Tips & Advice",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
-        name="BlogArticle"
-        component={BlogArticleScreen}
-        options={{
-          headerShown: false,
-          title: "Blog Article",
-          headerBackTitleVisible: false,
-        }}
-      />
-      <Stack.Screen
-        name="Support"
-        component={SupportScreen}
-        options={{ headerShown: false, title: 'Help & Support' }}
-      />
-      
-      {/* Public Resume Analyzer Tool - accessible without auth */}
-      <Stack.Screen
-        name="ResumeAnalyzer"
-        component={ResumeAnalyzerScreen}
-        options={{
-          headerShown: false,
-          title: "Resume Analyzer - AI Job Match Tool",
-          headerBackTitleVisible: false,
-        }}
-      />
-
-      {/* Resume Builder - Full AI-powered resume creation tool */}
-      <Stack.Screen
-        name="ResumeBuilder"
-        component={ResumeBuilderScreen}
-        options={{
-          headerShown: false,
-          title: "Resume Builder - AI Resume Maker | RefOpen",
-        }}
-      />
-
-      {/* Service Screens */}
-      <Stack.Screen name="ATSBeatSheet" component={ATSBeatSheetScreen} options={{ headerShown: false, title: 'ATS Resume Builder - Beat Tracking Systems' }} />
-      <Stack.Screen name="InterviewDecoded" component={InterviewDecodedScreen} options={{ headerShown: false, title: 'Interview Prep - AI Mock Practice' }} />
-      <Stack.Screen name="SalarySpy" component={SalarySpyScreen} options={{ headerShown: false, title: 'Salary Checker - Know Your Worth' }} />
-      <Stack.Screen name="OfferCoach" component={OfferCoachScreen} options={{ headerShown: false, title: 'Offer Negotiation Coach' }} />
-      <Stack.Screen name="LinkedInOptimizer" component={LinkedInOptimizerScreen} options={{ headerShown: false, title: 'LinkedIn Profile Optimizer' }} />
-      <Stack.Screen name="BlindReview" component={BlindReviewScreen} options={{ headerShown: false, title: 'Blind Resume Review' }} />
-      <Stack.Screen name="CareerSimulator" component={CareerSimulatorScreen} options={{ headerShown: false, title: 'Career Path Simulator' }} />
-      <Stack.Screen name="MarketPulse" component={MarketPulseScreen} options={{ headerShown: false, title: 'Job Market Pulse - Hiring Trends' }} />
-      <Stack.Screen name="Careers" component={CareersScreen} options={{ headerShown: false, title: 'Careers at RefOpen - Join Our Team' }} />
-      <Stack.Screen name="CareerJobDetail" component={CareerJobDetailScreen} options={{ headerShown: false, title: 'Job Details - Careers at RefOpen' }} />
+      <Stack.Screen name="BlogPublic" component={BlogListScreen} options={{ headerShown: false, title: 'Career Blog - Job Search Tips & Advice' }} />
+      <Stack.Screen name="BlogArticlePublic" component={BlogArticleScreen} options={{ headerShown: false, title: 'Blog Article' }} />
+      <Stack.Screen name="SupportPublic" component={SupportScreen} options={{ headerShown: false, title: 'Help & Support' }} />
+      <Stack.Screen name="ResumeAnalyzerPublic" component={ResumeAnalyzerScreen} options={{ headerShown: false, title: 'Resume Analyzer - AI Job Match Tool' }} />
+      <Stack.Screen name="ResumeBuilderPublic" component={ResumeBuilderScreen} options={{ headerShown: false, title: 'Resume Builder - AI Resume Maker | RefOpen' }} />
+      <Stack.Screen name="ATSBeatSheetPublic" component={ATSBeatSheetScreen} options={{ headerShown: false, title: 'ATS Resume Builder - Beat Tracking Systems' }} />
+      <Stack.Screen name="InterviewDecodedPublic" component={InterviewDecodedScreen} options={{ headerShown: false, title: 'Interview Prep - AI Mock Practice' }} />
+      <Stack.Screen name="SalarySpyPublic" component={SalarySpyScreen} options={{ headerShown: false, title: 'Salary Checker - Know Your Worth' }} />
+      <Stack.Screen name="OfferCoachPublic" component={OfferCoachScreen} options={{ headerShown: false, title: 'Offer Negotiation Coach' }} />
+      <Stack.Screen name="LinkedInOptimizerPublic" component={LinkedInOptimizerScreen} options={{ headerShown: false, title: 'LinkedIn Profile Optimizer' }} />
+      <Stack.Screen name="BlindReviewPublic" component={BlindReviewScreen} options={{ headerShown: false, title: 'Blind Resume Review' }} />
+      <Stack.Screen name="CareerSimulatorPublic" component={CareerSimulatorScreen} options={{ headerShown: false, title: 'Career Path Simulator' }} />
+      <Stack.Screen name="MarketPulsePublic" component={MarketPulseScreen} options={{ headerShown: false, title: 'Job Market Pulse - Hiring Trends' }} />
+      <Stack.Screen name="CareersPublic" component={CareersScreen} options={{ headerShown: false, title: 'Careers at RefOpen - Join Our Team' }} />
+      <Stack.Screen name="CareerJobDetailPublic" component={CareerJobDetailScreen} options={{ headerShown: false, title: 'Job Details - Careers at RefOpen' }} />
       
       {/* Public Ask Referral Screen - accessible without auth but actions require login */}
       <Stack.Screen
