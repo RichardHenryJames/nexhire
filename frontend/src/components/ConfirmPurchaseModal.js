@@ -268,7 +268,7 @@ export default function ConfirmPurchaseModal({
                 </TouchableOpacity>
               </View>
             )}
-            <TouchableOpacity style={styles.helpBtn} activeOpacity={0.6}>
+            <TouchableOpacity style={styles.helpBtn} activeOpacity={0.6} onPress={() => { try { const { Linking } = require('react-native'); Linking.openURL('https://www.refopen.com/support'); } catch(e) {} }}>
               <Ionicons name="help-circle-outline" size={14} color={colors.textSecondary} />
               <Text style={styles.helpText}>Need Help?</Text>
             </TouchableOpacity>
