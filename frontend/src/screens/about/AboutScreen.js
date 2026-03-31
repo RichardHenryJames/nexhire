@@ -557,9 +557,7 @@ export default function AboutScreenNew() {
                   color: C.text,
                 }}
               >
-                Your Entire{' '}
-                <Text style={{ color: C.primary }}>Career</Text>.{'\n'}
-                One <Text style={{ color: C.accent }}>Platform</Text>.
+                Get <Text style={{ color: C.primary }}>referred</Text>. Get <Text style={{ color: C.accent }}>noticed</Text>.{'\n'}Get <Text style={{ color: C.emerald }}>hired</Text>.
               </Text>
             </View>
 
@@ -577,9 +575,7 @@ export default function AboutScreenNew() {
                 marginBottom: 28,
               }}
             >
-              Stop cold-applying. Referred candidates are{' '}
-              <Text style={{ color: C.accent, fontWeight: '700' }}>15x more likely</Text> to get hired.
-              Get referrals from employees at top companies, plus AI-powered resume analyzer, interview prep, salary insights, and 7 more career tools. All in one app.
+              Stop cold applying. <Text style={{ color: C.accent, fontWeight: '700' }}>Start getting referred.</Text>{`\n\n`}Most people don't get rejected because they're bad — they just never get seen.{`\n`}RefOpen connects you with verified employees who are actually open to referring you.{`\n\n`}Browse real jobs. Get direct referrals. Track your progress.{`\n`}All in one place, without the guesswork.
             </Text>
 
             </AnimateOnScroll>
