@@ -140,6 +140,7 @@ export default function ConfirmPurchaseModal({
   accessDays = null,
   isFree = false,
   extraInfo = '',
+  originalPrice = null,
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -191,6 +192,15 @@ export default function ConfirmPurchaseModal({
             {/* ── Amount card ─────────────────────────────── */}
             {!isFree && (
               <View style={styles.amountCard}>
+                {originalPrice && originalPrice > requiredAmount && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <Text style={{ fontSize: 16, color: colors.textSecondary, textDecorationLine: 'line-through' }}>₹{originalPrice}</Text>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>₹{requiredAmount}</Text>
+                    <View style={{ backgroundColor: '#22C55E20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#22C55E' }}>{Math.round((1 - requiredAmount / originalPrice) * 100)}% OFF</Text>
+                    </View>
+                  </View>
+                )}
                 <View style={styles.amountRow}>
                   <Ionicons name="checkmark-circle" size={16} color={colors.success} />
                   <Text style={styles.amountText}>

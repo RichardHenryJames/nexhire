@@ -266,7 +266,7 @@ export default function AskReferralScreen({ navigation, route }) {
       <View style={s.summaryDivider} />
 
       <TouchableOpacity style={[s.summaryBtn, openToAny && { backgroundColor: '#8B5CF6' }, submitting && { opacity: 0.6 }]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
-        {submitting ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name="paper-plane" size={18} color="#fff" /><Text style={s.summaryBtnText}>Send</Text></>}
+        {submitting ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name="paper-plane" size={18} color="#fff" /><Text style={s.summaryBtnText}>Ask Referral</Text></>}
       </TouchableOpacity>
     </View>
   );
@@ -475,14 +475,14 @@ export default function AskReferralScreen({ navigation, route }) {
           {formJSX}
           <View style={s.stickyBottom}>
             <TouchableOpacity style={[s.stickyBtn, { flex: 1 }, openToAny&&{backgroundColor:'#8B5CF6'}, submitting&&{opacity:0.6}]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
-              {submitting ? <ActivityIndicator size="small" color="#fff"/> : <><Ionicons name="paper-plane" size={16} color="#fff"/><Text style={s.stickyBtnText}>Send</Text></>}
+              {submitting ? <ActivityIndicator size="small" color="#fff"/> : <><Ionicons name="paper-plane" size={16} color="#fff"/><Text style={s.stickyBtnText}>Ask Referral</Text></>}
             </TouchableOpacity>
           </View>
         </View>
       )}
 
       <ResumeUploadModal visible={showResumeModal} onClose={()=>setShowResumeModal(false)} onResumeSelected={handleResumeSelected} user={user} jobTitle={jobTitle||'Job Application'}/>
-      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} extraInfo={openToAny ? 'Open Mode' : 'Specific Mode'} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
+      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} extraInfo={openToAny ? 'Open Mode' : 'Specific Mode'} originalPrice={openToAny ? 899 : null} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
       <ReferralSuccessOverlay visible={showSuccessOverlay} onComplete={()=>{setShowSuccessOverlay(false);navigation.goBack();}} duration={3500} companyName={referralCompanyName} broadcastTime={referralBroadcastTime} isOpenToAny={referralCompanyName==='All Companies'}/>
     </KeyboardAvoidingView>
   );
