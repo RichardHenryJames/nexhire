@@ -196,7 +196,7 @@ export default function DesktopNavBar() {
     ShareEarn: '/share-earn', MyReferralRequests: '/referrals/my-requests',
     ProfileViews: '/ProfileViews', SavedJobs: '/saved-jobs', Applications: '/applications',
     Referral: '/provide-referral', BecomeReferrer: '/become-referrer',
-    Settings: '/settings', Support: '/support', Profile: '/profile',
+    Settings: '/settings', Support: '/p/support', Profile: '/profile',
     Services: '/services', Messages: '/messages', Notifications: '/notifications',
   };
 
