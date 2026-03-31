@@ -636,6 +636,7 @@ export default function AboutScreenNew() {
         {/* BENTO GRID - FOR JOB SEEKERS */}
         {/* ============================================ */}
         <View style={{ paddingVertical: 40, ...containerStyle }}>
+          <AnimateOnScroll delay={0} distance={30}>
           <View style={{ alignItems: 'center', marginBottom: 32 }}>
             <View
               style={{
