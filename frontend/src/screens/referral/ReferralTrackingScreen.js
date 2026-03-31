@@ -24,7 +24,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import SubScreenHeader from '../../components/SubScreenHeader';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
+import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import VerifyReferralModal from '../../components/modals/VerifyReferralModal';
 import { usePricing } from '../../contexts/PricingContext';
 import { getReferralCostForJob } from '../../utils/pricingUtils';
@@ -1151,10 +1151,12 @@ export default function ReferralTrackingScreen() {
       </Modal>
 
       {/* Wallet Recharge Modal - shown when insufficient balance for upgrade */}
-      <WalletRechargeModal
+      <ConfirmPurchaseModal
         visible={showWalletModal}
         currentBalance={walletModalData.currentBalance}
         requiredAmount={walletModalData.requiredAmount}
+        contextType="upgrade-referral"
+        itemName="Referral upgrade"
         onAddMoney={() => {
           setShowWalletModal(false);
           navigation.navigate('WalletRecharge');

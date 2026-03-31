@@ -18,7 +18,7 @@ import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { getReferralCostForJob } from '../../utils/pricingUtils';
 import JobCard from '../../components/jobs/JobCard';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
+import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
@@ -346,7 +346,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
         </View>
       )}
 
-      <WalletRechargeModal
+      <ConfirmPurchaseModal
         visible={showWalletModal}
         currentBalance={walletModalData.currentBalance}
         requiredAmount={walletModalData.requiredAmount}

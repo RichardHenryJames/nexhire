@@ -12,7 +12,7 @@ import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
+// WalletRechargeModal removed - ConfirmPurchaseModal handles both states
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
@@ -200,7 +200,7 @@ export default function AskReferralScreen({ navigation, route }) {
         if(result.data?.availableBalanceAfter!==undefined) setWalletBalance(result.data.availableBalanceAfter);
         setJobTitle('');setJobId('');setJobUrl('');setReferralMessage('');setSelectedCompany(null);setOpenToAny(true);setMinSalary('');setPreferredLocations('');setErrors({});setStep(1);
       } else if (result.errorCode==='INSUFFICIENT_WALLET_BALANCE') {
-        setWalletModalData({currentBalance:result.data?.currentBalance||0,requiredAmount:result.data?.requiredAmount||effectiveCost}); setShowWalletModal(true);
+        setWalletBalance(result.data?.currentBalance||0); setShowConfirmModal(true);
       } else showToast(result?.error||'Failed','error');
     }catch(e){showToast(e?.message||'Error','error');}finally{setSubmitting(false);}
   };
@@ -265,18 +265,8 @@ export default function AskReferralScreen({ navigation, route }) {
 
       <View style={s.summaryDivider} />
 
-      <View style={s.summaryPriceRow}>
-        <Text style={s.summaryPriceLabel}>Total</Text>
-        <Text style={[s.summaryPrice, openToAny && { color: '#8B5CF6' }]}>₹{effectiveCost}</Text>
-      </View>
-
-      <View style={s.summaryWalletRow}>
-        <Ionicons name="wallet-outline" size={14} color={colors.success} />
-        <Text style={s.summaryWalletText}>{loadingWallet?'...': `₹${walletBalance.toFixed(0)} available`}</Text>
-      </View>
-
       <TouchableOpacity style={[s.summaryBtn, openToAny && { backgroundColor: '#8B5CF6' }, submitting && { opacity: 0.6 }]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
-        {submitting ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name="paper-plane" size={18} color="#fff" /><Text style={s.summaryBtnText}>Send Request</Text></>}
+        {submitting ? <ActivityIndicator size="small" color="#fff" /> : <><Ionicons name="paper-plane" size={18} color="#fff" /><Text style={s.summaryBtnText}>Ask Referral</Text></>}
       </TouchableOpacity>
     </View>
   );
@@ -317,19 +307,15 @@ export default function AskReferralScreen({ navigation, route }) {
           <View style={s.segBtnRow}>
             <Ionicons name="globe-outline" size={18} color={openToAny ? '#8B5CF6' : colors.gray400} />
             <Text style={[s.segBtnTitle, openToAny && { color: '#8B5CF6' }]}>Open</Text>
-            {isDesktop && <Text style={[s.segBtnFromInline, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>}
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Get referred by employees from multiple companies with a single request</Text>}
-          {!isDesktop && <Text style={[s.segBtnFrom, openToAny && { color: '#8B5CF6' }]}>₹{pricing.openToAnyReferralCost}</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={[s.segBtn, !openToAny && s.segBtnActive]} onPress={() => switchMode(false)} activeOpacity={0.8}>
           <View style={s.segBtnRow}>
             <Ionicons name="business-outline" size={18} color={!openToAny ? colors.primary : colors.gray400} />
             <Text style={[s.segBtnTitle, !openToAny && { color: colors.primary }]}>Specific</Text>
-            {isDesktop && <Text style={[s.segBtnFromInline, !openToAny && { color: colors.primary }]}>from ₹{pricing.referralRequestCost}</Text>}
           </View>
           {!isDesktop && <Text style={s.segBtnDesc}>Targeted referral from an employee at a specific company</Text>}
-          {!isDesktop && <Text style={s.segBtnFrom}>from ₹{pricing.referralRequestCost}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -488,21 +474,15 @@ export default function AskReferralScreen({ navigation, route }) {
         <View style={s.inner}>
           {formJSX}
           <View style={s.stickyBottom}>
-            <View style={s.stickySummary}>
-              <Text style={s.stickyLabel}>Total</Text>
-              <Text style={[s.stickyPrice, openToAny&&{color:'#8B5CF6'}]}>₹{effectiveCost}</Text>
-            </View>
-            <TouchableOpacity style={s.stickyWallet} onPress={() => navigation.navigate('WalletRecharge')} activeOpacity={0.7}><Ionicons name="wallet-outline" size={14} color={colors.success}/><Text style={s.stickyBalance}>{loadingWallet?'...': `₹${walletBalance.toFixed(0)}`}</Text></TouchableOpacity>
-            <TouchableOpacity style={[s.stickyBtn, openToAny&&{backgroundColor:'#8B5CF6'}, submitting&&{opacity:0.6}]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
-              {submitting ? <ActivityIndicator size="small" color="#fff"/> : <><Ionicons name="paper-plane" size={16} color="#fff"/><Text style={s.stickyBtnText}>Send</Text></>}
+            <TouchableOpacity style={[s.stickyBtn, { flex: 1 }, openToAny&&{backgroundColor:'#8B5CF6'}, submitting&&{opacity:0.6}]} onPress={handleAskReferral} disabled={submitting} activeOpacity={0.85}>
+              {submitting ? <ActivityIndicator size="small" color="#fff"/> : <><Ionicons name="paper-plane" size={16} color="#fff"/><Text style={s.stickyBtnText}>Ask Referral</Text></>}
             </TouchableOpacity>
           </View>
         </View>
       )}
 
       <ResumeUploadModal visible={showResumeModal} onClose={()=>setShowResumeModal(false)} onResumeSelected={handleResumeSelected} user={user} jobTitle={jobTitle||'Job Application'}/>
-      <WalletRechargeModal visible={showWalletModal} currentBalance={walletModalData.currentBalance} requiredAmount={walletModalData.requiredAmount} onAddMoney={()=>{setShowWalletModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowWalletModal(false)}/>
-      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
+      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} extraInfo={openToAny ? 'Open Mode' : 'Specific Mode'} originalPrice={openToAny ? 899 : null} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
       <ReferralSuccessOverlay visible={showSuccessOverlay} onComplete={()=>{setShowSuccessOverlay(false);navigation.goBack();}} duration={3500} companyName={referralCompanyName} broadcastTime={referralBroadcastTime} isOpenToAny={referralCompanyName==='All Companies'}/>
     </KeyboardAvoidingView>
   );
@@ -560,7 +540,7 @@ const createStyles = (c, r = {}) => {
 
     /* Segmented control (expanded pills) */
     segment: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, gap: 8, alignItems: 'stretch' },
-    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, position: 'relative', overflow: 'hidden', justifyContent: 'space-between' },
+    segBtn: { flex: 1, padding: 14, borderRadius: 14, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface, position: 'relative', overflow: 'hidden' },
     segBtnActive: { borderColor: c.primary, backgroundColor: c.primary+'08' },
     segBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     segBtnTitle: { fontSize: 15, fontWeight: '700', color: c.textMuted, flex: 1 },

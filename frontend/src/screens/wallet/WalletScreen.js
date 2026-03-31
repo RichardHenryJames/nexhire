@@ -75,16 +75,16 @@ export default function WalletScreen({ navigation, route }) {
     try {
       if (showLoader) setLoading(true);
 
-      // Load wallet balance and transactions in parallel
-      const [walletResult, transactionsResult] = await Promise.all([
-        refopenAPI.getWalletBalance(),
-        refopenAPI.getWalletTransactions(1, 20),
-      ]);
-
+      // Load wallet balance first (fast) — show UI immediately
+      const walletResult = await refopenAPI.getWalletBalance();
       if (walletResult.success) {
         setWallet(walletResult.data);
       }
+      // Stop full-screen loader as soon as balance is ready
+      setLoading(false);
 
+      // Then load transactions (can be slower, list will show spinner)
+      const transactionsResult = await refopenAPI.getWalletTransactions(1, 100);
       if (transactionsResult.success) {
         setTransactions(transactionsResult.data.transactions || []);
         setHasMore(transactionsResult.data.totalPages > 1);
@@ -122,7 +122,7 @@ export default function WalletScreen({ navigation, route }) {
 
     try {
       const nextPage = page + 1;
-      const result = await refopenAPI.getWalletTransactions(nextPage, 20);
+      const result = await refopenAPI.getWalletTransactions(nextPage, 100);
 
       if (result.success) {
         setTransactions((prev) => [...prev, ...(result.data.transactions || [])]);
@@ -173,9 +173,12 @@ export default function WalletScreen({ navigation, route }) {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading wallet...</Text>
+      <View style={styles.container}>
+        <SubScreenHeader title="My Wallet" directBack="Home" />
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Loading wallet...</Text>
+        </View>
       </View>
     );
   }

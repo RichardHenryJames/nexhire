@@ -20,7 +20,6 @@ import { usePricing } from '../../contexts/PricingContext';
 import refopenAPI from '../../services/api';
 import { getReferralCostForJob } from '../../utils/pricingUtils';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
-import WalletRechargeModal from '../../components/WalletRechargeModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import AdCard from '../../components/ads/AdCard';
@@ -837,11 +836,13 @@ export default function ApplicationsScreen({ navigation }) {
         jobTitle={pendingJobForApplication?.JobTitle || pendingJobForApplication?.Title}
       />
 
-      {/* 💎 NEW: Beautiful Wallet Recharge Modal */}
-      <WalletRechargeModal
+      {/* Wallet Recharge Modal */}
+      <ConfirmPurchaseModal
         visible={showWalletModal}
         currentBalance={walletModalData.currentBalance}
         requiredAmount={walletModalData.requiredAmount}
+        contextType="referral"
+        itemName="Referral request"
         onAddMoney={() => {
           setShowWalletModal(false);
           navigation.navigate('WalletRecharge');

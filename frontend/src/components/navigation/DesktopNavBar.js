@@ -68,7 +68,7 @@ export default function DesktopNavBar() {
     if (p.includes('/messages') || p.includes('/chat')) return 'Messages';
     if (p.includes('/notifications')) return 'Notifications';
     if (p.includes('/ask-for-referral') || p.includes('/ask-referral')) return 'AskReferral';
-    if (p.includes('/services')) return 'Services';
+    if (p.includes('/services') || p.includes('/resume-builder') || p.includes('/resume-analyzer') || p.includes('/linkedin-optimizer')) return 'Services';
     if (p.includes('/profile') || p.includes('/settings')) return 'Profile';
     if (p === '/' || p.includes('/home')) return 'Home';
     return null;
@@ -196,7 +196,7 @@ export default function DesktopNavBar() {
     ShareEarn: '/share-earn', MyReferralRequests: '/referrals/my-requests',
     ProfileViews: '/ProfileViews', SavedJobs: '/saved-jobs', Applications: '/applications',
     Referral: '/provide-referral', BecomeReferrer: '/become-referrer',
-    Settings: '/settings', Support: '/support', Profile: '/profile',
+    Settings: '/settings', Support: '/p/support', Profile: '/profile',
     Services: '/services', Messages: '/messages', Notifications: '/notifications',
   };
 

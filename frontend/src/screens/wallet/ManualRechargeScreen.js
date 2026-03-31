@@ -200,23 +200,46 @@ const ManualRechargeScreen = ({ navigation, route }) => {
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
 
+  // Ref to track latest amount for stale-closure-safe access
+  const amountRef = useRef('');
+
   // Handle incoming promo code from PromoCodesScreen (without resetting other state)
   useEffect(() => {
     const incoming = route?.params?.promoCode;
     if (incoming) {
       setPromoCode(incoming);
       setShowPromoInput(true);
-      // Clear the param so it doesn't re-trigger
-      navigation.setParams({ promoCode: undefined });
-      // Validate after a tick so amount state is current
+
+      // Restore amount + pack if passed back (survives remount)
+      const returnAmt = route?.params?.returnAmount;
+      const returnPackId = route?.params?.returnPackId;
+      if (returnAmt) {
+        setAmount(returnAmt);
+        amountRef.current = returnAmt;
+      }
+
+      // Clear params so they don't re-trigger
+      navigation.setParams({ promoCode: undefined, returnAmount: undefined, returnPackId: undefined });
+
+      // Restore pack selection after bonusPacks load, then validate
       setTimeout(() => {
-        handleValidatePromo(incoming, parseFloat(amount) || 0);
-      }, 100);
+        if (returnPackId) {
+          // Use functional update so we read latest bonusPacks
+          setSelectedPack(prev => {
+            const packs = bonusPacks;
+            return packs.find(p => String(p.PackID) === String(returnPackId)) || prev;
+          });
+        }
+        const amt = parseFloat(returnAmt || amountRef.current) || 0;
+        handleValidatePromo(incoming, amt);
+      }, 200);
     }
   }, [route?.params?.promoCode]);
 
   // Form state
   const [amount, setAmount] = useState('');
+  // Keep ref in sync for stale-closure-safe reads
+  useEffect(() => { amountRef.current = amount; }, [amount]);
 
   useEffect(() => { loadData(); }, []);
 
@@ -452,7 +475,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                 <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 12, marginLeft: 5 }}>Got a promo code?</Text>
               </TouchableOpacity>
               <Text style={{ color: colors.gray500, marginHorizontal: 8, fontSize: 12 }}>|</Text>
-              <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes')} fontSize={12} />
+              <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes', { returnAmount: amount, returnPackId: selectedPack?.PackID })} fontSize={12} />
             </View>
           ) : (
             <View>
@@ -493,7 +516,7 @@ const ManualRechargeScreen = ({ navigation, route }) => {
                 </View>
               )}
               <View style={{ alignSelf: 'center', marginTop: 6 }}>
-                <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes')} fontSize={11} />
+                <ShimmerCouponLink onPress={() => navigation.navigate('PromoCodes', { returnAmount: amount, returnPackId: selectedPack?.PackID })} fontSize={11} />
               </View>
             </View>
           )}
