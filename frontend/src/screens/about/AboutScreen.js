@@ -29,46 +29,111 @@ import { Ionicons } from '@expo/vector-icons';
 import ComplianceFooter from '../../components/ComplianceFooter';
 
 // ============================================
-// SCROLL-TRIGGERED ANIMATION — Reveal on scroll
-// Professional Stripe/Linear style: elements fade+slide in
-// only when they enter the viewport as user scrolls down
+// SCROLL-TRIGGERED ANIMATION — CSS on web, Animated on native
+// Web: uses CSS @keyframes + animation-delay (most reliable)
+// Native: uses Animated with mount-based delays
 // ============================================
-// Registry: parent stores refs, scroll handler checks getBoundingClientRect
 const ScrollContext = React.createContext({ register: () => () => {} });
 
-const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40, style }) => {
-  const animValue = useRef(new Animated.Value(0)).current;
-  const hasAnimated = useRef(false);
-  const wrapperRef = useRef(null);
-  const { register } = React.useContext(ScrollContext);
+// Inject CSS animations once on web
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  const styleId = 'refopen-scroll-anim';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes fadeSlideLeft {
+        from { opacity: 0; transform: translateX(40px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      @keyframes fadeSlideDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .anim-reveal {
+        opacity: 0;
+        animation-fill-mode: forwards;
+        animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .anim-reveal.anim-visible {
+        animation-duration: 0.8s;
+      }
+      .anim-up.anim-visible { animation-name: fadeSlideUp; }
+      .anim-down.anim-visible { animation-name: fadeSlideDown; }
+      .anim-left.anim-visible { animation-name: fadeSlideLeft; }
+    `;
+    document.head.appendChild(style);
+  }
+}
 
-  const animate = useCallback(() => {
-    if (hasAnimated.current) return;
-    hasAnimated.current = true;
-    setTimeout(() => {
-      Animated.spring(animValue, {
-        toValue: 1,
-        tension: 50,
-        friction: 12,
-        useNativeDriver: true,
-      }).start();
-    }, delay);
+const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 30, style }) => {
+  const wrapperRef = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      // Native: just show with delay
+      const timer = setTimeout(() => setVisible(true), delay + 100);
+      return () => clearTimeout(timer);
+    }
+
+    // Web: use IntersectionObserver on the plain div wrapper
+    const timer = setTimeout(() => {
+      const node = wrapperRef.current;
+      if (!node) { setVisible(true); return; }
+
+      // RNW View ref → find the actual DOM div
+      const el = node._node || node;
+      if (!el || typeof el.getBoundingClientRect !== 'function') {
+        setVisible(true);
+        return;
+      }
+
+      if (typeof IntersectionObserver !== 'undefined') {
+        const observer = new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting) {
+              setVisible(true);
+              observer.disconnect();
+            }
+          },
+          { threshold: 0.1, rootMargin: '0px 0px -10% 0px' }
+        );
+        observer.observe(el);
+        // Cleanup
+        return () => observer.disconnect();
+      } else {
+        setVisible(true);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
   }, [delay]);
 
-  // Register this element with the parent scroll tracker
-  useEffect(() => {
-    const entry = { ref: wrapperRef, animate, animated: hasAnimated };
-    const unregister = register(entry);
-    return unregister;
-  }, [register, animate]);
+  if (Platform.OS === 'web') {
+    // Web: use CSS class-based animation (most reliable)
+    const dirClass = direction === 'down' ? 'anim-down' : direction === 'left' ? 'anim-left' : 'anim-up';
+    return (
+      <div
+        ref={wrapperRef}
+        className={`anim-reveal ${dirClass} ${visible ? 'anim-visible' : ''}`}
+        style={{ animationDelay: `${delay}ms`, ...(style || {}) }}
+      >
+        {children}
+      </div>
+    );
+  }
 
-  // Failsafe: animate after 3s if scroll detection fails
+  // Native: use Animated
+  const animValue = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!hasAnimated.current) animate();
-    }, delay + 3000);
-    return () => clearTimeout(timer);
-  }, []);
+    if (visible) {
+      Animated.timing(animValue, { toValue: 1, duration: 700, useNativeDriver: true }).start();
+    }
+  }, [visible]);
 
   const translateY = direction === 'up'
     ? animValue.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] })
@@ -76,24 +141,10 @@ const AnimateOnScroll = ({ children, delay = 0, direction = 'up', distance = 40,
     ? animValue.interpolate({ inputRange: [0, 1], outputRange: [-distance, 0] })
     : 0;
 
-  const translateX = direction === 'left'
-    ? animValue.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] })
-    : direction === 'right'
-    ? animValue.interpolate({ inputRange: [0, 1], outputRange: [-distance, 0] })
-    : 0;
-
-  // Wrap in a plain View so we get a reliable DOM ref on web
   return (
-    <View ref={wrapperRef} collapsable={false}>
-      <Animated.View
-        style={[
-          { opacity: animValue, transform: [{ translateY }, { translateX }] },
-          style,
-        ]}
-      >
-        {children}
-      </Animated.View>
-    </View>
+    <Animated.View style={[{ opacity: animValue, transform: [{ translateY }] }, style]}>
+      {children}
+    </Animated.View>
   );
 };
 
@@ -410,55 +461,6 @@ export default function AboutScreenNew() {
   const isLg = isDesktop;
   const isMd = isTablet;
 
-  // Scroll-triggered animation: registry + viewport check
-  const elementsRef = useRef([]);
-  const windowH = Dimensions.get('window').height;
-
-  const register = useCallback((entry) => {
-    elementsRef.current.push(entry);
-    return () => { elementsRef.current = elementsRef.current.filter(e => e !== entry); };
-  }, []);
-
-  const scrollContextValue = useMemo(() => ({ register }), [register]);
-
-  // Check which elements are in viewport
-  const checkElements = useCallback(() => {
-    elementsRef.current.forEach((entry) => {
-      if (entry.animated.current) return;
-      const node = entry.ref.current;
-      if (!node) return;
-
-      if (Platform.OS === 'web') {
-        // RNW View ref: use measureInWindow which works on View (not Animated.View)
-        if (node.measureInWindow) {
-          node.measureInWindow((x, y, w, h) => {
-            if (y != null && y < windowH * 0.88 && y > -h) {
-              entry.animate();
-            }
-          });
-        }
-      } else {
-        if (node.measureInWindow) {
-          node.measureInWindow((x, y) => {
-            if (y != null && y < windowH * 0.88) {
-              entry.animate();
-            }
-          });
-        }
-      }
-    });
-  }, [windowH]);
-
-  const handleScroll = useCallback(() => {
-    checkElements();
-  }, [checkElements]);
-
-  // Initial check after mount (for hero elements already visible)
-  useEffect(() => {
-    const timer = setTimeout(checkElements, 300);
-    return () => clearTimeout(timer);
-  }, [checkElements]);
-
   const containerStyle = {
     maxWidth: 1200,
     width: '100%',
@@ -513,12 +515,7 @@ export default function AboutScreenNew() {
         )}
       </View>
 
-      <ScrollContext.Provider value={scrollContextValue}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-      >
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* ============================================ */}
         {/* HERO SECTION */}
         {/* ============================================ */}
@@ -607,15 +604,6 @@ export default function AboutScreenNew() {
 
             </AnimateOnScroll>
 
-            {/* Trust indicators */}
-            <AnimateOnScroll delay={650} distance={15}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, opacity: 0.6 }}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Ionicons key={i} name="star" size={16} color={C.amber} style={{ marginRight: 2 }} />
-              ))}
-              <Text style={{ fontSize: 13, color: C.textMuted, marginLeft: 8 }}>4.9 rating · 10,000+ reviews</Text>
-            </View>
-            </AnimateOnScroll>
           </View>
         </View>
 
@@ -1035,7 +1023,6 @@ export default function AboutScreenNew() {
           <ComplianceFooter currentPage="about" />
         </View>
       </ScrollView>
-      </ScrollContext.Provider>
     </View>
   );
 }
