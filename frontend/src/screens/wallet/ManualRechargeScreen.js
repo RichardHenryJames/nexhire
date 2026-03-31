@@ -200,6 +200,9 @@ const ManualRechargeScreen = ({ navigation, route }) => {
   const [validatingPromo, setValidatingPromo] = useState(false);
   const [showPromoInput, setShowPromoInput] = useState(false);
 
+  // Ref to track latest amount for stale-closure-safe access
+  const amountRef = useRef('');
+
   // Handle incoming promo code from PromoCodesScreen (without resetting other state)
   useEffect(() => {
     const incoming = route?.params?.promoCode;
@@ -208,15 +211,17 @@ const ManualRechargeScreen = ({ navigation, route }) => {
       setShowPromoInput(true);
       // Clear the param so it doesn't re-trigger
       navigation.setParams({ promoCode: undefined });
-      // Validate after a tick so amount state is current
+      // Validate after a tick — use ref to get latest amount (avoids stale closure)
       setTimeout(() => {
-        handleValidatePromo(incoming, parseFloat(amount) || 0);
+        handleValidatePromo(incoming, parseFloat(amountRef.current) || 0);
       }, 100);
     }
   }, [route?.params?.promoCode]);
 
   // Form state
   const [amount, setAmount] = useState('');
+  // Keep ref in sync for stale-closure-safe reads
+  useEffect(() => { amountRef.current = amount; }, [amount]);
 
   useEffect(() => { loadData(); }, []);
 
