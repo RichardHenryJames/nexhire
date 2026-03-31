@@ -565,18 +565,17 @@ export default function AboutScreenNew() {
 
             {/* Subheadline */}
             <AnimateOnScroll delay={400} distance={25}>
-            <Text
-              style={{
-                fontSize: isLg ? 20 : 16,
-                color: C.textSub,
-                textAlign: 'center',
-                lineHeight: isLg ? 32 : 26,
-                maxWidth: 640,
-                marginBottom: 28,
-              }}
-            >
-              Stop cold applying. <Text style={{ color: C.accent, fontWeight: '700' }}>Start getting referred.</Text>{`\n\n`}Most people don't get rejected because they're bad — they just never get seen.{`\n`}RefOpen connects you with verified employees who are actually open to referring you.{`\n\n`}Browse real jobs. Get direct referrals. Track your progress.{`\n`}All in one place, without the guesswork.
-            </Text>
+            <View style={{ alignItems: 'center', maxWidth: 640, marginBottom: 40 }}>
+              <Text style={{ fontSize: isLg ? 20 : 16, color: C.textSub, textAlign: 'center', lineHeight: isLg ? 32 : 26 }}>
+                Stop cold applying. <Text style={{ color: C.accent, fontWeight: '700' }}>Start getting referred.</Text>
+              </Text>
+              <Text style={{ fontSize: isLg ? 17 : 15, color: C.textMuted, textAlign: 'center', lineHeight: isLg ? 28 : 24, marginTop: 16 }}>
+                Most people don't get rejected because they're bad — they just never get seen.{'\n'}RefOpen connects you with verified employees who are actually open to referring you.
+              </Text>
+              <Text style={{ fontSize: isLg ? 17 : 15, color: C.textSub, textAlign: 'center', lineHeight: isLg ? 28 : 24, marginTop: 16 }}>
+                Browse real jobs. Get direct referrals. Track your progress.{'\n'}All in one place, without the guesswork.
+              </Text>
+            </View>
 
             </AnimateOnScroll>
 
