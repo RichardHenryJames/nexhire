@@ -177,7 +177,7 @@ export const getWalletTransactions = withErrorHandling(async (req: HttpRequest, 
         // Extract query parameters
         const url = new URL(req.url);
         const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
-        const pageSize = Math.min(50, Math.max(1, parseInt(url.searchParams.get('pageSize') || '20')));
+        const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('pageSize') || '100')));
         const type = url.searchParams.get('type') as 'Credit' | 'Debit' | undefined;
         
         const history = await WalletService.getTransactionHistory(user.userId, page, pageSize, type);

@@ -36,7 +36,7 @@ export default function WalletTransactionsScreen({ navigation }) {
 
       const result = await refopenAPI.getWalletTransactions(
         pageNum,
-        20,
+        100,
         filterType === 'all' ? undefined : filterType
       );
 
