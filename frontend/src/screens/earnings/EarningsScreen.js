@@ -181,65 +181,65 @@ export default function EarningsScreen({ navigation }) {
   
   
 
-  // Point type display info (frontend-only)
+  // Point type display info (frontend-only) — uses Ionicons instead of emojis
   const getPointTypeInfo = (type) => {
     const typeDefaults = {
       proof_submission: { 
-        icon: '📸', 
+        ionicon: 'camera-outline', 
         title: 'Proof Submissions', 
         color: colors.primary,
         description: 'Base points for submitting referral screenshots'
       },
       verification: { 
-        icon: '✅', 
+        ionicon: 'checkmark-circle-outline', 
         title: 'Verifications', 
         color: colors.success,
         description: 'Bonus points when job seekers confirm referrals'
       },
       quick_response_bonus: { 
-        icon: '⚡', 
+        ionicon: 'flash-outline', 
         title: 'Quick Response Bonus', 
         color: colors.warning,
         description: 'Extra points for responding within 24 hours'
       },
       monthly_bonus: { 
-        icon: '🎁', 
+        ionicon: 'gift-outline', 
         title: 'Monthly Bonus', 
         color: colors.accent,
         description: 'Special monthly activity bonus'
       },
       streak_bonus: { 
-        icon: '🔥', 
+        ionicon: 'flame-outline', 
         title: 'Streak Bonus', 
         color: colors.error,
         description: 'Consecutive referral streak bonus'
       },
       general: { 
-        icon: '🎯', 
+        ionicon: 'ellipse-outline', 
         title: 'General Points', 
-        color: colors.gray500,
+        color: colors.gray500 || colors.textSecondary,
         description: 'Other referral activities'
       },
       milestone_5: { 
-        icon: '⭐', 
+        ionicon: 'star-outline', 
         title: '5th Referral Milestone', 
         color: colors.primary,
         description: 'Bonus for reaching 5 verified referrals'
       },
       milestone_10: { 
-        icon: '🔥', 
+        ionicon: 'flame-outline', 
         title: '10th Referral Milestone', 
         color: colors.warning,
         description: 'Bonus for reaching 10 verified referrals'
       },
       milestone_15: { 
-        icon: '🏆', 
+        ionicon: 'trophy-outline', 
         title: '15th Referral Milestone', 
         color: colors.error,
         description: 'Bonus for reaching 15 verified referrals'
       },
       milestone_20: { 
-        icon: '💎', 
+        ionicon: 'diamond-outline', 
         title: '20th Referral Milestone', 
         color: colors.success,
         description: 'Bonus for reaching 20 verified referrals'
@@ -248,9 +248,8 @@ export default function EarningsScreen({ navigation }) {
     
     const defaultInfo = typeDefaults[type] || typeDefaults.general;
     
-    
     return {
-      icon: defaultInfo.icon,
+      ionicon: defaultInfo.ionicon,
       title: defaultInfo.title,
       description: defaultInfo.description,
       color: defaultInfo.color
@@ -288,149 +287,107 @@ export default function EarningsScreen({ navigation }) {
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           
-          {/* Referral Stats Row - FIRST */}
-          <View style={styles.referralStatsRow}>
-            <View style={styles.referralStatCard}>
-              <Text style={styles.referralStatNumber}>{referralStats.totalReferralsMade || 0}</Text>
-              <Text style={styles.referralStatLabel}>Referrals Made</Text>
+          {/* ── Hero Stats ── */}
+          <View style={styles.heroStats}>
+            {/* Primary: Earnings — the number that matters most */}
+            <View style={styles.heroPrimary}>
+              <View style={styles.heroPrimaryIconWrap}>
+                <Ionicons name="wallet-outline" size={22} color={colors.success} />
+              </View>
+              <Text style={styles.heroPrimaryAmount}>₹{withdrawableData.withdrawableAmount || 0}</Text>
+              <Text style={styles.heroPrimaryLabel}>Total Earnings</Text>
             </View>
-            <View style={styles.referralStatCard}>
-              <Text style={[styles.referralStatNumber, { color: colors.success }]}>{referralStats.verifiedReferrals || 0}</Text>
-              <Text style={styles.referralStatLabel}>Verified</Text>
+
+            {/* Secondary: 3 compact metrics */}
+            <View style={styles.heroSecondaryRow}>
+              <View style={styles.heroSecondaryItem}>
+                <Text style={styles.heroSecondaryNumber}>{referralStats.totalReferralsMade || 0}</Text>
+                <Text style={styles.heroSecondaryLabel}>Referrals</Text>
+              </View>
+              <View style={[styles.heroSecondaryItem, styles.heroSecondaryItemBorder]}>
+                <Text style={[styles.heroSecondaryNumber, { color: colors.success }]}>{referralStats.verifiedReferrals || 0}</Text>
+                <Text style={styles.heroSecondaryLabel}>Verified</Text>
+              </View>
+              <View style={styles.heroSecondaryItem}>
+                <Text style={[styles.heroSecondaryNumber, { color: colors.primary }]}>{totalPoints || 0}</Text>
+                <Text style={styles.heroSecondaryLabel}>RefPoints</Text>
+              </View>
             </View>
           </View>
 
-          {/* Total Earnings + Total RefPoints - SECOND (side by side) */}
-          <View style={styles.statsRowCompact}>
-            <View style={styles.earningsCardCompact}>
-              <Ionicons name="wallet" size={20} color={colors.success} />
-              <Text style={styles.earningsAmountCompact}>₹{withdrawableData.withdrawableAmount || 0}</Text>
-              <Text style={styles.statsLabelCompact}>Referral Earnings</Text>
-            </View>
-            <View style={styles.pointsCardCompact}>
-              <Text style={styles.pointsEmojiCompact}>🏆</Text>
-              <Text style={styles.pointsNumberCompact}>{totalPoints || 0}</Text>
-              <Text style={styles.statsLabelCompact}>RefPoints</Text>
-            </View>
-          </View>
-
-          {/* 🎯 Monthly Milestone Progress Bar — flat for all referrers */}
+          {/* ── Monthly Milestones ── */}
           {(() => {
             const verified = referralStats.verifiedThisMonth || 0;
             const milestones = [
-              { count: 5, bonus: 100, color: colors.primary, emoji: '⭐', hidden: false },
-              { count: 10, color: colors.warning, emoji: '🔥', hidden: true },
-              { count: 15, color: colors.error, emoji: '🏆', hidden: true },
-              { count: 20, color: colors.success, emoji: '💎', hidden: true },
+              { count: 5, bonus: 100, color: colors.primary, ionicon: 'star', hidden: false },
+              { count: 10, color: colors.warning, ionicon: 'flame', hidden: true },
+              { count: 15, color: colors.error, ionicon: 'trophy', hidden: true },
+              { count: 20, color: colors.success, ionicon: 'diamond', hidden: true },
             ];
-            const maxCount = 25;
-            const mysteryMarker = { count: 25, color: colors.accent, mystery: true };
-            const progress = Math.min(verified / maxCount, 1);
-            const currentMonth = new Date().toLocaleString('default', { month: 'short' });
+            const currentMonth = new Date().toLocaleString('default', { month: 'long' });
+            const nextMilestone = milestones.find(m => verified < m.count);
+            const remaining = nextMilestone ? nextMilestone.count - verified : 0;
 
             return (
               <View style={styles.milestoneSection}>
-                <Text style={styles.milestoneSectionTitle}>🎯 Monthly Milestones ({currentMonth})</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, gap: 6 }}>
-                  <View style={{ backgroundColor: colors.success, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                    <Text style={{ color: colors.white, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>EXTRA</Text>
+                <View style={styles.milestoneTitleRow}>
+                  <Text style={styles.milestoneSectionTitle}>Monthly Milestones</Text>
+                  <View style={styles.milestoneMonthBadge}>
+                    <Text style={styles.milestoneMonthText}>{currentMonth}</Text>
                   </View>
-                  <Text style={styles.milestoneSubheading}>rewards on top of your per-referral earnings</Text>
                 </View>
+                <Text style={styles.milestoneSubheading}>Extra cash rewards on top of your per-referral earnings</Text>
                 
-                <View style={styles.milestoneBarContainer}>
-                  <View style={styles.milestoneBarTrack}>
-                    <View style={[styles.milestoneBarFill, { width: `${progress * 100}%` }]} />
-                    {milestones.map((m) => {
-                      const pos = (m.count / maxCount) * 100;
-                      const reached = verified >= m.count;
-                      return (
-                        <View key={m.count} style={[styles.milestoneMarker, { left: `${pos}%` }]}>
-                          <View style={[
-                            styles.milestoneMarkerDot,
-                            reached ? { backgroundColor: m.color, borderColor: m.color } : { backgroundColor: colors.surface, borderColor: colors.border }
-                          ]}>
-                            <Text style={styles.milestoneMarkerEmoji}>{reached ? '✓' : '○'}</Text>
-                          </View>
-                        </View>
-                      );
-                    })}
-                    {/* Mystery marker at the end */}
-                    <View style={[styles.milestoneMarker, { left: '100%' }]}>
-                      <View style={[
-                        styles.milestoneMarkerDot,
-                        verified >= mysteryMarker.count
-                          ? { backgroundColor: mysteryMarker.color, borderColor: mysteryMarker.color }
-                          : { backgroundColor: colors.surface, borderColor: mysteryMarker.color }
-                      ]}>
-                        <Text style={styles.milestoneMarkerEmoji}>{verified >= mysteryMarker.count ? '✓' : '○'}</Text>
-                      </View>
-                    </View>
-                    {verified < maxCount && (
-                      <View style={[styles.milestoneYouAreHere, { left: `${progress * 100}%` }]}>
-                        <View style={styles.milestoneYouDot} />
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.milestoneLabelsRow}>
-                    {milestones.map((m) => (
-                      <Text key={m.count} style={[styles.milestoneCountLabel, { left: `${(m.count / maxCount) * 100}%` }]}>{m.count}</Text>
-                    ))}
-                    <Text style={[styles.milestoneCountLabel, { left: '100%' }]}>🎁</Text>
-                  </View>
+                {/* Progress indicator */}
+                <View style={styles.milestoneProgressRow}>
+                  <Text style={styles.milestoneProgressCount}>
+                    <Text style={{ fontWeight: '700', color: colors.text }}>{verified}</Text>
+                    <Text style={{ color: colors.textSecondary }}> / {nextMilestone ? nextMilestone.count : '20+'}</Text>
+                  </Text>
+                  {nextMilestone ? (
+                    <Text style={styles.milestoneProgressHint}>{remaining} more to next reward</Text>
+                  ) : (
+                    <Text style={[styles.milestoneProgressHint, { color: colors.success }]}>All milestones reached!</Text>
+                  )}
                 </View>
 
-                <Text style={styles.milestoneCurrentText}>
-                  You've done <Text style={{ fontWeight: 'bold', color: colors.primary }}>{verified}</Text> verified referral{verified !== 1 ? 's' : ''} this month
-                </Text>
+                {/* Clean progress bar */}
+                <View style={styles.milestoneBarTrack}>
+                  <View style={[styles.milestoneBarFill, { width: `${Math.min(verified / 20, 1) * 100}%` }]} />
+                </View>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.milestoneCardsScroll} contentContainerStyle={styles.milestoneCardsRow}>
+                {/* Milestone cards */}
+                <View style={styles.milestoneCardsRow}>
                   {milestones.map((m) => {
                     const reached = verified >= m.count;
-                    const isNext = !reached && (milestones.findIndex(ms => verified < ms.count) === milestones.indexOf(m));
-                    // For hidden milestones, show actual earned amount from points breakdown (or keep hidden)
+                    const isNext = !reached && milestones.findIndex(ms => verified < ms.count) === milestones.indexOf(m);
                     const milestoneBreakdown = pointsBreakdown[`milestone_${m.count}`]?.total;
                     const earnedAmount = m.hidden && reached
-                      ? (milestoneBreakdown || m.bonus || 'XXX')
+                      ? (milestoneBreakdown || m.bonus || null)
                       : m.bonus;
                     return (
                       <View key={m.count} style={[
                         styles.milestoneCard,
-                        reached && { borderColor: m.color, backgroundColor: m.color + '15' },
-                        isNext && { borderColor: m.color, borderStyle: 'dashed' }
+                        reached && { borderColor: m.color, backgroundColor: m.color + '12' },
+                        isNext && { borderColor: m.color + '60' }
                       ]}>
-                        <Text style={styles.milestoneCardEmoji}>{m.emoji}</Text>
-                        <Text style={[styles.milestoneCardCount, reached && { color: m.color }]}>{m.count} referrals</Text>
+                        <View style={[styles.milestoneCardIcon, reached && { backgroundColor: m.color + '20' }]}>
+                          <Ionicons name={reached ? 'checkmark-circle' : m.ionicon + '-outline'} size={20} color={reached ? m.color : colors.textSecondary} />
+                        </View>
+                        <Text style={[styles.milestoneCardCount, reached && { color: m.color }]}>{m.count}</Text>
                         {m.hidden && !reached ? (
-                          <Text style={[styles.milestoneCardBonus, { color: m.color }]}>₹XXX</Text>
-                        ) : (
+                          <Text style={styles.milestoneCardBonusHidden}>Hidden</Text>
+                        ) : earnedAmount ? (
                           <Text style={[styles.milestoneCardBonus, reached && { color: m.color }]}>₹{earnedAmount}</Text>
+                        ) : (
+                          <Text style={styles.milestoneCardBonusHidden}>Bonus</Text>
                         )}
-                        {reached && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>✓ Earned</Text>}
+                        {reached && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>Earned</Text>}
                         {isNext && <Text style={[styles.milestoneCardStatus, { color: m.color }]}>{m.count - verified} more</Text>}
                       </View>
                     );
                   })}
-                  {/* Mystery milestone card */}
-                  {(() => {
-                    const reached25 = verified >= 25;
-                    const isNext25 = verified >= 20 && verified < 25;
-                    return (
-                      <View style={[
-                        styles.milestoneCard,
-                        styles.milestoneCardMystery,
-                        reached25 && { borderColor: colors.accent, backgroundColor: colors.accentBg },
-                        isNext25 && { borderColor: colors.accent, borderStyle: 'dashed' }
-                      ]}>
-                        <Text style={styles.milestoneCardEmoji}>🎁</Text>
-                        {reached25 && <Text style={[styles.milestoneCardStatus, { color: colors.accent }]}>✓ Unlocked!</Text>}
-                        {!reached25 && <Text style={[styles.milestoneCardBonus, { color: colors.accent }]}>₹XXX</Text>}
-                        {isNext25 && <Text style={[styles.milestoneCardStatus, { color: colors.accent }]}>Keep going!</Text>}
-                        {!reached25 && !isNext25 && <Text style={[styles.milestoneCardStatus, { color: colors.accent }]}>Surprise!</Text>}
-                      </View>
-                    );
-                  })()}
-                </ScrollView>
+                </View>
               </View>
             );
           })()}
@@ -438,7 +395,7 @@ export default function EarningsScreen({ navigation }) {
           {/* Points Breakdown by Type */}
           {Object.keys(pointsBreakdown).length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📊 RefPoints Breakdown by Type</Text>
+              <Text style={styles.sectionTitle}>RefPoints Breakdown</Text>
               
               {Object.values(pointsBreakdown).map((category) => {
                 const typeInfo = getPointTypeInfo(category.type);
@@ -446,7 +403,9 @@ export default function EarningsScreen({ navigation }) {
                   <View key={category.type} style={styles.breakdownCard}>
                     <View style={styles.breakdownHeader}>
                       <View style={styles.breakdownTitleRow}>
-                        <Text style={styles.breakdownIcon}>{typeInfo.icon}</Text>
+                        <View style={[styles.breakdownIconWrap, { backgroundColor: typeInfo.color + '15' }]}>
+                          <Ionicons name={typeInfo.ionicon} size={18} color={typeInfo.color} />
+                        </View>
                         <View style={styles.breakdownTitleColumn}>
                           <Text style={styles.breakdownTitle}>{typeInfo.title}</Text>
                           <Text style={styles.breakdownDescription}>{typeInfo.description}</Text>
@@ -496,7 +455,9 @@ export default function EarningsScreen({ navigation }) {
           ) : (
             <View style={styles.section}>
               <View style={styles.emptyState}>
-                <Text style={styles.emptyStateEmoji}>🎯</Text>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary + '15', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <Ionicons name="trophy-outline" size={28} color={colors.primary} />
+                </View>
                 <Text style={styles.emptyStateTitle}>No Points Yet</Text>
                 <Text style={styles.emptyStateDescription}>
                   Start earning by referring candidates for jobs at your company!
@@ -579,21 +540,69 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  // Referral Stats Row (first section)
-  referralStatsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+  // ── Hero Stats ──
+  heroStats: {
+    marginBottom: 20,
   },
-  referralStatCard: {
-    flex: 1,
+  heroPrimary: {
     backgroundColor: colors.surface || colors.background,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 14,
+    padding: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: 10,
   },
+  heroPrimaryIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.success + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  heroPrimaryAmount: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: colors.success,
+    letterSpacing: -0.5,
+  },
+  heroPrimaryLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  heroSecondaryRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface || colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  heroSecondaryItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  heroSecondaryItemBorder: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.border,
+  },
+  heroSecondaryNumber: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  heroSecondaryLabel: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  // kept for backward compat
   referralStatNumber: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -604,80 +613,74 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-  // Compact row for Earnings + RefPoints
-  statsRowCompact: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  // Milestone Progress Section
+  // ── Milestone Section ──
   milestoneSection: {
     marginBottom: 20,
     backgroundColor: colors.surface || colors.background,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  milestoneSectionTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  milestoneSubheading: { fontSize: 13, color: colors.textSecondary },
-  milestoneBarContainer: { marginBottom: 12 },
-  milestoneBarTrack: { height: 8, backgroundColor: colors.border, borderRadius: 4, position: 'relative', overflow: 'visible' },
-  milestoneBarFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 4, position: 'absolute', left: 0, top: 0 },
-  milestoneMarker: { position: 'absolute', top: -8, transform: [{ translateX: -12 }], alignItems: 'center' },
-  milestoneMarkerDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  milestoneMarkerEmoji: { fontSize: 10, fontWeight: 'bold', color: colors.white },
-  milestoneYouAreHere: { position: 'absolute', top: -4, transform: [{ translateX: -8 }] },
-  milestoneYouDot: { width: 16, height: 16, borderRadius: 8, backgroundColor: colors.primary, borderWidth: 3, borderColor: colors.white, shadowColor: colors.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 4, elevation: 4 },
-  milestoneLabelsRow: { position: 'relative', height: 20, marginTop: 4 },
-  milestoneCountLabel: { position: 'absolute', fontSize: 10, color: colors.textSecondary, transform: [{ translateX: -5 }] },
-  milestoneCurrentText: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginBottom: 12 },
-  milestoneCardsScroll: { marginHorizontal: -4 },
-  milestoneCardsRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 4 },
-  milestoneCard: { width: 90, minWidth: 90, borderRadius: 10, borderWidth: 1, borderColor: colors.border, padding: 10, alignItems: 'center', backgroundColor: colors.surface || colors.background },
-  milestoneCardMystery: { borderColor: colors.accent, borderWidth: 1.5, background: 'linear-gradient(135deg, #8B5CF615, #EC489915)' },
-  milestoneCardEmoji: { fontSize: 20, marginBottom: 4 },
-  milestoneCardCount: { fontSize: 11, color: colors.textSecondary, fontWeight: '600' },
-  milestoneCardBonus: { fontSize: 16, fontWeight: 'bold', color: colors.text, marginTop: 2 },
-  milestoneCardStatus: { fontSize: 10, fontWeight: '600', marginTop: 2 },
-  earningsCardCompact: {
-    flex: 1,
-    backgroundColor: colors.surface || colors.background,
-    borderRadius: 10,
-    padding: 12,
+  milestoneTitleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  milestoneSectionTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  milestoneMonthBadge: {
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  milestoneMonthText: { fontSize: 11, fontWeight: '600', color: colors.primary },
+  milestoneSubheading: { fontSize: 13, color: colors.textSecondary, marginBottom: 16 },
+  milestoneProgressRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 8,
+  },
+  milestoneProgressCount: { fontSize: 20, fontWeight: '600' },
+  milestoneProgressHint: { fontSize: 12, color: colors.textSecondary },
+  milestoneBarTrack: {
+    height: 6,
+    backgroundColor: colors.border,
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  milestoneBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+    borderRadius: 3,
+  },
+  milestoneCardsRow: { flexDirection: 'row', gap: 8 },
+  milestoneCard: {
+    flex: 1,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
-  },
-  pointsCardCompact: {
-    flex: 1,
-    backgroundColor: colors.surface || colors.background,
-    borderRadius: 10,
     padding: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.surface || colors.background,
   },
-  earningsAmountCompact: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.success,
-    marginTop: 4,
+  milestoneCardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.border + '50',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
-  pointsEmojiCompact: {
-    fontSize: 20,
-  },
-  pointsNumberCompact: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.primary,
-    marginTop: 4,
-  },
-  statsLabelCompact: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
+  milestoneCardCount: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 2 },
+  milestoneCardBonus: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
+  milestoneCardBonusHidden: { fontSize: 11, color: colors.textSecondary + '80', fontStyle: 'italic' },
+  milestoneCardStatus: { fontSize: 10, fontWeight: '600', marginTop: 4 },
+  // (compact stat styles removed — now using heroStats layout)
   section: {
     marginBottom: 16,
   },
@@ -706,8 +709,12 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     alignItems: 'flex-start',
     flex: 1,
   },
-  breakdownIcon: {
-    fontSize: 24,
+  breakdownIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   breakdownTitleColumn: {
@@ -759,10 +766,6 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     padding: 40,
-  },
-  emptyStateEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
   },
   emptyStateTitle: {
     fontSize: typography.sizes?.lg || 18,
