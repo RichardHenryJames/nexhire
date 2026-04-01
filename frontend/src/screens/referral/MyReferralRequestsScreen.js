@@ -381,20 +381,96 @@ export default function MyReferralRequestsScreen({ route }) {
             <Text style={styles.companyNameSecondary} numberOfLines={1}>
               {companyName}
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <Text style={styles.timeAgo}>
                 {getRelativeTime(request.RequestedAt)}
               </Text>
-              {request.Status === 'Pending' && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.warning + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-                  <Ionicons name="hourglass-outline" size={10} color={colors.warning} />
-                  <Text style={{ fontSize: 9, fontWeight: '600', color: colors.warning }}>Awaiting</Text>
-                </View>
-              )}
-              {(request.Status === 'Completed' || request.Status === 'ProofUploaded') && !request.PendingVerificationCount && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.success + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
-                  <Ionicons name="checkmark-circle" size={10} color={colors.success} />
-                  <Text style={{ fontSize: 9, fontWeight: '600', color: colors.success }}>Referred</Text>
+              {/* Status chips — comprehensive for all states */}
+              {(() => {
+                const s = request.Status;
+                const isOpen = !!request.OpenToAnyCompany;
+                const pvc = request.PendingVerificationCount || 0;
+                const crc = request.ChildReferralCount || 0;
+                const chipStyle = (bg, color) => ({ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: bg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 });
+                const chipText = (color) => ({ fontSize: 9, fontWeight: '600', color });
+
+                // In Progress statuses
+                if (s === 'Pending') return (
+                  <View style={chipStyle(colors.warning + '15', colors.warning)}>
+                    <Ionicons name="hourglass-outline" size={10} color={colors.warning} />
+                    <Text style={chipText(colors.warning)}>Awaiting</Text>
+                  </View>
+                );
+                if (s === 'NotifiedToReferrers') return (
+                  <View style={chipStyle(colors.primary + '15', colors.primary)}>
+                    <Ionicons name="radio-outline" size={10} color={colors.primary} />
+                    <Text style={chipText(colors.primary)}>{isOpen ? 'Broadcasting' : 'Live'}</Text>
+                  </View>
+                );
+                if (s === 'Viewed') return (
+                  <View style={chipStyle(colors.cyan + '15', colors.cyan)}>
+                    <Ionicons name="eye-outline" size={10} color={colors.cyan} />
+                    <Text style={chipText(colors.cyan)}>Seen</Text>
+                  </View>
+                );
+                if (s === 'Claimed') return (
+                  <View style={chipStyle(colors.primary + '15', colors.primary)}>
+                    <Ionicons name="hand-right-outline" size={10} color={colors.primary} />
+                    <Text style={chipText(colors.primary)}>Claimed</Text>
+                  </View>
+                );
+                // Action needed — referral done, needs confirmation
+                if ((s === 'Completed' || s === 'ProofUploaded') && (pvc > 0 || !isOpen)) return (
+                  <View style={chipStyle(colors.warning + '15', colors.warning)}>
+                    <Ionicons name="shield-checkmark-outline" size={10} color={colors.warning} />
+                    <Text style={chipText(colors.warning)}>{isOpen && pvc > 1 ? `${pvc} to confirm` : 'Confirm'}</Text>
+                  </View>
+                );
+                // Open-to-any completed, all verified
+                if ((s === 'Completed' || s === 'ProofUploaded') && isOpen && pvc === 0 && crc > 0) return (
+                  <View style={chipStyle(colors.success + '15', colors.success)}>
+                    <Ionicons name="checkmark-done" size={10} color={colors.success} />
+                    <Text style={chipText(colors.success)}>All confirmed</Text>
+                  </View>
+                );
+                // Closed statuses
+                if (s === 'Verified') return (
+                  <View style={chipStyle(colors.success + '15', colors.success)}>
+                    <Ionicons name="checkmark-circle" size={10} color={colors.success} />
+                    <Text style={chipText(colors.success)}>Verified</Text>
+                  </View>
+                );
+                if (s === 'Unverified') return (
+                  <View style={chipStyle(colors.error + '15', colors.error)}>
+                    <Ionicons name="close-circle" size={10} color={colors.error} />
+                    <Text style={chipText(colors.error)}>Disputed</Text>
+                  </View>
+                );
+                if (s === 'Cancelled') return (
+                  <View style={chipStyle(colors.textMuted + '20', colors.textMuted)}>
+                    <Ionicons name="ban" size={10} color={colors.textMuted} />
+                    <Text style={chipText(colors.textMuted)}>Cancelled</Text>
+                  </View>
+                );
+                if (s === 'Expired') return (
+                  <View style={chipStyle(colors.textMuted + '20', colors.textMuted)}>
+                    <Ionicons name="time-outline" size={10} color={colors.textMuted} />
+                    <Text style={chipText(colors.textMuted)}>Expired</Text>
+                  </View>
+                );
+                if (s === 'Refunded') return (
+                  <View style={chipStyle(colors.success + '15', colors.success)}>
+                    <Ionicons name="wallet-outline" size={10} color={colors.success} />
+                    <Text style={chipText(colors.success)}>Refunded</Text>
+                  </View>
+                );
+                return null;
+              })()}
+              {/* Open-to-any: show child count if any */}
+              {!!request.OpenToAnyCompany && (request.ChildReferralCount || 0) > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#8B5CF6' + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                  <Ionicons name="people-outline" size={10} color={'#8B5CF6'} />
+                  <Text style={{ fontSize: 9, fontWeight: '600', color: '#8B5CF6' }}>{request.ChildReferralCount} {request.ChildReferralCount === 1 ? 'company' : 'companies'}</Text>
                 </View>
               )}
             </View>
