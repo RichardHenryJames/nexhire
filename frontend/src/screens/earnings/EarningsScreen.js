@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
 import useResponsive from '../../hooks/useResponsive';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import WithdrawModal from '../../components/WithdrawModal';
 import { useFocusEffect } from '@react-navigation/native';
 
 export default function EarningsScreen({ navigation }) {
@@ -20,6 +21,7 @@ export default function EarningsScreen({ navigation }) {
   const [fadeAnim] = useState(new Animated.Value(1));
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
   // FAQ data (frontend-only, not DB driven)
   const faqData = [
@@ -301,7 +303,7 @@ export default function EarningsScreen({ navigation }) {
               <View style={styles.heroActions}>
                 <TouchableOpacity
                   style={styles.heroWithdrawBtn}
-                  onPress={() => navigation.navigate('Wallet')}
+                  onPress={() => setShowWithdrawModal(true)}
                 >
                   <Ionicons name="arrow-up-circle-outline" size={18} color={colors.white} />
                   <Text style={styles.heroWithdrawText}>Withdraw</Text>
@@ -520,6 +522,13 @@ export default function EarningsScreen({ navigation }) {
 
         </ScrollView>
       </View>
+
+      <WithdrawModal
+        visible={showWithdrawModal}
+        onClose={() => setShowWithdrawModal(false)}
+        onSuccess={() => loadAllData()}
+        navigation={navigation}
+      />
     </View>
   );
 }
