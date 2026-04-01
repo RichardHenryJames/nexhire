@@ -221,7 +221,7 @@ export default function AskReferralScreen({ navigation, route }) {
           <Text style={s.proofLabel}>online</Text>
           <Text style={s.proofSep}>·</Text>
           <Text style={s.proofCount}>{dailyRefCount}</Text>
-          <Text style={s.proofLabel}>today</Text>
+          <Text style={s.proofLabel}>referrals today</Text>
           <Text style={s.proofSep}>·</Text>
           <CachedImage source={{ uri: tickerCompany.logoURL }} style={s.tickerLogo} resizeMode="contain" />
           <Text style={s.tickerCompany} numberOfLines={1}>{tickerCompany.name}</Text>
