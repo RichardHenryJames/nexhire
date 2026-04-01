@@ -127,6 +127,9 @@ export class ApplicantService {
                     `SELECT 
                         COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 THEN rr.RequestID END) as TotalReferralsMade,
                         COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified' THEN rr.RequestID END) as VerifiedReferrals,
+                        COUNT(DISTINCT CASE WHEN rr.AssignedReferrerID = @param0 AND rr.Status = 'Verified'
+                            AND MONTH(rr.ReferredAt) = MONTH(GETUTCDATE())
+                            AND YEAR(rr.ReferredAt) = YEAR(GETUTCDATE()) THEN rr.RequestID END) as VerifiedThisMonth,
                         COUNT(DISTINCT CASE WHEN rr.ApplicantID = @param1 THEN rr.RequestID END) as ReferralRequestsMade,
                         ISNULL(SUM(CASE WHEN rw.ReferrerID = @param1 THEN rw.PointsEarned ELSE 0 END), 0) as TotalPointsFromRewards
                     FROM ReferralRequests rr
@@ -178,6 +181,7 @@ export class ApplicantService {
             profile.referralStats = {
                 totalReferralsMade: stats.TotalReferralsMade || 0,
                 verifiedReferrals: stats.VerifiedReferrals || 0,
+                verifiedThisMonth: stats.VerifiedThisMonth || 0,
                 referralRequestsMade: stats.ReferralRequestsMade || 0,
                 totalPointsFromRewards: stats.TotalPointsFromRewards || 0,
             };

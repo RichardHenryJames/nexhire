@@ -316,7 +316,7 @@ export default function EarningsScreen({ navigation }) {
 
           {/* 🎯 Monthly Milestone Progress Bar — flat for all referrers */}
           {(() => {
-            const verified = referralStats.verifiedReferrals || 0;
+            const verified = referralStats.verifiedThisMonth || 0;
             const milestones = [
               { count: 5, bonus: 100, color: colors.primary, emoji: '⭐', hidden: false },
               { count: 10, color: colors.warning, emoji: '🔥', hidden: true },
@@ -388,9 +388,10 @@ export default function EarningsScreen({ navigation }) {
                   {milestones.map((m) => {
                     const reached = verified >= m.count;
                     const isNext = !reached && (milestones.findIndex(ms => verified < ms.count) === milestones.indexOf(m));
-                    // For hidden milestones, get actual earned amount from points breakdown
+                    // For hidden milestones, show actual earned amount from points breakdown (or keep hidden)
+                    const milestoneBreakdown = pointsBreakdown[`milestone_${m.count}`]?.total;
                     const earnedAmount = m.hidden && reached
-                      ? (pointsBreakdown[`milestone_${m.count}`]?.total || m.bonus || '???')
+                      ? (milestoneBreakdown || m.bonus || 'XXX')
                       : m.bonus;
                     return (
                       <View key={m.count} style={[
