@@ -421,23 +421,23 @@ export default function MyReferralRequestsScreen({ route }) {
                 );
                 // Action needed — referral done, needs confirmation
                 if ((s === 'Completed' || s === 'ProofUploaded') && (pvc > 0 || !isOpen)) return (
-                  <View style={chipStyle(colors.warning + '15', colors.warning)}>
-                    <Ionicons name="shield-checkmark-outline" size={10} color={colors.warning} />
-                    <Text style={chipText(colors.warning)}>{isOpen && pvc > 1 ? `${pvc} to confirm` : 'Confirm'}</Text>
+                  <View style={chipStyle(colors.success + '15', colors.success)}>
+                    <Ionicons name="checkmark-circle" size={10} color={colors.success} />
+                    <Text style={chipText(colors.success)}>{isOpen && pvc > 1 ? `${pvc} referred` : 'Referred'}</Text>
                   </View>
                 );
                 // Open-to-any completed, all verified
                 if ((s === 'Completed' || s === 'ProofUploaded') && isOpen && pvc === 0 && crc > 0) return (
                   <View style={chipStyle(colors.success + '15', colors.success)}>
                     <Ionicons name="checkmark-done" size={10} color={colors.success} />
-                    <Text style={chipText(colors.success)}>All confirmed</Text>
+                    <Text style={chipText(colors.success)}>All done</Text>
                   </View>
                 );
                 // Closed statuses
                 if (s === 'Verified') return (
                   <View style={chipStyle(colors.success + '15', colors.success)}>
                     <Ionicons name="checkmark-circle" size={10} color={colors.success} />
-                    <Text style={chipText(colors.success)}>Verified</Text>
+                    <Text style={chipText(colors.success)}>Confirmed</Text>
                   </View>
                 );
                 if (s === 'Unverified') return (
