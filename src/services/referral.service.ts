@@ -1066,6 +1066,8 @@ export class ReferralService {
                     ar.ResumeLabel,
                     (SELECT COUNT(*) FROM ReferralRequests child WHERE child.ParentRequestID = rr.RequestID AND child.Status NOT IN ('Cancelled', 'Expired')) as ChildReferralCount,
                     (SELECT COUNT(*) FROM ReferralRequests child WHERE child.ParentRequestID = rr.RequestID AND child.Status IN ('Completed', 'ProofUploaded')) as PendingVerificationCount,
+                    (SELECT COUNT(*) FROM ReferralRequests child WHERE child.ParentRequestID = rr.RequestID AND child.Status = 'Verified') as VerifiedChildCount,
+                    (SELECT COUNT(*) FROM ReferralRequests child WHERE child.ParentRequestID = rr.RequestID AND child.Status = 'Unverified') as UnverifiedChildCount,
                     rp.FileURL as ProofFileURL,
                     rp.FileType as ProofFileType,
                     rp.Description as ProofDescription,

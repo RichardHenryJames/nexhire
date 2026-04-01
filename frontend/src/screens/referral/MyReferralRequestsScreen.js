@@ -391,6 +391,8 @@ export default function MyReferralRequestsScreen({ route }) {
                 const isOpen = !!request.OpenToAnyCompany;
                 const pvc = request.PendingVerificationCount || 0;
                 const crc = request.ChildReferralCount || 0;
+                const uvc = request.UnverifiedChildCount || 0;
+                const vcc = request.VerifiedChildCount || 0;
                 const chipStyle = (bg, color) => ({ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: bg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 });
                 const chipText = (color) => ({ fontSize: 9, fontWeight: '600', color });
 
@@ -426,8 +428,15 @@ export default function MyReferralRequestsScreen({ route }) {
                     <Text style={chipText(colors.success)}>{isOpen && pvc > 1 ? `${pvc} referred` : 'Referred'}</Text>
                   </View>
                 );
-                // Open-to-any completed, all verified
-                if ((s === 'Completed' || s === 'ProofUploaded') && isOpen && pvc === 0 && crc > 0) return (
+                // Open-to-any: has unverified (disputed) children
+                if ((s === 'Completed' || s === 'ProofUploaded') && isOpen && pvc === 0 && uvc > 0) return (
+                  <View style={chipStyle(colors.error + '15', colors.error)}>
+                    <Ionicons name="alert-circle" size={10} color={colors.error} />
+                    <Text style={chipText(colors.error)}>{uvc} disputed</Text>
+                  </View>
+                );
+                // Open-to-any completed, all verified (no unverified)
+                if ((s === 'Completed' || s === 'ProofUploaded') && isOpen && pvc === 0 && uvc === 0 && vcc > 0) return (
                   <View style={chipStyle(colors.success + '15', colors.success)}>
                     <Ionicons name="checkmark-done" size={10} color={colors.success} />
                     <Text style={chipText(colors.success)}>All done</Text>
