@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { typography } from '../../styles/theme';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -22,6 +22,7 @@ export default function EarningsScreen({ navigation }) {
   const [expandedFaq, setExpandedFaq] = useState(null);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // FAQ data (frontend-only, not DB driven)
   const faqData = [
@@ -76,6 +77,7 @@ export default function EarningsScreen({ navigation }) {
 
   const loadAllData = async () => {
     try {
+      setLoading(true);
       const userId = user?.UserID || user?.userId || user?.id || user?.sub;
       
       // 1. Load referralStats from Profile API (the ONLY source of totalReferralsMade/verifiedReferrals)
@@ -97,6 +99,8 @@ export default function EarningsScreen({ navigation }) {
       await loadWithdrawableBalance();
     } catch (error) {
       console.error('Error loading earnings data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -288,7 +292,14 @@ export default function EarningsScreen({ navigation }) {
           <SubScreenHeader title="Referrer Dashboard" fallbackTab="Profile" />
 
           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-          
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Loading dashboard...</Text>
+            </View>
+          ) : (
+          <>          
           {/* ── Hero Stats ── */}
           <View style={styles.heroStats}>
             {/* Primary: Earnings — the number that matters most */}
@@ -519,7 +530,8 @@ export default function EarningsScreen({ navigation }) {
             ))}
           </View>
 
-
+          </>
+          )}
         </ScrollView>
       </View>
 
@@ -566,6 +578,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   // ── Hero Stats ──
   heroStats: {
