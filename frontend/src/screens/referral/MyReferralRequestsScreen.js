@@ -381,23 +381,37 @@ export default function MyReferralRequestsScreen({ route }) {
             <Text style={styles.companyNameSecondary} numberOfLines={1}>
               {companyName}
             </Text>
-            <Text style={styles.timeAgo}>
-              {getRelativeTime(request.RequestedAt)}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={styles.timeAgo}>
+                {getRelativeTime(request.RequestedAt)}
+              </Text>
+              {request.Status === 'Pending' && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.warning + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                  <Ionicons name="hourglass-outline" size={10} color={colors.warning} />
+                  <Text style={{ fontSize: 9, fontWeight: '600', color: colors.warning }}>Awaiting</Text>
+                </View>
+              )}
+              {(request.Status === 'Completed' || request.Status === 'ProofUploaded') && !request.PendingVerificationCount && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.success + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                  <Ionicons name="checkmark-circle" size={10} color={colors.success} />
+                  <Text style={{ fontSize: 9, fontWeight: '600', color: colors.success }}>Referred</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Chevron — with Verify prefix when action needed, Convert to Open when expiring */}
           {(request.Status === 'Completed' || request.Status === 'ProofUploaded') &&
            (!request.OpenToAnyCompany || (request.PendingVerificationCount || 0) > 0) ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="alert-circle" size={14} color={colors.warning} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>Verify</Text>
+              <Ionicons name="checkmark-circle" size={14} color={colors.warning} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.warning }}>Confirm</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.warning} />
             </View>
           ) : isExpiringSoon(request) ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="globe-outline" size={14} color={'#8B5CF6'} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#8B5CF6' }}>Upgrade</Text>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#8B5CF6' }}>Go Open</Text>
               <Ionicons name="chevron-forward" size={16} color={'#8B5CF6'} />
             </View>
           ) : (
@@ -416,7 +430,7 @@ export default function MyReferralRequestsScreen({ route }) {
         {!loading && myRequests.length > 0 && (
           <View style={styles.tabBar}>
             {[
-              { key: 'action', label: 'Action', count: actionRequests.length, color: actionRequests.length > 0 ? colors.error : colors.primary },
+              { key: 'action', label: 'Pending', count: actionRequests.length, color: actionRequests.length > 0 ? colors.error : colors.primary },
               { key: 'progress', label: 'In Progress', count: progressRequests.length, color: colors.primary },
               { key: 'closed', label: 'Closed', count: closedRequests.length, color: colors.textSecondary },
             ].map(tab => (
@@ -426,12 +440,19 @@ export default function MyReferralRequestsScreen({ route }) {
                 onPress={() => switchTab(tab.key)}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  styles.tabText,
-                  activeTab === tab.key && { color: tab.color, fontWeight: '700' },
-                ]}>
-                  {tab.label}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[
+                    styles.tabText,
+                    activeTab === tab.key && { color: tab.color, fontWeight: '700' },
+                  ]}>
+                    {tab.label}
+                  </Text>
+                  {tab.count > 0 && (
+                    <View style={{ backgroundColor: activeTab === tab.key ? tab.color : colors.textMuted + '40', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: activeTab === tab.key ? '#fff' : colors.textMuted }}>{tab.count}</Text>
+                    </View>
+                  )}
+                </View>
                 {activeTab === tab.key && <View style={[styles.tabIndicator, { backgroundColor: tab.color }]} />}
               </TouchableOpacity>
             ))}
