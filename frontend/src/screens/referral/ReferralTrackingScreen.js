@@ -563,8 +563,8 @@ export default function ReferralTrackingScreen() {
                       style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, backgroundColor: colors.warning + '12' }}
                       onPress={() => setVerifyChildTarget({ requestId: child.RequestID, child })}
                     >
-                      <Ionicons name="alert-circle" size={14} color={colors.warning} />
-                      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>Verify</Text>
+                      <Ionicons name="checkmark-circle" size={14} color={colors.warning} />
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: colors.warning }}>Confirm</Text>
                     </TouchableOpacity>
                   )}
                 </View>
