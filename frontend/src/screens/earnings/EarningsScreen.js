@@ -296,6 +296,24 @@ export default function EarningsScreen({ navigation }) {
               </View>
               <Text style={styles.heroPrimaryAmount}>₹{withdrawableData.withdrawableAmount || 0}</Text>
               <Text style={styles.heroPrimaryLabel}>Total Earnings</Text>
+
+              {/* Action buttons */}
+              <View style={styles.heroActions}>
+                <TouchableOpacity
+                  style={styles.heroWithdrawBtn}
+                  onPress={() => navigation.navigate('Wallet')}
+                >
+                  <Ionicons name="arrow-up-circle-outline" size={18} color={colors.white} />
+                  <Text style={styles.heroWithdrawText}>Withdraw</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.heroWalletBtn}
+                  onPress={() => navigation.navigate('Wallet')}
+                >
+                  <Ionicons name="wallet-outline" size={16} color={colors.primary} />
+                  <Text style={styles.heroWalletText}>My Wallet</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Secondary: 3 compact metrics */}
@@ -572,6 +590,39 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  heroActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  heroWithdrawBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.success,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  heroWithdrawText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  heroWalletBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary + '15',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  heroWalletText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
   },
   heroSecondaryRow: {
     flexDirection: 'row',
