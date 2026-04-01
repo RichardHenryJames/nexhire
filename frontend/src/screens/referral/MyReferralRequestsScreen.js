@@ -25,7 +25,7 @@ import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
 
 export default function MyReferralRequestsScreen({ route }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { colors } = useTheme();
   const navigation = useNavigation();
   const responsive = useResponsive();
@@ -381,6 +381,11 @@ export default function MyReferralRequestsScreen({ route }) {
             <Text style={styles.companyNameSecondary} numberOfLines={1}>
               {companyName}
             </Text>
+            {isAdmin && request.SeekerName && (
+              <Text style={{ fontSize: 10, color: colors.cyan, fontWeight: '500' }} numberOfLines={1}>
+                👤 {request.SeekerName}{request.SeekerEmail ? ` · ${request.SeekerEmail}` : ''}
+              </Text>
+            )}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
               <Text style={styles.timeAgo}>
                 {getRelativeTime(request.RequestedAt)}
