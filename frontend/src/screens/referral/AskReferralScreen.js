@@ -239,8 +239,8 @@ export default function AskReferralScreen({ navigation, route }) {
           </Text>
           <Text style={s.modeBadgeDesc}>
             {openToAny
-              ? 'Get referred by employees from multiple companies with a single request'
-              : 'Targeted referral from an employee at a specific company'}
+              ? 'Get referred across multiple companies with one request'
+              : 'Request a referral from a specific company'}
           </Text>
         </View>
       </View>
@@ -308,14 +308,14 @@ export default function AskReferralScreen({ navigation, route }) {
             <Ionicons name="globe-outline" size={18} color={openToAny ? '#8B5CF6' : colors.gray400} />
             <Text style={[s.segBtnTitle, openToAny && { color: '#8B5CF6' }]}>Open</Text>
           </View>
-          {!isDesktop && <Text style={s.segBtnDesc}>Get referred by employees from multiple companies with a single request</Text>}
+          {!isDesktop && <Text style={s.segBtnDesc}>Get referred across multiple companies with one request</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={[s.segBtn, !openToAny && s.segBtnActive]} onPress={() => switchMode(false)} activeOpacity={0.8}>
           <View style={s.segBtnRow}>
             <Ionicons name="business-outline" size={18} color={!openToAny ? colors.primary : colors.gray400} />
             <Text style={[s.segBtnTitle, !openToAny && { color: colors.primary }]}>Specific</Text>
           </View>
-          {!isDesktop && <Text style={s.segBtnDesc}>Targeted referral from an employee at a specific company</Text>}
+          {!isDesktop && <Text style={s.segBtnDesc}>Request a referral from a specific company</Text>}
         </TouchableOpacity>
       </View>
 
