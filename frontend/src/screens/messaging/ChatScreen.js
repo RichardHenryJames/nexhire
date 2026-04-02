@@ -34,9 +34,8 @@ const parseMessageContent = (content, isMine, colors) => {
   
   const result = [];
   
-  // Combined regex for bold (**text**), italic (*text*), markdown images ![alt](url), and markdown links [text](url)
-  // Order matters: bold (**) must come before italic (*) to avoid partial matches
-  const combinedRegex = /(\*\*([^*]+)\*\*)|((?<![*\w])\*([^*]+)\*(?![*\w]))|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  // WhatsApp-style: *bold*, **bold**, _italic_, ![img](url), [link](url)
+  const combinedRegex = /(\*\*([^*]+)\*\*)|((?<![*\w])\*([^*]+)\*(?![*\w]))|((?<![\w])_([^_]+)_(?![\w]))|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   
   let lastIndex = 0;
   let match;
@@ -48,30 +47,37 @@ const parseMessageContent = (content, isMine, colors) => {
     }
     
     if (match[1]) {
-      // Bold text: **text**
+      // Bold: **text**
       result.push(
         <Text key={`bold-${match.index}`} style={{ fontWeight: '700' }}>
           {match[2]}
         </Text>
       );
     } else if (match[3]) {
-      // Italic text: *text*
+      // Bold (WhatsApp-style): *text*
       result.push(
-        <Text key={`italic-${match.index}`} style={{ fontStyle: 'italic' }}>
+        <Text key={`bold1-${match.index}`} style={{ fontWeight: '700' }}>
           {match[4]}
         </Text>
       );
     } else if (match[5]) {
-      // Markdown image: ![alt](url) - render as inline image
+      // Italic (WhatsApp-style): _text_
+      result.push(
+        <Text key={`italic-${match.index}`} style={{ fontStyle: 'italic' }}>
+          {match[6]}
+        </Text>
+      );
+    } else if (match[7]) {
+      // Markdown image: ![alt](url)
       result.push(
         <CachedImage
           key={`img-${match.index}`}
-          source={{ uri: match[7] }}
+          source={{ uri: match[9] }}
           style={{ width: 16, height: 16, marginRight: 4 }}
           resizeMode="contain"
         />
       );
-    } else if (match[8]) {
+    } else if (match[10]) {
       // Markdown link: [text](url)
       result.push(
         <Text
@@ -80,9 +86,9 @@ const parseMessageContent = (content, isMine, colors) => {
             color: isMine ? colors.indigoBg : colors.primary,
             textDecorationLine: 'underline',
           }}
-          onPress={() => Linking.openURL(match[10])}
+          onPress={() => Linking.openURL(match[12])}
         >
-          {match[9]}
+          {match[11]}
         </Text>
       );
     }
@@ -127,8 +133,8 @@ const parseMessageContentWeb = (content, isMine, colors) => {
   
   const result = [];
   
-  // Combined regex for bold (**text**), italic (*text*), markdown images ![alt](url), and markdown links [text](url)
-  const combinedRegex = /(\*\*([^*]+)\*\*)|((?<![*\w])\*([^*]+)\*(?![*\w]))|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  // WhatsApp-style: *bold*, **bold**, _italic_, ![img](url), [link](url)
+  const combinedRegex = /(\*\*([^*]+)\*\*)|((?<![*\w])\*([^*]+)\*(?![*\w]))|((?<![\w])_([^_]+)_(?![\w]))|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   
   let lastIndex = 0;
   let match;
@@ -140,31 +146,36 @@ const parseMessageContentWeb = (content, isMine, colors) => {
     }
     
     if (match[1]) {
-      // Bold text: **text**
+      // Bold: **text**
       result.push(
         <strong key={`bold-${match.index}`}>{match[2]}</strong>
       );
     } else if (match[3]) {
-      // Italic text: *text*
+      // Bold (WhatsApp-style): *text*
       result.push(
-        <em key={`italic-${match.index}`}>{match[4]}</em>
+        <strong key={`bold1-${match.index}`}>{match[4]}</strong>
       );
     } else if (match[5]) {
-      // Markdown image: ![alt](url) - render as inline image
+      // Italic (WhatsApp-style): _text_
+      result.push(
+        <em key={`italic-${match.index}`}>{match[6]}</em>
+      );
+    } else if (match[7]) {
+      // Markdown image: ![alt](url)
       result.push(
         <img
           key={`img-${match.index}`}
-          src={match[7]}
-          alt={match[6] || ''}
+          src={match[9]}
+          alt={match[8] || ''}
           style={{ width: 16, height: 16, marginRight: 4, verticalAlign: 'middle' }}
         />
       );
-    } else if (match[8]) {
+    } else if (match[10]) {
       // Markdown link: [text](url)
       result.push(
         <a
           key={`link-${match.index}`}
-          href={match[10]}
+          href={match[12]}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -173,7 +184,7 @@ const parseMessageContentWeb = (content, isMine, colors) => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {match[9]}
+          {match[11]}
         </a>
       );
     }

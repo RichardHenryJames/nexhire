@@ -40,28 +40,25 @@ const getWelcomeMessage = (firstName: string): string => `Hey ${firstName}! 👋
 
 Here's how to get the most out of it:
 
-🎯 **Get Referred to Top Companies**
+🎯 *Get Referred to Top Companies*
 Tap "Ask Referral" — real verified employees at Google, Microsoft, Amazon & 100+ companies will refer you directly.
-• *Specific Company* — pick a company, get a referral from an employee there
-• *Open to Any* — one request reaches referrers across all companies
+• _Specific Company_ — pick a company, get a referral from an employee there
+• _Open to Any_ — one request reaches referrers across all companies
 Full refund if no one refers you.
 
-🛠 **AI Career Tools**
-• *Resume Analyzer* — ATS score + fix suggestions
-• *Resume Builder* — 10 pro templates, AI-written content
-• *LinkedIn Optimizer* — audit & rewrite your profile with AI
-• *Interview Prep, Salary Spy, Offer Coach & more*
+🛠 *AI Career Tools*
+• _Resume Analyzer_ — ATS score + fix suggestions
+• _Resume Builder_ — 10 pro templates, AI-written content
+• _LinkedIn Optimizer_ — audit & rewrite your profile with AI
+• _Interview Prep, Salary Spy, Offer Coach & more_
 
-💼 **125K+ Jobs**
+💼 *125K+ Jobs*
 Browse & apply directly. Or tap "Ask Referral" on any job for an insider edge.
 
-💰 **Already Working?**
+💰 *Already Working?*
 Verify your company email → become a verified referrer. Earn cash for every referral you give + monthly milestone bonuses.
 
-**Follow us:**
-![LinkedIn](https://www.google.com/s2/favicons?domain=linkedin.com&sz=32) [LinkedIn](https://www.linkedin.com/company/refopen)
-![Instagram](https://www.google.com/s2/favicons?domain=instagram.com&sz=32) [Instagram](https://www.instagram.com/refopensolutions)
-![X](https://www.google.com/s2/favicons?domain=x.com&sz=32) [X (Twitter)](https://x.com/refopensolution)
+*Follow us:* ![in](https://www.google.com/s2/favicons?domain=linkedin.com&sz=32) [LinkedIn](https://www.linkedin.com/company/refopen) · ![ig](https://www.google.com/s2/favicons?domain=instagram.com&sz=32) [Instagram](https://www.instagram.com/refopensolutions) · ![x](https://www.google.com/s2/favicons?domain=x.com&sz=32) [X](https://x.com/refopensolution)
 
 — Team RefOpen 💜`;
 
