@@ -185,16 +185,17 @@ export async function sendSavedJobExpiringNudges(): Promise<{ sent: number }> {
     // Find saved jobs expiring in 4-6 days (window to avoid sending twice)
     const expiringJobs = await dbService.executeQuery(`
       SELECT
-        sj.UserID, u.Email, u.FirstName,
+        u.UserID, u.Email, u.FirstName,
         j.JobID, j.Title, o.Name as CompanyName, j.Location, j.ExpiresAt
       FROM SavedJobs sj
       JOIN Jobs j ON sj.JobID = j.JobID
       JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-      JOIN Users u ON sj.UserID = u.UserID
+      JOIN Applicants a ON sj.ApplicantID = a.ApplicantID
+      JOIN Users u ON a.UserID = u.UserID
       WHERE j.Status = 'Published'
         AND j.ExpiresAt BETWEEN DATEADD(day, 4, GETUTCDATE()) AND DATEADD(day, 6, GETUTCDATE())
         AND u.IsActive = 1 AND u.Email IS NOT NULL
-      ORDER BY sj.UserID, j.ExpiresAt ASC
+      ORDER BY u.UserID, j.ExpiresAt ASC
     `, []);
 
     if (expiringJobs.recordset.length === 0) {
@@ -288,7 +289,8 @@ export async function sendOnboardingDripEmails(): Promise<{ sent: number }> {
       INNER JOIN Applicants a ON u.UserID = a.UserID
       WHERE u.CreatedAt BETWEEN DATEADD(day, -4, GETUTCDATE()) AND DATEADD(day, -2, GETUTCDATE())
         AND u.IsActive = 1 AND u.Email IS NOT NULL AND u.UserType = 'JobSeeker'
-        AND (a.ResumeURL IS NULL OR a.PreferredJobTypes IS NULL OR a.PreferredLocations IS NULL)
+        AND (NOT EXISTS (SELECT 1 FROM ApplicantResumes ar WHERE ar.ApplicantID = a.ApplicantID)
+             OR a.PreferredJobTypes IS NULL OR a.PreferredLocations IS NULL)
         AND NOT EXISTS (SELECT 1 FROM EmailLogs e WHERE e.UserID = u.UserID AND e.EmailType = 'onboarding_day3')
     `, []);
 
@@ -379,16 +381,17 @@ export async function sendSimilarJobNotifications(): Promise<{ sent: number }> {
     // Get users who saved jobs in the last 2 days
     const recentSaves = await dbService.executeQuery(`
       SELECT TOP 50
-        sj.UserID, u.FirstName, u.Email,
+        u.UserID, u.FirstName, u.Email,
         j.Title as SavedTitle, o.Name as SavedCompany, j.JobTypeID, j.WorkplaceTypeID,
         j.OrganizationID, j.ExperienceMin, j.ExperienceMax
       FROM SavedJobs sj
       JOIN Jobs j ON sj.JobID = j.JobID
       JOIN Organizations o ON j.OrganizationID = o.OrganizationID
-      JOIN Users u ON sj.UserID = u.UserID
-      WHERE sj.CreatedAt >= DATEADD(day, -2, GETUTCDATE())
+      JOIN Applicants a ON sj.ApplicantID = a.ApplicantID
+      JOIN Users u ON a.UserID = u.UserID
+      WHERE sj.SavedAt >= DATEADD(day, -2, GETUTCDATE())
         AND u.IsActive = 1 AND u.Email IS NOT NULL
-      ORDER BY sj.CreatedAt DESC
+      ORDER BY sj.SavedAt DESC
     `, []);
 
     if (recentSaves.recordset.length === 0) {
@@ -415,7 +418,7 @@ export async function sendSimilarJobNotifications(): Promise<{ sent: number }> {
             AND j.JobTypeID = @param0
             AND j.OrganizationID != @param1
             AND j.PublishedAt >= DATEADD(day, -3, GETUTCDATE())
-            AND NOT EXISTS (SELECT 1 FROM SavedJobs s WHERE s.UserID = @param2 AND s.JobID = j.JobID)
+            AND NOT EXISTS (SELECT 1 FROM SavedJobs s JOIN Applicants a2 ON s.ApplicantID = a2.ApplicantID WHERE a2.UserID = @param2 AND s.JobID = j.JobID)
           ORDER BY j.PublishedAt DESC
         `, [ref.JobTypeID, ref.OrganizationID, userId]);
 
