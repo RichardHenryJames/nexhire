@@ -58,7 +58,7 @@ Browse & apply directly. Or tap "Ask Referral" on any job for an insider edge.
 💰 *Already Working?*
 Verify your company email → become a verified referrer. Earn cash for every referral you give + monthly milestone bonuses.
 
-*Follow us:* ![in](https://www.google.com/s2/favicons?domain=linkedin.com&sz=32) [LinkedIn](https://www.linkedin.com/company/refopen) · ![ig](https://www.google.com/s2/favicons?domain=instagram.com&sz=32) [Instagram](https://www.instagram.com/refopensolutions) · ![x](https://www.google.com/s2/favicons?domain=x.com&sz=32) [X](https://x.com/refopensolution)
+*Follow us:* [LinkedIn](https://www.linkedin.com/company/refopen) · [Instagram](https://www.instagram.com/refopensolutions) · [X](https://x.com/refopensolution)
 
 — Team RefOpen 💜`;
 
