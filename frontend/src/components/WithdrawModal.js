@@ -41,7 +41,7 @@ export default function WithdrawModal({ visible, onClose, onSuccess, navigation,
 
   // Withdrawable data
   const [withdrawableBalance, setWithdrawableBalance] = useState(0);
-  const [loadingWithdrawable, setLoadingWithdrawable] = useState(false);
+  const [loadingWithdrawable, setLoadingWithdrawable] = useState(true); // start true to avoid ₹0 flash
   const [withdrawMinimum, setWithdrawMinimum] = useState(200);
   const withdrawalFee = 0;
   const minimumWithdrawal = withdrawMinimum;
@@ -52,6 +52,7 @@ export default function WithdrawModal({ visible, onClose, onSuccess, navigation,
   // Fetch withdrawable balance when modal opens
   useEffect(() => {
     if (visible) {
+      setLoadingWithdrawable(true); // immediately show "Loading..." not ₹0
       (async () => {
         try {
           setLoadingWithdrawable(true);
