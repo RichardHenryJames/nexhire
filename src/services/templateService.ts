@@ -918,22 +918,22 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'You received this because you have unr
                             <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 28px;">
                                 <tr>
                                     <td style="padding: 10px 0; color: #4a4a4a; font-size: 14px; line-height: 1.6; border-bottom: 1px solid #F1F5F9;">
-                                        <strong style="color: #1a1a1a;">Browse Jobs</strong> — Search 125,000+ roles from top tech companies, Fortune 500 firms, and fast-growing startups using AI-powered filters.
+                                        <strong style="color: #1a1a1a;">🎯 Get Referred to Top Companies</strong> — Tap "Ask Referral" and verified employees at Google, Microsoft, Amazon & 100+ companies will refer you directly. Pick a specific company, or choose "Open to Any" to reach referrers across all companies. Full refund if no one refers you.
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 10px 0; color: #4a4a4a; font-size: 14px; line-height: 1.6; border-bottom: 1px solid #F1F5F9;">
-                                        <strong style="color: #1a1a1a;">Request Referrals</strong> — Send referral requests to multiple verified employees at any company. Your request is broadcast to all available referrers.
+                                        <strong style="color: #1a1a1a;">🛠 AI Career Tools</strong> — Resume Analyzer (ATS score + fix suggestions), Resume Builder (10 pro templates, AI-written content), LinkedIn Optimizer (audit & rewrite your profile with AI), Interview Prep, Salary Spy, Offer Coach & more.
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 10px 0; color: #4a4a4a; font-size: 14px; line-height: 1.6; border-bottom: 1px solid #F1F5F9;">
-                                        <strong style="color: #1a1a1a;">Track Applications</strong> — Monitor your referral requests, see who accepted, and track your application status in real-time.
+                                        <strong style="color: #1a1a1a;">💼 125K+ Jobs</strong> — Browse & apply directly. Or tap "Ask Referral" on any job listing for an insider edge.
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 10px 0; color: #4a4a4a; font-size: 14px; line-height: 1.6;">
-                                        <strong style="color: #1a1a1a;">Connect with Referrers</strong> — Message referrers directly, share your resume, and get guidance on the application process.
+                                        <strong style="color: #1a1a1a;">💬 Message Referrers</strong> — Chat directly with referrers, share your resume, and get guidance on the application process.
                                     </td>
                                 </tr>
                             </table>
@@ -1008,15 +1008,15 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'You received this because you have unr
                             <table width="100%" cellpadding="0" cellspacing="0" style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; margin-bottom: 24px;">
                                 <tr>
                                     <td style="padding: 24px;">
-                                        <p style="margin: 0 0 12px 0; color: #92400E; font-size: 15px; font-weight: 600;">Are you currently employed?</p>
+                                        <p style="margin: 0 0 12px 0; color: #92400E; font-size: 15px; font-weight: 600;">💰 Already working?</p>
                                         <p style="margin: 0 0 12px 0; color: #A16207; font-size: 14px; line-height: 1.6;">
-                                            You can also become a referrer on RefOpen. Help job seekers get hired at your company and earn rewards for every successful referral.
+                                            Verify your company email → become a verified referrer. Earn cash for every referral you give + monthly milestone bonuses.
                                         </p>
                                         <table width="100%" cellpadding="0" cellspacing="0">
-                                            <tr><td style="padding: 4px 0; color: #92400E; font-size: 13px;">• Earn cash rewards for successful referrals</td></tr>
-                                            <tr><td style="padding: 4px 0; color: #92400E; font-size: 13px;">• Post jobs from your company</td></tr>
+                                            <tr><td style="padding: 4px 0; color: #92400E; font-size: 13px;">• Earn cash for every verified referral</td></tr>
+                                            <tr><td style="padding: 4px 0; color: #92400E; font-size: 13px;">• Monthly milestone bonuses</td></tr>
+                                            <tr><td style="padding: 4px 0; color: #92400E; font-size: 13px;">• Post jobs from your company for free</td></tr>
                                             <tr><td style="padding: 4px 0; color: #92400E; font-size: 13px;">• Get a verified employee badge</td></tr>
-                                            <tr><td style="padding: 4px 0; color: #92400E; font-size: 13px;">• Withdraw earnings to UPI or bank account</td></tr>
                                         </table>
                                         <p style="margin: 16px 0 0 0; color: #A16207; font-size: 13px;">
                                             <a href="{{appUrl}}/settings" style="color: #92400E; font-weight: 500; text-decoration: underline;">Verify your work email</a> to get started as a referrer.

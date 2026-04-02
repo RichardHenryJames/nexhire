@@ -36,16 +36,27 @@ async function getPlatformAdminUserId(): Promise<string | null> {
 }
 
 // Welcome message template for new users (Job Seekers only) - single concise message
-const getWelcomeMessage = (firstName: string): string => `Hey ${firstName}! 👋
-So glad you're here — welcome to **RefOpen!** 🎉
+const getWelcomeMessage = (firstName: string): string => `Hey ${firstName}! 👋 Welcome to RefOpen.
 
-🚀 **125K+ Jobs** — Browse & apply directly. Want an edge? Tap "Ask Referral" → your request reaches **ALL** verified employees at that company.
+Here's how to get the most out of it:
 
-🤔 **Not sure which company?** Check "Open to any company" — we'll match you with referrers across companies.
+🎯 **Get Referred to Top Companies**
+Tap "Ask Referral" — real verified employees at Google, Microsoft, Amazon & 100+ companies will refer you directly.
+• *Specific Company* — pick a company, get a referral from an employee there
+• *Open to Any* — one request reaches referrers across all companies
+Full refund if no one refers you.
 
-🛠️ **Career Tools** — Try our AI Resume Analyzer, Cover Letter AI, Interview Prep & more.
+🛠 **AI Career Tools**
+• *Resume Analyzer* — ATS score + fix suggestions
+• *Resume Builder* — 10 pro templates, AI-written content
+• *LinkedIn Optimizer* — audit & rewrite your profile with AI
+• *Interview Prep, Salary Spy, Offer Coach & more*
 
-💼 **Already working?** Verify your work email → earn cash for referrals + get priority.
+💼 **125K+ Jobs**
+Browse & apply directly. Or tap "Ask Referral" on any job for an insider edge.
+
+💰 **Already Working?**
+Verify your company email → become a verified referrer. Earn cash for every referral you give + monthly milestone bonuses.
 
 **Follow us:**
 ![LinkedIn](https://www.google.com/s2/favicons?domain=linkedin.com&sz=32) [LinkedIn](https://www.linkedin.com/company/refopen)
