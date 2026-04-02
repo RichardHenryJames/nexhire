@@ -34,8 +34,9 @@ const parseMessageContent = (content, isMine, colors) => {
   
   const result = [];
   
-  // Combined regex for bold (**text**), markdown images ![alt](url), and markdown links [text](url)
-  const combinedRegex = /(\*\*([^*]+)\*\*)|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  // Combined regex for bold (**text**), italic (*text*), markdown images ![alt](url), and markdown links [text](url)
+  // Order matters: bold (**) must come before italic (*) to avoid partial matches
+  const combinedRegex = /(\*\*([^*]+)\*\*)|((?<![*\w])\*([^*]+)\*(?![*\w]))|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   
   let lastIndex = 0;
   let match;
@@ -54,16 +55,23 @@ const parseMessageContent = (content, isMine, colors) => {
         </Text>
       );
     } else if (match[3]) {
+      // Italic text: *text*
+      result.push(
+        <Text key={`italic-${match.index}`} style={{ fontStyle: 'italic' }}>
+          {match[4]}
+        </Text>
+      );
+    } else if (match[5]) {
       // Markdown image: ![alt](url) - render as inline image
       result.push(
         <CachedImage
           key={`img-${match.index}`}
-          source={{ uri: match[5] }}
+          source={{ uri: match[7] }}
           style={{ width: 16, height: 16, marginRight: 4 }}
           resizeMode="contain"
         />
       );
-    } else if (match[6]) {
+    } else if (match[8]) {
       // Markdown link: [text](url)
       result.push(
         <Text
@@ -72,9 +80,9 @@ const parseMessageContent = (content, isMine, colors) => {
             color: isMine ? colors.indigoBg : colors.primary,
             textDecorationLine: 'underline',
           }}
-          onPress={() => Linking.openURL(match[8])}
+          onPress={() => Linking.openURL(match[10])}
         >
-          {match[7]}
+          {match[9]}
         </Text>
       );
     }
@@ -119,8 +127,8 @@ const parseMessageContentWeb = (content, isMine, colors) => {
   
   const result = [];
   
-  // Combined regex for bold (**text**), markdown images ![alt](url), and markdown links [text](url)
-  const combinedRegex = /(\*\*([^*]+)\*\*)|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  // Combined regex for bold (**text**), italic (*text*), markdown images ![alt](url), and markdown links [text](url)
+  const combinedRegex = /(\*\*([^*]+)\*\*)|((?<![*\w])\*([^*]+)\*(?![*\w]))|(!\[([^\]]*)\]\((https?:\/\/[^)]+)\))|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
   
   let lastIndex = 0;
   let match;
@@ -137,21 +145,26 @@ const parseMessageContentWeb = (content, isMine, colors) => {
         <strong key={`bold-${match.index}`}>{match[2]}</strong>
       );
     } else if (match[3]) {
+      // Italic text: *text*
+      result.push(
+        <em key={`italic-${match.index}`}>{match[4]}</em>
+      );
+    } else if (match[5]) {
       // Markdown image: ![alt](url) - render as inline image
       result.push(
         <img
           key={`img-${match.index}`}
-          src={match[5]}
-          alt={match[4] || ''}
+          src={match[7]}
+          alt={match[6] || ''}
           style={{ width: 16, height: 16, marginRight: 4, verticalAlign: 'middle' }}
         />
       );
-    } else if (match[6]) {
+    } else if (match[8]) {
       // Markdown link: [text](url)
       result.push(
         <a
           key={`link-${match.index}`}
-          href={match[8]}
+          href={match[10]}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -160,7 +173,7 @@ const parseMessageContentWeb = (content, isMine, colors) => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {match[7]}
+          {match[9]}
         </a>
       );
     }
