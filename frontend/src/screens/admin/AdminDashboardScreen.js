@@ -1659,11 +1659,35 @@ export default function AdminDashboardScreen() {
             {/* Expanded preview */}
             {emailPreview?.LogID === email.LogID && (
               <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
-                {email.DeliveredAt && <Text style={{ fontSize: 11, color: colors.success, marginBottom: 2 }}>Delivered: {new Date(email.DeliveredAt).toLocaleString()}</Text>}
-                {email.OpenedAt && <Text style={{ fontSize: 11, color: colors.accent, marginBottom: 2 }}>Opened: {new Date(email.OpenedAt).toLocaleString()}</Text>}
-                {email.BouncedAt && <Text style={{ fontSize: 11, color: colors.error, marginBottom: 2 }}>Bounced: {new Date(email.BouncedAt).toLocaleString()}</Text>}
-                {email.ErrorMessage && <Text style={{ fontSize: 11, color: colors.error, marginBottom: 2 }}>Error: {email.ErrorMessage}</Text>}
-                {email.UserID && <Text style={{ fontSize: 11, color: colors.textSecondary }}>UserID: {email.UserID}</Text>}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="mail-outline" size={12} color={colors.primary} />
+                    <Text style={{ fontSize: 11, color: colors.primary }}>{email.Status || 'sent'}</Text>
+                  </View>
+                  {email.DeliveredAt && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="checkmark-done-outline" size={12} color={colors.success} />
+                      <Text style={{ fontSize: 11, color: colors.success }}>Delivered {new Date(email.DeliveredAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
+                    </View>
+                  )}
+                  {email.OpenedAt && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="eye-outline" size={12} color={colors.accent} />
+                      <Text style={{ fontSize: 11, color: colors.accent }}>Opened {new Date(email.OpenedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
+                    </View>
+                  )}
+                  {email.BouncedAt && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="alert-circle-outline" size={12} color={colors.error} />
+                      <Text style={{ fontSize: 11, color: colors.error }}>Bounced {new Date(email.BouncedAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
+                    </View>
+                  )}
+                </View>
+                {email.ErrorMessage && <Text style={{ fontSize: 11, color: colors.error, marginBottom: 4 }}>Error: {email.ErrorMessage}</Text>}
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 2 }}>To: {email.ToEmail}</Text>
+                {email.UserName && <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 2 }}>User: {email.UserName}</Text>}
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 2 }}>Type: {email.EmailType}</Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>Subject: {email.Subject}</Text>
               </View>
             )}
           </TouchableOpacity>
