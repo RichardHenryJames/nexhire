@@ -66,6 +66,9 @@ export default function AdminDashboardScreen() {
   const [transactionsData, setTransactionsData] = useState(null);
   const [emailLogsData, setEmailLogsData] = useState(null);
   const [emailLogsPagination, setEmailLogsPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [emailCategorySummary, setEmailCategorySummary] = useState([]);
+  const [emailFilter, setEmailFilter] = useState(''); // '' = all, or EmailType string
+  const [emailPreview, setEmailPreview] = useState(null); // selected email for preview
   const [resumeAnalyzerData, setResumeAnalyzerData] = useState(null);
   const [resumeAnalyzerPagination, setResumeAnalyzerPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [resumeBuilderData, setResumeBuilderData] = useState(null);
@@ -243,13 +246,15 @@ export default function AdminDashboardScreen() {
   }, []);
 
   // Load email logs data on demand (paginated)
-  const loadEmailLogs = useCallback(async (page = 1) => {
+  const loadEmailLogs = useCallback(async (page = 1, typeFilter = emailFilter) => {
     try {
       setTabLoading(prev => ({ ...prev, emailLogs: true }));
-      const response = await refopenAPI.apiCall(`/management/dashboard/email-logs?page=${page}&pageSize=20`);
+      const filterParam = typeFilter ? `&type=${encodeURIComponent(typeFilter)}` : '';
+      const response = await refopenAPI.apiCall(`/management/dashboard/email-logs?page=${page}&pageSize=20${filterParam}`);
       if (response.success) {
         setEmailLogsData(response.data.emailLogs);
         setEmailLogsPagination(response.data.pagination);
+        if (response.data.categorySummary) setEmailCategorySummary(response.data.categorySummary);
         loadedTabs.current.emailLogs = true;
       }
     } catch (error) {
@@ -257,7 +262,7 @@ export default function AdminDashboardScreen() {
     } finally {
       setTabLoading(prev => ({ ...prev, emailLogs: false }));
     }
-  }, []);
+  }, [emailFilter]);
 
   // Load resume analyzer data on demand (paginated)
   const loadResumeAnalyzer = useCallback(async (page = 1) => {
@@ -1528,46 +1533,142 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  const EMAIL_TYPE_LABELS = {
+    welcome: { label: 'Welcome', icon: 'hand-right-outline', color: colors.primary },
+    daily_job_recommendations: { label: 'Daily Jobs', icon: 'briefcase-outline', color: colors.success },
+    referrer_open_requests: { label: 'Referrer Notifications', icon: 'people-outline', color: colors.accent },
+    onboarding_day3: { label: 'Onboarding Day 3', icon: 'rocket-outline', color: colors.warning },
+    onboarding_day7: { label: 'Onboarding Day 7', icon: 'rocket-outline', color: colors.warning },
+    weekly_digest: { label: 'Weekly Digest', icon: 'newspaper-outline', color: colors.indigo || colors.primary },
+    referral_completed: { label: 'Referral Completed', icon: 'checkmark-done-outline', color: colors.success },
+    referral_verified: { label: 'Referral Verified', icon: 'shield-checkmark-outline', color: colors.success },
+    referral_claimed: { label: 'Referral Claimed', icon: 'hand-left-outline', color: colors.primary },
+    expiring_request_nudge: { label: 'Expiring Nudge', icon: 'time-outline', color: colors.warning },
+    become_verified_referrer: { label: 'Become Referrer', icon: 'star-outline', color: colors.accent },
+    career_application_received: { label: 'Career Applications', icon: 'document-text-outline', color: colors.primary },
+    support_ticket_reply: { label: 'Support Reply', icon: 'chatbubble-outline', color: colors.textSecondary },
+    support_ticket_notification: { label: 'Support Ticket', icon: 'chatbubble-outline', color: colors.textSecondary },
+    payment_approved: { label: 'Payment Approved', icon: 'card-outline', color: colors.success },
+    manual_payment_notification: { label: 'Manual Payment', icon: 'cash-outline', color: colors.success },
+    password_reset: { label: 'Password Reset', icon: 'lock-closed-outline', color: colors.error },
+    unread_message_reminder: { label: 'Unread Message', icon: 'mail-unread-outline', color: colors.warning },
+    saved_job_expiring: { label: 'Saved Job Expiring', icon: 'bookmark-outline', color: colors.warning },
+    admin_message_to_user: { label: 'Admin → User', icon: 'send-outline', color: colors.primary },
+    user_message_to_admin: { label: 'User → Admin', icon: 'arrow-back-outline', color: colors.textSecondary },
+    general: { label: 'General', icon: 'mail-outline', color: colors.textSecondary },
+  };
+
+  const getEmailTypeInfo = (type) => EMAIL_TYPE_LABELS[type] || { label: type, icon: 'mail-outline', color: colors.textSecondary };
+
   const renderEmailLogsTab = () => {
     if (tabLoading.emailLogs && !emailLogsData) {
       return <TabLoadingSpinner />;
     }
+
+    const totalEmails = emailCategorySummary.reduce((sum, c) => sum + (c.Count || 0), 0);
+    const totalFailed = emailCategorySummary.reduce((sum, c) => sum + (c.Failed || 0), 0);
+
     return (
     <>
+      {/* Summary Stats */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+        <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>{totalEmails}</Text>
+          <Text style={{ fontSize: 11, color: colors.textSecondary }}>Total Sent</Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.success }}>{emailCategorySummary.length}</Text>
+          <Text style={{ fontSize: 11, color: colors.textSecondary }}>Email Types</Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: totalFailed > 0 ? colors.error : colors.success }}>{totalFailed}</Text>
+          <Text style={{ fontSize: 11, color: colors.textSecondary }}>Failed</Text>
+        </View>
+      </View>
+
+      {/* Category Filter Chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 6, paddingRight: 8 }}>
+        <TouchableOpacity
+          onPress={() => { setEmailFilter(''); loadEmailLogs(1, ''); }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: !emailFilter ? colors.primary : colors.surface, borderWidth: 1, borderColor: !emailFilter ? colors.primary : colors.border }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '600', color: !emailFilter ? '#fff' : colors.text }}>All ({totalEmails})</Text>
+        </TouchableOpacity>
+        {emailCategorySummary.map((cat) => {
+          const info = getEmailTypeInfo(cat.EmailType);
+          const isActive = emailFilter === cat.EmailType;
+          return (
+            <TouchableOpacity
+              key={cat.EmailType}
+              onPress={() => { setEmailFilter(cat.EmailType); loadEmailLogs(1, cat.EmailType); }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: isActive ? info.color : colors.surface, borderWidth: 1, borderColor: isActive ? info.color : colors.border }}
+            >
+              <Ionicons name={info.icon} size={13} color={isActive ? '#fff' : info.color} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: isActive ? '#fff' : colors.text }}>{info.label} ({cat.Count})</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Page info */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Email Logs</Text>
+        <Text style={styles.sectionTitle}>{emailFilter ? getEmailTypeInfo(emailFilter).label : 'All Emails'}</Text>
         <Text style={styles.sectionSubtitle}>
           Page {emailLogsPagination.page} of {emailLogsPagination.totalPages} ({emailLogsPagination.total} total)
         </Text>
       </View>
       
-      {(emailLogsData || []).map((email, index) => (
-        <View key={email.LogID || index} style={styles.emailLogCard}>
-          <View style={styles.emailLogHeader}>
-            <View style={[styles.emailStatusBadge, { backgroundColor: getEmailStatusColor(email.Status) + '20' }]}>
-              <Ionicons 
-                name={email.Status === 'bounced' || email.Status === 'failed' ? 'close-circle' : 'checkmark-circle'} 
-                size={14} 
-                color={getEmailStatusColor(email.Status)} 
-              />
-              <Text style={[styles.emailStatusText, { color: getEmailStatusColor(email.Status) }]}>
-                {email.Status || 'sent'}
+      {/* Email List */}
+      {(emailLogsData || []).map((email, index) => {
+        const typeInfo = getEmailTypeInfo(email.EmailType);
+        return (
+          <TouchableOpacity
+            key={email.LogID || index}
+            style={styles.emailLogCard}
+            activeOpacity={0.7}
+            onPress={() => setEmailPreview(emailPreview?.LogID === email.LogID ? null : email)}
+          >
+            <View style={styles.emailLogHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: typeInfo.color + '15', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name={typeInfo.icon} size={14} color={typeInfo.color} />
+                </View>
+                <Text style={[styles.emailType, { color: typeInfo.color }]}>{typeInfo.label}</Text>
+              </View>
+              <View style={[styles.emailStatusBadge, { backgroundColor: getEmailStatusColor(email.Status) + '20' }]}>
+                <Ionicons 
+                  name={email.Status === 'bounced' || email.Status === 'failed' ? 'close-circle' : 'checkmark-circle'} 
+                  size={12} 
+                  color={getEmailStatusColor(email.Status)} 
+                />
+                <Text style={[styles.emailStatusText, { color: getEmailStatusColor(email.Status), fontSize: 10 }]}>
+                  {email.Status || 'sent'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.emailSubject} numberOfLines={emailPreview?.LogID === email.LogID ? 5 : 1}>{email.Subject}</Text>
+            <View style={styles.emailRecipient}>
+              <Ionicons name="person-outline" size={13} color={colors.textSecondary} />
+              <Text style={styles.emailRecipientText} numberOfLines={1}>
+                {email.UserName ? `${email.UserName} — ` : ''}{email.ToEmail}
               </Text>
             </View>
-            <Text style={styles.emailType}>{email.EmailType}</Text>
-          </View>
-          <Text style={styles.emailSubject} numberOfLines={2}>{email.Subject}</Text>
-          <View style={styles.emailRecipient}>
-            <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
-            <Text style={styles.emailRecipientText}>
-              {email.UserName ? `${email.UserName} - ` : ''}{email.ToEmail}
+            <Text style={styles.emailDate}>
+              {new Date(email.SentAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
             </Text>
-          </View>
-          <Text style={styles.emailDate}>
-            {new Date(email.SentAt).toLocaleString()}
-          </Text>
-        </View>
-      ))}
+            {/* Expanded preview */}
+            {emailPreview?.LogID === email.LogID && (
+              <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
+                {email.DeliveredAt && <Text style={{ fontSize: 11, color: colors.success, marginBottom: 2 }}>Delivered: {new Date(email.DeliveredAt).toLocaleString()}</Text>}
+                {email.OpenedAt && <Text style={{ fontSize: 11, color: colors.accent, marginBottom: 2 }}>Opened: {new Date(email.OpenedAt).toLocaleString()}</Text>}
+                {email.BouncedAt && <Text style={{ fontSize: 11, color: colors.error, marginBottom: 2 }}>Bounced: {new Date(email.BouncedAt).toLocaleString()}</Text>}
+                {email.ErrorMessage && <Text style={{ fontSize: 11, color: colors.error, marginBottom: 2 }}>Error: {email.ErrorMessage}</Text>}
+                {email.UserID && <Text style={{ fontSize: 11, color: colors.textSecondary }}>UserID: {email.UserID}</Text>}
+              </View>
+            )}
+          </TouchableOpacity>
+        );
+      })}
 
       {/* Pagination Controls */}
       <View style={styles.paginationContainer}>

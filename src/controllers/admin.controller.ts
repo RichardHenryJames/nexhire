@@ -528,8 +528,13 @@ export const getAdminDashboardEmailLogs = withAuth(async (
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
     const offset = (page - 1) * pageSize;
+    const filterType = url.searchParams.get('type') || '';
 
-    const [emailLogs, totalCount] = await Promise.all([
+    // Build WHERE clause for type filter
+    const typeFilter = filterType ? `WHERE el.EmailType = @param2` : '';
+    const typeFilterCount = filterType ? `WHERE EmailType = @param0` : '';
+
+    const [emailLogs, totalCount, categorySummary] = await Promise.all([
       dbService.executeQuery(`
         SELECT 
           el.LogID, el.ToEmail, el.EmailType, el.Subject, el.Status,
@@ -537,11 +542,23 @@ export const getAdminDashboardEmailLogs = withAuth(async (
           u.FirstName + ' ' + u.LastName AS UserName, u.UserID
         FROM EmailLogs el
         LEFT JOIN Users u ON el.UserID = u.UserID
+        ${typeFilter}
         ORDER BY el.SentAt DESC
         OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY
-      `, [offset, pageSize]),
+      `, filterType ? [offset, pageSize, filterType] : [offset, pageSize]),
       dbService.executeQuery(`
-        SELECT COUNT(*) AS TotalCount FROM EmailLogs
+        SELECT COUNT(*) AS TotalCount FROM EmailLogs ${typeFilterCount}
+      `, filterType ? [filterType] : []),
+      dbService.executeQuery(`
+        SELECT 
+          EmailType,
+          COUNT(*) AS Count,
+          SUM(CASE WHEN Status = 'Sent' THEN 1 ELSE 0 END) AS Sent,
+          SUM(CASE WHEN Status = 'Failed' THEN 1 ELSE 0 END) AS Failed,
+          MAX(SentAt) AS LastSent
+        FROM EmailLogs
+        GROUP BY EmailType
+        ORDER BY MAX(SentAt) DESC
       `, [])
     ]);
 
@@ -552,6 +569,7 @@ export const getAdminDashboardEmailLogs = withAuth(async (
       status: 200,
       jsonBody: successResponse({
         emailLogs: emailLogs.recordset || [],
+        categorySummary: categorySummary.recordset || [],
         pagination: {
           page,
           pageSize,
@@ -559,7 +577,8 @@ export const getAdminDashboardEmailLogs = withAuth(async (
           totalPages,
           hasNext: page < totalPages,
           hasPrev: page > 1
-        }
+        },
+        activeFilter: filterType || null
       }, 'Email logs loaded')
     };
   } catch (error) {
