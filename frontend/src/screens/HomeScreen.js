@@ -558,7 +558,7 @@ const [dashboardData, setDashboardData] = useState(() => {
               <Ionicons name="mail-unread" size={20} color="#4F46E5" />
               <View style={styles.emailBannerTextWrap}>
                 <Text style={styles.emailBannerTitle}>Verify your email</Text>
-                <Text style={styles.emailBannerSubtitle}>Unlock all features — jobs, referrals & more</Text>
+                <Text style={styles.emailBannerSubtitle}>Unlock all features: jobs, referrals & more</Text>
               </View>
             </View>
             <View style={styles.emailBannerRight}>

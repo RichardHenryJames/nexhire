@@ -150,7 +150,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
           {/* Anonymity reminder */}
           <View style={s.anonBannerSmall}>
             <Ionicons name="eye-off" size={14} color="#10B981" />
-            <Text style={s.anonBannerSmallText}>You're reviewing anonymously — the candidate will never know who you are</Text>
+            <Text style={s.anonBannerSmallText}>You're reviewing anonymously. The candidate will never know who you are.</Text>
           </View>
 
           {/* Profile Card */}
@@ -158,7 +158,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
             <View style={s.profileHeader}>
               <View style={[s.aiScoreBadge, { backgroundColor: getScoreColor(selectedRequest.aiScore || 50) + '15' }]}>
                 <Text style={[s.aiScoreText, { color: getScoreColor(selectedRequest.aiScore || 50) }]}>
-                  AI: {selectedRequest.aiScore || '—'}
+                  AI: {selectedRequest.aiScore || '-'}
                 </Text>
               </View>
               <Text style={s.profileRole}>Targeting: {selectedRequest.targetRole}</Text>
@@ -197,7 +197,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
                     {selectedRequest.anonymizedProfile.recentRoles.map((r, i) => (
                       <View key={i} style={{ marginTop: i > 0 ? 6 : 4 }}>
                         <Text style={s.profileValue}>
-                          {r.title}{r.company ? ` at ${r.company}` : ''}{r.durationMonths ? ` (${r.durationMonths >= 12 ? Math.round(r.durationMonths / 12) + 'y' : r.durationMonths + 'mo'})` : ''}{r.industry ? ` — ${r.industry}` : ''}
+                          {r.title}{r.company ? ` at ${r.company}` : ''}{r.durationMonths ? ` (${r.durationMonths >= 12 ? Math.round(r.durationMonths / 12) + 'y' : r.durationMonths + 'mo'})` : ''}{r.industry ? ` · ${r.industry}` : ''}
                         </Text>
                         {r.highlights?.length > 0 && r.highlights.map((h, hi) => (
                           <Text key={hi} style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1, paddingLeft: 8 }}>• {h}</Text>
@@ -336,7 +336,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
           {/* Anonymity assurance */}
           <View style={s.anonBanner}>
             <Ionicons name="shield-checkmark" size={16} color="#10B981" />
-            <Text style={s.anonBannerText}>Your identity is completely hidden. Candidates only see "Reviewer 1", "Reviewer 2" etc. — never your name, company role, or any identifying info.</Text>
+            <Text style={s.anonBannerText}>Your identity is completely hidden. Candidates only see "Reviewer 1", "Reviewer 2" etc. They never see your name, role, or any identifying info.</Text>
           </View>
 
           {/* Tabs */}

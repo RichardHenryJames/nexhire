@@ -628,8 +628,8 @@ export default function BlindReviewScreen({ navigation }) {
             color={status === 'completed' ? '#10B981' : status === 'in_review' ? '#3B82F6' : '#F59E0B'}
           />
           <Text style={[s.statusBadgeText, { color: status === 'completed' ? '#10B981' : status === 'in_review' ? '#3B82F6' : '#F59E0B' }]}>
-            {status === 'completed' ? 'Review complete — see results below' :
-             status === 'in_review' ? 'Feedback received — compiling insights' :
+            {status === 'completed' ? 'Review complete. See results below.' :
+             status === 'in_review' ? 'Feedback received. Compiling insights...' :
              'Your review is being processed...'}
           </Text>
         </View>
@@ -701,7 +701,7 @@ export default function BlindReviewScreen({ navigation }) {
       {anonymizedProfile && (
         <View style={s.anonCard}>
           <Text style={s.anonTitle}>Your Anonymized Profile</Text>
-          <Text style={s.anonHint}>This is what reviewers see — your name, email & phone are removed</Text>
+          <Text style={s.anonHint}>This is what reviewers see. Your name, email and phone are removed.</Text>
           <View style={s.anonRow}>
             <Text style={s.anonLabel}>Experience</Text>
             <Text style={s.anonValue}>{anonymizedProfile.experienceYears} years</Text>
@@ -730,7 +730,7 @@ export default function BlindReviewScreen({ navigation }) {
               {anonymizedProfile.recentRoles.slice(0, 4).map((r, i) => (
                 <View key={i} style={{ marginTop: i > 0 ? 8 : 4 }}>
                   <Text style={s.anonValue}>
-                    {r.title}{r.company ? ` at ${r.company}` : ''}{r.durationMonths ? ` (${r.durationMonths >= 12 ? Math.round(r.durationMonths / 12) + 'y' : r.durationMonths + 'mo'})` : ''}{r.industry ? ` — ${r.industry}` : ''}
+                    {r.title}{r.company ? ` at ${r.company}` : ''}{r.durationMonths ? ` (${r.durationMonths >= 12 ? Math.round(r.durationMonths / 12) + 'y' : r.durationMonths + 'mo'})` : ''}{r.industry ? ` · ${r.industry}` : ''}
                   </Text>
                   {r.highlights?.length > 0 && r.highlights.map((h, hi) => (
                     <Text key={hi} style={s.anonHighlight}>• {h}</Text>
@@ -788,7 +788,7 @@ export default function BlindReviewScreen({ navigation }) {
               <Text style={s.humanStatLabel}>Would Refer</Text>
             </View>
             <View style={s.humanStatCard}>
-              <Text style={s.humanStatNum}>{finalFeedback.averageRating?.toFixed(1) || '—'}</Text>
+              <Text style={s.humanStatNum}>{finalFeedback.averageRating?.toFixed(1) || '-'}</Text>
               <Text style={s.humanStatLabel}>Avg Rating</Text>
             </View>
             <View style={s.humanStatCard}>
@@ -835,7 +835,7 @@ export default function BlindReviewScreen({ navigation }) {
         </View>
       )}
 
-      {/* Individual Reviewer Cards — shown whether or not AI aggregation has run */}
+      {/* Individual Reviewer Cards */}
       {responses.length > 0 && (
         <View style={s.humanSection}>
           {!finalFeedback && (
@@ -874,23 +874,38 @@ export default function BlindReviewScreen({ navigation }) {
         </View>
       )}
 
-      {/* Get Referred CTA - FOMO funnel */}
-      {(aiAnalysis?.score >= 50 || aiScore >= 50) && orgName && (
-        <TouchableOpacity
-          style={s.getReferredBtn}
-          onPress={() => navigation.navigate('AskReferral', { preSelectedOrg: selectedCompany })}
-          activeOpacity={0.85}
-        >
-          <View style={s.getReferredInner}>
-            <Ionicons name="rocket" size={20} color="#fff" />
-            <View style={{ flex: 1 }}>
-              <Text style={s.getReferredTitle}>Get Referred at {orgName}</Text>
-              <Text style={s.getReferredSub}>Your profile looks referrable — request a real referral now</Text>
+      {/* Get Referred CTA - human > AI logic */}
+      {(() => {
+        const humanYes = responses.some(r => r.wouldRefer);
+        const humanExists = responses.length > 0;
+        const allHumanNo = humanExists && !humanYes;
+        const score = aiAnalysis?.score || aiScore || 0;
+        const showCTA = orgName && (humanYes || (!humanExists && score >= 50)) && !allHumanNo;
+        if (!showCTA) return null;
+        const ctaTitle = humanYes
+          ? `An insider would refer you. Get referred at ${orgName}`
+          : score >= 70 ? `Strong candidate. Get referred at ${orgName}`
+          : `Decent fit. Try getting referred at ${orgName}`;
+        const ctaSub = humanYes
+          ? 'A real insider validated your profile. Take the next step.'
+          : 'Your profile shows potential. Request a referral now.';
+        return (
+          <TouchableOpacity
+            style={s.getReferredBtn}
+            onPress={() => navigation.navigate('AskReferral', { preSelectedOrg: selectedCompany })}
+            activeOpacity={0.85}
+          >
+            <View style={s.getReferredInner}>
+              <Ionicons name="rocket" size={20} color="#fff" />
+              <View style={{ flex: 1 }}>
+                <Text style={s.getReferredTitle}>{ctaTitle}</Text>
+                <Text style={s.getReferredSub}>{ctaSub}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#fff" />
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#fff" />
-          </View>
-        </TouchableOpacity>
-      )}
+          </TouchableOpacity>
+        );
+      })()}
 
       <TouchableOpacity style={s.resetBtn} onPress={handleReset} activeOpacity={0.7}>
         <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
