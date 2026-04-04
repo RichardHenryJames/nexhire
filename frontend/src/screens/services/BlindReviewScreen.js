@@ -425,9 +425,6 @@ export default function BlindReviewScreen({ navigation }) {
                             <Text style={s.orgName}>{org.name}</Text>
                             {org.industry ? <Text style={s.orgIndustry}>{org.industry}</Text> : null}
                           </View>
-                          {org.tier === 'Elite' && (
-                            <View style={s.tierBadge}><Text style={s.tierBadgeText}>F500</Text></View>
-                          )}
                         </TouchableOpacity>
                       ))
                     )}
