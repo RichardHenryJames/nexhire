@@ -837,7 +837,8 @@ export const getAdminDashboardRevenue = withAuth(async (
           COUNT(DISTINCT wt.WalletID) AS UniqueUsers,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Blind_Review%' THEN wt.Amount ELSE 0 END) AS BlindReviewRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%LinkedIn%' THEN wt.Amount ELSE 0 END) AS LinkedInRevenue,
-          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Resume%' THEN wt.Amount ELSE 0 END) AS ResumeRevenue,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source = 'Resume_Analysis' THEN wt.Amount ELSE 0 END) AS ResumeAnalyzerRevenue,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE 'Resume_Template%' THEN wt.Amount ELSE 0 END) AS ResumeBuilderRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Referral%' AND wt.Source NOT LIKE '%EARNINGS%' AND wt.Source NOT LIKE '%BONUS%' THEN wt.Amount ELSE 0 END) AS ReferralRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%AI_Job%' THEN wt.Amount ELSE 0 END) AS AIJobsRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Profile_View%' THEN wt.Amount ELSE 0 END) AS ProfileViewRevenue
@@ -866,7 +867,8 @@ export const getAdminDashboardRevenue = withAuth(async (
           byService: {
             blindReview: s.BlindReviewRevenue || 0,
             linkedin: s.LinkedInRevenue || 0,
-            resume: s.ResumeRevenue || 0,
+            resumeAnalyzer: s.ResumeAnalyzerRevenue || 0,
+            resumeBuilder: s.ResumeBuilderRevenue || 0,
             referral: s.ReferralRevenue || 0,
             aiJobs: s.AIJobsRevenue || 0,
             profileView: s.ProfileViewRevenue || 0,

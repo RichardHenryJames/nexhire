@@ -2769,7 +2769,8 @@ export default function AdminDashboardScreen() {
             { name: 'Referrals', value: byService.referral, color: colors.accent || '#8B5CF6' },
             { name: 'AI Job Recommendations', value: byService.aiJobs, color: colors.warning || '#F59E0B' },
             { name: 'Blind Review', value: byService.blindReview, color: colors.success },
-            { name: 'Resume Tools', value: byService.resume, color: colors.primary },
+            { name: 'Resume Analyzer', value: byService.resumeAnalyzer, color: colors.primary },
+            { name: 'Resume Builder', value: byService.resumeBuilder, color: colors.secondary || '#64748B' },
             { name: 'LinkedIn Optimizer', value: byService.linkedin, color: colors.info || '#0A66C2' },
             { name: 'Profile Views', value: byService.profileView, color: colors.rose || '#F43F5E' },
           ].map((s, i) => (
