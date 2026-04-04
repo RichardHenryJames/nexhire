@@ -599,6 +599,7 @@ export default function BlindReviewScreen({ navigation }) {
   const anonymizedProfile = data?.anonymizedProfile || data?.data?.anonymizedProfile;
   const aiAnalysis = data?.aiAnalysis || data?.data?.aiAnalysis || aiScore;
   const finalFeedback = data?.finalFeedback || data?.data?.finalFeedback;
+  const responses = data?.responses || data?.data?.responses || [];
   const responseCount = data?.responseCount ?? data?.data?.responseCount ?? 0;
   const status = data?.status || data?.data?.status || 'pending';
   const hasReferrers = result?.hasReferrers;
@@ -812,6 +813,45 @@ export default function BlindReviewScreen({ navigation }) {
         </View>
       )}
 
+      {/* Individual Reviewer Cards — shown whether or not AI aggregation has run */}
+      {responses.length > 0 && (
+        <View style={s.humanSection}>
+          {!finalFeedback && (
+            <View style={s.humanHeader}>
+              <Ionicons name="people" size={20} color={colors.primary} />
+              <Text style={s.humanTitle}>Insider Feedback</Text>
+            </View>
+          )}
+          {responses.map((rev, idx) => (
+            <View key={idx} style={s.reviewerCard}>
+              <View style={s.reviewerHeader}>
+                <View style={s.reviewerAvatar}>
+                  <Ionicons name="person" size={16} color={colors.primary} />
+                </View>
+                <Text style={s.reviewerLabel}>Reviewer {idx + 1}</Text>
+                <View style={[s.referBadge, { backgroundColor: rev.wouldRefer ? '#10B98115' : '#EF444415' }]}>
+                  <Ionicons name={rev.wouldRefer ? 'thumbs-up' : 'thumbs-down'} size={12} color={rev.wouldRefer ? '#10B981' : '#EF4444'} />
+                  <Text style={[s.referBadgeText, { color: rev.wouldRefer ? '#10B981' : '#EF4444' }]}>
+                    {rev.wouldRefer ? 'Would refer' : 'Would not refer'}
+                  </Text>
+                </View>
+              </View>
+              <View style={s.reviewerStars}>
+                {[1,2,3,4,5].map(n => (
+                  <Ionicons key={n} name={n <= rev.overallRating ? 'star' : 'star-outline'} size={16} color={n <= rev.overallRating ? '#F59E0B' : colors.border} />
+                ))}
+                {rev.profileFit > 0 && (
+                  <Text style={s.reviewerFit}>Fit: {rev.profileFit}/5</Text>
+                )}
+              </View>
+              {rev.strengths ? <Text style={s.reviewerFeedback}><Text style={{ fontWeight: '700', color: '#10B981' }}>Strengths:</Text> {rev.strengths}</Text> : null}
+              {rev.weaknesses ? <Text style={s.reviewerFeedback}><Text style={{ fontWeight: '700', color: '#F59E0B' }}>Improve:</Text> {rev.weaknesses}</Text> : null}
+              {rev.suggestions ? <Text style={s.reviewerFeedback}><Text style={{ fontWeight: '700', color: '#3B82F6' }}>Suggestion:</Text> {rev.suggestions}</Text> : null}
+            </View>
+          ))}
+        </View>
+      )}
+
       <TouchableOpacity style={s.resetBtn} onPress={handleReset} activeOpacity={0.7}>
         <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
         <Text style={s.resetBtnText}>Submit Another Review</Text>
@@ -975,6 +1015,17 @@ const makeStyles = (c, isDesktop) => ({
   humanStatCard: { flex: 1, padding: 12, backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.border, alignItems: 'center' },
   humanStatNum: { fontSize: 22, fontWeight: '800', color: c.text },
   humanStatLabel: { fontSize: 10, fontWeight: '600', color: c.textSecondary, marginTop: 2, textTransform: 'uppercase' },
+
+  // Individual reviewer cards
+  reviewerCard: { marginHorizontal: 16, marginBottom: 10, padding: 14, backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.border },
+  reviewerHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  reviewerAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.primary + '15', justifyContent: 'center', alignItems: 'center' },
+  reviewerLabel: { fontSize: 13, fontWeight: '700', color: c.text, flex: 1 },
+  referBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  referBadgeText: { fontSize: 11, fontWeight: '700' },
+  reviewerStars: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 8 },
+  reviewerFit: { fontSize: 11, color: c.textSecondary, marginLeft: 8 },
+  reviewerFeedback: { fontSize: 12, color: c.textSecondary, lineHeight: 17, marginBottom: 4 },
 
   historyWrap: { paddingHorizontal: 16, marginTop: 8 },
   historyCard: { padding: 14, backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.border, marginBottom: 10 },
