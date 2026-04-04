@@ -132,6 +132,7 @@ export default function BlindReviewScreen({ navigation }) {
 
   // Animations
   const stepAnim = useRef(new Animated.Value(0)).current;
+  const ctaPulseAnim = useRef(new Animated.Value(1)).current;
 
   // ── Load data on mount ───────────────────────────────────
   useEffect(() => {
@@ -218,6 +219,19 @@ export default function BlindReviewScreen({ navigation }) {
     Animated.timing(stepAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
     return () => clearInterval(interval);
   }, [analyzing]);
+
+  // ── CTA pulse animation (subtle attention grab) ───────────
+  useEffect(() => {
+    if (view !== 'results' || !getReferredCTA) return;
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ctaPulseAnim, { toValue: 0.7, duration: 1200, useNativeDriver: true }),
+        Animated.timing(ctaPulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [view, getReferredCTA]);
 
   // ── Submit ───────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
@@ -657,17 +671,32 @@ export default function BlindReviewScreen({ navigation }) {
       {getReferredCTA && (
         <TouchableOpacity
           style={s.getReferredBtn}
-          onPress={() => navigation.navigate('AskReferral', { preSelectedOrganization: selectedCompany })}
+          onPress={() => {
+            const org = selectedCompany || {
+              id: data?.organizationId || data?.data?.organizationId,
+              name: orgName,
+              logoURL: data?.organizationLogo || data?.data?.organizationLogo || null,
+              tier: 'Standard',
+            };
+            navigation.navigate('AskReferral', {
+              preSelectedOrganization: {
+                id: org.id,
+                name: org.name || orgName,
+                logoURL: org.logoURL || null,
+                tier: org.tier || 'Standard',
+              },
+            });
+          }}
           activeOpacity={0.85}
         >
-          <View style={s.getReferredInner}>
+          <Animated.View style={[s.getReferredInner, { opacity: ctaPulseAnim }]}>
             <Ionicons name="rocket" size={20} color="#fff" />
             <View style={{ flex: 1 }}>
               <Text style={s.getReferredTitle}>{getReferredCTA.ctaTitle}</Text>
               <Text style={s.getReferredSub}>{getReferredCTA.ctaSub}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#fff" />
-          </View>
+          </Animated.View>
         </TouchableOpacity>
       )}
 
@@ -1101,10 +1130,11 @@ const makeStyles = (c, isDesktop) => ({
   emptyHistoryText: { fontSize: 16, fontWeight: '700', color: c.text, marginTop: 12 },
   emptyHistorySub: { fontSize: 13, color: c.textSecondary, marginTop: 4 },
 
-  // Get Referred CTA\n  getReferredBtn: { marginHorizontal: 16, marginTop: 16, marginBottom: 8, borderRadius: 14, overflow: 'hidden', backgroundColor: '#10B981' },
-  getReferredInner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
-  getReferredTitle: { fontSize: 15, fontWeight: '800', color: '#fff' },
-  getReferredSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
+  // Get Referred CTA - prominent, animated
+  getReferredBtn: { marginHorizontal: 16, marginTop: 16, marginBottom: 12, borderRadius: 16, overflow: 'hidden', backgroundColor: '#10B981', shadowColor: '#10B981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  getReferredInner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 18, paddingHorizontal: 18 },
+  getReferredTitle: { fontSize: 15, fontWeight: '800', color: '#fff', lineHeight: 20 },
+  getReferredSub: { fontSize: 12, color: 'rgba(255,255,255,0.9)', marginTop: 2 },
 
   resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginHorizontal: 16, marginTop: 8, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: c.primary + '30', backgroundColor: c.primary + '06' },
   resetBtnText: { fontSize: 14, fontWeight: '600', color: c.primary },
