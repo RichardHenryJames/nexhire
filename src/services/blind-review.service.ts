@@ -581,20 +581,16 @@ ${rawText.substring(0, 8000)}
       [requestId, newCount, newStatus]
     );
 
-    // If we now have enough responses, aggregate feedback
-    if (newCount >= 3) {
-      try {
-        await this.aggregateFeedback(requestId);
-      } catch (err) {
-        console.error('Feedback aggregation failed (non-critical):', err);
-      }
+    // Aggregate feedback after EVERY response — submitter sees results live
+    try {
+      await this.aggregateFeedback(requestId);
+    } catch (err) {
+      console.error('Feedback aggregation failed (non-critical):', err);
     }
 
     return {
       success: true,
-      message: newCount >= 3 
-        ? 'Thank you! This review is now complete with enough feedback.' 
-        : `Thank you! Your review has been submitted. (${newCount}/3 reviews received)`,
+      message: 'Thank you for your honest feedback!',
     };
   }
 
@@ -627,7 +623,8 @@ ${rawText.substring(0, 8000)}
     }).join('\n\n');
 
     // AI: Synthesize feedback
-    const prompt = `You are a career advisor. Multiple company insiders reviewed an anonymous candidate profile.
+    const reviewerWord = reviews.length === 1 ? 'A company insider' : `${reviews.length} company insiders`;
+    const prompt = `You are a career advisor. ${reviewerWord} reviewed an anonymous candidate profile.
 Synthesize their feedback into a helpful, actionable summary for the candidate.
 Remove any personally identifying info the reviewers may have accidentally included.
 
@@ -676,17 +673,17 @@ Respond with JSON:
 
       await dbService.executeQuery(
         `UPDATE BlindReviewRequests 
-         SET FinalScore = @param1, FinalFeedback = @param2, Status = 'completed', UpdatedAt = GETUTCDATE()
+         SET FinalScore = @param1, FinalFeedback = @param2, UpdatedAt = GETUTCDATE()
          WHERE RequestID = @param0`,
         [requestId, finalScore, JSON.stringify(aggregated)]
       );
     } catch (err) {
       console.error('AI aggregation failed:', err);
-      // Still mark as completed with raw scores
+      // Still update with raw scores
       const finalScore = Math.round(avgRating * 20);
       await dbService.executeQuery(
         `UPDATE BlindReviewRequests 
-         SET FinalScore = @param1, Status = 'completed', UpdatedAt = GETUTCDATE()
+         SET FinalScore = @param1, UpdatedAt = GETUTCDATE()
          WHERE RequestID = @param0`,
         [requestId, finalScore]
       );
