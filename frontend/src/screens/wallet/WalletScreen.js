@@ -26,6 +26,7 @@ export default function WalletScreen({ navigation, route }) {
   
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [pendingSubmissions, setPendingSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
@@ -54,6 +55,15 @@ export default function WalletScreen({ navigation, route }) {
         setHasMore(transactionsResult.data.totalPages > 1);
         setPage(1);
       }
+
+      // Load pending manual payment submissions
+      try {
+        const subsResult = await refopenAPI.getMyManualPaymentSubmissions();
+        if (subsResult?.success) {
+          const pending = (subsResult.data || []).filter(s => s.Status === 'Pending');
+          setPendingSubmissions(pending);
+        }
+      } catch (e) { /* non-critical */ }
     } catch (error) {
       console.error('Error loading wallet data:', error);
       showToast('Failed to load wallet data', 'error');
@@ -237,6 +247,44 @@ export default function WalletScreen({ navigation, route }) {
           <Text style={{ color: colors.white, fontWeight: '600', fontSize: 12 }}>Earn Now</Text>
         </View>
       </TouchableOpacity>
+
+      {/* Pending Payment Submissions */}
+      {pendingSubmissions.length > 0 && (
+        <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 8 }}>⏳ Pending Submissions</Text>
+          {pendingSubmissions.map((sub, idx) => (
+            <View key={sub.SubmissionID || idx} style={{
+              backgroundColor: colors.warning + '08',
+              borderWidth: 1,
+              borderColor: colors.warning + '30',
+              borderRadius: 10,
+              padding: 12,
+              marginBottom: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>₹{sub.Amount}</Text>
+                  {sub.PackName && (
+                    <View style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 9, fontWeight: '600', color: colors.primary }}>{sub.PackName}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
+                  Ref: {sub.ReferenceNumber || 'N/A'} · {sub.SubmittedAt ? new Date(sub.SubmittedAt).toLocaleDateString() : ''}
+                </Text>
+              </View>
+              <View style={{ backgroundColor: colors.warning + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="time-outline" size={12} color={colors.warning} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: colors.warning }}>Pending</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Recent Transactions */}
       <View style={styles.transactionsContainer}>

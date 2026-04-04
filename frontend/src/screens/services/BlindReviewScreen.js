@@ -26,6 +26,7 @@ import {
   Platform,
   Animated,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -171,9 +172,10 @@ export default function BlindReviewScreen({ navigation }) {
 
     searchCompanyTimeout.current = setTimeout(async () => {
       try {
-        const res = await refopenAPI.apiCall(`/organizations/search?q=${encodeURIComponent(text.trim())}&limit=8`);
-        if (res?.success && res.data) {
-          setCompanyResults(res.data);
+        const res = await refopenAPI.getOrganizations(text.trim(), 8);
+        if (res?.success && Array.isArray(res.data)) {
+          // Filter out the 'My company is not listed' sentinel
+          setCompanyResults(res.data.filter(o => o.id !== 999999));
         } else {
           setCompanyResults([]);
         }
@@ -187,7 +189,7 @@ export default function BlindReviewScreen({ navigation }) {
 
   const selectCompany = useCallback((org) => {
     setSelectedCompany(org);
-    setCompanySearch(org.Name);
+    setCompanySearch(org.name);
     setShowCompanyDropdown(false);
     setCompanyResults([]);
   }, []);
@@ -249,7 +251,7 @@ export default function BlindReviewScreen({ navigation }) {
       const response = await refopenAPI.apiCall('/tools/blind-review/submit', {
         method: 'POST',
         body: JSON.stringify({
-          organizationId: selectedCompany.OrganizationID,
+          organizationId: selectedCompany.id,
           targetRole: targetRole.trim(),
           sourceType,
           resumeId: sourceType === 'resume' ? selectedResumeId : undefined,
@@ -411,15 +413,19 @@ export default function BlindReviewScreen({ navigation }) {
                       </View>
                     ) : (
                       companyResults.map(org => (
-                        <TouchableOpacity key={org.OrganizationID} style={s.dropdownItem} onPress={() => selectCompany(org)} activeOpacity={0.7}>
-                          <View style={s.orgLogo}>
-                            <Text style={s.orgLogoText}>{org.Name.charAt(0)}</Text>
-                          </View>
+                        <TouchableOpacity key={org.id} style={s.dropdownItem} onPress={() => selectCompany(org)} activeOpacity={0.7}>
+                          {org.logoURL ? (
+                            <Image source={{ uri: org.logoURL }} style={s.orgLogoImg} />
+                          ) : (
+                            <View style={s.orgLogo}>
+                              <Text style={s.orgLogoText}>{(org.name || '?').charAt(0)}</Text>
+                            </View>
+                          )}
                           <View style={{ flex: 1 }}>
-                            <Text style={s.orgName}>{org.Name}</Text>
-                            {org.Industry && <Text style={s.orgIndustry}>{org.Industry}</Text>}
+                            <Text style={s.orgName}>{org.name}</Text>
+                            {org.industry ? <Text style={s.orgIndustry}>{org.industry}</Text> : null}
                           </View>
-                          {org.Tier === 'Elite' && (
+                          {org.tier === 'Elite' && (
                             <View style={s.tierBadge}><Text style={s.tierBadgeText}>F500</Text></View>
                           )}
                         </TouchableOpacity>
@@ -885,6 +891,7 @@ const makeStyles = (c, isDesktop) => ({
   dropdownEmptyText: { fontSize: 13, color: c.textSecondary },
   dropdownItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.border },
   orgLogo: { width: 32, height: 32, borderRadius: 8, backgroundColor: c.primary + '15', justifyContent: 'center', alignItems: 'center' },
+  orgLogoImg: { width: 32, height: 32, borderRadius: 8 },
   orgLogoText: { fontSize: 14, fontWeight: '700', color: c.primary },
   orgName: { fontSize: 14, fontWeight: '600', color: c.text },
   orgIndustry: { fontSize: 11, color: c.textSecondary },
