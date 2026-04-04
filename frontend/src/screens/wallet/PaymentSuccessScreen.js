@@ -30,7 +30,12 @@ export default function PaymentSuccessScreen({ route, navigation }) {
     balanceAfter = 0, 
     transactionId = '',
     paymentId = '',
+    method = 'razorpay', // 'razorpay' or 'manual'
+    bonusAmount = 0,
+    totalCredit = 0,
   } = route.params || {};
+
+  const isManual = method === 'manual';
 
   // Hide header for this screen
   useEffect(() => {
@@ -80,24 +85,47 @@ export default function PaymentSuccessScreen({ route, navigation }) {
         </View>
 
         {/* Success Message */}
-        <Text style={styles.title}>Payment Successful!</Text>
-        <Text style={styles.subtitle}>Your wallet has been recharged</Text>
+        <Text style={styles.title}>{isManual ? 'Payment Submitted!' : 'Payment Successful!'}</Text>
+        <Text style={styles.subtitle}>{isManual ? 'We\'ll verify and credit your wallet shortly' : 'Your wallet has been recharged'}</Text>
 
         {/* Amount Card */}
         <View style={styles.amountCard}>
           <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>Amount Added</Text>
+            <Text style={styles.amountLabel}>{isManual ? 'Amount Paid' : 'Amount Added'}</Text>
             <Text style={styles.amountValue}>+ {formatCurrency(amount)}</Text>
           </View>
           
-          <View style={styles.divider} />
-          
-          <View style={styles.amountRow}>
-            <Text style={styles.amountLabel}>New Wallet Balance</Text>
-            <Text style={[styles.amountValue, { color: colors.success }]}>
-              {formatCurrency(balanceAfter)}
-            </Text>
-          </View>
+          {bonusAmount > 0 && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.amountRow}>
+                <Text style={styles.amountLabel}>Bonus</Text>
+                <Text style={[styles.amountValue, { color: colors.success }]}>+ {formatCurrency(bonusAmount)}</Text>
+              </View>
+            </>
+          )}
+
+          {!isManual && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.amountRow}>
+                <Text style={styles.amountLabel}>New Wallet Balance</Text>
+                <Text style={[styles.amountValue, { color: colors.success }]}>
+                  {formatCurrency(balanceAfter)}
+                </Text>
+              </View>
+            </>
+          )}
+
+          {isManual && totalCredit > 0 && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.amountRow}>
+                <Text style={styles.amountLabel}>Total Credit (after verification)</Text>
+                <Text style={[styles.amountValue, { color: colors.success }]}>{formatCurrency(totalCredit)}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Transaction Details */}
@@ -121,9 +149,11 @@ export default function PaymentSuccessScreen({ route, navigation }) {
 
         {/* Info Text */}
         <View style={styles.infoContainer}>
-          <Ionicons name="information-circle-outline" size={18} color={colors.textSecondary} />
+          <Ionicons name="information-circle-outline" size={18} color={isManual ? colors.warning : colors.textSecondary} />
           <Text style={styles.infoText}>
-            Your wallet balance is updated instantly. You can now use it for referral requests and other services.
+            {isManual 
+              ? 'Your payment is being verified. Wallet will be credited within 1 minute to 24 hours. You\'ll receive a notification once done.'
+              : 'Your wallet balance is updated instantly. You can now use it for referral requests and other services.'}
           </Text>
         </View>
 

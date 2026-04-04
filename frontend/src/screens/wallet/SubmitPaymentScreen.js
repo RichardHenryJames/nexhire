@@ -181,11 +181,16 @@ const SubmitPaymentScreen = ({ navigation }) => {
 
       const result = await refopenAPI.submitManualPayment(payload);
       if (result?.success) {
-        showToast('Payment submitted successfully! 🎉', 'success');
         setAmount(''); setReferenceNumber(''); setUserRemarks('');
         setPaymentDate(new Date()); setSelectedPack(null);
         setPromoCode(''); setPromoResult(null);
-        loadData(); // Reload submissions
+        // Navigate to thank-you / success screen for conversion tracking
+        navigation.navigate('PaymentSuccess', {
+          amount: parseFloat(payload.amount),
+          bonusAmount: getPackBonus() + getPromoBonus(),
+          totalCredit: getTotalCredit(),
+          method: 'manual',
+        });
       } else {
         showToast('Failed to submit. Please try again.', 'error');
       }
