@@ -718,12 +718,9 @@ export default function BlindReviewScreen({ navigation }) {
             <View style={s.anonRow}>
               <Text style={s.anonLabel}>Skills</Text>
               <View style={s.chipWrap}>
-                {anonymizedProfile.skills.slice(0, 8).map((sk, i) => (
+                {anonymizedProfile.skills.map((sk, i) => (
                   <View key={i} style={s.skillChip}><Text style={s.skillChipText}>{sk}</Text></View>
                 ))}
-                {anonymizedProfile.skills.length > 8 && (
-                  <View style={s.skillChip}><Text style={s.skillChipText}>+{anonymizedProfile.skills.length - 8}</Text></View>
-                )}
               </View>
             </View>
           )}
