@@ -821,8 +821,12 @@ export const getAdminDashboardRevenue = withAuth(async (
           COUNT(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT LIKE '%Withdraw%' THEN 1 END) AS ServiceCount,
           COUNT(CASE WHEN wt.Source LIKE '%Withdraw%' THEN 1 END) AS WithdrawalCount
         FROM WalletTransactions wt
+        INNER JOIN Wallets w ON wt.WalletID = w.WalletID
+        INNER JOIN Users u ON w.UserID = u.UserID
         WHERE wt.CreatedAt >= DATEADD(DAY, -@param0, GETUTCDATE())
           AND wt.Status = 'Completed'
+          AND (u.Phone IS NULL OR u.Phone <> '0000000000')
+          AND wt.Source NOT LIKE '%Admin_TopUp%'
         GROUP BY CAST(wt.CreatedAt AS DATE)
         ORDER BY Day DESC
       `, [days]),
@@ -837,8 +841,12 @@ export const getAdminDashboardRevenue = withAuth(async (
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Resume%' THEN wt.Amount ELSE 0 END) AS ResumeRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Referral%' THEN wt.Amount ELSE 0 END) AS ReferralRevenue
         FROM WalletTransactions wt
+        INNER JOIN Wallets w ON wt.WalletID = w.WalletID
+        INNER JOIN Users u ON w.UserID = u.UserID
         WHERE wt.CreatedAt >= DATEADD(DAY, -@param0, GETUTCDATE())
           AND wt.Status = 'Completed'
+          AND (u.Phone IS NULL OR u.Phone <> '0000000000')
+          AND wt.Source NOT LIKE '%Admin_TopUp%'
       `, [days])
     ]);
 
