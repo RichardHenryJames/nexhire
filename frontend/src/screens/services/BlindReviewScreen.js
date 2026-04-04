@@ -603,7 +603,25 @@ export default function BlindReviewScreen({ navigation }) {
   const responseCount = data?.responseCount ?? data?.data?.responseCount ?? 0;
   const status = data?.status || data?.data?.status || 'pending';
   const hasReferrers = result?.hasReferrers;
-  const orgName = data?.organizationName || data?.data?.organizationName || selectedCompany?.Name || '';
+  const orgName = data?.organizationName || data?.data?.organizationName || selectedCompany?.name || '';
+
+  // Compute Get Referred CTA (reused in two positions)
+  const getReferredCTA = (() => {
+    const humanYes = responses.some(r => r.wouldRefer);
+    const humanExists = responses.length > 0;
+    const allHumanNo = humanExists && !humanYes;
+    const aiReviewPositive = finalFeedback && (finalFeedback.wouldReferPercent >= 50);
+    const aiReviewNegative = finalFeedback && (finalFeedback.wouldReferPercent < 50) && finalFeedback.responseCount === 0;
+    const score = aiAnalysis?.score || aiScore || 0;
+    if (!orgName || allHumanNo || aiReviewNegative || (!humanYes && !aiReviewPositive && score < 50)) return null;
+    const ctaTitle = humanYes ? `An insider would refer you. Get referred at ${orgName}`
+      : aiReviewPositive ? `Your profile is referrable at ${orgName}`
+      : score >= 70 ? `Strong candidate. Get referred at ${orgName}`
+      : `Decent fit. Try getting referred at ${orgName}`;
+    const ctaSub = humanYes ? 'A real insider validated your profile. Take the next step.'
+      : 'Your profile shows potential. Request a referral now.';
+    return { ctaTitle, ctaSub };
+  })();
 
   const resultsPanel = data ? (
     <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -634,6 +652,24 @@ export default function BlindReviewScreen({ navigation }) {
           </Text>
         </View>
       </View>
+
+      {/* Get Referred CTA - prominent position */}
+      {getReferredCTA && (
+        <TouchableOpacity
+          style={s.getReferredBtn}
+          onPress={() => navigation.navigate('AskReferral', { preSelectedOrganization: selectedCompany })}
+          activeOpacity={0.85}
+        >
+          <View style={s.getReferredInner}>
+            <Ionicons name="rocket" size={20} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={s.getReferredTitle}>{getReferredCTA.ctaTitle}</Text>
+              <Text style={s.getReferredSub}>{getReferredCTA.ctaSub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* AI Strengths */}
       {aiAnalysis?.strengths?.length > 0 && (
@@ -873,57 +909,6 @@ export default function BlindReviewScreen({ navigation }) {
           ))}
         </View>
       )}
-
-      {/* Get Referred CTA - priority: human > AI review > AI score */}
-      {(() => {
-        const humanYes = responses.some(r => r.wouldRefer);
-        const humanExists = responses.length > 0;
-        const allHumanNo = humanExists && !humanYes;
-        const aiReviewPositive = finalFeedback && (finalFeedback.wouldReferPercent >= 50);
-        const aiReviewNegative = finalFeedback && (finalFeedback.wouldReferPercent < 50) && finalFeedback.responseCount === 0;
-        const score = aiAnalysis?.score || aiScore || 0;
-
-        // Priority: human yes > human no > AI review > initial AI score
-        if (!orgName) return null;
-        if (allHumanNo) return null;
-        
-        let ctaTitle, ctaSub;
-        
-        if (humanYes) {
-          ctaTitle = `An insider would refer you. Get referred at ${orgName}`;
-          ctaSub = 'A real insider validated your profile. Take the next step.';
-        } else if (aiReviewPositive) {
-          ctaTitle = `Your profile is referrable at ${orgName}`;
-          ctaSub = 'Based on detailed review of your profile. Request a referral now.';
-        } else if (aiReviewNegative) {
-          return null;
-        } else if (score >= 70) {
-          ctaTitle = `Strong candidate. Get referred at ${orgName}`;
-          ctaSub = 'Your profile shows potential. Request a referral now.';
-        } else if (score >= 50) {
-          ctaTitle = `Decent fit. Try getting referred at ${orgName}`;
-          ctaSub = 'Your profile shows potential. Request a referral now.';
-        } else {
-          return null;
-        }
-
-        return (
-          <TouchableOpacity
-            style={s.getReferredBtn}
-            onPress={() => navigation.navigate('AskReferral', { preSelectedOrg: selectedCompany })}
-            activeOpacity={0.85}
-          >
-            <View style={s.getReferredInner}>
-              <Ionicons name="rocket" size={20} color="#fff" />
-              <View style={{ flex: 1 }}>
-                <Text style={s.getReferredTitle}>{ctaTitle}</Text>
-                <Text style={s.getReferredSub}>{ctaSub}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#fff" />
-            </View>
-          </TouchableOpacity>
-        );
-      })()}
 
       <TouchableOpacity style={s.resetBtn} onPress={handleReset} activeOpacity={0.7}>
         <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
