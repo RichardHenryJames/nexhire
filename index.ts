@@ -188,7 +188,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, getAdminDashboardResumeBuilder, getAdminDashboardLinkedInOptimizer, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, getAdminDashboardResumeBuilder, getAdminDashboardLinkedInOptimizer, getAdminDashboardBlindReview, getAdminDashboardRevenue, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -1914,6 +1914,20 @@ app.http("admin-dashboard-linkedin-optimizer", {
   authLevel: "anonymous",
   route: "management/dashboard/linkedin-optimizer",
   handler: withErrorHandling(getAdminDashboardLinkedInOptimizer),
+});
+
+app.http("admin-dashboard-blind-review", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/blind-review",
+  handler: withErrorHandling(getAdminDashboardBlindReview),
+});
+
+app.http("admin-dashboard-revenue", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/revenue",
+  handler: withErrorHandling(getAdminDashboardRevenue),
 });
 
 // ========================================================================

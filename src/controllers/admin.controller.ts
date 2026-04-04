@@ -746,6 +746,132 @@ export const getAdminDashboardLinkedInOptimizer = withAuth(async (
 });
 
 /**
+ * GET /api/management/dashboard/blind-review - Blind Review usage data (paginated)
+ */
+export const getAdminDashboardBlindReview = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const { dbService } = await import('../services/database.service');
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get('page') || '1');
+    const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
+    const offset = (page - 1) * pageSize;
+
+    const [data, totalCount] = await Promise.all([
+      dbService.executeQuery(`
+        SELECT 
+          br.RequestID, br.TargetRole, br.SourceType, br.AIScore, br.FinalScore,
+          br.Status, br.ResponseCount, br.CreatedAt,
+          u.FirstName + ' ' + u.LastName AS UserName, u.Email AS UserEmail,
+          o.Name AS CompanyName
+        FROM BlindReviewRequests br
+        LEFT JOIN Users u ON br.UserID = u.UserID
+        LEFT JOIN Organizations o ON br.OrganizationID = o.OrganizationID
+        ORDER BY br.CreatedAt DESC
+        OFFSET @param0 ROWS FETCH NEXT @param1 ROWS ONLY
+      `, [offset, pageSize]),
+      dbService.executeQuery(`SELECT COUNT(*) AS TotalCount FROM BlindReviewRequests`, [])
+    ]);
+
+    const total = totalCount.recordset[0]?.TotalCount || 0;
+
+    return {
+      status: 200,
+      jsonBody: successResponse({
+        blindReview: data.recordset || [],
+        pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize), hasNext: page < Math.ceil(total / pageSize), hasPrev: page > 1 }
+      }, 'Blind review data loaded')
+    };
+  } catch (error) {
+    console.error('Error in getAdminDashboardBlindReview:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to load blind review data' } };
+  }
+});
+
+/**
+ * GET /api/management/dashboard/revenue - Day-wise revenue dashboard
+ */
+export const getAdminDashboardRevenue = withAuth(async (
+  req: HttpRequest,
+  context: InvocationContext,
+  user
+): Promise<HttpResponseInit> => {
+  try {
+    const adminCheck = verifyAdmin(user);
+    if (adminCheck) return adminCheck;
+
+    const { dbService } = await import('../services/database.service');
+    const url = new URL(req.url);
+    const days = parseInt(url.searchParams.get('days') || '30');
+
+    const [dailyData, summary] = await Promise.all([
+      dbService.executeQuery(`
+        SELECT 
+          CAST(wt.CreatedAt AS DATE) AS Day,
+          SUM(CASE WHEN wt.TransactionType = 'Credit' THEN wt.Amount ELSE 0 END) AS Deposits,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS ServiceRevenue,
+          SUM(CASE WHEN wt.Source LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS Withdrawals,
+          COUNT(CASE WHEN wt.TransactionType = 'Credit' THEN 1 END) AS DepositCount,
+          COUNT(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT LIKE '%Withdraw%' THEN 1 END) AS ServiceCount,
+          COUNT(CASE WHEN wt.Source LIKE '%Withdraw%' THEN 1 END) AS WithdrawalCount
+        FROM WalletTransactions wt
+        WHERE wt.CreatedAt >= DATEADD(DAY, -@param0, GETUTCDATE())
+          AND wt.Status = 'Completed'
+        GROUP BY CAST(wt.CreatedAt AS DATE)
+        ORDER BY Day DESC
+      `, [days]),
+      dbService.executeQuery(`
+        SELECT 
+          SUM(CASE WHEN wt.TransactionType = 'Credit' THEN wt.Amount ELSE 0 END) AS TotalDeposits,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS TotalServiceRevenue,
+          SUM(CASE WHEN wt.Source LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS TotalWithdrawals,
+          COUNT(DISTINCT wt.WalletID) AS UniqueUsers,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Blind_Review%' THEN wt.Amount ELSE 0 END) AS BlindReviewRevenue,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%LinkedIn%' THEN wt.Amount ELSE 0 END) AS LinkedInRevenue,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Resume%' THEN wt.Amount ELSE 0 END) AS ResumeRevenue,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Referral%' THEN wt.Amount ELSE 0 END) AS ReferralRevenue
+        FROM WalletTransactions wt
+        WHERE wt.CreatedAt >= DATEADD(DAY, -@param0, GETUTCDATE())
+          AND wt.Status = 'Completed'
+      `, [days])
+    ]);
+
+    const s = summary.recordset[0] || {};
+    const profit = (s.TotalDeposits || 0) - (s.TotalWithdrawals || 0);
+
+    return {
+      status: 200,
+      jsonBody: successResponse({
+        daily: dailyData.recordset || [],
+        summary: {
+          totalDeposits: s.TotalDeposits || 0,
+          totalServiceRevenue: s.TotalServiceRevenue || 0,
+          totalWithdrawals: s.TotalWithdrawals || 0,
+          netProfit: profit,
+          uniqueUsers: s.UniqueUsers || 0,
+          byService: {
+            blindReview: s.BlindReviewRevenue || 0,
+            linkedin: s.LinkedInRevenue || 0,
+            resume: s.ResumeRevenue || 0,
+            referral: s.ReferralRevenue || 0,
+          }
+        },
+        days,
+      }, 'Revenue data loaded')
+    };
+  } catch (error) {
+    console.error('Error in getAdminDashboardRevenue:', error);
+    return { status: 500, jsonBody: { success: false, error: 'Failed to load revenue data' } };
+  }
+});
+
+/**
  * DELETE /api/admin/users/:userId - Delete a user and all their data
  * Same logic as scripts/delete-users.js but as an API endpoint
  */

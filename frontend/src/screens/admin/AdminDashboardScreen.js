@@ -28,7 +28,7 @@ import { useCustomAlert } from '../../components/CustomAlert';
 const { width: screenWidth } = Dimensions.get('window');
 
 // Valid tab names for deep linking
-const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'companies', 'transactions', 'services', 'emailLogs', 'resumeAnalyzer', 'resumeBuilder', 'linkedinOptimizer'];
+const VALID_TABS = ['overview', 'users', 'activity', 'referrals', 'companies', 'transactions', 'services', 'emailLogs', 'resumeAnalyzer', 'resumeBuilder', 'linkedinOptimizer', 'blindReview', 'revenue'];
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation();
@@ -75,6 +75,10 @@ export default function AdminDashboardScreen() {
   const [resumeBuilderPagination, setResumeBuilderPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [linkedinOptimizerData, setLinkedinOptimizerData] = useState(null);
   const [linkedinOptimizerPagination, setLinkedinOptimizerPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [blindReviewData, setBlindReviewData] = useState(null);
+  const [blindReviewPagination, setBlindReviewPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
+  const [revenueData, setRevenueData] = useState(null);
+  const [revenueDays, setRevenueDays] = useState(30);
   
   // Activity tracking data
   const [activityData, setActivityData] = useState(null);
@@ -315,6 +319,40 @@ export default function AdminDashboardScreen() {
     }
   }, []);
 
+  // Load Blind Review data on demand (paginated)
+  const loadBlindReview = useCallback(async (page = 1) => {
+    try {
+      setTabLoading(prev => ({ ...prev, blindReview: true }));
+      const response = await refopenAPI.apiCall(`/management/dashboard/blind-review?page=${page}&pageSize=20`);
+      if (response.success) {
+        setBlindReviewData(response.data.blindReview);
+        setBlindReviewPagination(response.data.pagination);
+        loadedTabs.current.blindReview = true;
+      }
+    } catch (error) {
+      console.error('Error loading blind review data:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, blindReview: false }));
+    }
+  }, []);
+
+  // Load Revenue data on demand
+  const loadRevenue = useCallback(async (days) => {
+    const d = days || revenueDays;
+    try {
+      setTabLoading(prev => ({ ...prev, revenue: true }));
+      const response = await refopenAPI.apiCall(`/management/dashboard/revenue?days=${d}`);
+      if (response.success) {
+        setRevenueData(response.data);
+        loadedTabs.current.revenue = true;
+      }
+    } catch (error) {
+      console.error('Error loading revenue data:', error);
+    } finally {
+      setTabLoading(prev => ({ ...prev, revenue: false }));
+    }
+  }, [revenueDays]);
+
   // Load activity analytics data
   const loadActivity = useCallback(async (days = 30, force = false) => {
     if (loadedTabs.current.activity && !force) return;
@@ -476,6 +514,12 @@ export default function AdminDashboardScreen() {
       case 'linkedinOptimizer':
         loadLinkedinOptimizer();
         break;
+      case 'blindReview':
+        loadBlindReview();
+        break;
+      case 'revenue':
+        loadRevenue();
+        break;
       case 'activity':
         loadActivity();
         break;
@@ -530,8 +574,14 @@ export default function AdminDashboardScreen() {
       case 'linkedinOptimizer':
         loadLinkedinOptimizer(1);
         break;
+      case 'blindReview':
+        loadBlindReview(1);
+        break;
+      case 'revenue':
+        loadRevenue();
+        break;
     }
-  }, [activeTab, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadResumeBuilder, loadLinkedinOptimizer]);
+  }, [activeTab, loadOverview, loadUsers, loadReferrals, loadTransactions, loadEmailLogs, loadResumeAnalyzer, loadResumeBuilder, loadLinkedinOptimizer, loadBlindReview, loadRevenue]);
 
   if (!isAdmin) {
     return (
@@ -620,6 +670,8 @@ export default function AdminDashboardScreen() {
           { key: 'resumeAnalyzer', label: 'Resume', icon: 'analytics-outline' },
           { key: 'resumeBuilder', label: 'Builder', icon: 'create-outline' },
           { key: 'linkedinOptimizer', label: 'LinkedIn', icon: 'logo-linkedin' },
+          { key: 'blindReview', label: 'Blind Review', icon: 'eye-off-outline' },
+          { key: 'revenue', label: 'Revenue', icon: 'trending-up-outline' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -2591,6 +2643,160 @@ export default function AdminDashboardScreen() {
     );
   };
 
+  // Blind Review Tab
+  const renderBlindReviewTab = () => {
+    if (tabLoading.blindReview && !blindReviewData) return <TabLoadingSpinner />;
+    return (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Blind Review Requests</Text>
+          <Text style={styles.sectionSubtitle}>
+            Page {blindReviewPagination.page} of {blindReviewPagination.totalPages} ({blindReviewPagination.total} total)
+          </Text>
+        </View>
+        {(blindReviewData || []).map((item, index) => (
+          <View key={item.RequestID || index} style={styles.resumeAnalyzerCard}>
+            <View style={styles.resumeAnalyzerHeader}>
+              <View style={[styles.emailStatusBadge, { backgroundColor: item.Status === 'completed' ? '#10B98115' : item.Status === 'in_review' ? '#3B82F615' : '#F59E0B15' }]}>
+                <Ionicons name={item.Status === 'completed' ? 'checkmark-circle' : item.Status === 'in_review' ? 'hourglass' : 'time'} size={14} color={item.Status === 'completed' ? '#10B981' : item.Status === 'in_review' ? '#3B82F6' : '#F59E0B'} />
+                <Text style={[styles.emailStatusText, { color: item.Status === 'completed' ? '#10B981' : item.Status === 'in_review' ? '#3B82F6' : '#F59E0B' }]}>
+                  {item.Status}
+                </Text>
+              </View>
+              {item.AIScore != null && (
+                <View style={[styles.emailStatusBadge, { backgroundColor: item.AIScore >= 70 ? '#10B98115' : item.AIScore >= 50 ? '#F59E0B15' : '#EF444415' }]}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: item.AIScore >= 70 ? '#10B981' : item.AIScore >= 50 ? '#F59E0B' : '#EF4444' }}>
+                    AI: {item.AIScore}
+                  </Text>
+                </View>
+              )}
+              {item.ResponseCount > 0 && (
+                <View style={[styles.emailStatusBadge, { backgroundColor: colors.primaryBg }]}>
+                  <Text style={[styles.emailStatusText, { color: colors.primary }]}>{item.ResponseCount} reviews</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.resumeAnalyzerMeta}>
+              <Text style={styles.metaLabel}>Target</Text>
+              <Text style={styles.metaValue}>{item.TargetRole} at {item.CompanyName || 'Unknown'}</Text>
+            </View>
+            <View style={styles.resumeAnalyzerMeta}>
+              <Text style={styles.metaLabel}>User</Text>
+              <Text style={styles.metaValue}>{item.UserName || 'N/A'}</Text>
+            </View>
+            <View style={styles.resumeAnalyzerMeta}>
+              <Text style={styles.metaLabel}>Email</Text>
+              <Text style={[styles.metaValue, { color: colors.primary }]}>{item.UserEmail || 'N/A'}</Text>
+            </View>
+            <View style={styles.resumeAnalyzerMeta}>
+              <Text style={styles.metaLabel}>Source</Text>
+              <Text style={styles.metaValue}>{item.SourceType === 'resume' ? 'Resume' : 'Profile'}</Text>
+            </View>
+            <View style={styles.resumeAnalyzerMeta}>
+              <Text style={styles.metaLabel}>Date</Text>
+              <Text style={styles.metaValue}>{new Date(item.CreatedAt).toLocaleString()}</Text>
+            </View>
+          </View>
+        ))}
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity style={[styles.paginationButton, !blindReviewPagination.hasPrev && styles.paginationButtonDisabled]} onPress={() => blindReviewPagination.hasPrev && loadBlindReview(blindReviewPagination.page - 1)} disabled={!blindReviewPagination.hasPrev}>
+            <Ionicons name="chevron-back" size={20} color={blindReviewPagination.hasPrev ? colors.primary : colors.textSecondary} />
+            <Text style={[styles.paginationButtonText, !blindReviewPagination.hasPrev && styles.paginationButtonTextDisabled]}>Prev</Text>
+          </TouchableOpacity>
+          <Text style={styles.paginationInfo}>Page {blindReviewPagination.page} of {blindReviewPagination.totalPages}</Text>
+          <TouchableOpacity style={[styles.paginationButton, !blindReviewPagination.hasNext && styles.paginationButtonDisabled]} onPress={() => blindReviewPagination.hasNext && loadBlindReview(blindReviewPagination.page + 1)} disabled={!blindReviewPagination.hasNext}>
+            <Text style={[styles.paginationButtonText, !blindReviewPagination.hasNext && styles.paginationButtonTextDisabled]}>Next</Text>
+            <Ionicons name="chevron-forward" size={20} color={blindReviewPagination.hasNext ? colors.primary : colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
+  // Revenue Tab
+  const renderRevenueTab = () => {
+    if (tabLoading.revenue && !revenueData) return <TabLoadingSpinner />;
+    const summary = revenueData?.summary || {};
+    const daily = revenueData?.daily || [];
+    const byService = summary.byService || {};
+
+    return (
+      <>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Revenue Dashboard</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {[7, 30, 90].map(d => (
+              <TouchableOpacity key={d} onPress={() => { setRevenueDays(d); loadRevenue(d); }}
+                style={[styles.emailStatusBadge, { backgroundColor: revenueDays === d ? colors.primary : colors.surfaceSecondary }]}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: revenueDays === d ? '#fff' : colors.textSecondary }}>{d}d</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Summary Cards */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 16, marginBottom: 16 }}>
+          {[
+            { label: 'Deposits', value: summary.totalDeposits, color: '#10B981', icon: 'arrow-down-circle' },
+            { label: 'Service Revenue', value: summary.totalServiceRevenue, color: '#3B82F6', icon: 'card' },
+            { label: 'Withdrawals', value: summary.totalWithdrawals, color: '#EF4444', icon: 'arrow-up-circle' },
+            { label: 'Net Profit', value: summary.netProfit, color: summary.netProfit >= 0 ? '#10B981' : '#EF4444', icon: 'trending-up' },
+          ].map((card, i) => (
+            <View key={i} style={[styles.overviewCard, { flex: 1, minWidth: 140 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Ionicons name={card.icon} size={16} color={card.color} />
+                <Text style={[styles.cardLabel, { fontSize: 11 }]}>{card.label}</Text>
+              </View>
+              <Text style={[styles.cardValue, { color: card.color, fontSize: 18 }]}>
+                {'\u20B9'}{(card.value || 0).toLocaleString('en-IN')}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Revenue by Service */}
+        <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+          <Text style={[styles.sectionTitle, { fontSize: 14, marginBottom: 8 }]}>Revenue by Service</Text>
+          {[
+            { name: 'Referrals', value: byService.referral, color: '#8B5CF6' },
+            { name: 'Blind Review', value: byService.blindReview, color: '#10B981' },
+            { name: 'Resume Tools', value: byService.resume, color: '#3B82F6' },
+            { name: 'LinkedIn Optimizer', value: byService.linkedin, color: '#0A66C2' },
+          ].map((s, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.color, marginRight: 10 }} />
+              <Text style={[styles.metaLabel, { flex: 1 }]}>{s.name}</Text>
+              <Text style={[styles.metaValue, { fontWeight: '700', color: s.color }]}>{'\u20B9'}{(s.value || 0).toLocaleString('en-IN')}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Daily Breakdown */}
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { fontSize: 14 }]}>Daily Breakdown</Text>
+        </View>
+        {daily.map((day, i) => (
+          <View key={i} style={[styles.resumeAnalyzerCard, { paddingVertical: 10 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={[styles.metaValue, { fontWeight: '700' }]}>{new Date(day.Day).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
+              <Text style={[styles.metaValue, { fontWeight: '700', color: '#10B981' }]}>+{'\u20B9'}{(day.Deposits || 0).toLocaleString('en-IN')}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>{day.DepositCount || 0} deposits</Text>
+              <Text style={{ fontSize: 11, color: '#3B82F6' }}>{day.ServiceCount || 0} services ({'\u20B9'}{(day.ServiceRevenue || 0).toLocaleString('en-IN')})</Text>
+              {day.Withdrawals > 0 && <Text style={{ fontSize: 11, color: '#EF4444' }}>{day.WithdrawalCount} withdrawals (-{'\u20B9'}{day.Withdrawals.toLocaleString('en-IN')})</Text>}
+            </View>
+          </View>
+        ))}
+        {daily.length === 0 && (
+          <View style={{ alignItems: 'center', padding: 40 }}>
+            <Text style={{ color: colors.textSecondary }}>No transaction data for this period</Text>
+          </View>
+        )}
+      </>
+    );
+  };
+
   // Social Share Claims Tab - Review and approve social media posts
   const renderSocialShareTab = () => {
     if (tabLoading.socialShare && !socialShareData) {
@@ -3069,6 +3275,8 @@ export default function AdminDashboardScreen() {
           {activeTab === 'resumeAnalyzer' && renderResumeAnalyzerTab()}
           {activeTab === 'resumeBuilder' && renderResumeBuilderTab()}
           {activeTab === 'linkedinOptimizer' && renderLinkedinOptimizerTab()}
+          {activeTab === 'blindReview' && renderBlindReviewTab()}
+          {activeTab === 'revenue' && renderRevenueTab()}
         </ScrollView>
       </View>
     </View>
