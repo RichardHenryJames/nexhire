@@ -814,39 +814,37 @@ export const getAdminDashboardRevenue = withAuth(async (
       dbService.executeQuery(`
         SELECT 
           CAST(wt.CreatedAt AS DATE) AS Day,
-          SUM(CASE WHEN wt.TransactionType = 'Credit' THEN wt.Amount ELSE 0 END) AS Deposits,
-          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS ServiceRevenue,
-          SUM(CASE WHEN wt.Source LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS Withdrawals,
-          COUNT(CASE WHEN wt.TransactionType = 'Credit' THEN 1 END) AS DepositCount,
-          COUNT(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT LIKE '%Withdraw%' THEN 1 END) AS ServiceCount,
-          COUNT(CASE WHEN wt.Source LIKE '%Withdraw%' THEN 1 END) AS WithdrawalCount
+          SUM(CASE WHEN wt.TransactionType = 'Credit' AND wt.Source IN ('Manual_Payment', 'Razorpay') THEN wt.Amount ELSE 0 END) AS Deposits,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT IN ('WITHDRAWAL', 'CANCELLATION_FEE') THEN wt.Amount ELSE 0 END) AS ServiceRevenue,
+          SUM(CASE WHEN wt.Source = 'WITHDRAWAL' THEN wt.Amount ELSE 0 END) AS Withdrawals,
+          COUNT(CASE WHEN wt.TransactionType = 'Credit' AND wt.Source IN ('Manual_Payment', 'Razorpay') THEN 1 END) AS DepositCount,
+          COUNT(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT IN ('WITHDRAWAL', 'CANCELLATION_FEE') THEN 1 END) AS ServiceCount,
+          COUNT(CASE WHEN wt.Source = 'WITHDRAWAL' THEN 1 END) AS WithdrawalCount
         FROM WalletTransactions wt
         INNER JOIN Wallets w ON wt.WalletID = w.WalletID
         INNER JOIN Users u ON w.UserID = u.UserID
         WHERE wt.CreatedAt >= DATEADD(DAY, -@param0, GETUTCDATE())
           AND wt.Status = 'Completed'
           AND (u.Phone IS NULL OR u.Phone <> '0000000000')
-          AND wt.Source NOT LIKE '%Admin_TopUp%'
         GROUP BY CAST(wt.CreatedAt AS DATE)
         ORDER BY Day DESC
       `, [days]),
       dbService.executeQuery(`
         SELECT 
-          SUM(CASE WHEN wt.TransactionType = 'Credit' THEN wt.Amount ELSE 0 END) AS TotalDeposits,
-          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS TotalServiceRevenue,
-          SUM(CASE WHEN wt.Source LIKE '%Withdraw%' THEN wt.Amount ELSE 0 END) AS TotalWithdrawals,
+          SUM(CASE WHEN wt.TransactionType = 'Credit' AND wt.Source IN ('Manual_Payment', 'Razorpay') THEN wt.Amount ELSE 0 END) AS TotalDeposits,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source NOT IN ('WITHDRAWAL', 'CANCELLATION_FEE') THEN wt.Amount ELSE 0 END) AS TotalServiceRevenue,
+          SUM(CASE WHEN wt.Source = 'WITHDRAWAL' THEN wt.Amount ELSE 0 END) AS TotalWithdrawals,
           COUNT(DISTINCT wt.WalletID) AS UniqueUsers,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Blind_Review%' THEN wt.Amount ELSE 0 END) AS BlindReviewRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%LinkedIn%' THEN wt.Amount ELSE 0 END) AS LinkedInRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Resume%' THEN wt.Amount ELSE 0 END) AS ResumeRevenue,
-          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Referral%' THEN wt.Amount ELSE 0 END) AS ReferralRevenue
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Referral%' AND wt.Source NOT LIKE '%EARNINGS%' AND wt.Source NOT LIKE '%BONUS%' THEN wt.Amount ELSE 0 END) AS ReferralRevenue
         FROM WalletTransactions wt
         INNER JOIN Wallets w ON wt.WalletID = w.WalletID
         INNER JOIN Users u ON w.UserID = u.UserID
         WHERE wt.CreatedAt >= DATEADD(DAY, -@param0, GETUTCDATE())
           AND wt.Status = 'Completed'
           AND (u.Phone IS NULL OR u.Phone <> '0000000000')
-          AND wt.Source NOT LIKE '%Admin_TopUp%'
       `, [days])
     ]);
 

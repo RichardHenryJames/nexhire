@@ -2736,10 +2736,10 @@ export default function AdminDashboardScreen() {
         {/* Summary Cards */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingHorizontal: 16, marginBottom: 16 }}>
           {[
-            { label: 'Deposits', value: summary.totalDeposits, color: '#10B981', icon: 'arrow-down-circle' },
-            { label: 'Service Revenue', value: summary.totalServiceRevenue, color: '#3B82F6', icon: 'card' },
-            { label: 'Withdrawals', value: summary.totalWithdrawals, color: '#EF4444', icon: 'arrow-up-circle' },
-            { label: 'Net Profit', value: summary.netProfit, color: summary.netProfit >= 0 ? '#10B981' : '#EF4444', icon: 'trending-up' },
+            { label: 'Real Deposits', value: summary.totalDeposits, color: colors.success, icon: 'arrow-down-circle' },
+            { label: 'Service Revenue', value: summary.totalServiceRevenue, color: colors.primary, icon: 'card' },
+            { label: 'Withdrawals', value: summary.totalWithdrawals, color: colors.error, icon: 'arrow-up-circle' },
+            { label: 'Net Profit', value: summary.netProfit, color: summary.netProfit >= 0 ? colors.success : colors.error, icon: 'trending-up' },
           ].map((card, i) => (
             <View key={i} style={[styles.overviewCard, { flex: 1, minWidth: 140 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
@@ -2757,10 +2757,10 @@ export default function AdminDashboardScreen() {
         <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
           <Text style={[styles.sectionTitle, { fontSize: 14, marginBottom: 8 }]}>Revenue by Service</Text>
           {[
-            { name: 'Referrals', value: byService.referral, color: '#8B5CF6' },
-            { name: 'Blind Review', value: byService.blindReview, color: '#10B981' },
-            { name: 'Resume Tools', value: byService.resume, color: '#3B82F6' },
-            { name: 'LinkedIn Optimizer', value: byService.linkedin, color: '#0A66C2' },
+            { name: 'Referrals', value: byService.referral, color: colors.accent || '#8B5CF6' },
+            { name: 'Blind Review', value: byService.blindReview, color: colors.success },
+            { name: 'Resume Tools', value: byService.resume, color: colors.primary },
+            { name: 'LinkedIn Optimizer', value: byService.linkedin, color: colors.info || '#0A66C2' },
           ].map((s, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.color, marginRight: 10 }} />
@@ -2778,12 +2778,12 @@ export default function AdminDashboardScreen() {
           <View key={i} style={[styles.resumeAnalyzerCard, { paddingVertical: 10 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{new Date(day.Day).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: '#10B981' }}>+{'\u20B9'}{(day.Deposits || 0).toLocaleString('en-IN')}</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.success }}>+{'\u20B9'}{(day.Deposits || 0).toLocaleString('en-IN')}</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <Text style={{ fontSize: 11, color: colors.textSecondary }}>{day.DepositCount || 0} deposits</Text>
-              <Text style={{ fontSize: 11, color: '#3B82F6' }}>{day.ServiceCount || 0} services ({'\u20B9'}{(day.ServiceRevenue || 0).toLocaleString('en-IN')})</Text>
-              {day.Withdrawals > 0 && <Text style={{ fontSize: 11, color: '#EF4444' }}>{day.WithdrawalCount} withdrawals (-{'\u20B9'}{day.Withdrawals.toLocaleString('en-IN')})</Text>}
+              <Text style={{ fontSize: 11, color: colors.primary }}>{day.ServiceCount || 0} services ({'\u20B9'}{(day.ServiceRevenue || 0).toLocaleString('en-IN')})</Text>
+              {day.Withdrawals > 0 && <Text style={{ fontSize: 11, color: colors.error }}>{day.WithdrawalCount} withdrawals (-{'\u20B9'}{day.Withdrawals.toLocaleString('en-IN')})</Text>}
             </View>
           </View>
         ))}
