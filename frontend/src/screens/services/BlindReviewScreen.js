@@ -567,9 +567,7 @@ export default function BlindReviewScreen({ navigation }) {
                 ) : (
                   <>
                     <Ionicons name="shield-checkmark" size={18} color="#fff" />
-                    <Text style={s.ctaBtnText}>
-                      {isFreeUse ? 'Get Blind Review — Free' : `Get Blind Review — ₹${costPerUse}`}
-                    </Text>
+                    <Text style={s.ctaBtnText}>Get Blind Review</Text>
                   </>
                 )}
               </TouchableOpacity>

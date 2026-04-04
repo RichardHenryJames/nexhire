@@ -81,7 +81,7 @@ export default function SubmissionHistoryScreen({ navigation }) {
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Submitted:</Text>
-            <Text style={styles.detailValue}>{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</Text>
+            <Text style={styles.detailValue}>{item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</Text>
           </View>
           {item.adminRemarks && (
             <View style={styles.detailRow}>

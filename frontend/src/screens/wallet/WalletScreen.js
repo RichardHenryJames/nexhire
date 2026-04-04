@@ -300,7 +300,7 @@ export default function WalletScreen({ navigation, route }) {
                   )}
                 </View>
                 <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
-                  Ref: {sub.referenceNumber || 'N/A'} · {sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ''}
+                  Ref: {sub.referenceNumber || 'N/A'} · {sub.createdAt ? new Date(sub.createdAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
                 </Text>
               </View>
               <View style={{ backgroundColor: colors.warning + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>

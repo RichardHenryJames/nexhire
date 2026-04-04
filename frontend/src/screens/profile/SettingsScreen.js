@@ -122,6 +122,7 @@ export default function SettingsScreen({ navigation, route }) {
     institution: '',
     graduationYear: '',
     gpa: '',
+    educationCountry: '',
     primarySkills: [],
     secondarySkills: [],
     isOpenToWork: false,
@@ -217,6 +218,7 @@ export default function SettingsScreen({ navigation, route }) {
             institution: data.Institution || '',
             graduationYear: data.GraduationYear || '',
             gpa: data.GPA || '',
+            educationCountry: data.EducationCountry || '',
             primarySkills,
             secondarySkills,
             isOpenToWork: data.IsOpenToWork || false,
@@ -379,6 +381,7 @@ export default function SettingsScreen({ navigation, route }) {
         fieldOfStudy: jobSeekerProfile.fieldOfStudy,
         graduationYear: jobSeekerProfile.graduationYear,
         gpa: jobSeekerProfile.gpa,
+        educationCountry: jobSeekerProfile.educationCountry,
       });
       showToast('Education details updated', 'success');
       setActiveModal(null);
@@ -755,7 +758,8 @@ export default function SettingsScreen({ navigation, route }) {
                 highestEducation: jobSeekerProfile.highestEducation || '',
                 fieldOfStudy: jobSeekerProfile.fieldOfStudy || '',
                 graduationYear: jobSeekerProfile.graduationYear || '',
-                gpa: jobSeekerProfile.gpa || ''
+                gpa: jobSeekerProfile.gpa || '',
+                educationCountry: jobSeekerProfile.educationCountry || ''
               }}
               setProfile={(updatedEducation) => {
                 setJobSeekerProfile(prev => ({
@@ -764,7 +768,8 @@ export default function SettingsScreen({ navigation, route }) {
                   highestEducation: updatedEducation.highestEducation || '',
                   fieldOfStudy: updatedEducation.fieldOfStudy || '',
                   graduationYear: updatedEducation.graduationYear || '',
-                  gpa: updatedEducation.gpa || ''
+                  gpa: updatedEducation.gpa || '',
+                  educationCountry: updatedEducation.educationCountry || prev.educationCountry || ''
                 }));
               }}
             />
