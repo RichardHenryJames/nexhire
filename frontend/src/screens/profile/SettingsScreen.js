@@ -1067,7 +1067,7 @@ export default function SettingsScreen({ navigation, route }) {
             <TouchableOpacity 
               onPress={saveNotificationPreferences}
               disabled={savingNotifications}
-              style={styles.saveButton}
+              style={styles.notifSaveButton}
             >
               {savingNotifications ? (
                 <ActivityIndicator size="small" color={colors.primary} />
@@ -1949,7 +1949,7 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.gray500,
     marginTop: 2,
   },
-  saveButton: {
+  notifSaveButton: {
     width: 60,
     alignItems: 'flex-end',
     paddingRight: 8,

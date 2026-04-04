@@ -138,9 +138,10 @@ export default function BlindReviewScreen({ navigation }) {
     if (!isAuthenticated) return;
     (async () => {
       try {
-        const [balResult, resumeResult] = await Promise.all([
+        const [balResult, resumeResult, historyResult] = await Promise.all([
           refopenAPI.getWalletBalance(),
           refopenAPI.getMyResumes(),
+          refopenAPI.apiCall('/tools/blind-review/history'),
         ]);
         if (balResult?.success) setWalletBalance(balResult.data?.availableBalance ?? balResult.data?.balance ?? 0);
         if (resumeResult?.success && resumeResult.data) {
@@ -149,6 +150,10 @@ export default function BlindReviewScreen({ navigation }) {
             .sort((a, b) => new Date(b.CreatedAt) - new Date(a.CreatedAt));
           setResumes(sorted);
           if (sorted.length) setSelectedResumeId(sorted[0].ResumeID);
+        }
+        // Load usage count from history to determine free vs paid
+        if (historyResult?.success && Array.isArray(historyResult.data)) {
+          setUsageCount(historyResult.data.length);
         }
       } catch (e) { /* silent */ }
     })();
