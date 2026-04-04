@@ -290,7 +290,13 @@ export async function getBlindReviewPending(req: HttpRequest, context: Invocatio
     }
     const userId = user.userId || user.sub;
 
-    const data = await BlindReviewService.getPendingForReferrer(userId);
+    // Check if admin
+    const userTypeResult = await dbService.executeQuery(
+      'SELECT UserType FROM Users WHERE UserID = @param0', [userId]
+    );
+    const isAdmin = userTypeResult.recordset?.[0]?.UserType === 'Admin';
+
+    const data = await BlindReviewService.getPendingForReferrer(userId, isAdmin);
 
     return {
       status: 200,
@@ -353,7 +359,7 @@ export async function submitBlindReviewResponse(req: HttpRequest, context: Invoc
       weaknessesFeedback: weaknessesFeedback?.trim() || undefined,
       suggestions: suggestions?.trim() || undefined,
       profileFit: profileFit ? Number(profileFit) : undefined,
-    });
+    }, user.userType === 'Admin');
 
     return {
       status: 200,

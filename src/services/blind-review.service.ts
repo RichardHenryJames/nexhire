@@ -483,38 +483,45 @@ ${rawText.substring(0, 8000)}
   /**
    * Get pending blind reviews for a referrer (matched by their current company)
    */
-  static async getPendingForReferrer(userId: string): Promise<any[]> {
-    // Find referrer's current company
-    const referrerResult = await dbService.executeQuery(
-      `SELECT a.CurrentOrganizationID, a.ApplicantID
-       FROM Applicants a
-       WHERE a.UserID = @param0 AND a.CurrentOrganizationID IS NOT NULL`,
-      [userId]
-    );
+  static async getPendingForReferrer(userId: string, isAdmin: boolean = false): Promise<any[]> {
+    let orgId: number | null = null;
 
-    if (!referrerResult.recordset?.length || !referrerResult.recordset[0].CurrentOrganizationID) {
-      return []; // Referrer has no company set — can't match
+    if (!isAdmin) {
+      // Regular referrer: find their current company
+      const referrerResult = await dbService.executeQuery(
+        `SELECT a.CurrentOrganizationID, a.ApplicantID
+         FROM Applicants a
+         WHERE a.UserID = @param0 AND a.CurrentOrganizationID IS NOT NULL`,
+        [userId]
+      );
+
+      if (!referrerResult.recordset?.length || !referrerResult.recordset[0].CurrentOrganizationID) {
+        return []; // Referrer has no company set — can't match
+      }
+      orgId = referrerResult.recordset[0].CurrentOrganizationID;
     }
 
-    const orgId = referrerResult.recordset[0].CurrentOrganizationID;
+    // Admin sees all pending; referrer sees only their company
+    const orgFilter = isAdmin ? '' : 'AND br.OrganizationID = @param0';
+    const params = isAdmin ? [userId] : [orgId, userId];
+    const userParam = isAdmin ? '@param0' : '@param1';
 
-    // Get pending requests for this company that this referrer hasn't responded to yet
     const result = await dbService.executeQuery(
       `SELECT br.RequestID, br.TargetRole, br.AnonymizedProfile, br.AIScore,
               br.SourceType, br.CreatedAt, br.ExpiresAt, br.ResponseCount,
               o.Name AS OrganizationName, o.LogoURL AS OrganizationLogo
        FROM BlindReviewRequests br
        JOIN Organizations o ON br.OrganizationID = o.OrganizationID
-       WHERE br.OrganizationID = @param0
-         AND br.Status IN ('pending', 'in_review')
+       WHERE br.Status IN ('pending', 'in_review')
          AND br.ExpiresAt > GETUTCDATE()
-         AND br.UserID <> @param1
+         AND br.UserID <> ${userParam}
+         ${orgFilter}
          AND NOT EXISTS (
            SELECT 1 FROM BlindReviewResponses resp 
-           WHERE resp.RequestID = br.RequestID AND resp.ReviewerID = @param1
+           WHERE resp.RequestID = br.RequestID AND resp.ReviewerID = ${userParam}
          )
        ORDER BY br.CreatedAt DESC`,
-      [orgId, userId]
+      params
     );
 
     return result.recordset.map((r: any) => ({
@@ -544,7 +551,8 @@ ${rawText.substring(0, 8000)}
       weaknessesFeedback?: string;
       suggestions?: string;
       profileFit?: number;
-    }
+    },
+    isAdmin: boolean = false
   ): Promise<{ success: boolean; message: string }> {
     // Validate rating
     if (response.overallRating < 1 || response.overallRating > 5) {
@@ -570,14 +578,16 @@ ${rawText.substring(0, 8000)}
       throw new Error('You cannot review your own profile.');
     }
 
-    // Verify referrer works at the target company
-    const referrerOrg = await dbService.executeQuery(
-      `SELECT CurrentOrganizationID FROM Applicants WHERE UserID = @param0`,
-      [reviewerId]
-    );
+    // Verify referrer works at the target company (admin bypasses this)
+    if (!isAdmin) {
+      const referrerOrg = await dbService.executeQuery(
+        `SELECT CurrentOrganizationID FROM Applicants WHERE UserID = @param0`,
+        [reviewerId]
+      );
 
-    if (!referrerOrg.recordset?.length || referrerOrg.recordset[0].CurrentOrganizationID !== req.OrganizationID) {
-      throw new Error('You can only review profiles for your current company.');
+      if (!referrerOrg.recordset?.length || referrerOrg.recordset[0].CurrentOrganizationID !== req.OrganizationID) {
+        throw new Error('You can only review profiles for your current company.');
+      }
     }
 
     // Check for duplicate response
