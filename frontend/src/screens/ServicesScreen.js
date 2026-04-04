@@ -110,7 +110,7 @@ const getServices = (colors) => [
     description: 'Submit your profile anonymously — referrers from your target company rate it and tell you if they\'d refer you.',
     icon: 'people',
     gradient: [colors.accentDark, colors.accentLight],
-    ready: false,
+    ready: true,
     screen: 'BlindReview',
   },
   {
