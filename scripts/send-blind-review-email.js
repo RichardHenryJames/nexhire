@@ -145,6 +145,32 @@ Free to use for now. Limited time offer.
 Team RefOpen`;
 }
 
+async function sendOneEmail(emailClient, user, pool) {
+  const message = {
+    senderAddress: SENDER,
+    content: {
+      subject: 'Before you apply, find out if insiders would refer you',
+      html: buildHtml(user.FirstName),
+      plainText: buildPlainText(user.FirstName),
+    },
+    recipients: { to: [{ address: user.Email }] },
+  };
+
+  // Timeout: if beginSend hangs for 15s, skip this user
+  const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('TIMEOUT')), ms));
+  const poller = await Promise.race([emailClient.beginSend(message), timeout(15000)]);
+  const messageId = poller.getOperationState?.()?.id || null;
+
+  await pool.request()
+    .input('userId', sql.UniqueIdentifier, user.UserID)
+    .input('toEmail', sql.NVarChar, user.Email)
+    .input('subject', sql.NVarChar, 'Before you apply, find out if insiders would refer you')
+    .input('status', sql.NVarChar, 'sent')
+    .input('messageId', sql.NVarChar, messageId)
+    .query(`INSERT INTO EmailLogs (UserID, ToEmail, EmailType, Subject, Status, ProviderMessageID)
+            VALUES (@userId, @toEmail, 'feature_launch_blind_review', @subject, @status, @messageId)`);
+}
+
 async function main() {
   const emailClient = new EmailClient(ACS_CONN);
   const pool = await sql.connect(DB_CONFIG);
@@ -164,74 +190,30 @@ async function main() {
   `);
 
   const users = result.recordset;
-  console.log(`\n📧 Sending Blind Review launch email to ${users.length} users\n`);
+  console.log(`\n📧 Sending Blind Review launch email to ${users.length} users (sequential)\n`);
 
-  let sent = 0, failed = 0, errors = [];
+  let sent = 0, failed = 0;
 
-  for (let i = 0; i < users.length; i += BATCH_SIZE) {
-    const batch = users.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
-    const totalBatches = Math.ceil(users.length / BATCH_SIZE);
-
-    const results = await Promise.allSettled(
-      batch.map(async (user) => {
-        const message = {
-          senderAddress: SENDER,
-          content: {
-            subject: 'Before you apply, find out if insiders would refer you',
-            html: buildHtml(user.FirstName),
-            plainText: buildPlainText(user.FirstName),
-          },
-          recipients: {
-            to: [{ address: user.Email }],
-          },
-        };
-
-        const poller = await emailClient.beginSend(message);
-        const res = await poller.pollUntilDone();
-
-        // Log to EmailLogs
-        try {
-          await pool.request()
-            .input('userId', sql.UniqueIdentifier, user.UserID)
-            .input('toEmail', sql.NVarChar, user.Email)
-            .input('subject', sql.NVarChar, 'Before you apply, find out if insiders would refer you')
-            .input('status', sql.NVarChar, res.status === 'Succeeded' ? 'sent' : 'failed')
-            .input('messageId', sql.NVarChar, res.id || null)
-            .query(`
-              INSERT INTO EmailLogs (UserID, ToEmail, EmailType, Subject, Status, ProviderMessageID)
-              VALUES (@userId, @toEmail, 'feature_launch_blind_review', @subject, @status, @messageId)
-            `);
-        } catch { /* don't fail send if logging fails */ }
-
-        if (res.status !== 'Succeeded') throw new Error(`Status: ${res.status}`);
-        return user.Email;
-      })
-    );
-
-    for (const r of results) {
-      if (r.status === 'fulfilled') {
-        sent++;
-      } else {
-        failed++;
-        errors.push(r.reason?.message || 'Unknown');
-      }
+  for (let i = 0; i < users.length; i++) {
+    const user = users[i];
+    try {
+      await sendOneEmail(emailClient, user, pool);
+      sent++;
+    } catch (err) {
+      failed++;
+      console.log(`  ❌ Failed ${user.Email}: ${err.message}`);
     }
 
-    console.log(`  Batch ${batchNum}/${totalBatches}: ${batch.length} processed (${sent} sent, ${failed} failed so far)`);
-
-    // Rate limit delay
-    if (i + BATCH_SIZE < users.length) {
-      await new Promise(r => setTimeout(r, DELAY_BETWEEN_BATCHES_MS));
+    // Progress every 10
+    if ((i + 1) % 10 === 0 || i === users.length - 1) {
+      console.log(`  ${i + 1}/${users.length} done (${sent} sent, ${failed} failed)`);
     }
+
+    // Small delay between each send to avoid rate limits
+    await new Promise(r => setTimeout(r, 500));
   }
 
   console.log(`\n✅ Done! Sent: ${sent}, Failed: ${failed}`);
-  if (errors.length > 0) {
-    console.log(`\n❌ Errors (first 10):`);
-    errors.slice(0, 10).forEach(e => console.log(`  - ${e}`));
-  }
-
   await pool.close();
 }
 

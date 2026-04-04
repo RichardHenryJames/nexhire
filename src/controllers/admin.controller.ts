@@ -838,7 +838,9 @@ export const getAdminDashboardRevenue = withAuth(async (
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Blind_Review%' THEN wt.Amount ELSE 0 END) AS BlindReviewRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%LinkedIn%' THEN wt.Amount ELSE 0 END) AS LinkedInRevenue,
           SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Resume%' THEN wt.Amount ELSE 0 END) AS ResumeRevenue,
-          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Referral%' AND wt.Source NOT LIKE '%EARNINGS%' AND wt.Source NOT LIKE '%BONUS%' THEN wt.Amount ELSE 0 END) AS ReferralRevenue
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Referral%' AND wt.Source NOT LIKE '%EARNINGS%' AND wt.Source NOT LIKE '%BONUS%' THEN wt.Amount ELSE 0 END) AS ReferralRevenue,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%AI_Job%' THEN wt.Amount ELSE 0 END) AS AIJobsRevenue,
+          SUM(CASE WHEN wt.TransactionType = 'Debit' AND wt.Source LIKE '%Profile_View%' THEN wt.Amount ELSE 0 END) AS ProfileViewRevenue
         FROM WalletTransactions wt
         INNER JOIN Wallets w ON wt.WalletID = w.WalletID
         INNER JOIN Users u ON w.UserID = u.UserID
@@ -866,6 +868,8 @@ export const getAdminDashboardRevenue = withAuth(async (
             linkedin: s.LinkedInRevenue || 0,
             resume: s.ResumeRevenue || 0,
             referral: s.ReferralRevenue || 0,
+            aiJobs: s.AIJobsRevenue || 0,
+            profileView: s.ProfileViewRevenue || 0,
           }
         },
         days,

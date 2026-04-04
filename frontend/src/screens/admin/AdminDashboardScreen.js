@@ -79,6 +79,8 @@ export default function AdminDashboardScreen() {
   const [blindReviewPagination, setBlindReviewPagination] = useState({ page: 1, pageSize: 20, total: 0, totalPages: 0 });
   const [revenueData, setRevenueData] = useState(null);
   const [revenueDays, setRevenueDays] = useState(30);
+  const [selectedBar, setSelectedBar] = useState(null);
+  const [chartFilter, setChartFilter] = useState('all'); // 'all', 'deposits', 'withdrawals'
   
   // Activity tracking data
   const [activityData, setActivityData] = useState(null);
@@ -2723,11 +2725,18 @@ export default function AdminDashboardScreen() {
       <>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Revenue Dashboard</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {[7, 30, 90].map(d => (
-              <TouchableOpacity key={d} onPress={() => { setRevenueDays(d); loadRevenue(d); }}
-                style={[styles.emailStatusBadge, { backgroundColor: revenueDays === d ? colors.primary : colors.surfaceSecondary }]}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: revenueDays === d ? '#fff' : colors.textSecondary }}>{d}d</Text>
+          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+            {[
+              { label: '1d', days: 1 },
+              { label: '7d', days: 7 },
+              { label: '1m', days: 30 },
+              { label: '2m', days: 60 },
+              { label: '3m', days: 90 },
+              { label: 'All', days: 365 },
+            ].map(f => (
+              <TouchableOpacity key={f.days} onPress={() => { setRevenueDays(f.days); setSelectedBar(null); setChartFilter('all'); loadRevenue(f.days); }}
+                style={[styles.emailStatusBadge, { backgroundColor: revenueDays === f.days ? colors.primary : colors.surfaceSecondary }]}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: revenueDays === f.days ? '#fff' : colors.textSecondary }}>{f.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -2741,12 +2750,12 @@ export default function AdminDashboardScreen() {
             { label: 'Withdrawals', value: summary.totalWithdrawals, color: colors.error, icon: 'arrow-up-circle' },
             { label: 'Net Profit', value: summary.netProfit, color: summary.netProfit >= 0 ? colors.success : colors.error, icon: 'trending-up' },
           ].map((card, i) => (
-            <View key={i} style={[styles.overviewCard, { flex: 1, minWidth: 140 }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            <View key={i} style={{ flex: 1, minWidth: 140, backgroundColor: colors.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                 <Ionicons name={card.icon} size={16} color={card.color} />
-                <Text style={[styles.cardLabel, { fontSize: 11 }]}>{card.label}</Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '500' }}>{card.label}</Text>
               </View>
-              <Text style={[styles.cardValue, { color: card.color, fontSize: 18 }]}>
+              <Text style={{ color: card.color, fontSize: 18, fontWeight: '800' }}>
                 {'\u20B9'}{(card.value || 0).toLocaleString('en-IN')}
               </Text>
             </View>
@@ -2758,9 +2767,11 @@ export default function AdminDashboardScreen() {
           <Text style={[styles.sectionTitle, { fontSize: 14, marginBottom: 8 }]}>Revenue by Service</Text>
           {[
             { name: 'Referrals', value: byService.referral, color: colors.accent || '#8B5CF6' },
+            { name: 'AI Job Recommendations', value: byService.aiJobs, color: colors.warning || '#F59E0B' },
             { name: 'Blind Review', value: byService.blindReview, color: colors.success },
             { name: 'Resume Tools', value: byService.resume, color: colors.primary },
             { name: 'LinkedIn Optimizer', value: byService.linkedin, color: colors.info || '#0A66C2' },
+            { name: 'Profile Views', value: byService.profileView, color: colors.rose || '#F43F5E' },
           ].map((s, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.color, marginRight: 10 }} />
@@ -2769,6 +2780,125 @@ export default function AdminDashboardScreen() {
             </View>
           ))}
         </View>
+
+        {/* Daily Bar Chart — Deposits (green) vs Withdrawals (red) */}
+        {daily.length > 0 && (() => {
+          const chartDays = daily.slice(0, 60).reverse();
+          const showDeposits = chartFilter === 'all' || chartFilter === 'deposits';
+          const showWithdrawals = chartFilter === 'all' || chartFilter === 'withdrawals';
+          const maxVal = Math.max(
+            ...chartDays.map(d => Math.max(
+              showDeposits ? (d.Deposits || 0) : 0,
+              showWithdrawals ? (d.Withdrawals || 0) : 0
+            )), 1
+          );
+          // Smart x-axis: show ~6-8 labels evenly spaced
+          const labelInterval = Math.max(1, Math.floor(chartDays.length / 7));
+
+          return (
+          <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Daily Cash Flow</Text>
+              {/* Clickable legend — toggles filter */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setChartFilter(f => f === 'deposits' ? 'all' : 'deposits')}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, backgroundColor: chartFilter === 'deposits' ? colors.success + '20' : 'transparent', borderWidth: chartFilter === 'deposits' ? 1 : 0, borderColor: colors.success + '40' }}
+                >
+                  <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: colors.success }} />
+                  <Text style={{ fontSize: 10, color: chartFilter === 'withdrawals' ? colors.textMuted + '60' : colors.textMuted, fontWeight: chartFilter === 'deposits' ? '700' : '400' }}>Deposits</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setChartFilter(f => f === 'withdrawals' ? 'all' : 'withdrawals')}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6, backgroundColor: chartFilter === 'withdrawals' ? colors.error + '20' : 'transparent', borderWidth: chartFilter === 'withdrawals' ? 1 : 0, borderColor: colors.error + '40' }}
+                >
+                  <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: colors.error }} />
+                  <Text style={{ fontSize: 10, color: chartFilter === 'deposits' ? colors.textMuted + '60' : colors.textMuted, fontWeight: chartFilter === 'withdrawals' ? '700' : '400' }}>Withdrawals</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+              {/* Tooltip */}
+              {selectedBar && (
+                <View style={{ backgroundColor: colors.text, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8, alignSelf: 'center' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.background, textAlign: 'center' }}>
+                    {new Date(selectedBar.day.Day).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </Text>
+                  {showDeposits && (
+                    <Text style={{ fontSize: 10, color: colors.success, fontWeight: '600', textAlign: 'center' }}>
+                      ↓ Deposits: {'\u20B9'}{(selectedBar.day.Deposits || 0).toLocaleString('en-IN')}
+                    </Text>
+                  )}
+                  {showWithdrawals && (
+                    <Text style={{ fontSize: 10, color: colors.error, fontWeight: '600', textAlign: 'center' }}>
+                      ↑ Withdrawals: {'\u20B9'}{(selectedBar.day.Withdrawals || 0).toLocaleString('en-IN')}
+                    </Text>
+                  )}
+                </View>
+              )}
+              {/* Bars */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1, height: 150 }}>
+                {chartDays.map((day, i) => {
+                  const depVal = day.Deposits || 0;
+                  const wdVal = day.Withdrawals || 0;
+                  const depH = showDeposits && depVal > 0 ? Math.max(3, (depVal / maxVal) * 130) : 0;
+                  const wdH = showWithdrawals && wdVal > 0 ? Math.max(3, (wdVal / maxVal) * 130) : 0;
+                  const isSelected = selectedBar?.index === i;
+                  const showBoth = showDeposits && showWithdrawals && wdH > 0;
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      activeOpacity={0.6}
+                      onPress={() => setSelectedBar(isSelected ? null : { index: i, day })}
+                      style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: showBoth ? 1 : 0, width: '100%', justifyContent: 'center' }}>
+                        {depH > 0 && (
+                          <View style={{
+                            width: showBoth ? '45%' : '80%',
+                            height: depH,
+                            backgroundColor: colors.success,
+                            borderRadius: 2,
+                            opacity: isSelected ? 1 : 0.75,
+                          }} />
+                        )}
+                        {wdH > 0 && (
+                          <View style={{
+                            width: showBoth ? '45%' : '80%',
+                            height: wdH,
+                            backgroundColor: colors.error,
+                            borderRadius: 2,
+                            opacity: isSelected ? 1 : 0.75,
+                          }} />
+                        )}
+                        {depH === 0 && wdH === 0 && (
+                          <View style={{ width: '80%', height: 2, backgroundColor: colors.border, borderRadius: 1 }} />
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {/* X-axis labels — smart interval */}
+              <View style={{ flexDirection: 'row', marginTop: 4, height: 16 }}>
+                {chartDays.map((day, i) => {
+                  const showLabel = i === 0 || i === chartDays.length - 1 || (i % labelInterval === 0);
+                  const isSelected = selectedBar?.index === i;
+                  return (
+                    <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                      {showLabel ? (
+                        <Text style={{ fontSize: 7, color: isSelected ? colors.text : colors.textMuted, fontWeight: isSelected ? '700' : '400', textAlign: 'center' }}>
+                          {new Date(day.Day).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).replace(' ', '\n')}
+                        </Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+          );
+        })()}
 
         {/* Daily Breakdown */}
         <View style={styles.sectionHeader}>
