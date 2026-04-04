@@ -60,7 +60,7 @@ export default function WalletScreen({ navigation, route }) {
       try {
         const subsResult = await refopenAPI.getMyManualPaymentSubmissions();
         if (subsResult?.success) {
-          const pending = (subsResult.data || []).filter(s => s.Status === 'Pending');
+          const pending = (subsResult.data || []).filter(s => s.status === 'Pending');
           setPendingSubmissions(pending);
         }
       } catch (e) { /* non-critical */ }
@@ -253,7 +253,7 @@ export default function WalletScreen({ navigation, route }) {
         <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 8 }}>⏳ Pending Submissions</Text>
           {pendingSubmissions.map((sub, idx) => (
-            <View key={sub.SubmissionID || idx} style={{
+            <View key={sub.submissionId || idx} style={{
               backgroundColor: colors.warning + '08',
               borderWidth: 1,
               borderColor: colors.warning + '30',
@@ -266,15 +266,15 @@ export default function WalletScreen({ navigation, route }) {
             }}>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>₹{sub.Amount}</Text>
-                  {sub.PackName && (
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>₹{sub.amount}</Text>
+                  {sub.packName && (
                     <View style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                      <Text style={{ fontSize: 9, fontWeight: '600', color: colors.primary }}>{sub.PackName}</Text>
+                      <Text style={{ fontSize: 9, fontWeight: '600', color: colors.primary }}>{sub.packName}</Text>
                     </View>
                   )}
                 </View>
                 <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
-                  Ref: {sub.ReferenceNumber || 'N/A'} · {sub.SubmittedAt ? new Date(sub.SubmittedAt).toLocaleDateString() : ''}
+                  Ref: {sub.referenceNumber || 'N/A'} · {sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : ''}
                 </Text>
               </View>
               <View style={{ backgroundColor: colors.warning + '15', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
