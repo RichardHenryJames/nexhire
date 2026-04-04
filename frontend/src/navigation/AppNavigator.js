@@ -68,6 +68,7 @@ import ManualRechargeScreen from "../screens/wallet/ManualRechargeScreen";
 import SubmitPaymentScreen from "../screens/wallet/SubmitPaymentScreen";
 import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
 import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
+import SubmissionHistoryScreen from "../screens/wallet/SubmissionHistoryScreen";
 import WalletHoldsScreen from "../screens/wallet/WalletHoldsScreen";
 import PromoCodesScreen from "../screens/wallet/PromoCodesScreen";
 import EarningsScreen from "../screens/earnings/EarningsScreen";
@@ -272,6 +273,7 @@ const linking = {
           SubmitPayment: "wallet/submit-payment",
           WithdrawalRequests: "wallet/withdrawals",
           PaymentSuccess: "wallet/payment-success",
+          SubmissionHistory: "wallet/submission-history",
           WalletHolds: "wallet/holds",
           PromoCodes: "promo-codes",
           
@@ -879,6 +881,11 @@ function MainStack() {
           title: "Payment Successful",
           gestureEnabled: false, // Prevent swipe back
         }}
+      />
+      <Stack.Screen
+        name="SubmissionHistory"
+        component={SubmissionHistoryScreen}
+        options={{ headerShown: false, title: "Credit History" }}
       />
       <Stack.Screen
         name="WalletHolds"

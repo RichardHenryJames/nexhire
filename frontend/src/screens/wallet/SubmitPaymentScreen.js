@@ -471,62 +471,31 @@ const SubmitPaymentScreen = ({ navigation }) => {
           )}
         </TouchableOpacity>
 
-        {/* Your Submissions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📄 Your Submissions</Text>
-          {submissions.length === 0 ? (
-            <Text style={{ textAlign: 'center', color: colors.gray400, paddingVertical: 20 }}>
-              No submissions yet. Submit your first payment above!
-            </Text>
-          ) : (
-            submissions.map((sub, index) => (
-              <View key={sub.submissionId || index} style={[styles.submissionCard, { borderLeftColor: getStatusColor(sub.status) }]}>
-                <View style={styles.submissionHeader}>
-                  <Text style={styles.submissionAmount}>₹{sub.amount}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(sub.status) + '20' }]}>
-                    <Ionicons name={getStatusIcon(sub.status)} size={14} color={getStatusColor(sub.status)} />
-                    <Text style={[styles.statusText, { color: getStatusColor(sub.status) }]}>{sub.status}</Text>
-                  </View>
-                </View>
-                <View style={styles.submissionDetails}>
-                  {sub.packName && (
-                    <View style={styles.submissionRow}>
-                      <Text style={styles.submissionLabel}>Pack:</Text>
-                      <Text style={[styles.submissionValue, { color: colors.primary }]}>{sub.packName}</Text>
-                    </View>
-                  )}
-                  {sub.promoCode && (
-                    <View style={styles.submissionRow}>
-                      <Text style={styles.submissionLabel}>Promo:</Text>
-                      <Text style={[styles.submissionValue, { color: colors.success }]}>{sub.promoCode}</Text>
-                    </View>
-                  )}
-                  <View style={styles.submissionRow}>
-                    <Text style={styles.submissionLabel}>Method:</Text>
-                    <Text style={styles.submissionValue}>{sub.paymentMethod}</Text>
-                  </View>
-                  <View style={styles.submissionRow}>
-                    <Text style={styles.submissionLabel}>Ref No:</Text>
-                    <Text style={styles.submissionValue}>{sub.referenceNumber}</Text>
-                  </View>
-                  <View style={styles.submissionRow}>
-                    <Text style={styles.submissionLabel}>Date:</Text>
-                    <Text style={styles.submissionValue}>{new Date(sub.paymentDate).toLocaleDateString('en-IN')}</Text>
-                  </View>
-                  <View style={styles.submissionRow}>
-                    <Text style={styles.submissionLabel}>Submitted:</Text>
-                    <Text style={styles.submissionValue}>{new Date(sub.createdAt).toLocaleDateString('en-IN')}</Text>
-                  </View>
-                </View>
-                {sub.status === 'Rejected' && sub.adminRemarks && (
-                  <View style={styles.adminRemarks}>
-                    <Text style={styles.adminRemarksText}>Reason: {sub.adminRemarks}</Text>
-                  </View>
-                )}
+        {/* View Credit History link */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('SubmissionHistory')}
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: 12,
+            padding: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>View Credit History</Text>
+            {submissions.length > 0 && (
+              <View style={{ backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.white }}>{submissions.length}</Text>
               </View>
-            ))
-          )}
-        </View>
+            )}
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
 
         {/* Need Help */}
         <TouchableOpacity

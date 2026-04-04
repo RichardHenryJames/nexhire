@@ -11,6 +11,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -81,8 +82,17 @@ export default function WalletScreen({ navigation, route }) {
   useEffect(() => {
     if (route.params?.refresh) {
       loadWalletData(false);
+      // Clear the param so it doesn't re-trigger
+      navigation.setParams({ refresh: undefined, timestamp: undefined });
     }
   }, [route.params?.refresh, route.params?.timestamp, loadWalletData]);
+
+  // Also reload when screen comes into focus (e.g., back from PaymentSuccess)
+  useFocusEffect(
+    useCallback(() => {
+      loadWalletData(false);
+    }, [loadWalletData])
+  );
 
   // Refresh handler
   const onRefresh = useCallback(() => {
@@ -248,28 +258,44 @@ export default function WalletScreen({ navigation, route }) {
         </View>
       </TouchableOpacity>
 
-      {/* Pending Payment Submissions */}
+      {/* Pending Credits */}
       {pendingSubmissions.length > 0 && (
         <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 8 }}>⏳ Pending Submissions</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>⏳ Pending Credits</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SubmissionHistory')} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 12, color: colors.primary, fontWeight: '600' }}>View all</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
           {pendingSubmissions.map((sub, idx) => (
-            <View key={sub.submissionId || idx} style={{
-              backgroundColor: colors.warning + '08',
-              borderWidth: 1,
-              borderColor: colors.warning + '30',
-              borderRadius: 10,
-              padding: 12,
-              marginBottom: 6,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}>
+            <TouchableOpacity
+              key={sub.submissionId || idx}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('SubmissionHistory')}
+              style={{
+                backgroundColor: colors.warning + '08',
+                borderWidth: 1,
+                borderColor: colors.warning + '30',
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 6,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>₹{sub.amount}</Text>
                   {sub.packName && (
                     <View style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                       <Text style={{ fontSize: 9, fontWeight: '600', color: colors.primary }}>{sub.packName}</Text>
+                    </View>
+                  )}
+                  {sub.promoCode && (
+                    <View style={{ backgroundColor: colors.success + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 9, fontWeight: '600', color: colors.success }}>{sub.promoCode}</Text>
                     </View>
                   )}
                 </View>
@@ -281,7 +307,7 @@ export default function WalletScreen({ navigation, route }) {
                 <Ionicons name="time-outline" size={12} color={colors.warning} />
                 <Text style={{ fontSize: 11, fontWeight: '600', color: colors.warning }}>Pending</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
