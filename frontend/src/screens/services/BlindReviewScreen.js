@@ -874,21 +874,39 @@ export default function BlindReviewScreen({ navigation }) {
         </View>
       )}
 
-      {/* Get Referred CTA - human > AI logic */}
+      {/* Get Referred CTA - priority: human > AI review > AI score */}
       {(() => {
         const humanYes = responses.some(r => r.wouldRefer);
         const humanExists = responses.length > 0;
         const allHumanNo = humanExists && !humanYes;
+        const aiReviewPositive = finalFeedback && (finalFeedback.wouldReferPercent >= 50);
+        const aiReviewNegative = finalFeedback && (finalFeedback.wouldReferPercent < 50) && finalFeedback.responseCount === 0;
         const score = aiAnalysis?.score || aiScore || 0;
-        const showCTA = orgName && (humanYes || (!humanExists && score >= 50)) && !allHumanNo;
-        if (!showCTA) return null;
-        const ctaTitle = humanYes
-          ? `An insider would refer you. Get referred at ${orgName}`
-          : score >= 70 ? `Strong candidate. Get referred at ${orgName}`
-          : `Decent fit. Try getting referred at ${orgName}`;
-        const ctaSub = humanYes
-          ? 'A real insider validated your profile. Take the next step.'
-          : 'Your profile shows potential. Request a referral now.';
+
+        // Priority: human yes > human no > AI review > initial AI score
+        if (!orgName) return null;
+        if (allHumanNo) return null;
+        
+        let ctaTitle, ctaSub;
+        
+        if (humanYes) {
+          ctaTitle = `An insider would refer you. Get referred at ${orgName}`;
+          ctaSub = 'A real insider validated your profile. Take the next step.';
+        } else if (aiReviewPositive) {
+          ctaTitle = `Your profile is referrable at ${orgName}`;
+          ctaSub = 'Based on detailed review of your profile. Request a referral now.';
+        } else if (aiReviewNegative) {
+          return null;
+        } else if (score >= 70) {
+          ctaTitle = `Strong candidate. Get referred at ${orgName}`;
+          ctaSub = 'Your profile shows potential. Request a referral now.';
+        } else if (score >= 50) {
+          ctaTitle = `Decent fit. Try getting referred at ${orgName}`;
+          ctaSub = 'Your profile shows potential. Request a referral now.';
+        } else {
+          return null;
+        }
+
         return (
           <TouchableOpacity
             style={s.getReferredBtn}
