@@ -11,7 +11,7 @@ import { AIJobRecommendationService } from '../services/ai-job-recommendation.se
 import { MessagingService } from '../services/messaging.service';
 
 // Supported access types
-type AccessType = 'ai_jobs' | 'profile_views' | 'resume_template' | 'resume_analysis' | 'linkedin_optimization';
+type AccessType = 'ai_jobs' | 'profile_views' | 'resume_template' | 'resume_analysis' | 'linkedin_optimization' | 'blind_review';
 
 interface AccessStatusResult {
   type: AccessType;
@@ -31,13 +31,13 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
     const url = new URL(req.url);
     const accessType = url.searchParams.get('type') as AccessType;
 
-    if (!accessType || !['ai_jobs', 'profile_views', 'resume_template', 'resume_analysis', 'linkedin_optimization'].includes(accessType)) {
+    if (!accessType || !['ai_jobs', 'profile_views', 'resume_template', 'resume_analysis', 'linkedin_optimization', 'blind_review'].includes(accessType)) {
       return {
         status: 400,
         jsonBody: {
           success: false,
           error: 'Invalid or missing access type',
-          message: 'Please provide type parameter: ai_jobs, profile_views, or resume_template'
+          message: 'Please provide type parameter: ai_jobs, profile_views, resume_template, resume_analysis, linkedin_optimization, or blind_review'
         }
       };
     }
@@ -191,6 +191,35 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
           totalUsed: liUsageCount,
           freeUses: liFreeUses,
           freeRemaining: Math.max(0, liFreeUses - liUsageCount),
+        } as any;
+        break;
+
+      case 'blind_review':
+        const brCost = (await PricingService.getSetting('BLIND_REVIEW_COST')) || 49;
+        const brFreeUses = (await PricingService.getSetting('BLIND_REVIEW_FREE_USES')) || 1;
+        let brUsageCount = 0;
+        try {
+          const brResult = await (await import('../services/database.service')).dbService.executeQuery(
+            `SELECT COUNT(*) AS cnt FROM BlindReviewUsage WHERE UserID = @param0`,
+            [user.userId]
+          );
+          brUsageCount = brResult.recordset?.[0]?.cnt || 0;
+        } catch (e) {
+          brUsageCount = 0;
+        }
+        const brIsFree = brUsageCount < brFreeUses;
+        result = {
+          type: 'blind_review',
+          hasActiveAccess: brIsFree,
+          requiresPayment: !brIsFree,
+          cost: brCost,
+          durationDays: 0,
+          message: brIsFree
+            ? `${brFreeUses - brUsageCount} free review remaining`
+            : `Each blind review costs ₹${brCost}`,
+          totalUsed: brUsageCount,
+          freeUses: brFreeUses,
+          freeRemaining: Math.max(0, brFreeUses - brUsageCount),
         } as any;
         break;
 
