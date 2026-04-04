@@ -191,7 +191,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
                     {selectedRequest.anonymizedProfile.recentRoles.map((r, i) => (
                       <View key={i} style={{ marginTop: i > 0 ? 6 : 4 }}>
                         <Text style={s.profileValue}>
-                          {r.title}{r.durationMonths ? ` (${Math.round(r.durationMonths / 12)}y)` : ''}{r.industry ? ` — ${r.industry}` : ''}
+                          {r.title}{r.company ? ` at ${r.company}` : ''}{r.durationMonths ? ` (${r.durationMonths >= 12 ? Math.round(r.durationMonths / 12) + 'y' : r.durationMonths + 'mo'})` : ''}{r.industry ? ` — ${r.industry}` : ''}
                         </Text>
                         {r.highlights?.length > 0 && r.highlights.map((h, hi) => (
                           <Text key={hi} style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1, paddingLeft: 8 }}>• {h}</Text>

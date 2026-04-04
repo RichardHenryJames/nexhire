@@ -39,8 +39,7 @@ export interface AnonymizedProfile {
   gpa?: string;
   skills: string[];
   recentRoles: Array<{
-    title: string;
-    durationMonths: number;
+    title: string;    company?: string;        // Actual company name (kept for referrability)    durationMonths: number;
     industry?: string;
     highlights?: string[];   // Key achievements/responsibilities (anonymized)
   }>;
@@ -263,13 +262,16 @@ export class BlindReviewService {
     return `You are an expert recruiter and career advisor. I need you to do TWO things with this profile:
 
 ## TASK 1: ANONYMIZE
-Strip ALL personally identifiable information from this profile:
-- Replace the person's name with nothing (don't include any name)
-- Replace ALL company names with generic labels: "Company A", "Company B", "Company C" etc (in order of recency)
-- Remove email addresses, phone numbers, URLs, LinkedIn profiles
-- Remove specific city names — keep only country or region (e.g., "South Asia" instead of "Bangalore, India")
-- Keep: job titles, skills, years of experience, education level, field of study, certifications
-- Keep: project descriptions but remove any names of people or specific internal product names
+Strip ONLY personal identifiers from this profile:
+- Remove the person's name completely (don't include any name)
+- Remove email addresses, phone numbers, URLs, LinkedIn/GitHub profiles
+- Remove specific home addresses
+- Remove names of managers or references
+- KEEP company names as-is (e.g. "IBM", "Google", "L&T") — these are professional credentials, not personal identity
+- KEEP college/university names as-is (e.g. "BMS College of Engineering") — these help assess the candidate
+- KEEP city names for work locations (e.g. "Bangalore", "Jakarta") — these provide context
+- KEEP: job titles, skills, years of experience, education level, field of study, GPA, certifications
+- KEEP: project descriptions, technologies, achievements
 
 ## TASK 2: SCORE
 Evaluate how likely a hiring insider at ${companyName} (${companyIndustry || 'Technology'} industry) would refer this person for a "${targetRole}" role.
@@ -289,26 +291,27 @@ ${rawText.substring(0, 8000)}
     "experienceYears": <number>,
     "educationLevel": "<highest degree>",
     "fieldOfStudy": "<field>",
-    "institution": "<anonymized institution description e.g. 'Top-tier engineering college' or 'State university' — NEVER the actual name>",
+    "institution": "<actual college/university name as written in the profile>",
     "gpa": "<GPA if mentioned, else null>",
     "skills": ["<skill1>", "<skill2>", ...],
     "recentRoles": [
       {
         "title": "<job title>",
-        "durationMonths": <number>,
+        "company": "<actual company name as written in the profile>",
+        "durationMonths": <calculate from dates: e.g. May 2021 to May 2024 = 36 months. MUST be > 0 if dates exist>,
         "industry": "<industry>",
         "highlights": ["<key achievement/responsibility 1>", "<key achievement 2>", "<key achievement 3>"]
       }
     ],
     "projects": [
       {
-        "name": "<anonymized project name e.g. 'Content Discovery Platform' — remove brand names>",
+        "name": "<project name — keep as-is but remove client company names like 'CITI Bank' if it reveals the candidate>",
         "description": "<1-2 sentence anonymized description of what was built>",
         "technologies": ["<tech1>", "<tech2>"]
       }
     ],
     "certifications": ["<cert1>", ...],
-    "summary": "<3-4 sentence anonymized professional summary covering experience, strengths, and domain expertise>"
+    "summary": "<3-4 sentence professional summary. Include company names and key technologies. Only remove the person's name.>"
   },
   "aiScore": {
     "score": <0-100>,
@@ -351,6 +354,7 @@ ${rawText.substring(0, 8000)}
           skills: Array.isArray(ap.skills) ? ap.skills : [],
           recentRoles: Array.isArray(ap.recentRoles) ? ap.recentRoles.map((r: any) => ({
             title: r.title || 'Unknown Role',
+            company: r.company || undefined,
             durationMonths: r.durationMonths || 0,
             industry: r.industry || '',
             highlights: Array.isArray(r.highlights) ? r.highlights : [],

@@ -543,8 +543,8 @@ export default function BlindReviewScreen({ navigation }) {
                 <Ionicons name="eye-off-outline" size={20} color={colors.primary} />
                 <Text style={s.previewTitle}>What the reviewer will see</Text>
                 <Text style={s.previewText}>
-                  {'• Your skills, experience years, education level\n• Job titles (generic: "Company A", "Company B")\n• Certifications and domain expertise\n\n'}
-                  <Text style={{ fontWeight: '700', color: colors.primary }}>NOT shared:</Text>{' Your name, email, phone, specific company names, or any personal details'}
+                  {'• Skills, technologies, certifications\n• Work experience with company names, durations, key achievements\n• Projects with descriptions and tech stack\n• Education with college name and GPA\n\n'}
+                  <Text style={{ fontWeight: '700', color: colors.primary }}>NOT shared:</Text>{' Your name, email, phone number, or LinkedIn profile'}
                 </Text>
               </View>
             </View>
@@ -701,7 +701,7 @@ export default function BlindReviewScreen({ navigation }) {
       {anonymizedProfile && (
         <View style={s.anonCard}>
           <Text style={s.anonTitle}>Your Anonymized Profile</Text>
-          <Text style={s.anonHint}>This is what reviewers see — no personal info</Text>
+          <Text style={s.anonHint}>This is what reviewers see — your name, email & phone are removed</Text>
           <View style={s.anonRow}>
             <Text style={s.anonLabel}>Experience</Text>
             <Text style={s.anonValue}>{anonymizedProfile.experienceYears} years</Text>
@@ -733,7 +733,7 @@ export default function BlindReviewScreen({ navigation }) {
               {anonymizedProfile.recentRoles.slice(0, 4).map((r, i) => (
                 <View key={i} style={{ marginTop: i > 0 ? 8 : 4 }}>
                   <Text style={s.anonValue}>
-                    {r.title}{r.durationMonths ? ` (${Math.round(r.durationMonths / 12)}y)` : ''}{r.industry ? ` — ${r.industry}` : ''}
+                    {r.title}{r.company ? ` at ${r.company}` : ''}{r.durationMonths ? ` (${r.durationMonths >= 12 ? Math.round(r.durationMonths / 12) + 'y' : r.durationMonths + 'mo'})` : ''}{r.industry ? ` — ${r.industry}` : ''}
                   </Text>
                   {r.highlights?.length > 0 && r.highlights.map((h, hi) => (
                     <Text key={hi} style={s.anonHighlight}>• {h}</Text>
