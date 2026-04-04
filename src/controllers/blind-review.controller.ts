@@ -378,3 +378,38 @@ export async function submitBlindReviewResponse(req: HttpRequest, context: Invoc
     };
   }
 }
+
+// ── Get referrer's own review history ──────────────────────────
+
+export async function getBlindReviewMyReviews(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  if (req.method === 'OPTIONS') {
+    return { status: 200, headers: corsHeaders };
+  }
+
+  try {
+    let user: any;
+    try { user = authenticate(req); } catch {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        jsonBody: { success: false, error: 'Authentication required.' },
+      };
+    }
+    const userId = user.userId || user.sub;
+
+    const reviews = await BlindReviewService.getMyReviews(userId);
+
+    return {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: { success: true, data: reviews, count: reviews.length },
+    };
+  } catch (error: any) {
+    context.error('Get my reviews error:', error.message);
+    return {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: { success: false, error: 'Something went wrong.' },
+    };
+  }
+}

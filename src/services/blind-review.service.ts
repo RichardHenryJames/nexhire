@@ -794,4 +794,39 @@ Respond with JSON:
     const count = result.recordset?.[0]?.cnt || 0;
     return { count, hasReferrers: count > 0 };
   }
+
+  /**
+   * Get reviews submitted BY this referrer (their review history)
+   */
+  static async getMyReviews(userId: string): Promise<any[]> {
+    const result = await dbService.executeQuery(
+      `SELECT resp.ResponseID, resp.WouldRefer, resp.OverallRating, resp.ProfileFit,
+              resp.StrengthsFeedback, resp.WeaknessesFeedback, resp.Suggestions,
+              resp.CreatedAt,
+              req.TargetRole, req.Status AS RequestStatus, req.AIScore,
+              o.Name AS OrganizationName, o.LogoURL AS OrganizationLogo
+       FROM BlindReviewResponses resp
+       JOIN BlindReviewRequests req ON resp.RequestID = req.RequestID
+       JOIN Organizations o ON req.OrganizationID = o.OrganizationID
+       WHERE resp.ReviewerID = @param0
+       ORDER BY resp.CreatedAt DESC`,
+      [userId]
+    );
+
+    return result.recordset.map((r: any) => ({
+      responseId: r.ResponseID,
+      wouldRefer: r.WouldRefer,
+      overallRating: r.OverallRating,
+      profileFit: r.ProfileFit,
+      strengths: r.StrengthsFeedback,
+      weaknesses: r.WeaknessesFeedback,
+      suggestions: r.Suggestions,
+      createdAt: r.CreatedAt,
+      targetRole: r.TargetRole,
+      requestStatus: r.RequestStatus,
+      aiScore: r.AIScore,
+      organizationName: r.OrganizationName,
+      organizationLogo: r.OrganizationLogo,
+    }));
+  }
 }

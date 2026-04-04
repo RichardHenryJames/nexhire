@@ -34,8 +34,11 @@ export default function BlindReviewInboxScreen({ navigation }) {
   const { isDesktop } = useResponsive();
   const { isAuthenticated } = useAuth();
 
+  const [tab, setTab] = useState('pending'); // 'pending' | 'history'
   const [pending, setPending] = useState([]);
+  const [myReviews, setMyReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
   // Review form
@@ -59,6 +62,18 @@ export default function BlindReviewInboxScreen({ navigation }) {
       }
     } catch { /* silent */ }
     setLoading(false);
+  }, []);
+
+  // Load referrer's own review history
+  const loadMyReviews = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await refopenAPI.apiCall('/tools/blind-review/my-reviews');
+      if (res?.success) {
+        setMyReviews(res.data || []);
+      }
+    } catch { /* silent */ }
+    setHistoryLoading(false);
   }, []);
 
   useEffect(() => {
@@ -287,12 +302,26 @@ export default function BlindReviewInboxScreen({ navigation }) {
         <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={s.inboxHeader}>
             <Ionicons name="people" size={24} color={colors.primary} />
-            <Text style={s.inboxTitle}>Profiles to Review</Text>
-            <Text style={s.inboxSub}>Anonymous candidates want feedback from insiders at your company</Text>
+            <Text style={s.inboxTitle}>Blind Review</Text>
+            <Text style={s.inboxSub}>Review anonymous candidate profiles at your company</Text>
           </View>
 
-          {loading ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 60 }} />
+          {/* Tabs */}
+          <View style={s.tabRow}>
+            <TouchableOpacity style={[s.tabBtn, tab === 'pending' && s.tabBtnActive]} onPress={() => setTab('pending')} activeOpacity={0.7}>
+              <Text style={[s.tabBtnText, tab === 'pending' && s.tabBtnTextActive]}>
+                Pending{pending.length > 0 ? ` (${pending.length})` : ''}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.tabBtn, tab === 'history' && s.tabBtnActive]} onPress={() => { setTab('history'); if (!myReviews.length) loadMyReviews(); }} activeOpacity={0.7}>
+              <Text style={[s.tabBtnText, tab === 'history' && s.tabBtnTextActive]}>My Reviews</Text>
+            </TouchableOpacity>
+          </View>
+
+          {tab === 'pending' ? (
+            <>
+              {loading ? (
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 60 }} />
           ) : pending.length === 0 ? (
             <View style={s.emptyWrap}>
               <Ionicons name="checkmark-done-outline" size={48} color={colors.border} />
@@ -316,7 +345,6 @@ export default function BlindReviewInboxScreen({ navigation }) {
                         <Text style={[s.pendingScoreText, { color: getScoreColor(item.aiScore) }]}>{item.aiScore}</Text>
                       </View>
                     )}
-                    <Text style={s.pendingReviews}>{item.responseCount}/3</Text>
                     <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
                   </View>
                 </View>
@@ -328,6 +356,69 @@ export default function BlindReviewInboxScreen({ navigation }) {
             <Ionicons name="refresh" size={16} color={colors.primary} />
             <Text style={s.refreshBtnText}>Refresh</Text>
           </TouchableOpacity>
+            </>
+          ) : (
+            /* ── My Reviews History Tab ── */
+            <>
+              {historyLoading ? (
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 60 }} />
+              ) : myReviews.length === 0 ? (
+                <View style={s.emptyWrap}>
+                  <Ionicons name="document-text-outline" size={48} color={colors.border} />
+                  <Text style={s.emptyTitle}>No reviews yet</Text>
+                  <Text style={s.emptySub}>Reviews you submit will appear here for your records.</Text>
+                </View>
+              ) : (
+                myReviews.map((rev, idx) => (
+                  <View key={rev.responseId || idx} style={s.historyCard}>
+                    <View style={s.historyCardHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.historyCardRole}>{rev.targetRole}</Text>
+                        <Text style={s.historyCardOrg}>{rev.organizationName}</Text>
+                      </View>
+                      <View style={s.historyCardBadge}>
+                        <Ionicons name={rev.wouldRefer ? 'thumbs-up' : 'thumbs-down'} size={14} color={rev.wouldRefer ? '#10B981' : '#EF4444'} />
+                        <Text style={[s.historyCardBadgeText, { color: rev.wouldRefer ? '#10B981' : '#EF4444' }]}>
+                          {rev.wouldRefer ? 'Would refer' : 'Would not refer'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={s.historyCardStats}>
+                      <View style={s.historyCardStat}>
+                        <Text style={s.historyCardStatLabel}>Your Rating</Text>
+                        <View style={{ flexDirection: 'row', gap: 2 }}>
+                          {[1,2,3,4,5].map(n => (
+                            <Ionicons key={n} name={n <= rev.overallRating ? 'star' : 'star-outline'} size={14} color={n <= rev.overallRating ? '#F59E0B' : colors.border} />
+                          ))}
+                        </View>
+                      </View>
+                      {rev.profileFit > 0 && (
+                        <View style={s.historyCardStat}>
+                          <Text style={s.historyCardStatLabel}>Profile Fit</Text>
+                          <Text style={s.historyCardStatValue}>{rev.profileFit}/5</Text>
+                        </View>
+                      )}
+                      <View style={s.historyCardStat}>
+                        <Text style={s.historyCardStatLabel}>Date</Text>
+                        <Text style={s.historyCardStatValue}>{new Date(rev.createdAt).toLocaleDateString()}</Text>
+                      </View>
+                    </View>
+                    {(rev.strengths || rev.weaknesses || rev.suggestions) && (
+                      <View style={s.historyCardFeedback}>
+                        {rev.strengths ? <Text style={s.historyFeedbackText}><Text style={{ fontWeight: '700', color: '#10B981' }}>Strengths:</Text> {rev.strengths}</Text> : null}
+                        {rev.weaknesses ? <Text style={s.historyFeedbackText}><Text style={{ fontWeight: '700', color: '#F59E0B' }}>Improve:</Text> {rev.weaknesses}</Text> : null}
+                        {rev.suggestions ? <Text style={s.historyFeedbackText}><Text style={{ fontWeight: '700', color: '#3B82F6' }}>Suggestions:</Text> {rev.suggestions}</Text> : null}
+                      </View>
+                    )}
+                  </View>
+                ))
+              )}
+              <TouchableOpacity style={s.refreshBtn} onPress={loadMyReviews} activeOpacity={0.7}>
+                <Ionicons name="refresh" size={16} color={colors.primary} />
+                <Text style={s.refreshBtnText}>Refresh</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </ScrollView>
       )}
     </View>
@@ -359,6 +450,27 @@ const makeStyles = (c, isDesktop) => ({
 
   refreshBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginHorizontal: 16, marginTop: 12, paddingVertical: 10 },
   refreshBtnText: { fontSize: 13, fontWeight: '600', color: c.primary },
+
+  // Tabs
+  tabRow: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 16, backgroundColor: c.surface, borderRadius: 12, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
+  tabBtn: { flex: 1, paddingVertical: 11, alignItems: 'center' },
+  tabBtnActive: { backgroundColor: c.primary },
+  tabBtnText: { fontSize: 13, fontWeight: '600', color: c.textSecondary },
+  tabBtnTextActive: { color: '#fff' },
+
+  // History cards
+  historyCard: { marginHorizontal: 16, marginBottom: 10, backgroundColor: c.surface, borderRadius: 14, borderWidth: 1, borderColor: c.border, overflow: 'hidden' },
+  historyCardHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: c.border + '50' },
+  historyCardRole: { fontSize: 14, fontWeight: '700', color: c.text },
+  historyCardOrg: { fontSize: 12, color: c.textSecondary, marginTop: 1 },
+  historyCardBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  historyCardBadgeText: { fontSize: 11, fontWeight: '700' },
+  historyCardStats: { flexDirection: 'row', padding: 12, gap: 16 },
+  historyCardStat: { gap: 2 },
+  historyCardStatLabel: { fontSize: 10, fontWeight: '600', color: c.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  historyCardStatValue: { fontSize: 13, fontWeight: '600', color: c.text },
+  historyCardFeedback: { paddingHorizontal: 14, paddingBottom: 14, gap: 6 },
+  historyFeedbackText: { fontSize: 12, color: c.textSecondary, lineHeight: 17 },
 
   // Review form
   backRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 12 },
