@@ -149,12 +149,18 @@ async function main() {
   const emailClient = new EmailClient(ACS_CONN);
   const pool = await sql.connect(DB_CONFIG);
 
-  // PRODUCTION: all active users
+  // PRODUCTION: all active users, skip those already emailed
   const result = await pool.request().query(`
-    SELECT UserID, Email, FirstName 
-    FROM Users 
-    WHERE IsActive = 1 AND Email IS NOT NULL AND Email != ''
-    ORDER BY CreatedAt DESC
+    SELECT u.UserID, u.Email, u.FirstName 
+    FROM Users u
+    WHERE u.IsActive = 1 AND u.Email IS NOT NULL AND u.Email != ''
+      AND NOT EXISTS (
+        SELECT 1 FROM EmailLogs e 
+        WHERE e.UserID = u.UserID 
+          AND e.EmailType = 'feature_launch_blind_review' 
+          AND e.Status = 'sent'
+      )
+    ORDER BY u.CreatedAt DESC
   `);
 
   const users = result.recordset;
