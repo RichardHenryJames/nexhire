@@ -147,6 +147,12 @@ export default function BlindReviewInboxScreen({ navigation }) {
             <Text style={s.backRowText}>Back to inbox</Text>
           </TouchableOpacity>
 
+          {/* Anonymity reminder */}
+          <View style={s.anonBannerSmall}>
+            <Ionicons name="eye-off" size={14} color="#10B981" />
+            <Text style={s.anonBannerSmallText}>You're reviewing anonymously — the candidate will never know who you are</Text>
+          </View>
+
           {/* Profile Card */}
           <View style={s.profileCard}>
             <View style={s.profileHeader}>
@@ -327,6 +333,12 @@ export default function BlindReviewInboxScreen({ navigation }) {
             <Text style={s.inboxSub}>Review anonymous candidate profiles at your company</Text>
           </View>
 
+          {/* Anonymity assurance */}
+          <View style={s.anonBanner}>
+            <Ionicons name="shield-checkmark" size={16} color="#10B981" />
+            <Text style={s.anonBannerText}>Your identity is completely hidden. Candidates only see "Reviewer 1", "Reviewer 2" etc. — never your name, company role, or any identifying info.</Text>
+          </View>
+
           {/* Tabs */}
           <View style={s.tabRow}>
             <TouchableOpacity style={[s.tabBtn, tab === 'pending' && s.tabBtnActive]} onPress={() => setTab('pending')} activeOpacity={0.7}>
@@ -453,6 +465,11 @@ const makeStyles = (c, isDesktop) => ({
   inboxHeader: { padding: 20, alignItems: 'center', gap: 6 },
   inboxTitle: { fontSize: 20, fontWeight: '800', color: c.text },
   inboxSub: { fontSize: 13, color: c.textSecondary, textAlign: 'center', maxWidth: 320 },
+
+  anonBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 16, marginBottom: 16, padding: 12, backgroundColor: '#10B98110', borderRadius: 12, borderWidth: 1, borderColor: '#10B98120' },
+  anonBannerText: { fontSize: 12, color: '#10B981', flex: 1, lineHeight: 17 },
+  anonBannerSmall: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#10B98108', borderRadius: 8 },
+  anonBannerSmallText: { fontSize: 11, color: '#10B981', flex: 1 },
 
   emptyWrap: { alignItems: 'center', padding: 40, marginTop: 20 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginTop: 12 },
