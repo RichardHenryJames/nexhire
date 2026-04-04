@@ -186,15 +186,36 @@ export default function BlindReviewInboxScreen({ navigation }) {
                 )}
 
                 {selectedRequest.anonymizedProfile.recentRoles?.length > 0 && (
-                  <View style={s.profileRow}>
-                    <Text style={s.profileLabel}>Roles</Text>
-                    <View style={{ flex: 1 }}>
-                      {selectedRequest.anonymizedProfile.recentRoles.map((r, i) => (
-                        <Text key={i} style={s.profileValue}>
-                          {r.title}{r.durationMonths ? ` (${Math.round(r.durationMonths / 12)}y)` : ''}
+                  <View style={[s.profileRow, { flexDirection: 'column' }]}>
+                    <Text style={s.profileLabel}>Work Experience</Text>
+                    {selectedRequest.anonymizedProfile.recentRoles.map((r, i) => (
+                      <View key={i} style={{ marginTop: i > 0 ? 6 : 4 }}>
+                        <Text style={s.profileValue}>
+                          {r.title}{r.durationMonths ? ` (${Math.round(r.durationMonths / 12)}y)` : ''}{r.industry ? ` — ${r.industry}` : ''}
                         </Text>
-                      ))}
-                    </View>
+                        {r.highlights?.length > 0 && r.highlights.map((h, hi) => (
+                          <Text key={hi} style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1, paddingLeft: 8 }}>• {h}</Text>
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+                )}
+                {selectedRequest.anonymizedProfile.projects?.length > 0 && (
+                  <View style={[s.profileRow, { flexDirection: 'column' }]}>
+                    <Text style={s.profileLabel}>Projects</Text>
+                    {selectedRequest.anonymizedProfile.projects.map((p, i) => (
+                      <View key={i} style={{ marginTop: i > 0 ? 4 : 2 }}>
+                        <Text style={[s.profileValue, { fontWeight: '600' }]}>{p.name}</Text>
+                        {p.description ? <Text style={{ fontSize: 12, color: colors.textSecondary }}>{p.description}</Text> : null}
+                        {p.technologies?.length > 0 && (
+                          <View style={[s.chipWrap, { marginTop: 2 }]}>
+                            {p.technologies.map((t, ti) => (
+                              <View key={ti} style={s.chip}><Text style={s.chipText}>{t}</Text></View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    ))}
                   </View>
                 )}
               </View>

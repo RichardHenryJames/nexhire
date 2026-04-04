@@ -35,8 +35,20 @@ export interface AnonymizedProfile {
   experienceYears: number;
   educationLevel: string;
   fieldOfStudy: string;
+  institution?: string;     // Anonymized: "Top-tier engineering college" not exact name
+  gpa?: string;
   skills: string[];
-  recentRoles: Array<{ title: string; durationMonths: number; industry?: string }>;
+  recentRoles: Array<{
+    title: string;
+    durationMonths: number;
+    industry?: string;
+    highlights?: string[];   // Key achievements/responsibilities (anonymized)
+  }>;
+  projects?: Array<{
+    name: string;            // Anonymized project name
+    description: string;     // What they built (anonymized)
+    technologies?: string[];
+  }>;
   certifications: string[];
   summary: string;          // AI-generated anonymized summary
 }
@@ -185,6 +197,7 @@ export class BlindReviewService {
         `SELECT a.Headline, a.Summary, a.CurrentJobTitle, a.PrimarySkills, a.SecondarySkills,
                 a.HighestEducation, a.FieldOfStudy, a.GraduationYear, a.TotalExperienceMonths,
                 a.Certifications, a.Languages, a.PreferredRoles, a.CurrentCompanyName,
+                a.Institution, a.GPA,
                 u.FirstName, u.LastName
          FROM Applicants a
          JOIN Users u ON a.UserID = u.UserID
@@ -193,7 +206,7 @@ export class BlindReviewService {
       ),
       dbService.executeQuery(
         `SELECT we.JobTitle, we.CompanyName, we.Department, we.StartDate, we.EndDate, 
-                we.IsCurrent, we.Description, we.Skills, we.Location,
+                we.IsCurrent, we.Description, we.Achievements, we.Skills, we.Location,
                 o.Name AS OrgName, o.Industry AS OrgIndustry
          FROM WorkExperiences we
          LEFT JOIN Organizations o ON we.OrganizationID = o.OrganizationID
@@ -216,6 +229,8 @@ export class BlindReviewService {
     if (p.PrimarySkills) parts.push(`Primary Skills: ${p.PrimarySkills}`);
     if (p.SecondarySkills) parts.push(`Secondary Skills: ${p.SecondarySkills}`);
     if (p.HighestEducation) parts.push(`Education: ${p.HighestEducation}${p.FieldOfStudy ? ' in ' + p.FieldOfStudy : ''}${p.GraduationYear ? ' (' + p.GraduationYear + ')' : ''}`);
+    if (p.Institution) parts.push(`Institution: ${p.Institution}`);
+    if (p.GPA) parts.push(`GPA: ${p.GPA}`);
     if (p.TotalExperienceMonths) parts.push(`Total Experience: ${Math.round(p.TotalExperienceMonths / 12)} years`);
     if (p.Certifications) parts.push(`Certifications: ${p.Certifications}`);
     if (p.Languages) parts.push(`Languages: ${p.Languages}`);
@@ -227,7 +242,8 @@ export class BlindReviewService {
         const duration = w.IsCurrent ? 'Present' : (w.EndDate ? new Date(w.EndDate).getFullYear().toString() : '');
         const start = w.StartDate ? new Date(w.StartDate).getFullYear().toString() : '';
         parts.push(`- ${w.JobTitle} at ${company} (${start} - ${duration})`);
-        if (w.Description) parts.push(`  ${w.Description}`);
+        if (w.Description) parts.push(`  Description: ${w.Description}`);
+        if (w.Achievements) parts.push(`  Achievements: ${w.Achievements}`);
         if (w.Skills) parts.push(`  Skills: ${w.Skills}`);
       }
     }
@@ -273,12 +289,26 @@ ${rawText.substring(0, 8000)}
     "experienceYears": <number>,
     "educationLevel": "<highest degree>",
     "fieldOfStudy": "<field>",
+    "institution": "<anonymized institution description e.g. 'Top-tier engineering college' or 'State university' — NEVER the actual name>",
+    "gpa": "<GPA if mentioned, else null>",
     "skills": ["<skill1>", "<skill2>", ...],
     "recentRoles": [
-      {"title": "<job title>", "durationMonths": <number>, "industry": "<industry>"}
+      {
+        "title": "<job title>",
+        "durationMonths": <number>,
+        "industry": "<industry>",
+        "highlights": ["<key achievement/responsibility 1>", "<key achievement 2>", "<key achievement 3>"]
+      }
+    ],
+    "projects": [
+      {
+        "name": "<anonymized project name e.g. 'Content Discovery Platform' — remove brand names>",
+        "description": "<1-2 sentence anonymized description of what was built>",
+        "technologies": ["<tech1>", "<tech2>"]
+      }
     ],
     "certifications": ["<cert1>", ...],
-    "summary": "<2-3 sentence anonymized professional summary>"
+    "summary": "<3-4 sentence anonymized professional summary covering experience, strengths, and domain expertise>"
   },
   "aiScore": {
     "score": <0-100>,
@@ -316,11 +346,19 @@ ${rawText.substring(0, 8000)}
           experienceYears: ap.experienceYears || 0,
           educationLevel: ap.educationLevel || 'Not specified',
           fieldOfStudy: ap.fieldOfStudy || 'Not specified',
+          institution: ap.institution || undefined,
+          gpa: ap.gpa || undefined,
           skills: Array.isArray(ap.skills) ? ap.skills : [],
           recentRoles: Array.isArray(ap.recentRoles) ? ap.recentRoles.map((r: any) => ({
             title: r.title || 'Unknown Role',
             durationMonths: r.durationMonths || 0,
             industry: r.industry || '',
+            highlights: Array.isArray(r.highlights) ? r.highlights : [],
+          })) : [],
+          projects: Array.isArray(ap.projects) ? ap.projects.map((p: any) => ({
+            name: p.name || 'Project',
+            description: p.description || '',
+            technologies: Array.isArray(p.technologies) ? p.technologies : [],
           })) : [],
           certifications: Array.isArray(ap.certifications) ? ap.certifications : [],
           summary: ap.summary || 'Profile summary not available.',

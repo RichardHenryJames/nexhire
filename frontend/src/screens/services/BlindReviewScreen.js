@@ -708,7 +708,11 @@ export default function BlindReviewScreen({ navigation }) {
           </View>
           <View style={s.anonRow}>
             <Text style={s.anonLabel}>Education</Text>
-            <Text style={s.anonValue}>{anonymizedProfile.educationLevel}{anonymizedProfile.fieldOfStudy !== 'Not specified' ? ` in ${anonymizedProfile.fieldOfStudy}` : ''}</Text>
+            <Text style={s.anonValue}>
+              {anonymizedProfile.educationLevel}{anonymizedProfile.fieldOfStudy !== 'Not specified' ? ` in ${anonymizedProfile.fieldOfStudy}` : ''}
+              {anonymizedProfile.institution ? `\n${anonymizedProfile.institution}` : ''}
+              {anonymizedProfile.gpa ? ` · GPA: ${anonymizedProfile.gpa}` : ''}
+            </Text>
           </View>
           {anonymizedProfile.skills?.length > 0 && (
             <View style={s.anonRow}>
@@ -724,15 +728,36 @@ export default function BlindReviewScreen({ navigation }) {
             </View>
           )}
           {anonymizedProfile.recentRoles?.length > 0 && (
-            <View style={s.anonRow}>
-              <Text style={s.anonLabel}>Roles</Text>
-              <View style={{ flex: 1 }}>
-                {anonymizedProfile.recentRoles.slice(0, 3).map((r, i) => (
-                  <Text key={i} style={s.anonValue}>
+            <View style={[s.anonRow, { flexDirection: 'column' }]}>
+              <Text style={s.anonLabel}>Work Experience</Text>
+              {anonymizedProfile.recentRoles.slice(0, 4).map((r, i) => (
+                <View key={i} style={{ marginTop: i > 0 ? 8 : 4 }}>
+                  <Text style={s.anonValue}>
                     {r.title}{r.durationMonths ? ` (${Math.round(r.durationMonths / 12)}y)` : ''}{r.industry ? ` — ${r.industry}` : ''}
                   </Text>
-                ))}
-              </View>
+                  {r.highlights?.length > 0 && r.highlights.map((h, hi) => (
+                    <Text key={hi} style={s.anonHighlight}>• {h}</Text>
+                  ))}
+                </View>
+              ))}
+            </View>
+          )}
+          {anonymizedProfile.projects?.length > 0 && (
+            <View style={[s.anonRow, { flexDirection: 'column' }]}>
+              <Text style={s.anonLabel}>Projects</Text>
+              {anonymizedProfile.projects.slice(0, 3).map((p, i) => (
+                <View key={i} style={{ marginTop: i > 0 ? 6 : 4 }}>
+                  <Text style={[s.anonValue, { fontWeight: '600' }]}>{p.name}</Text>
+                  {p.description ? <Text style={s.anonHighlight}>{p.description}</Text> : null}
+                  {p.technologies?.length > 0 && (
+                    <View style={[s.chipWrap, { marginTop: 3 }]}>
+                      {p.technologies.slice(0, 5).map((t, ti) => (
+                        <View key={ti} style={s.skillChip}><Text style={s.skillChipText}>{t}</Text></View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ))}
             </View>
           )}
           {anonymizedProfile.summary && (
@@ -1002,6 +1027,7 @@ const makeStyles = (c, isDesktop) => ({
   anonRow: { flexDirection: 'row', paddingVertical: 6, borderTopWidth: 1, borderTopColor: c.border + '50', gap: 8 },
   anonLabel: { fontSize: 12, fontWeight: '600', color: c.textSecondary, width: 90 },
   anonValue: { fontSize: 13, color: c.text, flex: 1 },
+  anonHighlight: { fontSize: 12, color: c.textSecondary, lineHeight: 17, marginTop: 2, paddingLeft: 8 },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, flex: 1 },
   skillChip: { backgroundColor: c.primary + '10', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
   skillChipText: { fontSize: 11, fontWeight: '600', color: c.primary },
