@@ -220,14 +220,14 @@ export default function BlindReviewScreen({ navigation }) {
     return () => clearInterval(interval);
   }, [analyzing]);
 
-  // ── CTA pulse animation (subtle attention grab) ───────────
+  // CTA pulse animation (scale pulse for attention)
   useEffect(() => {
     if (view !== 'results' || !result) return;
     ctaPulseAnim.setValue(1);
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(ctaPulseAnim, { toValue: 0.7, duration: 1200, useNativeDriver: true }),
-        Animated.timing(ctaPulseAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(ctaPulseAnim, { toValue: 1.03, duration: 1000, useNativeDriver: true }),
+        Animated.timing(ctaPulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
       ])
     );
     pulse.start();
@@ -620,22 +620,23 @@ export default function BlindReviewScreen({ navigation }) {
   const hasReferrers = result?.hasReferrers;
   const orgName = data?.organizationName || data?.data?.organizationName || selectedCompany?.name || '';
 
-  // Compute Get Referred CTA (reused in two positions)
+  // Compute Get Referred CTA (always show one: Specific for strong, Open for weak)
   const getReferredCTA = (() => {
+    if (!orgName && !data) return null;
     const humanYes = responses.some(r => r.wouldRefer);
     const humanExists = responses.length > 0;
     const allHumanNo = humanExists && !humanYes;
     const aiReviewPositive = finalFeedback && (finalFeedback.wouldReferPercent >= 50);
-    const aiReviewNegative = finalFeedback && (finalFeedback.wouldReferPercent < 50) && finalFeedback.responseCount === 0;
     const score = aiAnalysis?.score || aiScore || 0;
-    if (!orgName || allHumanNo || aiReviewNegative || (!humanYes && !aiReviewPositive && score < 50)) return null;
-    const ctaTitle = humanYes ? `An insider would refer you. Get referred at ${orgName}`
-      : aiReviewPositive ? `Your profile is referrable at ${orgName}`
-      : score >= 70 ? `Strong candidate. Get referred at ${orgName}`
-      : `Decent fit. Try getting referred at ${orgName}`;
-    const ctaSub = humanYes ? 'A real insider validated your profile. Take the next step.'
-      : 'Your profile shows potential. Request a referral now.';
-    return { ctaTitle, ctaSub };
+
+    // Strong signal: show Specific referral CTA (green)
+    if (humanYes) return { type: 'specific', ctaTitle: `An insider would refer you at ${orgName}`, ctaSub: 'A real insider validated your profile. Take the next step.', color: '#10B981' };
+    if (aiReviewPositive) return { type: 'specific', ctaTitle: `Your profile is referrable at ${orgName}`, ctaSub: 'Based on detailed review. Request a referral now.', color: '#10B981' };
+    if (!allHumanNo && score >= 70) return { type: 'specific', ctaTitle: `Strong candidate at ${orgName}`, ctaSub: 'Your profile shows strong potential. Get referred now.', color: '#10B981' };
+    if (!allHumanNo && score >= 50) return { type: 'specific', ctaTitle: `Decent fit at ${orgName}`, ctaSub: 'Your profile shows potential. Request a referral now.', color: '#10B981' };
+
+    // Weak signal: show Open referral CTA (blue)
+    return { type: 'open', ctaTitle: 'Try Open Referral', ctaSub: 'Get referred across multiple companies with a single request. Broaden your chances.', color: '#3B82F6' };
   })();
 
   const resultsPanel = data ? (
@@ -668,30 +669,34 @@ export default function BlindReviewScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Get Referred CTA - prominent position */}
+      {/* Get Referred CTA */}
       {getReferredCTA && (
         <TouchableOpacity
-          style={s.getReferredBtn}
+          style={[s.getReferredBtn, { backgroundColor: getReferredCTA.color }]}
           onPress={() => {
-            const org = selectedCompany || {
-              id: data?.organizationId || data?.data?.organizationId,
-              name: orgName,
-              logoURL: data?.organizationLogo || data?.data?.organizationLogo || null,
-              tier: 'Standard',
-            };
-            navigation.navigate('AskReferral', {
-              preSelectedOrganization: {
-                id: org.id,
-                name: org.name || orgName,
-                logoURL: org.logoURL || null,
-                tier: org.tier || 'Standard',
-              },
-            });
+            if (getReferredCTA.type === 'open') {
+              navigation.navigate('AskReferral');
+            } else {
+              const org = selectedCompany || {
+                id: data?.organizationId || data?.data?.organizationId,
+                name: orgName,
+                logoURL: data?.organizationLogo || data?.data?.organizationLogo || null,
+                tier: 'Standard',
+              };
+              navigation.navigate('AskReferral', {
+                preSelectedOrganization: {
+                  id: org.id,
+                  name: org.name || orgName,
+                  logoURL: org.logoURL || null,
+                  tier: org.tier || 'Standard',
+                },
+              });
+            }
           }}
           activeOpacity={0.85}
         >
-          <Animated.View style={[s.getReferredInner, { opacity: ctaPulseAnim }]}>
-            <Ionicons name="rocket" size={20} color="#fff" />
+          <Animated.View style={[s.getReferredInner, { transform: [{ scale: ctaPulseAnim }] }]}>
+            <Ionicons name={getReferredCTA.type === 'open' ? 'globe' : 'rocket'} size={20} color="#fff" />
             <View style={{ flex: 1 }}>
               <Text style={s.getReferredTitle}>{getReferredCTA.ctaTitle}</Text>
               <Text style={s.getReferredSub}>{getReferredCTA.ctaSub}</Text>
@@ -1132,7 +1137,7 @@ const makeStyles = (c, isDesktop) => ({
   emptyHistorySub: { fontSize: 13, color: c.textSecondary, marginTop: 4 },
 
   // Get Referred CTA - prominent, animated
-  getReferredBtn: { marginHorizontal: 16, marginTop: 16, marginBottom: 12, borderRadius: 16, overflow: 'hidden', backgroundColor: '#10B981', shadowColor: '#10B981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  getReferredBtn: { marginHorizontal: 16, marginTop: 16, marginBottom: 12, borderRadius: 16, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 },
   getReferredInner: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 18, paddingHorizontal: 18 },
   getReferredTitle: { fontSize: 15, fontWeight: '800', color: '#fff', lineHeight: 20 },
   getReferredSub: { fontSize: 12, color: 'rgba(255,255,255,0.9)', marginTop: 2 },
