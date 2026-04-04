@@ -225,6 +225,11 @@ export default function ProfileSlider({ visible, onClose }) {
           icon: 'people-outline',
           label: 'Provide Referral',
           onPress: () => navigateTo('Referral'),          badge: pendingReferralCount,        },
+        {
+          icon: 'eye-off-outline',
+          label: 'Blind Review Inbox',
+          onPress: () => navigateTo('BlindReviewInbox'),
+        },
       ],
     }]),
     {

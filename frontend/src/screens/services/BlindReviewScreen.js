@@ -621,10 +621,9 @@ export default function BlindReviewScreen({ navigation }) {
             color={status === 'completed' ? '#10B981' : status === 'in_review' ? '#3B82F6' : '#F59E0B'}
           />
           <Text style={[s.statusBadgeText, { color: status === 'completed' ? '#10B981' : status === 'in_review' ? '#3B82F6' : '#F59E0B' }]}>
-            {status === 'completed' ? `${responseCount} insider review${responseCount !== 1 ? 's' : ''} received` :
+            {status === 'completed' ? (responseCount > 0 ? `${responseCount} insider review${responseCount !== 1 ? 's' : ''} received` : 'Review complete — see results below') :
              status === 'in_review' ? `${responseCount}/3 reviews received — waiting for more` :
-             hasReferrers === false ? 'AI-only review (no insiders at this company yet)' :
-             'Waiting for insider reviews...'}
+             'Your review is being processed...'}
           </Text>
         </View>
       </View>

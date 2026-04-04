@@ -495,7 +495,7 @@ export default function DesktopNavBar() {
                   { icon: 'megaphone-outline', label: 'Social Share', screen: 'ShareEarn' },
                 ].map(item => renderDropdownLink(item))}
                 {isVerifiedReferrer || isAdmin
-                  ? renderDropdownLink({ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' })
+                  ? <>{renderDropdownLink({ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' })}{renderDropdownLink({ icon: 'eye-off-outline', label: 'Blind Review Inbox', screen: 'BlindReviewInbox' })}</>
                   : renderDropdownLink({ icon: 'shield-checkmark-outline', label: 'Become Referrer', screen: 'BecomeReferrer' })
                 }
 
