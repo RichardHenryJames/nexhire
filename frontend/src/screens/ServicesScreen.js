@@ -64,6 +64,16 @@ const getServices = (colors) => [
     screen: 'LinkedInOptimizer',
   },
   {
+    id: 'blind-profile-review',
+    title: 'Blind Review',
+    subtitle: 'Insider feedback on your profile',
+    description: 'Submit your profile anonymously — referrers from your target company rate it and tell you if they\'d refer you.',
+    icon: 'people',
+    gradient: [colors.accentDark, colors.accentLight],
+    ready: true,
+    screen: 'BlindReview',
+  },
+  {
     id: 'interview-prep',
     title: 'Interview Prep',
     subtitle: 'Practice with real questions',
@@ -102,16 +112,6 @@ const getServices = (colors) => [
     gradient: [colors.successDark, colors.successLight],
     ready: false,
     screen: 'MarketPulse',
-  },
-  {
-    id: 'blind-profile-review',
-    title: 'Blind Review',
-    subtitle: 'Insider feedback on your profile',
-    description: 'Submit your profile anonymously — referrers from your target company rate it and tell you if they\'d refer you.',
-    icon: 'people',
-    gradient: [colors.accentDark, colors.accentLight],
-    ready: true,
-    screen: 'BlindReview',
   },
   {
     id: 'career-path-simulator',

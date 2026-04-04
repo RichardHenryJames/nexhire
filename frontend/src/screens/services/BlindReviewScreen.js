@@ -874,6 +874,24 @@ export default function BlindReviewScreen({ navigation }) {
         </View>
       )}
 
+      {/* Get Referred CTA - FOMO funnel */}
+      {(aiAnalysis?.score >= 50 || aiScore >= 50) && orgName && (
+        <TouchableOpacity
+          style={s.getReferredBtn}
+          onPress={() => navigation.navigate('AskReferral', { preSelectedOrg: selectedCompany })}
+          activeOpacity={0.85}
+        >
+          <View style={s.getReferredInner}>
+            <Ionicons name="rocket" size={20} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={s.getReferredTitle}>Get Referred at {orgName}</Text>
+              <Text style={s.getReferredSub}>Your profile looks referrable — request a real referral now</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      )}
+
       <TouchableOpacity style={s.resetBtn} onPress={handleReset} activeOpacity={0.7}>
         <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
         <Text style={s.resetBtnText}>Submit Another Review</Text>
@@ -1064,6 +1082,11 @@ const makeStyles = (c, isDesktop) => ({
   emptyHistory: { alignItems: 'center', padding: 40 },
   emptyHistoryText: { fontSize: 16, fontWeight: '700', color: c.text, marginTop: 12 },
   emptyHistorySub: { fontSize: 13, color: c.textSecondary, marginTop: 4 },
+
+  // Get Referred CTA\n  getReferredBtn: { marginHorizontal: 16, marginTop: 16, marginBottom: 8, borderRadius: 14, overflow: 'hidden', backgroundColor: '#10B981' },
+  getReferredInner: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
+  getReferredTitle: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  getReferredSub: { fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 1 },
 
   resetBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginHorizontal: 16, marginTop: 8, paddingVertical: 14, borderRadius: 12, borderWidth: 1, borderColor: c.primary + '30', backgroundColor: c.primary + '06' },
   resetBtnText: { fontSize: 14, fontWeight: '600', color: c.primary },

@@ -780,6 +780,24 @@ const [dashboardData, setDashboardData] = useState(() => {
                 </View>
               </TouchableOpacity>
 
+              {/* 🔍 Blind Review Card - Get insider feedback */}
+              <TouchableOpacity
+                style={[styles.quickActionCard, { borderLeftWidth: 3, borderLeftColor: colors.accentDark }]}
+                onPress={() => navigation.navigate('BlindReview')}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.quickActionIcon, { backgroundColor: colors.accentDark + '20' }]}>
+                  <Ionicons name="eye-off" size={24} color={colors.accentDark} />
+                </View>
+                <View style={styles.quickActionContent}>
+                  <Text style={styles.quickActionTitle}>Blind Review</Text>
+                  <Text style={styles.quickActionDescription}>Would insiders refer you? Find out free</Text>
+                </View>
+                <View style={{ backgroundColor: '#10B98115', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981' }}>FREE</Text>
+                </View>
+              </TouchableOpacity>
+
               {/* Secondary Cards Container - 3 column grid on desktop */}
               <View style={styles.secondaryCardsContainer}>
                 {/* 🎯 My Referrals Card - Only show if user has incoming referral requests */}
