@@ -675,7 +675,7 @@ export default function BlindReviewScreen({ navigation }) {
           style={[s.getReferredBtn, { backgroundColor: getReferredCTA.color }]}
           onPress={() => {
             if (getReferredCTA.type === 'open') {
-              navigation.navigate('AskReferral');
+              navigation.navigate('MainTabs', { screen: 'AskReferral' });
             } else {
               const org = selectedCompany || {
                 id: data?.organizationId || data?.data?.organizationId,
@@ -683,12 +683,15 @@ export default function BlindReviewScreen({ navigation }) {
                 logoURL: data?.organizationLogo || data?.data?.organizationLogo || null,
                 tier: 'Standard',
               };
-              navigation.navigate('AskReferral', {
-                preSelectedOrganization: {
-                  id: org.id,
-                  name: org.name || orgName,
-                  logoURL: org.logoURL || null,
-                  tier: org.tier || 'Standard',
+              navigation.navigate('MainTabs', {
+                screen: 'AskReferral',
+                params: {
+                  preSelectedOrganization: {
+                    id: org.id,
+                    name: org.name || orgName,
+                    logoURL: org.logoURL || null,
+                    tier: org.tier || 'Standard',
+                  },
                 },
               });
             }
