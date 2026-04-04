@@ -16,9 +16,9 @@
 import { dbService } from './database.service';
 import { AIService } from './ai.service';
 
-// ── AI API Keys (dedicated Blind Review keys, separate quota) ──
-const GROQ_API_KEY = process.env.GROQ_BLIND_REVIEW_API_KEY || process.env.GROQ_RESUME_API_KEY || '';
-const GEMINI_API_KEY = process.env.GEMINI_BLIND_REVIEW_API_KEY || process.env.GEMINI_RESUME_API_KEY || '';
+// ── AI API Keys (dedicated Blind Review keys, separate quota — KV-backed in prod) ──
+const GROQ_API_KEY = process.env.GROQ_BLIND_REVIEW_API_KEY || '';
+const GEMINI_API_KEY = process.env.GEMINI_BLIND_REVIEW_API_KEY || '';
 
 // ── Interfaces ─────────────────────────────────────────────────
 
