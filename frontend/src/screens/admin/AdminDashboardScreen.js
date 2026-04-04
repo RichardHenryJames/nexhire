@@ -2660,7 +2660,7 @@ export default function AdminDashboardScreen() {
               <View style={[styles.emailStatusBadge, { backgroundColor: item.Status === 'completed' ? '#10B98115' : item.Status === 'in_review' ? '#3B82F615' : '#F59E0B15' }]}>
                 <Ionicons name={item.Status === 'completed' ? 'checkmark-circle' : item.Status === 'in_review' ? 'hourglass' : 'time'} size={14} color={item.Status === 'completed' ? '#10B981' : item.Status === 'in_review' ? '#3B82F6' : '#F59E0B'} />
                 <Text style={[styles.emailStatusText, { color: item.Status === 'completed' ? '#10B981' : item.Status === 'in_review' ? '#3B82F6' : '#F59E0B' }]}>
-                  {item.Status}
+                  {item.Status === 'completed' ? 'Completed' : item.Status === 'in_review' ? 'In Review' : 'Pending'}
                 </Text>
               </View>
               {item.AIScore != null && (
@@ -2676,25 +2676,24 @@ export default function AdminDashboardScreen() {
                 </View>
               )}
             </View>
-            <View style={styles.resumeAnalyzerMeta}>
-              <Text style={styles.metaLabel}>Target</Text>
-              <Text style={styles.metaValue}>{item.TargetRole} at {item.CompanyName || 'Unknown'}</Text>
+            <View style={styles.resumeInfoRow}>
+              <Text style={[styles.resumeInfoText, { fontWeight: '600', width: 50 }]}>Target</Text>
+              <Text style={[styles.resumeInfoText, { color: colors.text, flex: 1 }]}>{item.TargetRole} at {item.CompanyName || 'Unknown'}</Text>
             </View>
-            <View style={styles.resumeAnalyzerMeta}>
-              <Text style={styles.metaLabel}>User</Text>
-              <Text style={styles.metaValue}>{item.UserName || 'N/A'}</Text>
+            <View style={styles.resumeInfoRow}>
+              <Text style={[styles.resumeInfoText, { fontWeight: '600', width: 50 }]}>User</Text>
+              <Text style={[styles.resumeInfoText, { color: colors.text, flex: 1 }]}>{item.UserName || 'N/A'}</Text>
             </View>
-            <View style={styles.resumeAnalyzerMeta}>
-              <Text style={styles.metaLabel}>Email</Text>
-              <Text style={[styles.metaValue, { color: colors.primary }]}>{item.UserEmail || 'N/A'}</Text>
+            <View style={styles.resumeInfoRow}>
+              <Text style={[styles.resumeInfoText, { fontWeight: '600', width: 50 }]}>Email</Text>
+              <Text style={[styles.resumeInfoText, { color: colors.primary, flex: 1 }]}>{item.UserEmail || 'N/A'}</Text>
             </View>
-            <View style={styles.resumeAnalyzerMeta}>
-              <Text style={styles.metaLabel}>Source</Text>
-              <Text style={styles.metaValue}>{item.SourceType === 'resume' ? 'Resume' : 'Profile'}</Text>
+            <View style={styles.resumeInfoRow}>
+              <Text style={[styles.resumeInfoText, { fontWeight: '600', width: 50 }]}>Source</Text>
+              <Text style={[styles.resumeInfoText, { color: colors.text, flex: 1 }]}>{item.SourceType === 'resume' ? 'Resume' : 'Profile'}</Text>
             </View>
-            <View style={styles.resumeAnalyzerMeta}>
-              <Text style={styles.metaLabel}>Date</Text>
-              <Text style={styles.metaValue}>{new Date(item.CreatedAt).toLocaleString()}</Text>
+            <View style={styles.resumeMetaRow}>
+              <Text style={styles.resumeMetaText}>{new Date(item.CreatedAt).toLocaleString()}</Text>
             </View>
           </View>
         ))}
@@ -2765,8 +2764,8 @@ export default function AdminDashboardScreen() {
           ].map((s, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: s.color, marginRight: 10 }} />
-              <Text style={[styles.metaLabel, { flex: 1 }]}>{s.name}</Text>
-              <Text style={[styles.metaValue, { fontWeight: '700', color: s.color }]}>{'\u20B9'}{(s.value || 0).toLocaleString('en-IN')}</Text>
+              <Text style={{ fontSize: 13, color: colors.text, flex: 1 }}>{s.name}</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: s.color }}>{'\u20B9'}{(s.value || 0).toLocaleString('en-IN')}</Text>
             </View>
           ))}
         </View>
@@ -2778,8 +2777,8 @@ export default function AdminDashboardScreen() {
         {daily.map((day, i) => (
           <View key={i} style={[styles.resumeAnalyzerCard, { paddingVertical: 10 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={[styles.metaValue, { fontWeight: '700' }]}>{new Date(day.Day).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
-              <Text style={[styles.metaValue, { fontWeight: '700', color: '#10B981' }]}>+{'\u20B9'}{(day.Deposits || 0).toLocaleString('en-IN')}</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>{new Date(day.Day).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#10B981' }}>+{'\u20B9'}{(day.Deposits || 0).toLocaleString('en-IN')}</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <Text style={{ fontSize: 11, color: colors.textSecondary }}>{day.DepositCount || 0} deposits</Text>
