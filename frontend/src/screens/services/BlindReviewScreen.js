@@ -222,7 +222,8 @@ export default function BlindReviewScreen({ navigation }) {
 
   // ── CTA pulse animation (subtle attention grab) ───────────
   useEffect(() => {
-    if (view !== 'results' || !getReferredCTA) return;
+    if (view !== 'results' || !result) return;
+    ctaPulseAnim.setValue(1);
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(ctaPulseAnim, { toValue: 0.7, duration: 1200, useNativeDriver: true }),
@@ -231,7 +232,7 @@ export default function BlindReviewScreen({ navigation }) {
     );
     pulse.start();
     return () => pulse.stop();
-  }, [view, getReferredCTA]);
+  }, [view, result]);
 
   // ── Submit ───────────────────────────────────────────────
   const handleSubmit = useCallback(async () => {
