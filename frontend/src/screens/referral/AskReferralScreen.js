@@ -367,14 +367,18 @@ export default function AskReferralScreen({ navigation, route }) {
             // All messages are the same subtle style — no visual difference between 0 and >0 referrers
             // Just slightly different wording so it feels natural
             const messages = referrerCount === 0
-              ? [
-                  `Most seekers also try Open Referral. One request reaches referrers at all companies`,
-                  `Tip: Open Referral lets multiple companies refer you with a single request`,
-                  `Many candidates combine this with Open Referral for wider coverage`,
-                  `Open Referral is popular for this role. Get referred across multiple companies at once`,
-                  `Did you know? You can get referred at Google, Microsoft and more with one request`,
-                  `Seekers who try Open Referral typically hear back faster from more companies`,
-                ]
+              ? (() => {
+                  const examples = ['Google', 'Microsoft', 'Amazon', 'Meta', 'Apple', 'Netflix'].filter(n => n.toLowerCase() !== selectedCompany.name.toLowerCase());
+                  const pick2 = [examples[nameHash % examples.length], examples[(nameHash + 1) % examples.length]];
+                  return [
+                    `Most seekers also try Open Referral. One request reaches referrers at all companies`,
+                    `Tip: Open Referral lets multiple companies refer you with a single request`,
+                    `Many candidates combine this with Open Referral for wider coverage`,
+                    `Open Referral is popular for this role. Get referred across multiple companies at once`,
+                    `Did you know? You can get referred at ${pick2[0]}, ${pick2[1]} and more with one request`,
+                    `Seekers who try Open Referral typically hear back faster from more companies`,
+                  ];
+                })()
               : [
                   `Tip: You can also try Open Referral to get referred at multiple companies at once`,
                   `Many seekers pair a specific request with Open Referral for extra coverage`,
