@@ -150,8 +150,10 @@ export default function MyReferralRequestsScreen({ route }) {
   const progressRequests = useMemo(() => {
     const filtered = myRequests.filter(r => {
       if (IN_PROGRESS_STATUSES.includes(r.Status)) return true;
-      // Open-to-any Completed but all children already verified — nothing to do, but not truly closed
-      // Open-to-any Completed but all children already verified → closed
+      // Open-to-any Completed/ProofUploaded with no pending verifications:
+      // Still active — can receive more referrals from other companies.
+      // Keep in InProgress until expired/cancelled.
+      if (r.OpenToAnyCompany && ACTION_STATUSES.includes(r.Status) && (r.PendingVerificationCount || 0) === 0) return true;
       return false;
     });
     // Sort: convert-to-open eligible (expiring soon) first, then by oldest first
@@ -165,9 +167,8 @@ export default function MyReferralRequestsScreen({ route }) {
 
   const closedRequests = useMemo(() => {
     const filtered = myRequests.filter(r => {
+      // Only truly terminal statuses go to Closed
       if (CLOSED_STATUSES.includes(r.Status)) return true;
-      // Open-to-any Completed with no pending verifications → all done
-      if (r.OpenToAnyCompany && ACTION_STATUSES.includes(r.Status) && (r.PendingVerificationCount || 0) === 0) return true;
       return false;
     });
     // Newest first — most recent completions at top
