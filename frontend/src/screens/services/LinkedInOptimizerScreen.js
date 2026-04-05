@@ -576,7 +576,7 @@ export default function LinkedInOptimizerScreen({ navigation }) {
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
               {result.overallScore >= 70
-                ? `Your profile scored ${result.overallScore}/100 — put it to work with a direct referral`
+                ? `Your profile scored ${result.overallScore}/100. Put it to work with a direct referral`
                 : `Boost your chances with a direct employee referral at your dream company`}
             </Text>
           </View>

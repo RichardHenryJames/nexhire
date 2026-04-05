@@ -368,14 +368,20 @@ export default function AskReferralScreen({ navigation, route }) {
             // Just slightly different wording so it feels natural
             const messages = referrerCount === 0
               ? [
-                  `Most seekers also try Open Referral — one request reaches referrers at all companies`,
+                  `Most seekers also try Open Referral. One request reaches referrers at all companies`,
                   `Tip: Open Referral lets multiple companies refer you with a single request`,
                   `Many candidates combine this with Open Referral for wider coverage`,
+                  `Open Referral is popular for this role. Get referred across multiple companies at once`,
+                  `Did you know? You can get referred at Google, Microsoft and more with one request`,
+                  `Seekers who try Open Referral typically hear back faster from more companies`,
                 ]
               : [
                   `Tip: You can also try Open Referral to get referred at multiple companies at once`,
                   `Many seekers pair a specific request with Open Referral for extra coverage`,
-                  `Also available: Open Referral — one request, referrers across all companies`,
+                  `Also available: Open Referral. One request, referrers across all companies`,
+                  `Some seekers also send an Open Referral alongside for wider reach`,
+                  `Open Referral is a great add-on. One request covers 100+ companies`,
+                  `Want to explore more companies too? Open Referral covers them all in one go`,
                 ];
             const msg = messages[nameHash % messages.length];
             

@@ -906,7 +906,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
               </Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, lineHeight: 18 }}>
                 {r.matchScore >= 70
-                  ? `Your resume scored ${r.matchScore}/100 — put it to work with a direct referral`
+                  ? `Your resume scored ${r.matchScore}/100. Put it to work with a direct referral`
                   : `Improve your chances with a direct employee referral at your dream company`}
               </Text>
             </View>
