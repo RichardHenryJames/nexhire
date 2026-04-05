@@ -484,8 +484,16 @@ class RefOpenAPI {
       return result;
     } catch (error) {
       console.error('LinkedIn login failed:', error.message);
-      if (error.message.includes('not found') || error.message.includes('User not found')) {
-        return { success: false, error: 'USER_NOT_FOUND', needsRegistration: true, message: 'Account not found. Please complete registration.' };
+      if (error.message.includes('not found') || error.message.includes('User not found') || error.data?.needsRegistration) {
+        // The backend 404 response includes linkedInUser + verificationToken in error.data
+        return {
+          success: false,
+          error: 'USER_NOT_FOUND',
+          needsRegistration: true,
+          linkedInUser: error.data?.linkedInUser || null,
+          linkedInVerificationToken: error.data?.linkedInVerificationToken || null,
+          message: 'Account not found. Please complete registration.',
+        };
       }
       throw error;
     }
@@ -496,8 +504,8 @@ class RefOpenAPI {
       const result = await this.apiCall('/auth/linkedin-register', {
         method: 'POST',
         body: JSON.stringify({
-          code: linkedInData.code,
-          redirectUri: linkedInData.redirectUri,
+          verificationToken: linkedInData.verificationToken,
+          linkedInUser: linkedInData.linkedInUser,
           ...additionalUserData,
         }),
       });

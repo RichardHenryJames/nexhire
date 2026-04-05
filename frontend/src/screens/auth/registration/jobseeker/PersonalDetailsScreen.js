@@ -79,10 +79,14 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         confirmPassword: 'google-oauth-user',
       }));
     }
-    // For LinkedIn users, pre-fill dummy passwords (server does code exchange, no password needed)
+    // For LinkedIn users, pre-fill from verified LinkedIn profile data
     if (isLinkedInUser && !isGoogleUser) {
+      const liUser = pendingLinkedInAuth?.linkedInUser;
       setFormData((prev) => ({
         ...prev,
+        firstName: liUser?.given_name || liUser?.name?.split(' ')[0] || prev.firstName,
+        lastName: liUser?.family_name || liUser?.name?.split(' ').slice(1).join(' ') || prev.lastName,
+        email: liUser?.email || prev.email,
         password: 'linkedin-oauth-user',
         confirmPassword: 'linkedin-oauth-user',
       }));
@@ -155,8 +159,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       }
       if (isLinkedInUser && pendingLinkedInAuth) {
         registrationData.linkedInAuth = {
-          code: pendingLinkedInAuth.code,
-          redirectUri: pendingLinkedInAuth.redirectUri,
+          verificationToken: pendingLinkedInAuth.verificationToken,
+          linkedInUser: pendingLinkedInAuth.linkedInUser,
         };
       }
 

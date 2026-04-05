@@ -333,10 +333,16 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (loginResult.needsRegistration) {
-          setPendingLinkedInAuth(linkedInResult.data);
+          // Store verified LinkedIn user info + verification token from backend
+          // (NOT the auth code — codes are single-use and already consumed)
+          setPendingLinkedInAuth({
+            verificationToken: loginResult.linkedInVerificationToken,
+            linkedInUser: loginResult.linkedInUser,
+          });
           return {
             success: false,
             needsRegistration: true,
+            linkedInUser: loginResult.linkedInUser,
             message: 'New user needs to complete registration',
           };
         }
@@ -347,7 +353,8 @@ export const AuthProvider = ({ children }) => {
           loginError.message.includes('not found') ||
           loginError.message.includes('USER_NOT_FOUND')
         ) {
-          setPendingLinkedInAuth(linkedInResult.data);
+          // loginError won't have linkedInUser here (it's a thrown error, not API response)
+          setPendingLinkedInAuth({ verificationToken: null, linkedInUser: null });
           return {
             success: false,
             needsRegistration: true,

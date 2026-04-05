@@ -234,8 +234,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
           }),
           ...(isLinkedInUser && pendingLinkedInAuth && {
             linkedInAuth: {
-              code: pendingLinkedInAuth.code,
-              redirectUri: pendingLinkedInAuth.redirectUri,
+              verificationToken: pendingLinkedInAuth.verificationToken,
+              linkedInUser: pendingLinkedInAuth.linkedInUser,
             },
           }),
           

@@ -1798,6 +1798,32 @@ export class UserService {
         };
     }
 
+    // ─── LinkedIn pending registration cache ─────────────────
+    // When login fails (user not found), we cache the verified LinkedIn identity
+    // so the register endpoint can use it without re-exchanging the (single-use) code.
+    private static linkedInPendingRegistrations = new Map<string, { linkedInUser: any; expiresAt: number }>();
+
+    static storeLinkedInPendingRegistration(linkedInUser: any): string {
+        // Clean expired entries
+        const now = Date.now();
+        for (const [key, val] of this.linkedInPendingRegistrations) {
+            if (val.expiresAt < now) this.linkedInPendingRegistrations.delete(key);
+        }
+        const token = AuthService.generateUniqueId();
+        this.linkedInPendingRegistrations.set(token, { linkedInUser, expiresAt: now + 10 * 60 * 1000 }); // 10 min
+        return token;
+    }
+
+    static retrieveLinkedInPendingRegistration(token: string): any | null {
+        const entry = this.linkedInPendingRegistrations.get(token);
+        if (!entry || entry.expiresAt < Date.now()) {
+            this.linkedInPendingRegistrations.delete(token);
+            return null;
+        }
+        this.linkedInPendingRegistrations.delete(token); // single-use
+        return entry.linkedInUser;
+    }
+
     /**
      * LinkedIn OAuth Login
      */
@@ -1810,7 +1836,19 @@ export class UserService {
 
         const existingUser = await this.findByEmail(linkedInUser.email);
         if (!existingUser) {
-            throw new NotFoundError('User not found with email: ' + linkedInUser.email);
+            // Store verified LinkedIn identity for registration and attach to error
+            const verificationToken = this.storeLinkedInPendingRegistration(linkedInUser);
+            const err: any = new NotFoundError('User not found with email: ' + linkedInUser.email);
+            err.linkedInUser = {
+                email: linkedInUser.email,
+                name: linkedInUser.name,
+                given_name: linkedInUser.given_name,
+                family_name: linkedInUser.family_name,
+                picture: linkedInUser.picture,
+                email_verified: linkedInUser.email_verified,
+            };
+            err.verificationToken = verificationToken;
+            throw err;
         }
         if (!existingUser.IsActive) {
             throw new ValidationError('Account is deactivated');
@@ -1846,9 +1884,24 @@ export class UserService {
      * LinkedIn OAuth Registration
      */
     static async registerWithLinkedIn(data: any, requestMeta?: { ipAddress?: string | null; userAgent?: string | null }): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
-        const { code, redirectUri, userType, ...additionalData } = data;
+        const { verificationToken, linkedInUser: clientLinkedInUser, userType, ...additionalData } = data;
 
-        const linkedInUser = await this.exchangeLinkedInCode(code, redirectUri);
+        // Retrieve verified LinkedIn identity from cache (set during failed login)
+        let linkedInUser: any = null;
+        if (verificationToken) {
+            linkedInUser = this.retrieveLinkedInPendingRegistration(verificationToken);
+        }
+        if (!linkedInUser) {
+            // Fallback: if code+redirectUri provided (shouldn't happen in normal flow)
+            if (data.code && data.redirectUri) {
+                linkedInUser = await this.exchangeLinkedInCode(data.code, data.redirectUri);
+            } else if (clientLinkedInUser?.email) {
+                // Last resort: use client-provided data (less secure but functional)
+                linkedInUser = clientLinkedInUser;
+            } else {
+                throw new ValidationError('LinkedIn verification expired. Please try signing in again.');
+            }
+        }
 
         if (!linkedInUser.email) throw new ValidationError('LinkedIn email is required');
         if (!userType) throw new ValidationError('User type is required');

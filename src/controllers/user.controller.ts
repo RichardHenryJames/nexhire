@@ -140,9 +140,18 @@ export const linkedinLogin = withErrorHandling(async (req: HttpRequest, context:
         console.error('LinkedIn login failed:', error.message);
         
         if (error.message.includes('User not found') || error.message.includes('not found')) {
+            // Return the verified LinkedIn user data + verification token so frontend
+            // can pre-populate the registration form and register without re-exchanging code
             return {
                 status: 404,
-                jsonBody: errorResponse('USER_NOT_FOUND', 'Account not found. Please complete registration.')
+                jsonBody: {
+                    success: false,
+                    error: 'USER_NOT_FOUND',
+                    message: 'Account not found. Please complete registration.',
+                    needsRegistration: true,
+                    linkedInUser: (error as any).linkedInUser || null,
+                    linkedInVerificationToken: (error as any).verificationToken || null,
+                }
             };
         }
         
