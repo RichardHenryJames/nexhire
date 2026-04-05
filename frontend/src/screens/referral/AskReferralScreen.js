@@ -359,53 +359,80 @@ export default function AskReferralScreen({ navigation, route }) {
           </View>
           {errors.company && <Text style={s.fieldError}>{errors.company}</Text>}
 
-          {/* Smart OTA suggestion after company selection — varied messaging */}
+          {/* Smart OTA suggestion after company selection — context-aware */}
           {selectedCompany && !showCompanyDD && (() => {
-            // Generate a deterministic but varied message per company
-            const nameHash = selectedCompany.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+            const referrerCount = selectedCompany.verifiedReferrersCount || 0;
             const tier = selectedCompany.tier || 'Standard';
-            const isElite = tier === 'Elite';
-            const isPremium = tier === 'Premium';
+            const nameHash = selectedCompany.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
             
-            // Vary the message so it doesn't look canned
-            const messages = [
-              { title: '💡 Maximize your chances', body: `Open Referral sends your request to referrers across all companies — get multiple referrals with one request.` },
-              { title: '🚀 Cast a wider net', body: `Instead of waiting for one referrer, Open Referral broadcasts to 500+ verified referrers across top companies.` },
-              { title: '⚡ Speed up your search', body: `Open Referral gets you referred faster — multiple companies can pick up your request simultaneously.` },
-              { title: '🎯 Don\'t put all eggs in one basket', body: `Open Referral lets referrers from Google, Microsoft, Amazon & more refer you at the same time.` },
+            // Different messaging based on whether there are referrers or not
+            if (referrerCount === 0) {
+              // No referrers — stronger push to Open, but don't say "no referrers"
+              const noRefMessages = [
+                { title: '🚀 Get referred faster with Open Referral', body: `Open Referral broadcasts your request to 500+ verified referrers across all top companies — multiple referrals with one request.` },
+                { title: '⚡ Increase your chances significantly', body: `Open Referral lets referrers from Google, Microsoft, Amazon & more refer you simultaneously — one request, many companies.` },
+                { title: '🎯 One request, many companies', body: `Instead of waiting for a single company, Open Referral puts your profile in front of referrers at 100+ companies at once.` },
+              ];
+              const msg = noRefMessages[nameHash % noRefMessages.length];
+              
+              return (
+                <TouchableOpacity
+                  style={{
+                    marginTop: 12,
+                    padding: 14,
+                    borderRadius: 12,
+                    backgroundColor: '#8B5CF6' + '10',
+                    borderWidth: 1,
+                    borderColor: '#8B5CF6' + '30',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => switchMode(true)}
+                  activeOpacity={0.75}
+                >
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6' + '15', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Ionicons name="globe-outline" size={18} color="#8B5CF6" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6', marginBottom: 2 }}>
+                      {msg.title}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 17 }}>
+                      {msg.body}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color="#8B5CF6" style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
+              );
+            }
+            
+            // Has referrers — softer, optional suggestion
+            const withRefMessages = [
+              { title: '💡 Also consider Open Referral', body: `Get referred across multiple companies with one request — great if you're exploring options beyond ${selectedCompany.name}.` },
+              { title: '🌐 Explore more companies too?', body: `Open Referral sends your request to referrers at 100+ companies — a great complement to your ${selectedCompany.name} request.` },
             ];
-            const msg = messages[nameHash % messages.length];
-
-            // Show a believable success stat that varies per company
-            const successPercent = 85 + (nameHash % 12); // 85-96%
+            const msg = withRefMessages[nameHash % withRefMessages.length];
             
             return (
               <TouchableOpacity
                 style={{
                   marginTop: 12,
-                  padding: 14,
+                  padding: 12,
                   borderRadius: 12,
-                  backgroundColor: '#8B5CF6' + '0A',
+                  backgroundColor: '#8B5CF6' + '08',
                   borderWidth: 1,
-                  borderColor: '#8B5CF6' + '25',
+                  borderColor: '#8B5CF6' + '18',
                   flexDirection: 'row',
                   alignItems: 'center',
                 }}
                 onPress={() => switchMode(true)}
                 activeOpacity={0.75}
               >
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6' + '15', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                  <Ionicons name="globe-outline" size={18} color="#8B5CF6" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6', marginBottom: 2 }}>
-                    {msg.title}
-                  </Text>
-                  <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 17 }}>
-                    {msg.body}{isElite || isPremium ? ` ${successPercent}% of Open Referrals get picked up.` : ''}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color="#8B5CF6" style={{ marginLeft: 6 }} />
+                <Ionicons name="globe-outline" size={16} color="#8B5CF6" style={{ marginRight: 10 }} />
+                <Text style={{ fontSize: 12, color: colors.textSecondary, flex: 1 }}>
+                  {msg.title} — {msg.body}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ marginLeft: 6 }} />
               </TouchableOpacity>
             );
           })()}

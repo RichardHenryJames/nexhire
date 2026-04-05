@@ -197,7 +197,8 @@ export class ReferenceRepository {
         if (isFortune500 && !hasSearch) {
             query = `
                 SELECT OrganizationID as id, Name as name, LogoURL as logoURL, Industry as industry,
-                       IsFortune500 as isFortune500, ISNULL(Tier, 'Standard') as tier
+                       IsFortune500 as isFortune500, ISNULL(Tier, 'Standard') as tier,
+                       ISNULL(VerifiedReferrersCount, 0) as verifiedReferrersCount
                 FROM Organizations
                 WHERE IsActive = 1 AND IsFortune500 = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
                 ORDER BY Name ASC
@@ -205,7 +206,8 @@ export class ReferenceRepository {
         } else if (hasSearch) {
             query = `
                 SELECT OrganizationID as id, Name as name, LogoURL as logoURL, Industry as industry,
-                       IsFortune500 as isFortune500, ISNULL(Tier, 'Standard') as tier
+                       IsFortune500 as isFortune500, ISNULL(Tier, 'Standard') as tier,
+                       ISNULL(VerifiedReferrersCount, 0) as verifiedReferrersCount
                 FROM Organizations
                 WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL) AND Name LIKE @param${paramIndex}
             `;
@@ -216,7 +218,8 @@ export class ReferenceRepository {
         } else {
             query = `
                 SELECT OrganizationID as id, Name as name, LogoURL as logoURL, Industry as industry,
-                       IsFortune500 as isFortune500, ISNULL(Tier, 'Standard') as tier
+                       IsFortune500 as isFortune500, ISNULL(Tier, 'Standard') as tier,
+                       ISNULL(VerifiedReferrersCount, 0) as verifiedReferrersCount
                 FROM Organizations
                 WHERE IsActive = 1 AND (IsUserCreated = 0 OR IsUserCreated IS NULL)
                 ORDER BY CASE WHEN Tier = 'Elite' THEN 0 WHEN Tier = 'Premium' THEN 1 ELSE 2 END, Name ASC
