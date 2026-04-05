@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerForPushNotifications, clearPushToken } from '../services/pushNotifications';
 import refopenAPI from '../services/api';
 import googleAuth from '../services/googleAuth';
+import linkedinAuth from '../services/linkedinAuth';
 import { createSmartAuthMethods } from '../services/smartProfileUpdate';
 import { getAndClearRedirectRoute, navigateToRoute } from '../navigation/navigationRef';
 import { warmHomeCache, clearHomeCache } from '../utils/homeCache';
@@ -90,6 +91,9 @@ export const AuthProvider = ({ children }) => {
   const [pendingGoogleAuth, setPendingGoogleAuthState] = useState(() => {
     return loadPendingGoogleAuthFromStorage();
   });
+
+  // LinkedIn auth: store code+redirectUri when new user needs registration
+  const [pendingLinkedInAuth, setPendingLinkedInAuth] = useState(null);
 
   // Track whether the initial auth check has completed
   // After the first check, subsequent checkAuthState calls should NOT toggle global loading
@@ -300,6 +304,71 @@ export const AuthProvider = ({ children }) => {
     setPendingGoogleAuth(null);
   };
 
+  // LinkedIn Sign-In Flow — authorization code flow,
+  // code exchange happens server-side (needs client_secret).
+  const loginWithLinkedIn = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const linkedInResult = await linkedinAuth.signIn();
+
+      if (!linkedInResult.success) {
+        if (linkedInResult.cancelled) return { success: false, cancelled: true };
+        if (linkedInResult.dismissed) return { success: false, dismissed: true };
+        if (linkedInResult.needsConfig) return { success: false, error: linkedInResult.error, needsConfig: true };
+        if (linkedInResult.featureDisabled) return { success: false, error: linkedInResult.error, featureDisabled: true };
+        throw new Error(linkedInResult.error || 'LinkedIn authentication failed');
+      }
+
+      // Send authorization code to backend for token exchange
+      try {
+        const loginResult = await refopenAPI.loginWithLinkedIn(linkedInResult.data);
+
+        if (loginResult.success) {
+          setUser(loginResult.data.user);
+          handlePostLoginRedirect();
+          return { success: true, user: loginResult.data.user };
+        }
+
+        if (loginResult.needsRegistration) {
+          setPendingLinkedInAuth(linkedInResult.data);
+          return {
+            success: false,
+            needsRegistration: true,
+            message: 'New user needs to complete registration',
+          };
+        }
+
+        throw new Error(loginResult.error || 'Login failed');
+      } catch (loginError) {
+        if (
+          loginError.message.includes('not found') ||
+          loginError.message.includes('USER_NOT_FOUND')
+        ) {
+          setPendingLinkedInAuth(linkedInResult.data);
+          return {
+            success: false,
+            needsRegistration: true,
+            message: 'New user needs to complete registration',
+          };
+        }
+        throw loginError;
+      }
+    } catch (error) {
+      const errorMessage = error.message || 'LinkedIn Sign-In failed';
+      console.error('LinkedIn Sign-In error:', error);
+      setError(errorMessage);
+      return { success: false, error: errorMessage };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clearPendingLinkedInAuth = () => {
+    setPendingLinkedInAuth(null);
+  };
+
   // Handle redirect after successful login
   const handlePostLoginRedirect = () => {
     if (pendingRedirect) {
@@ -360,13 +429,28 @@ export const AuthProvider = ({ children }) => {
       
       // Check if this is a Google OAuth registration
       const isGoogleRegistration = !!userData.googleAuth;
+      const isLinkedInRegistration = !!userData.linkedInAuth;
+      const isSocialRegistration = isGoogleRegistration || isLinkedInRegistration;
       
       // Separate education and work experience data from registration data
       const { educationData, workExperienceData, jobPreferences, ...registrationData } = userData;
       
       let result;
       
-      if (isGoogleRegistration) {
+      if (isLinkedInRegistration) {
+        // Use dedicated LinkedIn registration endpoint (code exchange on server)
+        result = await refopenAPI.registerWithLinkedIn(userData.linkedInAuth, {
+          userType: registrationData.userType,
+          phone: registrationData.phone,
+          referralCode: registrationData.referralCode,
+          organizationName: registrationData.organizationName,
+          organizationIndustry: registrationData.organizationIndustry,
+          organizationSize: registrationData.organizationSize,
+          termsAccepted: registrationData.termsAccepted,
+          termsVersion: registrationData.termsVersion,
+          privacyPolicyVersion: registrationData.privacyPolicyVersion,
+        });
+      } else if (isGoogleRegistration) {
         // Use dedicated Google registration endpoint (no password needed)
         const googleTokenData = {
           accessToken: userData.googleAuth.accessToken,
@@ -404,10 +488,10 @@ export const AuthProvider = ({ children }) => {
         // Handle different login flows for Google vs regular users
         let loginResult;
         
-        if (isGoogleRegistration) {
-          // Google registration already returns tokens and user - no need to login again
+        if (isGoogleRegistration || isLinkedInRegistration) {
+          // Social registration already returns tokens and user - no need to login again
           loginResult = { success: true, user: result.data.user };
-          // Tokens are already set by registerWithGoogle
+          // Tokens are already set by registerWithGoogle/registerWithLinkedIn
         } else {
           // Regular user login
           loginResult = await login(userData.email, userData.password);
@@ -648,7 +732,9 @@ export const AuthProvider = ({ children }) => {
     // Authentication methods
     login,
     loginWithGoogle, // NEW: Google Sign-In method
+    loginWithLinkedIn, // NEW: LinkedIn Sign-In method
     clearPendingGoogleAuth, // NEW: Clear pending Google auth
+    clearPendingLinkedInAuth, // NEW: Clear pending LinkedIn auth
     register,
     logout,
     handlePostLoginRedirect, // Handle redirect after login
@@ -684,6 +770,12 @@ export const AuthProvider = ({ children }) => {
     isGoogleUser: user?.LoginMethod === 'Google',
     hasPendingGoogleAuth: !!pendingGoogleAuth,
     googleAuthAvailable: googleAuth.isConfigured(),
+    // LinkedIn auth state
+    pendingLinkedInAuth,
+    hasLinkedInAuth: !!user?.LinkedInId,
+    isLinkedInUser: user?.LoginMethod === 'LinkedIn',
+    hasPendingLinkedInAuth: !!pendingLinkedInAuth,
+    linkedInAuthAvailable: linkedinAuth.isConfigured(),
     hasPendingRedirect: !!pendingRedirect,
   };
 

@@ -21,6 +21,7 @@ import { spacing, typography, borderRadius, styles as themeStyles } from '../../
 import { useTheme } from '../../contexts/ThemeContext';
 import { authDarkColors } from '../../styles/authDarkColors';
 import GoogleSignInButton from '../../components/GoogleSignInButton';
+import LinkedInSignInButton from '../../components/LinkedInSignInButton';
 import AnimatedSection from '../../components/auth/AnimatedSection';
 import useResponsive from '../../hooks/useResponsive';
 import { showToast } from '../../components/Toast';
@@ -34,11 +35,12 @@ export default function LoginScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [formLoading, setFormLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [linkedInLoading, setLinkedInLoading] = useState(false);
   const [loginError, setLoginError] = useState(''); // State for login error message
   const [isInAppBrowser, setIsInAppBrowser] = useState(false); // Detect in-app browser
   const [showBrowserModal, setShowBrowserModal] = useState(false); // Modal for in-app browser warning
   
-  const { login, loginWithGoogle, loading, error, clearError, googleAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
+  const { login, loginWithGoogle, loginWithLinkedIn, loading, error, clearError, googleAuthAvailable, linkedInAuthAvailable, isAuthenticated, handlePostLoginRedirect, checkAuthState } = useAuth();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet } = responsive;
   const colors = authDarkColors; // Always use dark colors for auth screens
@@ -212,6 +214,35 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  // Handle LinkedIn Sign-In
+  const handleLinkedInSignIn = async () => {
+    if (isInAppBrowser) {
+      setShowBrowserModal(true);
+      return;
+    }
+    try {
+      setLinkedInLoading(true);
+      const result = await loginWithLinkedIn();
+      
+      if (result.success) {
+        // Navigation handled by auth context
+      } else if (result.cancelled || result.dismissed) {
+        // User cancelled — do nothing
+      } else if (result.needsConfig) {
+        showToast('LinkedIn Sign-In is not configured yet. Please use email and password.', 'error');
+      } else if (result.needsRegistration) {
+        // AuthContext has set pendingLinkedInAuth — navigator handles it
+      } else {
+        showToast(result.error || 'LinkedIn Sign-In failed', 'error');
+      }
+    } catch (error) {
+      console.error('LinkedIn Sign-In error:', error);
+      showToast(error.message || 'LinkedIn Sign-In failed', 'error');
+    } finally {
+      setLinkedInLoading(false);
+    }
+  };
+
   const handleRegisterNavigation = () => {
     // For email/password sign up start the Job Seeker registration flow
     // directly at the experience type selection screen (skip user type)
@@ -269,16 +300,26 @@ export default function LoginScreen({ navigation }) {
           </View>
           </AnimatedSection>
 
-          {/* NEW: Google Sign-In Section */}
+          {/* Social Sign-In Section */}
           <AnimatedSection delay={200}>
-          {googleAuthAvailable && (
+          {(googleAuthAvailable || linkedInAuthAvailable) && (
             <>
               <View style={screenStyles.googleSection}>
-                <GoogleSignInButton
-                  onPress={handleGoogleSignIn}
-                  loading={googleLoading}
-                  disabled={formLoading || loading}
-                />
+                {googleAuthAvailable && (
+                  <GoogleSignInButton
+                    onPress={handleGoogleSignIn}
+                    loading={googleLoading}
+                    disabled={formLoading || loading || linkedInLoading}
+                  />
+                )}
+                {linkedInAuthAvailable && (
+                  <LinkedInSignInButton
+                    onPress={handleLinkedInSignIn}
+                    loading={linkedInLoading}
+                    disabled={formLoading || loading || googleLoading}
+                    style={{ marginTop: 10 }}
+                  />
+                )}
               </View>
 
               <View style={screenStyles.divider}>

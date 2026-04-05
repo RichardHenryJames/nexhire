@@ -118,6 +118,73 @@ export const googleRegister = withErrorHandling(async (req: HttpRequest, context
 });
 
 /**
+ * LinkedIn OAuth Login
+ * POST /auth/linkedin
+ * Frontend sends authorization code, backend exchanges it for tokens + user info
+ */
+export const linkedinLogin = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { code, redirectUri } = await extractRequestBody(req);
+    
+    try {
+        const result = await UserService.loginWithLinkedIn({ code, redirectUri });
+        
+        return {
+            status: 200,
+            jsonBody: successResponse(result, 'LinkedIn login successful')
+        };
+    } catch (error: any) {
+        console.error('LinkedIn login failed:', error.message);
+        
+        if (error.message.includes('User not found') || error.message.includes('not found')) {
+            return {
+                status: 404,
+                jsonBody: errorResponse('USER_NOT_FOUND', 'Account not found. Please complete registration.')
+            };
+        }
+        
+        throw error;
+    }
+});
+
+/**
+ * LinkedIn OAuth Registration
+ * POST /auth/linkedin-register
+ */
+export const linkedinRegister = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { code, redirectUri, userType, ...additionalData } = await extractRequestBody(req);
+    
+    const requestMeta = {
+        ipAddress: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || req.headers.get('client-ip') || null,
+        userAgent: req.headers.get('user-agent') || null,
+    };
+    
+    try {
+        const result = await UserService.registerWithLinkedIn({
+            code,
+            redirectUri,
+            userType,
+            ...additionalData
+        }, requestMeta);
+        
+        return {
+            status: 201,
+            jsonBody: successResponse(result, 'LinkedIn registration successful')
+        };
+    } catch (error: any) {
+        console.error('LinkedIn registration failed:', error.message);
+        
+        if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+            return {
+                status: 409,
+                jsonBody: errorResponse('USER_EXISTS', 'Account already exists. Please sign in instead.')
+            };
+        }
+        
+        throw error;
+    }
+});
+
+/**
  * Logout user
  * POST /auth/logout
  */

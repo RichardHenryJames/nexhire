@@ -463,6 +463,56 @@ class RefOpenAPI {
     }
   }
 
+  // ─── LinkedIn OAuth ───
+
+  async loginWithLinkedIn(linkedInData) {
+    try {
+      const result = await this.apiCall('/auth/linkedin', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: linkedInData.code,
+          redirectUri: linkedInData.redirectUri,
+        }),
+      });
+
+      if (result.success && result.data?.tokens) {
+        await this.setTokens(result.data.tokens.accessToken, result.data.tokens.refreshToken);
+        this.token = result.data.tokens.accessToken;
+        this.refreshToken = result.data.tokens.refreshToken;
+      }
+
+      return result;
+    } catch (error) {
+      console.error('LinkedIn login failed:', error.message);
+      if (error.message.includes('not found') || error.message.includes('User not found')) {
+        return { success: false, error: 'USER_NOT_FOUND', needsRegistration: true, message: 'Account not found. Please complete registration.' };
+      }
+      throw error;
+    }
+  }
+
+  async registerWithLinkedIn(linkedInData, additionalUserData) {
+    try {
+      const result = await this.apiCall('/auth/linkedin-register', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: linkedInData.code,
+          redirectUri: linkedInData.redirectUri,
+          ...additionalUserData,
+        }),
+      });
+
+      if (result.success && result.data?.tokens) {
+        await this.setTokens(result.data.tokens.accessToken, result.data.tokens.refreshToken);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('LinkedIn registration failed:', error.message);
+      throw error;
+    }
+  }
+
   // Password Management APIs
   
   /**

@@ -23,7 +23,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
   const colors = authDarkColors;
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
-  const { register, pendingGoogleAuth, clearPendingGoogleAuth } = useAuth();
+  const { register, pendingGoogleAuth, clearPendingGoogleAuth, pendingLinkedInAuth, clearPendingLinkedInAuth } = useAuth();
 
   const routeParams = route?.params || {};
   const {
@@ -33,10 +33,13 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     workExperienceData = null,
     educationData = null,
     fromGoogleAuth = false,
+    fromLinkedInAuth = false,
     skippedSteps = false,
   } = routeParams;
 
-  const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
+  const isGoogleUser = fromGoogleAuth || !!pendingGoogleAuth;
+  const isLinkedInUser = fromLinkedInAuth || !!pendingLinkedInAuth;
+  const isSocialUser = isGoogleUser || isLinkedInUser;
   const googleUser = pendingGoogleAuth?.user;
 
   // Guard against hard refresh with lost Google data
@@ -45,7 +48,11 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       if (typeof window !== 'undefined') { window.location.href = '/login'; return; }
       setTimeout(() => { navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); }, 100);
     }
-  }, [fromGoogleAuth, pendingGoogleAuth, googleUser, navigation]);
+    if (fromLinkedInAuth && !pendingLinkedInAuth) {
+      if (typeof window !== 'undefined') { window.location.href = '/login'; return; }
+      setTimeout(() => { navigation.reset({ index: 0, routes: [{ name: 'Login' }] }); }, 100);
+    }
+  }, [fromGoogleAuth, pendingGoogleAuth, googleUser, fromLinkedInAuth, pendingLinkedInAuth, navigation]);
 
   // ─── Form state (slim: name + email + password + terms) ─────
   const [formData, setFormData] = useState({
@@ -91,7 +98,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
     else if (formData.lastName.length < 2) e.lastName = 'Min 2 characters';
     if (!formData.email.trim()) e.email = 'Email is required';
     else if (!validateEmail(formData.email)) e.email = 'Please enter a valid email';
-    if (!isGoogleUser) {
+    if (!isSocialUser) {
       if (!formData.password) e.password = 'Password is required';
       else if (formData.password.length < 8) e.password = 'Min 8 characters';
       if (!formData.confirmPassword) e.confirmPassword = 'Confirm your password';
@@ -125,7 +132,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       if (educationData) {
         registrationData.educationData = educationData;
       }
-      if (!isGoogleUser) {
+      if (!isSocialUser) {
         registrationData.password = formData.password;
       }
       if (isGoogleUser && pendingGoogleAuth) {
@@ -138,15 +145,23 @@ export default function PersonalDetailsScreen({ navigation, route }) {
           locale: googleUser.locale,
         };
       }
+      if (isLinkedInUser && pendingLinkedInAuth) {
+        registrationData.linkedInAuth = {
+          code: pendingLinkedInAuth.code,
+          redirectUri: pendingLinkedInAuth.redirectUri,
+        };
+      }
 
       const result = await register(registrationData);
 
       if (result.success) {
         if (isGoogleUser) clearPendingGoogleAuth();
+        if (isLinkedInUser) clearPendingLinkedInAuth();
       } else {
         const msg = result.error || 'Unable to create account.';
         if (msg.includes('already exists') || msg.includes('Conflict')) {
           if (isGoogleUser) clearPendingGoogleAuth();
+          if (isLinkedInUser) clearPendingLinkedInAuth();
           showToast('Account already exists. Please sign in.', 'info');
           navigation.navigate('Login');
         } else {
@@ -157,6 +172,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
       const msg = error.message || 'Registration failed.';
       if (msg.includes('already exists') || msg.includes('Conflict')) {
         if (isGoogleUser) clearPendingGoogleAuth();
+        if (isLinkedInUser) clearPendingLinkedInAuth();
         showToast('Account already exists. Please sign in.', 'info');
         navigation.navigate('Login');
       } else {

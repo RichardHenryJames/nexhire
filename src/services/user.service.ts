@@ -1739,6 +1739,255 @@ export class UserService {
         );
     }
 
+    // ─── LinkedIn OAuth helpers ──────────────────────────────────
+
+    /**
+     * Exchange LinkedIn authorization code for access token + user info
+     */
+    private static async exchangeLinkedInCode(code: string, redirectUri: string): Promise<{
+        sub: string; email: string; email_verified: boolean;
+        name: string; given_name: string; family_name: string; picture: string;
+    }> {
+        const clientId = process.env.LINKEDIN_CLIENT_ID;
+        const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+        if (!clientId || !clientSecret) throw new Error('LinkedIn OAuth not configured on server');
+
+        // Exchange code for access token
+        const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code,
+                client_id: clientId,
+                client_secret: clientSecret,
+                redirect_uri: redirectUri,
+            }).toString(),
+        });
+
+        if (!tokenRes.ok) {
+            const errText = await tokenRes.text();
+            console.error('[LinkedIn] Token exchange failed:', errText);
+            throw new Error('LinkedIn token exchange failed');
+        }
+
+        const tokenData = await tokenRes.json() as any;
+        const accessToken = tokenData.access_token;
+        if (!accessToken) throw new Error('No access token from LinkedIn');
+
+        // Fetch user profile using OpenID Connect userinfo endpoint
+        const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (!profileRes.ok) {
+            const errText = await profileRes.text();
+            console.error('[LinkedIn] Userinfo failed:', errText);
+            throw new Error('Failed to fetch LinkedIn profile');
+        }
+
+        const profile = await profileRes.json() as any;
+        return {
+            sub: profile.sub,
+            email: profile.email,
+            email_verified: profile.email_verified ?? false,
+            name: profile.name || '',
+            given_name: profile.given_name || profile.name?.split(' ')[0] || '',
+            family_name: profile.family_name || profile.name?.split(' ').slice(1).join(' ') || '',
+            picture: profile.picture || '',
+        };
+    }
+
+    /**
+     * LinkedIn OAuth Login
+     */
+    static async loginWithLinkedIn(data: { code: string; redirectUri: string }): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
+        const linkedInUser = await this.exchangeLinkedInCode(data.code, data.redirectUri);
+
+        if (!linkedInUser.email) {
+            throw new ValidationError('LinkedIn email is required');
+        }
+
+        const existingUser = await this.findByEmail(linkedInUser.email);
+        if (!existingUser) {
+            throw new NotFoundError('User not found with email: ' + linkedInUser.email);
+        }
+        if (!existingUser.IsActive) {
+            throw new ValidationError('Account is deactivated');
+        }
+
+        // Update user with LinkedIn information
+        const updateData: any = {};
+        if (!existingUser.LinkedInId && linkedInUser.sub) updateData.LinkedInId = linkedInUser.sub;
+        if (!existingUser.ProfilePictureURL && linkedInUser.picture) updateData.ProfilePictureURL = linkedInUser.picture;
+        if (!existingUser.EmailVerified && linkedInUser.email_verified) updateData.EmailVerified = 1;
+        updateData.LoginMethod = 'LinkedIn';
+        updateData.LastLoginAt = new Date().toISOString();
+
+        if (Object.keys(updateData).length > 0) {
+            const updateFields = Object.keys(updateData).map((key, i) => `${key} = @param${i + 1}`).join(', ');
+            const values = Object.values(updateData);
+            await dbService.executeQuery(
+                `UPDATE Users SET ${updateFields}, UpdatedAt = GETUTCDATE() WHERE UserID = @param0`,
+                [existingUser.UserID, ...values]
+            );
+            const updatedUser = await this.findById(existingUser.UserID);
+            if (updatedUser) Object.assign(existingUser, updatedUser);
+        }
+
+        await this.updateLastLogin(existingUser.UserID);
+        const tokens = AuthService.generateAuthTokens(existingUser);
+        const { Password, ...userWithoutPassword } = existingUser;
+
+        return { user: userWithoutPassword, tokens };
+    }
+
+    /**
+     * LinkedIn OAuth Registration
+     */
+    static async registerWithLinkedIn(data: any, requestMeta?: { ipAddress?: string | null; userAgent?: string | null }): Promise<{ user: Omit<User, 'Password'>; tokens: any }> {
+        const { code, redirectUri, userType, ...additionalData } = data;
+
+        const linkedInUser = await this.exchangeLinkedInCode(code, redirectUri);
+
+        if (!linkedInUser.email) throw new ValidationError('LinkedIn email is required');
+        if (!userType) throw new ValidationError('User type is required');
+
+        const allowedUserTypes = ['JobSeeker', 'Employer'];
+        if (!allowedUserTypes.includes(userType)) {
+            throw new ValidationError(`Invalid user type. Allowed types: ${allowedUserTypes.join(', ')}`);
+        }
+
+        const existingUser = await this.findByEmail(linkedInUser.email);
+        if (existingUser) {
+            throw new ConflictError('User with this email already exists. Please sign in instead.');
+        }
+
+        const firstName = linkedInUser.given_name || 'User';
+        const lastName = linkedInUser.family_name || '';
+        const userId = AuthService.generateUniqueId();
+
+        // Referral code lookup
+        let referrerId: string | null = null;
+        if (additionalData.referralCode?.trim()) {
+            const referrerResult = await dbService.executeQuery(
+                `SELECT UserID FROM Users WHERE CAST(UserID AS NVARCHAR(50)) LIKE @param0 AND IsActive = 1`,
+                [additionalData.referralCode.trim() + '-%']
+            );
+            if (referrerResult.recordset?.length > 0) referrerId = referrerResult.recordset[0].UserID;
+        }
+
+        const termsVersion = additionalData.termsVersion || appConstants.legal.TERMS_VERSION;
+        const privacyPolicyVersion = additionalData.privacyPolicyVersion || appConstants.legal.PRIVACY_POLICY_VERSION;
+        const termsAccepted = additionalData.termsAccepted === true;
+
+        const tx = await dbService.beginTransaction();
+        try {
+            const userQuery = `
+                INSERT INTO Users (
+                    UserID, Email, Password, UserType, FirstName, LastName,
+                    Phone, DateOfBirth, Gender, EmailVerified, PhoneVerified,
+                    ProfileVisibility, CreatedAt, UpdatedAt, IsActive,
+                    TwoFactorEnabled, LoginAttempts, LinkedInId, ProfilePictureURL,
+                    LoginMethod, ReferredBy, LastLoginAt,
+                    TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion
+                ) VALUES (
+                    @param0, @param1, @param2, @param3, @param4, @param5,
+                    @param6, @param7, @param8, @param9, 0,
+                    'Public', GETUTCDATE(), GETUTCDATE(), 1,
+                    0, 0, @param10, @param11, 'LinkedIn', @param12, GETUTCDATE(),
+                    @param13, @param14, @param15, @param16
+                );
+                SELECT UserID, Email, UserType, FirstName, LastName, Phone,
+                       ProfilePictureURL, DateOfBirth, Gender, EmailVerified, PhoneVerified,
+                       LastLoginAt, LastActive, ProfileVisibility, CreatedAt, UpdatedAt,
+                       IsActive, TwoFactorEnabled, LoginAttempts, IsVerifiedReferrer, IsVerifiedUser,
+                       LinkedInId, LoginMethod, ReferredBy, WalletBonusGiven,
+                       TermsAcceptedAt, TermsVersion, PrivacyPolicyAcceptedAt, PrivacyPolicyVersion
+                FROM Users WHERE UserID = @param0;
+            `;
+
+            const userResult = await dbService.executeTransactionQuery<User>(tx, userQuery, [
+                userId,
+                linkedInUser.email,
+                '', // No password for LinkedIn users
+                userType,
+                firstName,
+                lastName,
+                additionalData.phone || null,
+                additionalData.dateOfBirth || null,
+                additionalData.gender || null,
+                linkedInUser.email_verified ? 1 : 0,
+                linkedInUser.sub, // LinkedInId
+                linkedInUser.picture || null,
+                referrerId,
+                termsAccepted ? new Date().toISOString() : null,
+                termsAccepted ? termsVersion : null,
+                termsAccepted ? new Date().toISOString() : null,
+                termsAccepted ? privacyPolicyVersion : null,
+            ]);
+
+            if (!userResult.recordset?.length) throw new Error('Failed to create user');
+            const user = userResult.recordset[0];
+
+            if (userType === appConstants.userTypes.EMPLOYER) {
+                await this.createEmployerProfileWithOrganizationTx(tx, userId, {
+                    organizationName: additionalData.organizationName || `${firstName} ${lastName}'s Company`,
+                    organizationIndustry: additionalData.organizationIndustry || 'Technology',
+                    organizationSize: additionalData.organizationSize || 'Small',
+                    ...additionalData
+                });
+            } else if (userType === appConstants.userTypes.JOB_SEEKER) {
+                await this.createApplicantProfileTx(tx, userId);
+            }
+
+            await tx.commit();
+
+            // Consent audit log
+            if (termsAccepted) {
+                try {
+                    await dbService.executeQuery(`
+                        INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
+                        VALUES (@param0, 'TERMS', @param1, GETUTCDATE(), @param2, @param3);
+                        INSERT INTO UserConsentLog (UserID, ConsentType, Version, AcceptedAt, IPAddress, UserAgent)
+                        VALUES (@param0, 'PRIVACY', @param4, GETUTCDATE(), @param2, @param3);
+                    `, [userId, termsVersion, requestMeta?.ipAddress, requestMeta?.userAgent, privacyPolicyVersion]);
+                } catch (e) { console.warn('Consent audit log failed:', e); }
+            }
+
+            // Create wallet + signup bonus
+            try {
+                const { WalletService } = await import('./wallet.service');
+                await WalletService.giveWelcomeBonus(userId);
+            } catch (e) { console.warn('Wallet creation failed:', e); }
+
+            // Handle referral credit
+            if (referrerId) {
+                try {
+                    const { WalletService } = await import('./wallet.service');
+                    await WalletService.giveReferralBonuses(userId, referrerId);
+                } catch (e) { console.warn('Referral credit failed:', e); }
+            }
+
+            // Auto-update LinkedIn profile URL for applicants
+            if (userType === appConstants.userTypes.JOB_SEEKER) {
+                try {
+                    await dbService.executeQuery(
+                        `UPDATE Applicants SET LinkedInProfile = @param1, UpdatedAt = GETUTCDATE() WHERE UserID = @param0`,
+                        [userId, `https://www.linkedin.com/in/${linkedInUser.sub}`]
+                    );
+                } catch (e) { /* non-critical */ }
+            }
+
+            const tokens = AuthService.generateAuthTokens(user);
+            const { Password, ...userWithoutPassword } = user;
+            return { user: userWithoutPassword, tokens };
+        } catch (error) {
+            await tx.rollback();
+            throw error;
+        }
+    }
+
     /**
      * Google OAuth Login
      */

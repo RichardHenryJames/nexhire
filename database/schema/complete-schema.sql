@@ -2171,6 +2171,7 @@ BEGIN
     CREATE TABLE Users (
         UserID UNIQUEIDENTIFIER NOT NULL DEFAULT (newid()),
         GoogleId NVARCHAR(100) NULL,
+        LinkedInId NVARCHAR(100) NULL,
         Email NVARCHAR(320) NOT NULL,
         Password NVARCHAR(255) NOT NULL,
         LoginMethod NVARCHAR(50) NULL DEFAULT ('Password'),

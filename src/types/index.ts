@@ -50,6 +50,8 @@ export interface User {
 
     /** Google OAuth fields */
     GoogleId?: string;
+    /** LinkedIn OAuth fields */
+    LinkedInId?: string;
     LoginMethod?: string;
     GoogleAccessToken?: string;
 

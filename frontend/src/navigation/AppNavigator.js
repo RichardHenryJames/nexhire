@@ -387,13 +387,15 @@ function EmployerFlow() {
 
 // Auth Stack Navigator with complete registration flows
 function AuthStack() {
-  const { hasPendingGoogleAuth, pendingGoogleAuth } = useAuth();
+  const { hasPendingGoogleAuth, pendingGoogleAuth, hasPendingLinkedInAuth, pendingLinkedInAuth } = useAuth();
   const { colors } = useTheme();
 
+  const hasPendingSocialAuth = hasPendingGoogleAuth || hasPendingLinkedInAuth;
+  const pendingSocialUser = pendingGoogleAuth?.user || null; // LinkedIn doesn't have user info pre-registration
 
   // FIXED: Better initial route logic
   const getInitialRoute = () => {
-    if (hasPendingGoogleAuth) {
+    if (hasPendingSocialAuth) {
       return "JobSeekerFlow";
     }
     return "Login";
@@ -417,13 +419,15 @@ function AuthStack() {
         name="JobSeekerFlow"
         component={JobSeekerFlow}
         initialParams={
-          hasPendingGoogleAuth
+          hasPendingSocialAuth
             ? {
                 screen: "ExperienceTypeSelection",
                 params: {
                   userType: "JobSeeker",
-                  fromGoogleAuth: true,
-                  googleUser: pendingGoogleAuth?.user,
+                  fromGoogleAuth: hasPendingGoogleAuth,
+                  fromLinkedInAuth: hasPendingLinkedInAuth,
+                  googleUser: pendingSocialUser,
+                  linkedInAuthData: pendingLinkedInAuth,
                 },
               }
             : undefined
@@ -433,13 +437,15 @@ function AuthStack() {
         name="EmployerFlow"
         component={EmployerFlow}
         initialParams={
-          hasPendingGoogleAuth
+          hasPendingSocialAuth
             ? {
                 screen: "EmployerTypeSelection",
                 params: {
                   userType: "Employer",
-                  fromGoogleAuth: true,
-                  googleUser: pendingGoogleAuth?.user,
+                  fromGoogleAuth: hasPendingGoogleAuth,
+                  fromLinkedInAuth: hasPendingLinkedInAuth,
+                  googleUser: pendingSocialUser,
+                  linkedInAuthData: pendingLinkedInAuth,
                 },
               }
             : undefined
@@ -937,7 +943,7 @@ function MainStack() {
 
 // Root Navigator
 export default function AppNavigator() {
-  const { loading, isAuthenticated, hasPendingGoogleAuth } = useAuth();
+  const { loading, isAuthenticated, hasPendingGoogleAuth, hasPendingLinkedInAuth } = useAuth();
   const { colors } = useTheme();
 
 
@@ -948,7 +954,7 @@ export default function AppNavigator() {
 
   // Determine initial route based on auth state
   // Logged-out users land on About page first (like a landing page)
-  const initialRouteName = hasPendingGoogleAuth
+  const initialRouteName = (hasPendingGoogleAuth || hasPendingLinkedInAuth)
     ? "Auth"
     : isAuthenticated
     ? "Main"

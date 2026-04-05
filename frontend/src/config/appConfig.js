@@ -79,6 +79,10 @@ class FrontendConfigService {
         },
       },
 
+      linkedin: {
+        clientId: getEnvVar('linkedInClientId', 'EXPO_PUBLIC_LINKEDIN_CLIENT_ID', '86cp69478h82iv'),
+      },
+
       razorpay: {
         keyId: razorpayKey,
         isProduction: razorpayKey.startsWith('rzp_live_'),
@@ -86,6 +90,7 @@ class FrontendConfigService {
 
       features: {
         googleSignIn: getBooleanEnvVar('featureGoogleSignin', 'EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN', true),
+        linkedInSignIn: getBooleanEnvVar('featureLinkedInSignin', 'EXPO_PUBLIC_FEATURE_LINKEDIN_SIGNIN', true),
         razorpayPayments: getBooleanEnvVar('featureRazorpayPayments', 'EXPO_PUBLIC_FEATURE_RAZORPAY_PAYMENTS', true),
         referralSystem: getBooleanEnvVar('featureReferralSystem', 'EXPO_PUBLIC_FEATURE_REFERRAL_SYSTEM', true),
         jobScraping: getBooleanEnvVar('featureJobScraping', 'EXPO_PUBLIC_FEATURE_JOB_SCRAPING', true),

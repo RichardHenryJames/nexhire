@@ -18,6 +18,8 @@ import {
   refreshToken,
   googleLogin,
   googleRegister,
+  linkedinLogin,
+  linkedinRegister,
   getMyReferralCode,
   forgotPassword,
   resetPassword,
@@ -277,6 +279,22 @@ app.http("auth-google-register", {
   authLevel: "anonymous",
   route: "auth/google-register",
   handler: withErrorHandling(googleRegister),
+});
+
+// NEW: LinkedIn OAuth Login
+app.http("auth-linkedin-login", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/linkedin",
+  handler: withErrorHandling(linkedinLogin),
+});
+
+// NEW: LinkedIn OAuth Registration
+app.http("auth-linkedin-register", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "auth/linkedin-register",
+  handler: withErrorHandling(linkedinRegister),
 });
 
 // FIXED: Add logout endpoint
