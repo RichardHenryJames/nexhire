@@ -558,7 +558,7 @@ export default function LinkedInOptimizerScreen({ navigation }) {
           borderRadius: 14,
           overflow: 'hidden',
         }}
-        onPress={() => navigation.navigate('AskReferral')}
+        onPress={() => navigation.navigate('MainTabs', { screen: 'AskReferral' })}
         activeOpacity={0.85}
       >
         <View style={{

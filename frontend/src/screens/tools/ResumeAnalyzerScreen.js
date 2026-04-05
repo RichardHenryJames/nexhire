@@ -300,10 +300,14 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
     );
     scanLoop.start();
 
-    // Step progression
+    // Step progression — mark each step as done sequentially
     let stepIdx = 0;
     const interval = setInterval(() => {
-      setCompletedSteps(prev => [...prev, stepIdx]);
+      // Mark current step as completed
+      setCompletedSteps(prev => {
+        if (prev.includes(stepIdx)) return prev;
+        return [...prev, stepIdx];
+      });
       stepIdx++;
       if (stepIdx < ANALYZING_STEPS.length) {
         setAnalyzingStep(stepIdx);
@@ -665,14 +669,14 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
   // ── Analyzing overlay ──
   const renderAnalyzingOverlay = () => (
     <View style={styles.analyzingOverlay}>
-      {/* Document icon with scan line */}
+      {/* Document icon with scanning line */}
       <View style={styles.scanContainer}>
         <Ionicons name="document-text" size={64} color={colors.primary} />
         <Animated.View
           style={[styles.scanLine, {
             backgroundColor: colors.primary,
             transform: [{
-              translateY: scanLineAnim.interpolate({ inputRange: [0, 1], outputRange: [-30, 30] }),
+              translateY: scanLineAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [-32, 32, -32] }),
             }],
           }]}
         />
@@ -886,7 +890,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
             borderRadius: 14,
             overflow: 'hidden',
           }}
-          onPress={() => navigation.navigate('AskReferral')}
+          onPress={() => navigation.navigate('MainTabs', { screen: 'AskReferral' })}
           activeOpacity={0.85}
         >
           <LinearGradient
