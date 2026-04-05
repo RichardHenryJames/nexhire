@@ -317,7 +317,7 @@ export default function LoginScreen({ navigation }) {
                     onPress={handleLinkedInSignIn}
                     loading={linkedInLoading}
                     disabled={formLoading || loading || googleLoading}
-                    style={{ marginTop: 10 }}
+                    style={{ marginTop: 12 }}
                   />
                 )}
               </View>
@@ -694,8 +694,8 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
   loginButton: {
     backgroundColor: colors.primary,
     borderWidth: 0,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 12,
+    paddingVertical: 14,
     paddingHorizontal: 24,
     marginTop: spacing.md,
     alignItems: 'center',
@@ -707,7 +707,9 @@ const createScreenStyles = (colors, themeStyles, responsive = {}) => {
     elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.borderMedium || 'rgba(255,255,255,0.2)',
     shadowOpacity: 0,
     elevation: 0,
   },

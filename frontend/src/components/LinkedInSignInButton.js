@@ -52,18 +52,18 @@ const LinkedInSignInButton = ({ onPress, loading = false, disabled = false, styl
 const createStyles = (colors) => StyleSheet.create({
   button: {
     backgroundColor: '#0A66C2',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
   },
   buttonSmall: {
     backgroundColor: '#0A66C2',
-    borderRadius: 6,
+    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
     shadowColor: '#000',

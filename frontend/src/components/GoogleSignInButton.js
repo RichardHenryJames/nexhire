@@ -55,38 +55,32 @@ const GoogleSignInButton = ({ onPress, loading = false, disabled = false, style 
 
 const createStyles = (colors) => StyleSheet.create({
   button: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    shadowColor: colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
     elevation: 2,
   },
   buttonSmall: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    shadowColor: colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
   },
   buttonPressed: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: '#f0f0f0',
   },
   buttonDisabled: {
-    backgroundColor: colors.gray200,
-    borderColor: colors.border,
+    backgroundColor: '#ffffff80',
   },
   buttonContent: {
     flexDirection: 'row',
@@ -97,17 +91,17 @@ const createStyles = (colors) => StyleSheet.create({
     marginRight: 12,
   },
   buttonText: {
-    color: colors.text,
+    color: '#1f1f1f',
     fontSize: typography.sizes.base || 16,
     fontWeight: '600',
   },
   buttonTextSmall: {
-    color: colors.text,
+    color: '#1f1f1f',
     fontSize: typography.sizes.sm || 14,
     fontWeight: '600',
   },
   buttonTextDisabled: {
-    color: colors.textSecondary,
+    color: '#1f1f1f80',
   },
 });
 
