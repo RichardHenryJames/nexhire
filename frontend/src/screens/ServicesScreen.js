@@ -278,27 +278,6 @@ export default function ServicesScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* Hero banner */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-          <View style={{
-            borderRadius: 14,
-            padding: 18,
-            backgroundColor: colors.primary + '08',
-            borderWidth: 1,
-            borderColor: colors.primary + '18',
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.primary + '15', alignItems: 'center', justifyContent: 'center' }}>
-                <Ionicons name="sparkles" size={14} color={colors.primary} />
-              </View>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>AI career tools, mostly free</Text>
-            </View>
-            <Text style={{ fontSize: 12.5, color: colors.textSecondary, lineHeight: 18 }}>
-              Analyze your resume, optimize LinkedIn, get insider feedback. Use these tools to prep, then get a referral when you are ready.
-            </Text>
-          </View>
-        </View>
-
         {/* Section Label */}
         <View style={[styles.sectionHeader, isDesktop && { maxWidth: 900 }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
