@@ -2,7 +2,7 @@
  * Expiring Request Nudge Email Service
  * 
  * Sends daily emails to seekers whose specific-company referral requests
- * are expiring within 3 days and have NOT been completed yet.
+ * are expiring within 5 days and have NOT been completed yet.
  * Nudges them to upgrade to "Open to Any Company" for better chances.
  * 
  * Runs daily at 10 AM IST (4:30 AM UTC)
@@ -35,7 +35,7 @@ interface NudgeEmailResult {
 export class ExpiringRequestNudgeService {
 
     /**
-     * Get specific-company requests expiring within 3 days that haven't been completed or nudged
+     * Get specific-company requests expiring within 5 days that haven't been completed or nudged
      * Eligible: Pending, NotifiedToReferrers, Viewed, Claimed — but NOT completed/submitted
      */
     static async getExpiringRequests(): Promise<ExpiringRequest[]> {
@@ -64,7 +64,7 @@ export class ExpiringRequestNudgeService {
               AND rr.ExpiryNudgeSent = 0
               AND rr.ExpiryTime IS NOT NULL
               AND rr.ExpiryTime > GETUTCDATE()
-              AND rr.ExpiryTime <= DATEADD(DAY, 3, GETUTCDATE())
+              AND rr.ExpiryTime <= DATEADD(DAY, 5, GETUTCDATE())
               AND u.Email IS NOT NULL
               AND u.Email != ''
               AND u.IsActive = 1

@@ -4808,7 +4808,7 @@ app.timer("dailyJobRecommendationEmail", {
 
 // ========================================================================
 // TIMER TRIGGER - EXPIRING REQUEST NUDGE (Daily at 10 AM IST = 4:30 AM UTC)
-// Nudges seekers whose specific-company requests expire in ≤3 days to Go Open
+// Nudges seekers whose specific-company requests expire in ≤5 days to Go Open
 // ========================================================================
 
 app.timer("expiringRequestNudgeTimer", {

@@ -550,6 +550,42 @@ export default function LinkedInOptimizerScreen({ navigation }) {
         </View>
       )}
 
+      {/* Referral CTA */}
+      <TouchableOpacity
+        style={{
+          marginTop: 16,
+          marginBottom: 12,
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}
+        onPress={() => navigation.navigate('AskReferral')}
+        activeOpacity={0.85}
+      >
+        <View style={{
+          padding: 18,
+          borderRadius: 14,
+          backgroundColor: '#8B5CF6' + '12',
+          borderWidth: 1,
+          borderColor: '#8B5CF6' + '30',
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#8B5CF6', fontSize: 15, fontWeight: '700', marginBottom: 4 }}>
+              Ready to land the job? Get a referral →
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
+              {result.overallScore >= 70
+                ? `Your profile scored ${result.overallScore}/100 — put it to work with a direct referral`
+                : `Boost your chances with a direct employee referral at your dream company`}
+            </Text>
+          </View>
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#8B5CF6' + '20', alignItems: 'center', justifyContent: 'center', marginLeft: 12 }}>
+            <Ionicons name="paper-plane" size={20} color="#8B5CF6" />
+          </View>
+        </View>
+      </TouchableOpacity>
+
       <TouchableOpacity style={s.resetBtn} onPress={handleReset} activeOpacity={0.7}>
         <Ionicons name="refresh" size={16} color={colors.primary} />
         <Text style={s.resetBtnText}>Optimize Another Profile</Text>

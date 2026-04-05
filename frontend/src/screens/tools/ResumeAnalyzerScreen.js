@@ -878,6 +878,44 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Referral CTA */}
+        <TouchableOpacity
+          style={{
+            marginTop: 16,
+            marginBottom: 12,
+            borderRadius: 14,
+            overflow: 'hidden',
+          }}
+          onPress={() => navigation.navigate('AskReferral')}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={['#8B5CF6', '#6D28D9']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{
+              padding: 18,
+              borderRadius: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700', marginBottom: 4 }}>
+                Ready to land the job? Get a referral →
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, lineHeight: 18 }}>
+                {r.matchScore >= 70
+                  ? `Your resume scored ${r.matchScore}/100 — put it to work with a direct referral`
+                  : `Improve your chances with a direct employee referral at your dream company`}
+              </Text>
+            </View>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: 12 }}>
+              <Ionicons name="paper-plane" size={20} color="#fff" />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+
         {/* Bottom action (desktop/tablet) */}
         {!isMobile && (
           <TouchableOpacity style={styles.outlineBtn} onPress={handleAnalyzeAnother} activeOpacity={0.7}>

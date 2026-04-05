@@ -358,6 +358,37 @@ export default function AskReferralScreen({ navigation, route }) {
             )}
           </View>
           {errors.company && <Text style={s.fieldError}>{errors.company}</Text>}
+
+          {/* Smart OTA suggestion after company selection */}
+          {selectedCompany && !showCompanyDD && (
+            <TouchableOpacity
+              style={{
+                marginTop: 12,
+                padding: 14,
+                borderRadius: 12,
+                backgroundColor: '#8B5CF6' + '0A',
+                borderWidth: 1,
+                borderColor: '#8B5CF6' + '25',
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+              onPress={() => switchMode(true)}
+              activeOpacity={0.75}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6' + '15', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Ionicons name="globe-outline" size={18} color="#8B5CF6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6', marginBottom: 2 }}>
+                  💡 Maximize your chances — try Open Referral
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 17 }}>
+                  Referrers at {selectedCompany.name} are receiving high demand right now. Open Referral sends your request to 500+ referrers across all companies — 99% success rate.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#8B5CF6" style={{ marginLeft: 6 }} />
+            </TouchableOpacity>
+          )}
         </AnimatedFormStep>
       )}
 
