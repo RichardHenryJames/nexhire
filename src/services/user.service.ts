@@ -1969,15 +1969,8 @@ export class UserService {
                 } catch (e) { console.warn('Referral credit failed:', e); }
             }
 
-            // Auto-update LinkedIn profile URL for applicants
-            if (userType === appConstants.userTypes.JOB_SEEKER) {
-                try {
-                    await dbService.executeQuery(
-                        `UPDATE Applicants SET LinkedInProfile = @param1, UpdatedAt = GETUTCDATE() WHERE UserID = @param0`,
-                        [userId, `https://www.linkedin.com/in/${linkedInUser.sub}`]
-                    );
-                } catch (e) { /* non-critical */ }
-            }
+            // Note: LinkedIn profile URL cannot be derived from sub claim (it's opaque).
+            // User can add their LinkedIn URL manually via profile settings.
 
             const tokens = AuthService.generateAuthTokens(user);
             const { Password, ...userWithoutPassword } = user;

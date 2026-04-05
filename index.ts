@@ -286,7 +286,7 @@ app.http("auth-linkedin-login", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "auth/linkedin",
-  handler: withErrorHandling(linkedinLogin),
+  handler: linkedinLogin,
 });
 
 // NEW: LinkedIn OAuth Registration
@@ -294,7 +294,7 @@ app.http("auth-linkedin-register", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "auth/linkedin-register",
-  handler: withErrorHandling(linkedinRegister),
+  handler: linkedinRegister,
 });
 
 // FIXED: Add logout endpoint

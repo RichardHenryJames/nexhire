@@ -125,6 +125,10 @@ export const googleRegister = withErrorHandling(async (req: HttpRequest, context
 export const linkedinLogin = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const { code, redirectUri } = await extractRequestBody(req);
     
+    if (!code || !redirectUri) {
+        return { status: 400, jsonBody: errorResponse('VALIDATION_ERROR', 'code and redirectUri are required') };
+    }
+    
     try {
         const result = await UserService.loginWithLinkedIn({ code, redirectUri });
         
@@ -152,6 +156,10 @@ export const linkedinLogin = withErrorHandling(async (req: HttpRequest, context:
  */
 export const linkedinRegister = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
     const { code, redirectUri, userType, ...additionalData } = await extractRequestBody(req);
+    
+    if (!code || !redirectUri) {
+        return { status: 400, jsonBody: errorResponse('VALIDATION_ERROR', 'code and redirectUri are required') };
+    }
     
     const requestMeta = {
         ipAddress: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || req.headers.get('client-ip') || null,

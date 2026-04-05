@@ -165,6 +165,7 @@ export default function EducationDetailsScreen({ navigation, route }) {
       workExperienceData,
       educationData: { degreeType, degreeTypeKey, fieldOfStudy, graduationYear },
       fromGoogleAuth: route?.params?.fromGoogleAuth,
+      fromLinkedInAuth: route?.params?.fromLinkedInAuth,
       googleUser: route?.params?.googleUser,
     });
   };

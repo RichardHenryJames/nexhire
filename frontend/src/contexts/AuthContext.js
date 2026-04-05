@@ -140,6 +140,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setError(null);
       setPendingGoogleAuth(null);
+      setPendingLinkedInAuth(null);
     });
 
     return () => {
@@ -616,6 +617,9 @@ export const AuthProvider = ({ children }) => {
       if (pendingGoogleAuth) {
         clearPendingGoogleAuth();
       }
+      if (pendingLinkedInAuth) {
+        clearPendingLinkedInAuth();
+      }
       setLoading(false);
     }
   };
@@ -662,18 +666,21 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setError(null);
         setPendingGoogleAuth(null); // Clear any pending Google auth
+        setPendingLinkedInAuth(null); // Clear any pending LinkedIn auth
         
       } else {
         console.warn('Logout had issues but continuing:', result.message);
         setUser(null);
         setError(null);
         setPendingGoogleAuth(null);
+        setPendingLinkedInAuth(null);
       }
     } catch (error) {
       console.error('Logout error:', error);
       setUser(null);
       setError(null);
       setPendingGoogleAuth(null);
+      setPendingLinkedInAuth(null);
     } finally {
       setLoading(false);
       

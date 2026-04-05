@@ -79,7 +79,15 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         confirmPassword: 'google-oauth-user',
       }));
     }
-  }, [isGoogleUser, googleUser]);
+    // For LinkedIn users, pre-fill dummy passwords (server does code exchange, no password needed)
+    if (isLinkedInUser && !isGoogleUser) {
+      setFormData((prev) => ({
+        ...prev,
+        password: 'linkedin-oauth-user',
+        confirmPassword: 'linkedin-oauth-user',
+      }));
+    }
+  }, [isSocialUser, isGoogleUser, isLinkedInUser, googleUser]);
 
   // ─── Validation ──────────────────────────────────────────────
   const validateEmail = (email) => {

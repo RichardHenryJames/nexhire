@@ -157,6 +157,7 @@ export default function WorkExperienceScreen({ navigation, route }) {
     navigation.navigate('EducationDetailsScreen', {
       userType, experienceType, totalSteps, workExperienceData,
       fromGoogleAuth: route?.params?.fromGoogleAuth,
+      fromLinkedInAuth: route?.params?.fromLinkedInAuth,
       googleUser: route?.params?.googleUser,
     });
   };

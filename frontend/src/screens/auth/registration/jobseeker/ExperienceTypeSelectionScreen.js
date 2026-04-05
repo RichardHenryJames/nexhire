@@ -21,15 +21,17 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [selectedType, setSelectedType] = useState(null);
-  const { pendingGoogleAuth } = useAuth();
+  const { pendingGoogleAuth, pendingLinkedInAuth } = useAuth();
 
   const {
     userType = 'JobSeeker',
     fromGoogleAuth: fromGoogleAuthParam = false,
+    fromLinkedInAuth: fromLinkedInAuthParam = false,
     googleUser: routeGoogleUser = null,
   } = route.params || {};
 
   const fromGoogleAuth = fromGoogleAuthParam === true || fromGoogleAuthParam === 'true';
+  const fromLinkedInAuth = fromLinkedInAuthParam === true || fromLinkedInAuthParam === 'true';
   const googleUser = routeGoogleUser || pendingGoogleAuth?.user;
 
   // Guard against hard refresh with lost Google data
@@ -44,7 +46,17 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
         navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
       }, 100);
     }
-  }, [fromGoogleAuth, googleUser, pendingGoogleAuth, navigation]);
+    if (fromLinkedInAuth && !pendingLinkedInAuth) {
+      console.warn('⚠️ Hard refresh detected with lost LinkedIn data - redirecting to login');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+        return;
+      }
+      setTimeout(() => {
+        navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+      }, 100);
+    }
+  }, [fromGoogleAuth, googleUser, pendingGoogleAuth, fromLinkedInAuth, pendingLinkedInAuth, navigation]);
 
   // ── Staggered entrance animations ──────────────────────────
   const headerAnim = useRef(new Animated.Value(0)).current;
@@ -107,6 +119,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
         experienceType: selectedType,
         totalSteps: 3,
         fromGoogleAuth,
+        fromLinkedInAuth,
         googleUser,
       });
     } else {
@@ -115,6 +128,7 @@ export default function ExperienceTypeSelectionScreen({ navigation, route }) {
         experienceType: selectedType,
         totalSteps: 4,
         fromGoogleAuth,
+        fromLinkedInAuth,
         googleUser,
       });
     }

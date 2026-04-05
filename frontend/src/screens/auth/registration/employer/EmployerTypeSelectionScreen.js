@@ -35,7 +35,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
-  const { userType = 'Employer', fromGoogleAuth, googleUser } = route?.params || {};
+  const { userType = 'Employer', fromGoogleAuth, fromLinkedInAuth, googleUser } = route?.params || {};
 
   // Employer type selection
   const [selectedType, setSelectedType] = useState(null); // 'company' | 'startup' | 'freelancer'
@@ -136,6 +136,8 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
     const routeParams = {
       userType,
       employerType: selectedType,
+      fromGoogleAuth,
+      fromLinkedInAuth,
       ...(selectedType === 'company' && selectedCompany && { selectedCompany }),
       ...(selectedType === 'startup' && startupCompany && { selectedCompany: startupCompany })
     };
@@ -157,6 +159,7 @@ export default function EmployerTypeSelectionScreen({ navigation, route }) {
       params: {
         userType: 'JobSeeker',
         fromGoogleAuth,
+        fromLinkedInAuth,
         googleUser,
       },
     };

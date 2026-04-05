@@ -31,13 +31,16 @@ export default function EmployerAccountScreen({ navigation, route }) {
     selectedCompany, 
     employerDetails,
     fromGoogleAuth,
+    fromLinkedInAuth,
     skipEmailPassword
   } = route.params || {};
   
-  const { user, pendingGoogleAuth, register, clearPendingGoogleAuth } = useAuth();
+  const { user, pendingGoogleAuth, register, clearPendingGoogleAuth, pendingLinkedInAuth, clearPendingLinkedInAuth } = useAuth();
 
-  // Check if this is a Google user
-  const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
+  // Check if this is a social auth user
+  const isGoogleUser = fromGoogleAuth || !!pendingGoogleAuth;
+  const isLinkedInUser = fromLinkedInAuth || !!pendingLinkedInAuth;
+  const isSocialUser = isGoogleUser || isLinkedInUser;
   const googleUser = pendingGoogleAuth?.user;
 
   const [firstName, setFirstName] = useState(user?.FirstName || '');
@@ -201,10 +204,10 @@ export default function EmployerAccountScreen({ navigation, route }) {
         organizationPayload.bio = employerDetails.bio.trim();
       }
 
-      // Handle Google users vs regular users differently
-      if (isGoogleUser && pendingGoogleAuth) {
+      // Handle social auth users vs regular users differently
+      if (isSocialUser && (pendingGoogleAuth || pendingLinkedInAuth)) {
         
-        // Prepare comprehensive registration data for Google user
+        // Prepare comprehensive registration data for social auth user
         const registrationData = {
           email: email.trim().toLowerCase(),
           firstName: firstName.trim(),
@@ -212,21 +215,29 @@ export default function EmployerAccountScreen({ navigation, route }) {
           userType: 'Employer',
           ...(phone && { phone: phone.trim() }),
           ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
-          ...(referralCode && { referralCode: referralCode.trim() }), // 🎁 NEW: Add referral code
-          ...(emailVerificationId && { emailVerificationId }), // Email OTP verification proof
+          ...(referralCode && { referralCode: referralCode.trim() }),
+          ...(emailVerificationId && { emailVerificationId }),
           termsAccepted: true,
           termsVersion: frontendConfig.legal.termsVersion,
           privacyPolicyVersion: frontendConfig.legal.privacyPolicyVersion,
           
-          // Add Google OAuth data
-          googleAuth: {
-            googleId: googleUser.id,
-            accessToken: pendingGoogleAuth.accessToken,
-            idToken: pendingGoogleAuth.idToken,
-            verified: googleUser.verified_email,
-            picture: googleUser.picture,
-            locale: googleUser.locale,
-          },
+          // Add social auth data
+          ...(isGoogleUser && pendingGoogleAuth && {
+            googleAuth: {
+              googleId: googleUser.id,
+              accessToken: pendingGoogleAuth.accessToken,
+              idToken: pendingGoogleAuth.idToken,
+              verified: googleUser.verified_email,
+              picture: googleUser.picture,
+              locale: googleUser.locale,
+            },
+          }),
+          ...(isLinkedInUser && pendingLinkedInAuth && {
+            linkedInAuth: {
+              code: pendingLinkedInAuth.code,
+              redirectUri: pendingLinkedInAuth.redirectUri,
+            },
+          }),
           
           // Add organization data
           ...organizationPayload,
@@ -235,18 +246,15 @@ export default function EmployerAccountScreen({ navigation, route }) {
         const result = await register(registrationData);
         
         if (result.success) {
-          // FIXED: Clear pending Google auth and let AuthContext handle navigation
-          clearPendingGoogleAuth();
-          // Navigation will be handled automatically by AuthContext when isAuthenticated becomes true
+          if (isGoogleUser) clearPendingGoogleAuth();
+          if (isLinkedInUser) clearPendingLinkedInAuth();
           return;
         } else {
-          // ✅ NEW: Check if error is "User already exists"
-          const errorMessage = result.error || 'Google registration failed';
+          const errorMessage = result.error || 'Registration failed';
           
           if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
-            
-            // Clear any pending Google auth data
-            clearPendingGoogleAuth();
+            if (isGoogleUser) clearPendingGoogleAuth();
+            if (isLinkedInUser) clearPendingLinkedInAuth();
             
             showToast('Account already exists. Please sign in.', 'info');
             navigation.navigate('Login');
