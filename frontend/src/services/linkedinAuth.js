@@ -64,6 +64,7 @@ class LinkedInAuthService {
   // Web: authorization code flow — LinkedIn redirects with ?code=...
   async _signInWeb(clientId) {
     const redirectUri = AuthSession.makeRedirectUri({ scheme: undefined });
+    console.log('[LinkedInAuth] redirect_uri =', redirectUri);
     const state = Math.random().toString(36).substring(2, 15);
 
     const authParams = this._buildQueryString({

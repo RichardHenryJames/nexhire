@@ -334,7 +334,8 @@ export class WorkExperienceService {
   }
 
   static async resolveOrganizationId(explicitId: number | null, companyName?: string | null | string[]): Promise<number | null> {
-    if (explicitId && Number.isInteger(explicitId)) return explicitId;
+    // Safety: 999999 is the UI sentinel for "My company is not listed" — not a real org
+    if (explicitId && Number.isInteger(explicitId) && explicitId !== 999999) return explicitId;
 
     // Normalize companyName to a plain string (handle arrays or non-strings)
     let name: string | null = null;
@@ -347,7 +348,7 @@ export class WorkExperienceService {
       name = null;
     }
 
-    if (!name) return null;
+    if (!name || name.toLowerCase() === 'my company is not listed') return null;
 
     // Try to find by name
     let result = await dbService.executeQuery('SELECT OrganizationID FROM Organizations WHERE Name = @param0', [name]);

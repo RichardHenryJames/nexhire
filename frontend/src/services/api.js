@@ -618,23 +618,26 @@ class RefOpenAPI {
       return { success: false, error: 'jobTitle and startDate are required' };
     }
     
+    // Strip sentinel "My company is not listed" (id 999999)
+    const isNotListed = workExp.organizationId === 999999 || 
+      (workExp.companyName || '').toLowerCase() === 'my company is not listed';
+
     const payload = {
       jobTitle: workExp.jobTitle,
       startDate: workExp.startDate,
       endDate: workExp.endDate || null,
-      isCurrent: workExp.isCurrent ?? false,  // ✅ FIXED: Include isCurrent field
-      companyName: workExp.companyName || null,
-      organizationId: workExp.organizationId || null,
-      department: workExp.department || null,  // ✅ ADDED: Missing fields
-      employmentType: workExp.employmentType || null,  // ✅ ADDED
-      location: workExp.location || null,  // ✅ ADDED
-      country: workExp.country || null,  // ✅ ADDED
-      description: workExp.description || null,  // ✅ ADDED
-      skills: workExp.skills || null,  // ✅ ADDED
-      achievements: workExp.achievements || null,  // ✅ ADDED
-      // reasonForLeaving removed — not collected per legal/privacy policy
-      salary: workExp.salary || null,  // ✅ ADDED
-      currencyId: workExp.currencyId || null,  // ✅ ADDED
+      isCurrent: workExp.isCurrent ?? false,
+      companyName: isNotListed ? null : (workExp.companyName || null),
+      organizationId: isNotListed ? null : (workExp.organizationId || null),
+      department: workExp.department || null,
+      employmentType: workExp.employmentType || null,
+      location: workExp.location || null,
+      country: workExp.country || null,
+      description: workExp.description || null,
+      skills: workExp.skills || null,
+      achievements: workExp.achievements || null,
+      salary: workExp.salary || null,
+      currencyId: workExp.currencyId || null,
       salaryFrequency: workExp.salaryFrequency || null,
       managerName: workExp.managerName || null,
       managerContact: workExp.managerContact || null,

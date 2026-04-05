@@ -492,7 +492,7 @@ app.http("my-work-experiences", {
   methods: ["GET", "OPTIONS"],
   authLevel: "anonymous",
   route: "work-experiences/my",
-  handler: withErrorHandling(getMyWorkExperiences),
+  handler: getMyWorkExperiences,
 });
 
 // SECURITY FIX: Work experiences now require auth
@@ -525,7 +525,7 @@ app.http("create-work-experience", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
   route: "work-experiences",
-  handler: withErrorHandling(createWorkExperience),
+  handler: createWorkExperience,
 });
 
 app.http("users-deactivate", {

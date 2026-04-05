@@ -485,10 +485,16 @@ export default function AddWorkExperienceModal({
     
     try {
       setSaving(true);
+
+      // Strip sentinel "My company is not listed" (id 999999) — it's a UI-only placeholder
+      const rawOrgId = coerceOrgId(form.organizationId);
+      const rawCompanyName = normalizeString(form.companyName);
+      const isNotListedSentinel = rawOrgId === 999999 || (rawCompanyName || '').toLowerCase() === 'my company is not listed';
+
       const payload = {
         jobTitle: normalizeString(form.jobTitle),
-        companyName: normalizeString(form.companyName),
-        organizationId: coerceOrgId(form.organizationId),
+        companyName: isNotListedSentinel ? null : rawCompanyName,
+        organizationId: isNotListedSentinel ? null : rawOrgId,
         department: normalizeString(form.department),
         employmentType: normalizeString(form.employmentType),
         startDate: normalizeString(form.startDate),
@@ -518,7 +524,7 @@ export default function AddWorkExperienceModal({
       showToast(`Work experience ${editingItem ? 'updated' : 'added'} successfully`, 'success');
       
       if (onSave) {
-        onSave(result.data || payload);
+        await onSave(result.data || payload);
       }
       onClose();
     } catch (e) {
