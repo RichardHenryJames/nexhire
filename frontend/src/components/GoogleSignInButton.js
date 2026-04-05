@@ -98,15 +98,13 @@ const createStyles = (colors) => StyleSheet.create({
   },
   buttonText: {
     color: colors.text,
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    fontFamily: 'Roboto, sans-serif', // Google's font
+    fontSize: typography.sizes.base || 16,
+    fontWeight: '600',
   },
   buttonTextSmall: {
     color: colors.text,
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    fontFamily: 'Roboto, sans-serif',
+    fontSize: typography.sizes.sm || 14,
+    fontWeight: '600',
   },
   buttonTextDisabled: {
     color: colors.textSecondary,

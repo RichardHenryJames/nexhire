@@ -88,7 +88,7 @@ const createStyles = (colors) => StyleSheet.create({
   },
   buttonText: {
     color: '#ffffff',
-    fontSize: typography?.sizes?.md || 16,
+    fontSize: typography?.sizes?.base || 16,
     fontWeight: '600',
     textAlign: 'center',
   },
