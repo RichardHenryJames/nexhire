@@ -164,10 +164,10 @@ export const linkedinLogin = withErrorHandling(async (req: HttpRequest, context:
  * POST /auth/linkedin-register
  */
 export const linkedinRegister = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
-    const { code, redirectUri, userType, ...additionalData } = await extractRequestBody(req);
+    const { verificationToken, linkedInUser, userType, ...additionalData } = await extractRequestBody(req);
     
-    if (!code || !redirectUri) {
-        return { status: 400, jsonBody: errorResponse('VALIDATION_ERROR', 'code and redirectUri are required') };
+    if (!verificationToken && !linkedInUser?.email) {
+        return { status: 400, jsonBody: errorResponse('VALIDATION_ERROR', 'LinkedIn verification data is required. Please try signing in again.') };
     }
     
     const requestMeta = {
@@ -177,8 +177,8 @@ export const linkedinRegister = withErrorHandling(async (req: HttpRequest, conte
     
     try {
         const result = await UserService.registerWithLinkedIn({
-            code,
-            redirectUri,
+            verificationToken,
+            linkedInUser,
             userType,
             ...additionalData
         }, requestMeta);

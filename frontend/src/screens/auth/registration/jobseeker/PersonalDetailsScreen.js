@@ -214,8 +214,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
         <View style={styles.content}>
           <AnimatedSection delay={0}>
             <View style={styles.header}>
-              {/* Google user card */}
-              {isGoogleUser && googleUser && (
+              {/* Social auth user card */}
+              {isSocialUser && (isGoogleUser && googleUser ? (
                 <View style={styles.googleCard}>
                   {googleUser.picture && (
                     <Image source={{ uri: googleUser.picture }} style={styles.googleAvatar} />
@@ -227,14 +227,26 @@ export default function PersonalDetailsScreen({ navigation, route }) {
                   </View>
                   <Ionicons name="checkmark-circle" size={22} color={colors.success} />
                 </View>
-              )}
+              ) : isLinkedInUser && pendingLinkedInAuth?.linkedInUser ? (
+                <View style={styles.googleCard}>
+                  {pendingLinkedInAuth.linkedInUser.picture && (
+                    <Image source={{ uri: pendingLinkedInAuth.linkedInUser.picture }} style={styles.googleAvatar} />
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.googleLabel}>LinkedIn Connected</Text>
+                    <Text style={styles.googleName}>{pendingLinkedInAuth.linkedInUser.name}</Text>
+                    <Text style={styles.googleEmail}>{pendingLinkedInAuth.linkedInUser.email}</Text>
+                  </View>
+                  <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+                </View>
+              ) : null)}
 
               <Text style={styles.emoji}>🚀</Text>
               <Text style={styles.title}>
-                {isGoogleUser ? 'Almost there!' : 'Create your account'}
+                {isSocialUser ? 'Almost there!' : 'Create your account'}
               </Text>
               <Text style={styles.subtitle}>
-                {isGoogleUser ? 'Just confirm your name and you\'re in' : 'Just a few details and you\'re all set'}
+                {isSocialUser ? 'Just confirm your name and you\'re in' : 'Just a few details and you\'re all set'}
               </Text>
             </View>
           </AnimatedSection>
@@ -275,6 +287,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               <Text style={styles.inputLabel}>
                 Email <Text style={styles.required}>*</Text>
                 {isGoogleUser && <Text style={styles.prefilledBadge}> ✓ Google</Text>}
+                {isLinkedInUser && !isGoogleUser && <Text style={styles.prefilledBadge}> ✓ LinkedIn</Text>}
               </Text>
               <TextInput
                 style={[styles.input, errors.email && styles.inputError]}
@@ -289,8 +302,8 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
 
-            {/* Password — hidden for Google users */}
-            {!isGoogleUser && (
+            {/* Password — hidden for social auth users */}
+            {!isSocialUser && (
               <>
                 <View style={styles.fieldContainer}>
                   <Text style={styles.inputLabel}>Password <Text style={styles.required}>*</Text></Text>
@@ -365,7 +378,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
               ) : (
                 <>
                   <Text style={styles.registerButtonText}>
-                    {isGoogleUser ? 'Complete Signup' : 'Create Account'}
+                    {isSocialUser ? 'Complete Signup' : 'Create Account'}
                   </Text>
                   <Ionicons name="checkmark" size={20} color={colors.white} />
                 </>
@@ -373,7 +386,7 @@ export default function PersonalDetailsScreen({ navigation, route }) {
             </TouchableOpacity>
 
             {/* Login link */}
-            {!isGoogleUser && (
+            {!isSocialUser && (
               <TouchableOpacity style={styles.loginLink} onPress={() => navigation.navigate('Login')}>
                 <Text style={styles.loginLinkText}>Already have an account? <Text style={{ color: colors.primary, fontWeight: '700' }}>Sign In</Text></Text>
               </TouchableOpacity>

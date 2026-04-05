@@ -26,11 +26,13 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
   const colors = authDarkColors; // Always use dark colors for auth screens
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
-  const { pendingGoogleAuth } = useAuth();
-  const { employerType = 'startup', selectedCompany, fromGoogleAuth, skipEmailPassword } = route.params || {};
+  const { pendingGoogleAuth, pendingLinkedInAuth } = useAuth();
+  const { employerType = 'startup', selectedCompany, fromGoogleAuth, fromLinkedInAuth, skipEmailPassword } = route.params || {};
 
-  // Check if this is a Google user
-  const isGoogleUser = fromGoogleAuth || pendingGoogleAuth;
+  // Check if this is a social auth user
+  const isGoogleUser = fromGoogleAuth || !!pendingGoogleAuth;
+  const isLinkedInUser = fromLinkedInAuth || !!pendingLinkedInAuth;
+  const isSocialUser = isGoogleUser || isLinkedInUser;
   const googleUser = pendingGoogleAuth?.user;
 
   const [jobTitle, setJobTitle] = useState('');
@@ -129,6 +131,7 @@ export default function EmployerPersonalDetailsScreen({ navigation, route }) {
       employerType,
       selectedCompany,
       fromGoogleAuth,
+      fromLinkedInAuth,
       skipEmailPassword,
       employerDetails: {
         jobTitle,
