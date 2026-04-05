@@ -41,6 +41,7 @@ const getServices = (colors) => [
     icon: 'document-text',
     gradient: [colors.primaryDark, colors.primary],
     ready: true,
+    free: true,
     screen: 'ResumeAnalyzer',
   },
   {
@@ -51,6 +52,7 @@ const getServices = (colors) => [
     icon: 'create',
     gradient: [colors.accentDark, colors.accentLight],
     ready: true,
+    free: false,
     screen: 'ResumeBuilder',
   },
   {
@@ -61,6 +63,7 @@ const getServices = (colors) => [
     icon: 'logo-linkedin',
     gradient: ['#0A66C2', '#004182'],
     ready: true,
+    free: true,
     screen: 'LinkedInOptimizer',
   },
   {
@@ -71,6 +74,7 @@ const getServices = (colors) => [
     icon: 'people',
     gradient: [colors.accentDark, colors.accentLight],
     ready: true,
+    free: true,
     screen: 'BlindReview',
   },
   {
@@ -187,6 +191,10 @@ function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested 
             <View style={[styles.lockBadge, { backgroundColor: colors.gray200 || colors.border }]}>
               <Ionicons name="lock-closed" size={12} color={colors.gray500} />
             </View>
+          ) : service.free ? (
+            <View style={[styles.requestedBadge, { backgroundColor: '#10B981' + '15' }]}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981', letterSpacing: 0.5 }}>FREE</Text>
+            </View>
           ) : null}
         </View>
 
@@ -203,14 +211,19 @@ function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested 
 
         {/* CTA */}
         <View style={[styles.ctaRow, { borderTopColor: colors.border }]}>
-          {isReady ? (
+          {isReady && service.free ? (
+            <>
+              <Text style={[styles.ctaText, { color: '#10B981' }]}>Try Free</Text>
+              <Ionicons name="arrow-forward" size={16} color="#10B981" />
+            </>
+          ) : isReady ? (
             <>
               <Text style={[styles.ctaText, { color: colors.primary }]}>Try Now</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.primary} />
             </>
           ) : (
             <>
-              <Text style={[styles.ctaText, { color: colors.textSecondary }]}>Explore</Text>
+              <Text style={[styles.ctaText, { color: colors.textSecondary }]}>Coming Soon</Text>
               <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} />
             </>
           )}
@@ -265,7 +278,28 @@ export default function ServicesScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
       >
 
-        {/* ── Section Label ─────────────────────────────── */}
+        {/* Hero banner */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
+          <View style={{
+            borderRadius: 14,
+            padding: 18,
+            backgroundColor: colors.primary + '08',
+            borderWidth: 1,
+            borderColor: colors.primary + '18',
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: colors.primary + '15', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="sparkles" size={14} color={colors.primary} />
+              </View>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>AI career tools, mostly free</Text>
+            </View>
+            <Text style={{ fontSize: 12.5, color: colors.textSecondary, lineHeight: 18 }}>
+              Analyze your resume, optimize LinkedIn, get insider feedback. Use these tools to prep, then get a referral when you are ready.
+            </Text>
+          </View>
+        </View>
+
+        {/* Section Label */}
         <View style={[styles.sectionHeader, isDesktop && { maxWidth: 900 }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             All Tools
