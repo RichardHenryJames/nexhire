@@ -263,9 +263,11 @@ export default function MyReferralRequestsScreen({ route }) {
       return 'Searching across companies';
     }
 
-    // Open-to-any Completed with all children verified
+    // Open-to-any Completed with verified children but still active
     if (request?.OpenToAnyCompany && status === 'Completed' && (request.PendingVerificationCount || 0) === 0) {
-      return 'All referrals verified';
+      const vCount = request.VerifiedChildCount || 0;
+      if (vCount > 0) return `${vCount} verified, accepting more`;
+      return 'Active, accepting referrals';
     }
 
     switch (status) {
@@ -441,11 +443,11 @@ export default function MyReferralRequestsScreen({ route }) {
                     <Text style={chipText(colors.error)}>{uvc} disputed</Text>
                   </View>
                 );
-                // Open-to-any completed, all verified (no unverified)
+                // Open-to-any completed, all current verified but still accepting more
                 if ((s === 'Completed' || s === 'ProofUploaded') && isOpen && pvc === 0 && uvc === 0 && vcc > 0) return (
-                  <View style={chipStyle(colors.success + '15', colors.success)}>
-                    <Ionicons name="checkmark-done" size={10} color={colors.success} />
-                    <Text style={chipText(colors.success)}>All done</Text>
+                  <View style={chipStyle(colors.primary + '15', colors.primary)}>
+                    <Ionicons name="checkmark-done" size={10} color={colors.primary} />
+                    <Text style={chipText(colors.primary)}>{vcc} verified</Text>
                   </View>
                 );
                 // Closed statuses
