@@ -729,8 +729,9 @@ export class UserService {
         const fieldOfStudy = educationData.fieldOfStudy || '';
         const graduationYear = educationData.graduationYear || '';
         const gpa = educationData.gpa || '';
+        const educationCountry = educationData.educationCountry || educationData.country || '';
 
-        await dbService.executeQuery(`UPDATE Applicants SET Institution=@param1, HighestEducation=@param2, FieldOfStudy=@param3, GraduationYear=@param4, GPA=@param5, UpdatedAt=GETUTCDATE() WHERE ApplicantID=@param0`, [applicantId, institutionName, degreeType, fieldOfStudy, graduationYear, gpa]);
+        await dbService.executeQuery(`UPDATE Applicants SET Institution=@param1, HighestEducation=@param2, FieldOfStudy=@param3, GraduationYear=@param4, GPA=@param5, EducationCountry=@param6, UpdatedAt=GETUTCDATE() WHERE ApplicantID=@param0`, [applicantId, institutionName, degreeType, fieldOfStudy, graduationYear, gpa, educationCountry]);
         const completeness = await this.recomputeProfileCompletenessByApplicantId(applicantId);
         return { success: true, message: 'Education updated successfully', profileCompleteness: completeness };
     }

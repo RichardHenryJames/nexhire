@@ -200,6 +200,7 @@ BEGIN
         FieldOfStudy NVARCHAR(200) NULL,
         GraduationYear NVARCHAR(4) NULL,
         GPA NVARCHAR(50) NULL,
+        EducationCountry NVARCHAR(100) NULL,
         AdditionalDocuments NTEXT NULL,
         AllowRecruitersToContact BIT NULL DEFAULT ((1)),
         HideCurrentCompany BIT NULL DEFAULT ((0)),

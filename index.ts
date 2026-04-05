@@ -188,7 +188,7 @@ import { getPricing } from "./src/controllers/pricing.controller";
 import { checkAccessStatus } from "./src/controllers/access.controller";
 
 // Import admin dashboard controller
-import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, getAdminDashboardResumeBuilder, getAdminDashboardLinkedInOptimizer, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
+import { getAdminDashboardOverview, getAdminDashboardUsers, getAdminDashboardReferrals, getAdminDashboardTransactions, getAdminDashboardEmailLogs, getAdminDashboardResumeAnalyzer, getAdminDashboardResumeBuilder, getAdminDashboardLinkedInOptimizer, getAdminDashboardBlindReview, getAdminDashboardRevenue, adminDeleteUser, adminMakeReferrer } from "./src/controllers/admin.controller";
 
 // Import manual payment controller
 import {
@@ -1916,6 +1916,20 @@ app.http("admin-dashboard-linkedin-optimizer", {
   handler: withErrorHandling(getAdminDashboardLinkedInOptimizer),
 });
 
+app.http("admin-dashboard-blind-review", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/blind-review",
+  handler: withErrorHandling(getAdminDashboardBlindReview),
+});
+
+app.http("admin-dashboard-revenue", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "management/dashboard/revenue",
+  handler: withErrorHandling(getAdminDashboardRevenue),
+});
+
 // ========================================================================
 // USER ACTIVITY TRACKING ENDPOINTS
 // ========================================================================
@@ -2024,6 +2038,7 @@ app.http("tools-resume-analyzer", {
 });
 
 import { analyzeLinkedIn } from "./src/controllers/linkedin-optimizer.controller";
+import { submitBlindReview, getBlindReviewStatus, getBlindReviewHistory, getBlindReviewPending, submitBlindReviewResponse, getBlindReviewMyReviews } from "./src/controllers/blind-review.controller";
 
 /**
  * LinkedIn Profile Optimizer - Analyze and optimize LinkedIn profiles
@@ -2039,6 +2054,77 @@ app.http("tools-linkedin-optimizer", {
   authLevel: "anonymous",
   route: "tools/linkedin-optimizer",
   handler: analyzeLinkedIn,
+});
+
+// ========================================================================
+// BLIND REVIEW ENDPOINTS - Anonymous profile review by verified referrers
+// ========================================================================
+
+/**
+ * Submit a profile for blind review
+ * POST /api/tools/blind-review/submit
+ * Auth required. First 1 use free, then ₹49/use.
+ */
+app.http("tools-blind-review-submit", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/blind-review/submit",
+  handler: submitBlindReview,
+});
+
+/**
+ * Get status + results of a blind review request
+ * GET /api/tools/blind-review/status/{id}
+ */
+app.http("tools-blind-review-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/blind-review/status/{id}",
+  handler: getBlindReviewStatus,
+});
+
+/**
+ * Get user's blind review history
+ * GET /api/tools/blind-review/history
+ */
+app.http("tools-blind-review-history", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/blind-review/history",
+  handler: getBlindReviewHistory,
+});
+
+/**
+ * Referrer: get pending profiles to review (matched by company)
+ * GET /api/tools/blind-review/pending
+ */
+app.http("tools-blind-review-pending", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/blind-review/pending",
+  handler: getBlindReviewPending,
+});
+
+/**
+ * Referrer: submit review feedback on an anonymized profile
+ * POST /api/tools/blind-review/respond/{id}
+ */
+app.http("tools-blind-review-respond", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/blind-review/respond/{id}",
+  handler: submitBlindReviewResponse,
+});
+
+/**
+ * Referrer: get their own review history
+ * GET /api/tools/blind-review/my-reviews
+ */
+app.http("tools-blind-review-my-reviews", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/blind-review/my-reviews",
+  handler: getBlindReviewMyReviews,
 });
 
 // ========================================================================

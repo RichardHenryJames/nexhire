@@ -68,6 +68,7 @@ import ManualRechargeScreen from "../screens/wallet/ManualRechargeScreen";
 import SubmitPaymentScreen from "../screens/wallet/SubmitPaymentScreen";
 import WithdrawalRequestsScreen from "../screens/wallet/WithdrawalRequestsScreen";
 import PaymentSuccessScreen from "../screens/wallet/PaymentSuccessScreen";
+import SubmissionHistoryScreen from "../screens/wallet/SubmissionHistoryScreen";
 import WalletHoldsScreen from "../screens/wallet/WalletHoldsScreen";
 import PromoCodesScreen from "../screens/wallet/PromoCodesScreen";
 import EarningsScreen from "../screens/earnings/EarningsScreen";
@@ -112,6 +113,7 @@ import SalarySpyScreen from "../screens/services/SalarySpyScreen";
 import OfferCoachScreen from "../screens/services/OfferCoachScreen";
 import LinkedInOptimizerScreen from "../screens/services/LinkedInOptimizerScreen";
 import BlindReviewScreen from "../screens/services/BlindReviewScreen";
+import BlindReviewInboxScreen from "../screens/services/BlindReviewInboxScreen";
 import CareerSimulatorScreen from "../screens/services/CareerSimulatorScreen";
 import MarketPulseScreen from "../screens/services/MarketPulseScreen";
 import CareersScreen from "../screens/careers/CareersScreen";
@@ -271,6 +273,7 @@ const linking = {
           SubmitPayment: "wallet/submit-payment",
           WithdrawalRequests: "wallet/withdrawals",
           PaymentSuccess: "wallet/payment-success",
+          SubmissionHistory: "wallet/submission-history",
           WalletHolds: "wallet/holds",
           PromoCodes: "promo-codes",
           
@@ -300,6 +303,7 @@ const linking = {
           SalarySpy: "t/salary-spy",
           OfferCoach: "t/offer-coach",
           BlindReview: "t/blind-review",
+          BlindReviewInbox: "t/blind-review-inbox",
           CareerSimulator: "t/career-simulator",
           MarketPulse: "t/market-pulse",
           Careers: "t/careers",
@@ -879,6 +883,11 @@ function MainStack() {
         }}
       />
       <Stack.Screen
+        name="SubmissionHistory"
+        component={SubmissionHistoryScreen}
+        options={{ headerShown: false, title: "Credit History" }}
+      />
+      <Stack.Screen
         name="WalletHolds"
         component={WalletHoldsScreen}
         options={{ headerShown: false }}
@@ -910,6 +919,7 @@ function MainStack() {
       <Stack.Screen name="SalarySpy" component={SalarySpyScreen} options={{ headerShown: false, title: 'Salary Checker - Know Your Worth' }} />
       <Stack.Screen name="OfferCoach" component={OfferCoachScreen} options={{ headerShown: false, title: 'Offer Negotiation Coach' }} />
       <Stack.Screen name="BlindReview" component={BlindReviewScreen} options={{ headerShown: false, title: 'Blind Resume Review' }} />
+      <Stack.Screen name="BlindReviewInbox" component={BlindReviewInboxScreen} options={{ headerShown: false, title: 'Blind Review Inbox' }} />
       <Stack.Screen name="CareerSimulator" component={CareerSimulatorScreen} options={{ headerShown: false, title: 'Career Path Simulator' }} />
       <Stack.Screen name="MarketPulse" component={MarketPulseScreen} options={{ headerShown: false, title: 'Job Market Pulse - Hiring Trends' }} />
       <Stack.Screen name="Careers" component={CareersScreen} options={{ headerShown: false, title: 'Careers at RefOpen - Join Our Team' }} />

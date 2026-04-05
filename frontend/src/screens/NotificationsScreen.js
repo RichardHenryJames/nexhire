@@ -257,6 +257,8 @@ export default function NotificationsScreen() {
       navigation.navigate('ResumeAnalyzer');
     } else if (url.startsWith('/services/linkedin-optimizer')) {
       navigation.navigate('LinkedInOptimizer');
+    } else if (url.startsWith('/services/blind-review')) {
+      navigation.navigate('BlindReview');
     }
   };
 

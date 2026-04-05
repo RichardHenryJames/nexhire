@@ -25,8 +25,15 @@ export default function EducationSection({ profile, setProfile, onSave }) {
   const [fieldsOfStudy, setFieldsOfStudy] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('India');
+  const [selectedCountry, setSelectedCountry] = useState(profile?.educationCountry || 'India');
   
+  // Sync selectedCountry when profile prop changes (e.g., modal reopen with saved data)
+  useEffect(() => {
+    if (profile?.educationCountry && profile.educationCountry !== selectedCountry) {
+      setSelectedCountry(profile.educationCountry);
+    }
+  }, [profile?.educationCountry]);
+
   // Loading states
   const [loadingColleges, setLoadingColleges] = useState(false);
   const [loadingCountries, setLoadingCountries] = useState(false);
@@ -135,6 +142,8 @@ export default function EducationSection({ profile, setProfile, onSave }) {
     
     if (type === 'country') {
       setSelectedCountry(item.code);
+      // Propagate country to parent so it persists across modal open/close and gets saved to DB
+      setProfile({ ...profile, educationCountry: item.code });
       setActiveModal(null);
       setSearchTerm('');
       return;

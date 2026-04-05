@@ -122,7 +122,10 @@ export default function DesktopLayout({
       ...(!isVerifiedUser ? [{ icon: 'checkmark-circle-outline', label: 'Get Verified', screen: 'GetVerified' }] : []),
       ...(!isVerifiedReferrer && !isAdmin
         ? [{ icon: 'shield-checkmark-outline', label: 'Become a Referrer', screen: 'BecomeReferrer' }]
-        : [{ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' }]
+        : [
+            { icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' },
+            { icon: 'eye-off-outline', label: 'Blind Review Inbox', screen: 'BlindReviewInbox' },
+          ]
       ),
       { icon: 'settings-outline', label: 'Settings', screen: 'Settings' },
       { icon: 'card-outline', label: 'Recharge Wallet', screen: 'WalletRecharge' },
