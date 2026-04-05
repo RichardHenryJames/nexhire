@@ -272,117 +272,211 @@ Only 14 of 210 requests (6.7%) used Open-to-Any, despite it having a 64% success
 
 ## 11. Revenue Growth Ideas
 
-### 🔴 TIER 1 — Highest Impact, Do This Week
+### 🔴 TIER 1: Highest Impact, Do This Week
 
 #### 1. Recruit Referrers at High-Demand Companies
-- **Target:** Meta, Amazon, Intuit, Cisco — these have paying demand but 0 supply
-- **Action:** Personal LinkedIn outreach. Offer ₹500 first-referral bonus
-- **Impact:** 1 referrer at Meta = unlock 10+ blocked requests = **₹1,000-2,000 immediate revenue**
-- **Zero code needed** — just manual outreach
+- **Target:** Meta, Amazon, Intuit, Cisco. These have paying demand but 0 supply
+- **Action:** Personal LinkedIn outreach. Offer first-referral bonus
+- **Impact:** 1 referrer at Meta = unlock 10+ blocked requests
+- **Zero code needed.** Just manual outreach
+- **Status:** NOT DONE. Manual task
 
-#### 2. Make Open-to-Any the Default/Prominent Option
-- When user picks a company with no referrer, show: "No referrer at [Company] yet. Try Open-to-Any (₹449) — 64% success rate, multiple companies can refer you"
-- Show success rate comparison directly in the UI
-- **Impact:** If 20% of specific requests upgrade → ~40 × 0.2 × ₹449 = **₹3,592 extra**
+#### 2. Smart Open-to-Any Suggestion on Ask Referral Screen
+- When user picks a specific company, show a subtle inline hint to try Open Referral
+- Uses real `VerifiedReferrersCount` from Organizations table (now returned by API)
+- When 0 referrers: slightly stronger wording (e.g. "Most seekers also try Open Referral")
+- When 1+ referrers: softer wording (e.g. "You can also try Open Referral for extra coverage")
+- Both look visually identical. No way for user to tell the difference is based on referrer count
+- 6 varied messages per case, rotated by company name hash. Different company = different message
+- Company name examples (Google, Microsoft, etc.) auto-exclude the selected company
+- **Status:** DONE. Committed and pushed to master
 
-#### 3. Improve Expiry Nudge Effectiveness
-- ✅ The nudge system exists and works (28 sent so far)
-- **Enhancements to consider:**
-  - Extend nudge window from 3 days to 5 days
-  - Add push notification (not just email + in-app)
-  - Add a "special upgrade price" in the nudge (e.g., "Upgrade for just ₹250 more instead of ₹449")
-  - Track nudge → upgrade conversion to measure effectiveness
+#### 3. Extend Expiry Nudge Window from 3 to 5 Days
+- The nudge email + in-app notification already existed (sends when request expires in <=3 days)
+- Extended to 5 days so more users get nudged before expiry
+- Updated in `expiringRequestNudgeService.ts` SQL query and all comments
+- **Status:** DONE. Committed and pushed to master. DB change takes effect on next timer run
 
-### 🟡 TIER 2 — This Month
+### 🟡 TIER 2: This Month
 
-#### 4. Make AI Tools Free (Top-of-Funnel)
-- They earn ₹0 from real users anyway
-- Make Resume Analyzer, LinkedIn Optimizer fully free
-- After analysis, show: "Your resume scored 72/100. Get a referral to put it to use → ₹99"
-- **Impact:** More top-of-funnel engagement → better conversion to referral purchases
+#### 4. Make AI Tools Free (Top-of-Funnel for Referral Revenue)
+- Resume Analyzer, LinkedIn Optimizer, Blind Review earned ₹0 from real users
+- Changed free usage limits from 2/1/10 to 100/100/100 in both:
+  - Code defaults in `pricing.service.ts`
+  - Live production database `PricingSettings` table (updated directly)
+- These tools are now effectively free for all users
+- Goal: more users try the tools, see their score, then click the referral CTA
+- **Status:** DONE. Live in production immediately (DB updated, no deploy needed for pricing)
 
-#### 5. Optimize Pack Pricing
-- ✅ Pack system already exists with 5 tiers (₹89 → ₹1,499)
+#### 5. Referral CTA After Resume Analyzer Results
+- Added a purple gradient card after results: "Ready to land the job? Get a referral"
+- Shows score-aware subtitle:
+  - Score >= 70: "Your resume scored X/100. Put it to work with a direct referral"
+  - Score < 70: "Improve your chances with a direct employee referral at your dream company"
+- Navigates to `MainTabs > AskReferral` (same pattern as Blind Review)
+- Shows on both mobile and desktop results views
+- **Status:** DONE. Committed and pushed to master
+
+#### 6. Referral CTA After LinkedIn Optimizer Results
+- Same concept as Resume Analyzer: purple bordered card after results
+- Score-aware subtitle:
+  - Score >= 70: "Your profile scored X/100. Put it to work with a direct referral"
+  - Score < 70: "Boost your chances with a direct employee referral at your dream company"
+- Navigates to `MainTabs > AskReferral`
+- **Status:** DONE. Committed and pushed to master
+
+#### 7. Services Screen: FREE Badges and Try Free CTAs
+- Added `free: true` property to Resume Analyzer, LinkedIn Optimizer, Blind Review
+- Green "FREE" badge shows on top-right of free service cards
+- CTA label changes:
+  - Free services: "Try Free" (green)
+  - Paid services: "Try Now" (blue)
+  - Coming soon: "Coming Soon" (gray)
+- **Status:** DONE. Committed and pushed to master
+
+#### 8. Optimize Pack Pricing
+- Pack system already exists with 5 tiers (₹89 to ₹1,499)
 - Most deposits cluster around ₹199-399 range
-- **Consider:** Adding a ₹49 micro-pack (1 referral, 0 bonus) for first-time users to reduce entry friction
-- **Consider:** Time-limited bonus increases (e.g., "This weekend: 50% extra on all packs") to create urgency
+- Consider: ₹49 micro-pack, time-limited bonus increases
+- **Status:** NOT DONE. Needs more data on which packs convert best
 
-#### 6. "Priority Queue" Add-on
-- When a referrer logs in, they see pending requests
-- Offer ₹49 "priority boost" to move to top of queue
-- Doesn't require new referrers — just better monetisation of existing supply
+#### 9. "Priority Queue" Add-on
+- Offer ₹49 to move request to top of referrer queue
+- **Status:** NOT DONE. Needs design + backend work
 
-#### 7. Fix Razorpay Integration
-- Only ₹2 ever processed through Razorpay. Something is broken/unused
-- Automated payments = no admin bottleneck = faster conversion = weekend/night revenue
-- **Impact:** Could 2-3× conversion by removing manual friction
+#### 10. Fix Razorpay Integration
+- Only ₹2 ever processed. Manual UPI is 100% of real revenue
+- **Status:** NOT DONE. Needs investigation
 
-### 🟢 TIER 3 — Next Quarter
+### 🟢 TIER 3: Next Quarter
 
-#### 8. "Guaranteed Referral" Premium Product
-- ₹999-1,999: You personally ensure a referral happens or full refund
-- Concierge service for users who can't find a referrer
-- Even 5 sales/month = **₹5,000-10,000**
+#### 11. "Guaranteed Referral" Premium Product
+- ₹999-1,999 concierge service
+- **Status:** NOT DONE
 
-#### 9. Subscription: "RefOpen Pro" ₹499/month
-- Includes 3 referral requests + all AI tools + profile views
-- Predictable recurring revenue
-- 10 subscribers = ₹5,000/month
+#### 12. Subscription: "RefOpen Pro" ₹499/month
+- **Status:** NOT DONE
 
-#### 10. Employer-Side Revenue
-- Currently 0 employers on platform
-- Companies pay ₹5,000-50,000 per hire on job portals
-- Offer "Featured Employer" or "referral-as-a-service" for companies
+#### 13. Employer-Side Revenue
+- **Status:** NOT DONE
 
-#### 11. Social Proof Marketing
-- 40 successful referrals = 40 potential testimonials
-- "Ritwik got referred to Microsoft through RefOpen" — powerful for LinkedIn/Twitter
-- **Every successful referral is a marketing asset** — automate asking for testimonials
+#### 14. Social Proof Marketing
+- 40 successful referrals = potential testimonials
+- **Status:** NOT DONE. Manual task
 
 ---
 
-## 12. Revenue Projection
+## 12. Backend Changes Made (Technical Details)
+
+### Organizations API: Now Returns `verifiedReferrersCount`
+- **File:** `src/repositories/reference.repository.ts`
+- Added `ISNULL(VerifiedReferrersCount, 0) as verifiedReferrersCount` to all 3 organization query variants (Fortune500, search, default)
+- Column already indexed: `IX_Organizations_VerifiedReferrersCount` + included in `IX_Organizations_Tier_Covering`
+- No performance impact
+
+### Expiry Nudge: 3 Days to 5 Days
+- **File:** `src/services/expiringRequestNudgeService.ts`
+- Changed `DATEADD(DAY, 3, GETUTCDATE())` to `DATEADD(DAY, 5, GETUTCDATE())`
+- Timer trigger comment updated in `index.ts`
+
+### Pricing Defaults: Free Tiers Increased
+- **File:** `src/services/pricing.service.ts`
+- `AI_RESUME_FREE_USES`: 2 to 100
+- Added defaults for `LINKEDIN_OPTIMIZER_FREE_USES: 100`, `LINKEDIN_OPTIMIZER_COST: 29`
+- Added defaults for `BLIND_REVIEW_FREE_USES: 100`, `BLIND_REVIEW_COST: 49`
+
+### Production Database Updates (Live)
+- `PricingSettings.AI_RESUME_FREE_USES` = 100
+- `PricingSettings.LINKEDIN_OPTIMIZER_FREE_USES` = 100
+- `PricingSettings.BLIND_REVIEW_FREE_USES` = 100
+
+---
+
+## 13. Frontend Changes Made (Technical Details)
+
+### AskReferralScreen.js: Smart OTA Suggestion
+- After company selection in Specific mode, shows subtle inline tip
+- Reads `selectedCompany.verifiedReferrersCount` from org API
+- 6 messages for 0-referrer companies, 6 for 1+ referrer companies
+- Company name hash picks which message to show (deterministic per company)
+- Example company names auto-exclude the selected company
+- Tapping "Try" switches to Open mode via `switchMode(true)`
+- Visual: small muted row with globe icon, surface background, purple "Try" link
+
+### ResumeAnalyzerScreen.js: Referral CTA + Animation Fixes
+- Purple gradient `LinearGradient` card after results section
+- Score-aware subtitle (>= 70 vs < 70 threshold)
+- Navigates `MainTabs > AskReferral`
+- Fixed analyzing animation: steps now go green sequentially (timeout-based instead of interval)
+- Fixed scan line: smooth continuous top-to-bottom-to-top sweep using `Animated.sequence`
+
+### LinkedInOptimizerScreen.js: Referral CTA
+- Purple bordered card after results section
+- Score-aware subtitle
+- Navigates `MainTabs > AskReferral`
+
+### ServicesScreen.js: FREE Badges
+- Added `free: true` to Resume Analyzer, LinkedIn Optimizer, Blind Review service definitions
+- Green "FREE" pill badge on free service cards
+- CTA: "Try Free" (green) for free, "Try Now" (blue) for paid, "Coming Soon" (gray) for locked
+
+---
+
+## 14. Revenue Projection
 
 ### Current Run Rate (April pace)
 - Deposits: ~₹5,200/month
 - Service revenue: ~₹5,700/month
 
-### With Tier 1 Fixes (Conservative Estimate)
+### With Changes Shipped Today (Conservative)
 
-| Action | Expected Monthly Impact |
+| Change | Expected Monthly Impact |
 |--------|----------------------|
-| Referrer supply fix (Meta, Amazon) | +₹2,000 |
-| Open-to-Any push/default | +₹3,500 |
-| Improved expiry nudge | +₹1,500 |
-| **Total projected** | **~₹12,700/month** (2.2×) |
+| OTA suggestion (subtle push) | +₹1,500-2,500 |
+| Extended nudge (5d instead of 3d) | +₹500-1,000 |
+| Free AI tools with referral CTA | +₹500-1,500 |
+| FREE badges driving exploration | +₹300-500 |
+| **Total projected** | **₹8,000-11,400/month** (1.5-2x) |
 
-### With Tier 1 + Tier 2 (Optimistic)
+### If Referrer Supply is Also Fixed (Meta, Amazon, etc.)
 
-| Action | Expected Monthly Impact |
+| Change | Expected Monthly Impact |
 |--------|----------------------|
-| All Tier 1 | +₹7,000 |
-| Free AI tools → referral funnel | +₹1,500 |
-| Pack optimisation | +₹1,000 |
-| Priority queue | +₹500 |
-| Fix Razorpay | +₹2,000 (conversion uplift) |
-| **Total projected** | **~₹17,700/month** (3×) |
+| All shipped changes above | +₹3,000-5,500 |
+| Referrer supply at Meta/Amazon/Intuit | +₹2,000-3,000 |
+| **Total projected** | **₹10,700-14,200/month** (2-2.5x) |
 
 ---
 
-## 13. Key Takeaways
+## 15. Key Takeaways
 
-1. **The product works.** 39 real people paid real money. 40 successful referrals happened. The unit economics are strong (96% margin).
+1. **The product works.** 39 real people paid real money. 40 successful referrals happened. Unit economics are strong (96% margin).
 
 2. **Supply is the bottleneck, not demand.** 127 requests expired because no referrer existed. Fix supply at Meta/Amazon/Intuit and you unlock trapped revenue.
 
-3. **Open-to-Any is your best product** — 64% success rate, ₹449 price, but only 6.7% of requests use it. Push it harder.
+3. **Open-to-Any is the best product.** 64% success rate, ₹449 price, but only 6.7% of requests use it. Now being pushed subtly via the OTA suggestion on company select.
 
-4. **Non-referral services earn ₹0.** Consider making them free for lead generation instead of trying to monetize them directly.
+4. **Non-referral services now serve as top-of-funnel.** Made free (100 uses each) and every results screen funnels to "Get a referral" CTA. Resume Analyzer + LinkedIn Optimizer are now lead-gen tools, not revenue products.
 
-5. **Recharge packs and expiry nudges already exist.** Focus on optimizing them (conversion tracking, better nudge timing, micro-packs) rather than building new features.
+5. **Existing systems leveraged, not rebuilt.** Expiry nudge extended (3d to 5d), recharge packs already existed, org referrer count already in DB. Just wired them up better.
 
-6. **Manual payment is a bottleneck.** Every deposit requires admin approval. Fixing Razorpay or adding auto-approval for small amounts would reduce friction.
+6. **Manual payment remains a bottleneck.** Every deposit requires admin approval. Fixing Razorpay would remove friction and enable weekend/night revenue.
 
 ---
 
-*Generated from live production database queries on April 6, 2026*
+## Commits on `feature/revenue-optimizations` branch (merged to master)
+
+1. `35485c9` Revenue optimizations: extend nudge 5d, free AI tools (100 uses), referral CTA on results, smart OTA suggestion
+2. `a9b8fad` Fix OTA suggestion: varied messaging per company, no fake stats, honest success %
+3. `777b1f3` Use real VerifiedReferrersCount for OTA suggestion: stronger push when 0 referrers, softer when referrers exist
+4. `e6e6331` Subtle OTA hint: same look for 0 and >0 referrers, feels like a helpful tip not a redirect
+5. `71f59c9` Remove em dashes, add 6 varied messages per case, friendlier copy
+6. `2ed2562` Exclude selected company from example names in OTA suggestion
+7. `99b56f9` Services screen: FREE badges, catchy hero banner, Try Free CTAs, better exploration
+8. `28ccbd6` Remove hero banner from services screen, keep FREE badges and Try Free CTAs
+9. `d740428` Fix: analyzing steps sequential green, scan line sweeps full doc, referral CTA uses MainTabs navigation
+10. `5ae1eff` Fix: steps go green sequentially (timeout-based), scan line smooth up-down sweep
+
+---
+
+*Generated from live production database queries on April 6, 2026. Updated with implementation details after code changes were shipped.*
