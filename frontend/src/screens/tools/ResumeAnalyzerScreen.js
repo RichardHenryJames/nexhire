@@ -293,30 +293,30 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
     setCompletedSteps([]);
     setAnalyzingStep(0);
 
-    // Scan line loop
+    // Scan line: smooth continuous top-to-bottom-to-top sweep
     scanLineAnim.setValue(0);
     const scanLoop = Animated.loop(
-      Animated.timing(scanLineAnim, { toValue: 1, duration: 2000, easing: Easing.inOut(Easing.ease), useNativeDriver: true })
+      Animated.sequence([
+        Animated.timing(scanLineAnim, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(scanLineAnim, { toValue: 0, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
     );
     scanLoop.start();
 
-    // Step progression — mark each step as done sequentially
-    let stepIdx = 0;
-    const interval = setInterval(() => {
-      // Mark current step as completed
-      setCompletedSteps(prev => {
-        if (prev.includes(stepIdx)) return prev;
-        return [...prev, stepIdx];
-      });
-      stepIdx++;
-      if (stepIdx < ANALYZING_STEPS.length) {
-        setAnalyzingStep(stepIdx);
-      } else {
-        clearInterval(interval);
-      }
-    }, 3000);
+    // Step progression using timeouts for precise sequential control
+    const timeouts = [];
+    ANALYZING_STEPS.forEach((_, idx) => {
+      const t = setTimeout(() => {
+        // Mark this step done and advance to next
+        setCompletedSteps(prev => [...Array(idx + 1).keys()]); // [0], [0,1], [0,1,2], [0,1,2,3]
+        if (idx + 1 < ANALYZING_STEPS.length) {
+          setAnalyzingStep(idx + 1);
+        }
+      }, (idx + 1) * 3000);
+      timeouts.push(t);
+    });
 
-    return () => { clearInterval(interval); scanLoop.stop(); };
+    return () => { timeouts.forEach(clearTimeout); scanLoop.stop(); };
   }, [isAnalyzing]);
 
   // ── Mobile view transitions ──
@@ -676,7 +676,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
           style={[styles.scanLine, {
             backgroundColor: colors.primary,
             transform: [{
-              translateY: scanLineAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [-32, 32, -32] }),
+              translateY: scanLineAnim.interpolate({ inputRange: [0, 1], outputRange: [-32, 32] }),
             }],
           }]}
         />
