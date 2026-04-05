@@ -26,7 +26,7 @@ export interface AICallOptions {
   systemMessage?: string;
   /** Timeout in milliseconds. Default 60000 (60s) */
   timeoutMs?: number;
-  /** Groq model. Default 'llama-3.3-70b-versatile' */
+  /** Groq model. Default 'openai/gpt-oss-120b' */
   groqModel?: string;
   /** Gemini model. Default 'gemini-2.5-flash' */
   geminiModel?: string;
@@ -67,7 +67,7 @@ const DEFAULT_OPTIONS: Required<AICallOptions> = {
   jsonMode: false,
   systemMessage: '',
   timeoutMs: 60000,
-  groqModel: 'llama-3.3-70b-versatile',
+  groqModel: 'openai/gpt-oss-120b',
   geminiModel: 'gemini-2.5-flash',
   providerOrder: ['groq', 'gemini'],
 };
