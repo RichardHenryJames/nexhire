@@ -2022,6 +2022,34 @@ export class UserService {
                 } catch (e) { console.warn('Referral credit failed:', e); }
             }
 
+            // Send welcome email to new user
+            try {
+                const { EmailService } = await import('./emailService');
+                await EmailService.sendWelcomeEmail(linkedInUser.email, firstName || 'there');
+            } catch (e) { console.warn('Welcome email failed:', e); }
+
+            // Send welcome message from Platform Admin (in-app message, no email)
+            import('./messaging.service').then(({ MessagingService }) => {
+                MessagingService.sendWelcomeMessageToNewUser(userId, firstName || 'there')
+                    .catch(err => console.warn('Welcome message failed:', err));
+            });
+
+            // Create NotificationPreferences with all flags enabled by default
+            try {
+                await dbService.executeQuery(`
+                    INSERT INTO NotificationPreferences (
+                        UserID, EmailEnabled, PushEnabled, InAppEnabled,
+                        ReferralRequestEmail, ReferralRequestPush,
+                        ReferralClaimedEmail, ReferralClaimedPush,
+                        ReferralVerifiedEmail, ReferralVerifiedPush,
+                        JobApplicationEmail, MessageReceivedEmail, MessageReceivedPush,
+                        WeeklyDigestEnabled, DailyJobRecommendationEmail, ReferrerNotificationEmail, MarketingEmail
+                    ) VALUES (
+                        @param0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+                    )
+                `, [userId]);
+            } catch (e) { console.warn('NotificationPreferences creation failed:', e); }
+
             // Note: LinkedIn profile URL cannot be derived from sub claim (it's opaque).
             // User can add their LinkedIn URL manually via profile settings.
 
