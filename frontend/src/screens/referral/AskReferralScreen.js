@@ -359,80 +359,45 @@ export default function AskReferralScreen({ navigation, route }) {
           </View>
           {errors.company && <Text style={s.fieldError}>{errors.company}</Text>}
 
-          {/* Smart OTA suggestion after company selection — context-aware */}
+          {/* Subtle OTA suggestion — like "try another payment method" */}
           {selectedCompany && !showCompanyDD && (() => {
             const referrerCount = selectedCompany.verifiedReferrersCount || 0;
-            const tier = selectedCompany.tier || 'Standard';
             const nameHash = selectedCompany.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
             
-            // Different messaging based on whether there are referrers or not
-            if (referrerCount === 0) {
-              // No referrers — stronger push to Open, but don't say "no referrers"
-              const noRefMessages = [
-                { title: '🚀 Get referred faster with Open Referral', body: `Open Referral broadcasts your request to 500+ verified referrers across all top companies — multiple referrals with one request.` },
-                { title: '⚡ Increase your chances significantly', body: `Open Referral lets referrers from Google, Microsoft, Amazon & more refer you simultaneously — one request, many companies.` },
-                { title: '🎯 One request, many companies', body: `Instead of waiting for a single company, Open Referral puts your profile in front of referrers at 100+ companies at once.` },
-              ];
-              const msg = noRefMessages[nameHash % noRefMessages.length];
-              
-              return (
-                <TouchableOpacity
-                  style={{
-                    marginTop: 12,
-                    padding: 14,
-                    borderRadius: 12,
-                    backgroundColor: '#8B5CF6' + '10',
-                    borderWidth: 1,
-                    borderColor: '#8B5CF6' + '30',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                  }}
-                  onPress={() => switchMode(true)}
-                  activeOpacity={0.75}
-                >
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#8B5CF6' + '15', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Ionicons name="globe-outline" size={18} color="#8B5CF6" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#8B5CF6', marginBottom: 2 }}>
-                      {msg.title}
-                    </Text>
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 17 }}>
-                      {msg.body}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color="#8B5CF6" style={{ marginLeft: 6 }} />
-                </TouchableOpacity>
-              );
-            }
-            
-            // Has referrers — softer, optional suggestion
-            const withRefMessages = [
-              { title: '💡 Also consider Open Referral', body: `Get referred across multiple companies with one request — great if you're exploring options beyond ${selectedCompany.name}.` },
-              { title: '🌐 Explore more companies too?', body: `Open Referral sends your request to referrers at 100+ companies — a great complement to your ${selectedCompany.name} request.` },
-            ];
-            const msg = withRefMessages[nameHash % withRefMessages.length];
+            // All messages are the same subtle style — no visual difference between 0 and >0 referrers
+            // Just slightly different wording so it feels natural
+            const messages = referrerCount === 0
+              ? [
+                  `Most seekers also try Open Referral — one request reaches referrers at all companies`,
+                  `Tip: Open Referral lets multiple companies refer you with a single request`,
+                  `Many candidates combine this with Open Referral for wider coverage`,
+                ]
+              : [
+                  `Tip: You can also try Open Referral to get referred at multiple companies at once`,
+                  `Many seekers pair a specific request with Open Referral for extra coverage`,
+                  `Also available: Open Referral — one request, referrers across all companies`,
+                ];
+            const msg = messages[nameHash % messages.length];
             
             return (
               <TouchableOpacity
                 style={{
-                  marginTop: 12,
-                  padding: 12,
-                  borderRadius: 12,
-                  backgroundColor: '#8B5CF6' + '08',
-                  borderWidth: 1,
-                  borderColor: '#8B5CF6' + '18',
+                  marginTop: 10,
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  borderRadius: 8,
+                  backgroundColor: colors.surface,
                   flexDirection: 'row',
                   alignItems: 'center',
                 }}
                 onPress={() => switchMode(true)}
-                activeOpacity={0.75}
+                activeOpacity={0.7}
               >
-                <Ionicons name="globe-outline" size={16} color="#8B5CF6" style={{ marginRight: 10 }} />
-                <Text style={{ fontSize: 12, color: colors.textSecondary, flex: 1 }}>
-                  {msg.title} — {msg.body}
+                <Ionicons name="globe-outline" size={14} color={colors.textSecondary} style={{ marginRight: 8 }} />
+                <Text style={{ fontSize: 12, color: colors.textSecondary, flex: 1, lineHeight: 17 }}>
+                  {msg}
                 </Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} style={{ marginLeft: 6 }} />
+                <Text style={{ fontSize: 12, color: '#8B5CF6', fontWeight: '600', marginLeft: 8 }}>Try</Text>
               </TouchableOpacity>
             );
           })()}
