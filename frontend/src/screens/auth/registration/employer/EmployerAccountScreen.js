@@ -64,18 +64,25 @@ export default function EmployerAccountScreen({ navigation, route }) {
   const [otpCooldown, setOtpCooldown] = useState(0);
   const [verifiedEmail, setVerifiedEmail] = useState('');
 
-  // Pre-populate Google user data
+  // Pre-populate social user data
   useEffect(() => {
     if (isGoogleUser && googleUser) {
       
       setFirstName(googleUser.given_name || googleUser.name?.split(' ')[0] || '');
       setLastName(googleUser.family_name || googleUser.name?.split(' ').slice(1).join(' ') || '');
       setEmail(googleUser.email || '');
-      // No password needed for Google users
       setPassword('google-oauth-user');
       setConfirmPassword('google-oauth-user');
     }
-  }, [isGoogleUser, googleUser]);
+    if (isLinkedInUser && !isGoogleUser && pendingLinkedInAuth?.linkedInUser) {
+      const liUser = pendingLinkedInAuth.linkedInUser;
+      setFirstName(liUser.given_name || liUser.name?.split(' ')[0] || '');
+      setLastName(liUser.family_name || liUser.name?.split(' ').slice(1).join(' ') || '');
+      setEmail(liUser.email || '');
+      setPassword('linkedin-oauth-user');
+      setConfirmPassword('linkedin-oauth-user');
+    }
+  }, [isSocialUser, isGoogleUser, isLinkedInUser, googleUser, pendingLinkedInAuth]);
 
   // ===== EMAIL VERIFICATION HANDLERS =====
   useEffect(() => {
@@ -166,7 +173,7 @@ export default function EmployerAccountScreen({ navigation, route }) {
     // Users will be prompted to verify after login via EmailVerificationModal
     
     // Skip password validation for Google users and already authenticated users
-    if (!refopenAPI.token && !isGoogleUser) {
+    if (!refopenAPI.token && !isSocialUser) {
       if (!password || password.length < 6) return 'Password must be at least 6 characters';
       if (password !== confirmPassword) return 'Passwords do not match';
     }
@@ -324,10 +331,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
       
       if (errorMessage.includes('already exists') || errorMessage.includes('Conflict')) {
         
-        // Clear any pending Google auth data
-        if (isGoogleUser) {
-          clearPendingGoogleAuth();
-        }
+        if (isGoogleUser) clearPendingGoogleAuth();
+        if (isLinkedInUser) clearPendingLinkedInAuth();
         
         showToast('Account already exists. Please sign in.', 'info');
         navigation.navigate('Login');
@@ -340,31 +345,38 @@ export default function EmployerAccountScreen({ navigation, route }) {
   return (
     <RegistrationWrapper currentStep={4} totalSteps={4} stepLabel="Create your account" onBack={() => navigation.goBack()}>
       <ScrollView style={styles.scroll} contentContainerStyle={{ padding: 24, maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 600 : '100%', width: '100%', alignSelf: 'center' }}>
-        {/* Show Google user info if applicable */}
-        {isGoogleUser && googleUser && (
+        {/* Show social user info if applicable */}
+        {isSocialUser && (isGoogleUser && googleUser ? (
           <View style={styles.googleUserInfo}>
             {googleUser.picture && (
-              <Image 
-                source={{ uri: googleUser.picture }} 
-                style={styles.googleUserAvatar}
-              />
+              <Image source={{ uri: googleUser.picture }} style={styles.googleUserAvatar} />
             )}
             <View style={styles.googleUserTextContainer}>
-              <Text style={styles.googleUserWelcome}>
-                Creating employer account for
-              </Text>
+              <Text style={styles.googleUserWelcome}>Creating employer account for</Text>
               <Text style={styles.googleUserName}>{googleUser.name}</Text>
               <Text style={styles.googleUserEmail}>{googleUser.email}</Text>
             </View>
             <Ionicons name="checkmark-circle" size={24} color={colors.success} />
           </View>
-        )}
+        ) : isLinkedInUser && pendingLinkedInAuth?.linkedInUser ? (
+          <View style={styles.googleUserInfo}>
+            {pendingLinkedInAuth.linkedInUser.picture && (
+              <Image source={{ uri: pendingLinkedInAuth.linkedInUser.picture }} style={styles.googleUserAvatar} />
+            )}
+            <View style={styles.googleUserTextContainer}>
+              <Text style={styles.googleUserWelcome}>Creating employer account for</Text>
+              <Text style={styles.googleUserName}>{pendingLinkedInAuth.linkedInUser.name}</Text>
+              <Text style={styles.googleUserEmail}>{pendingLinkedInAuth.linkedInUser.email}</Text>
+            </View>
+            <Ionicons name="checkmark-circle" size={24} color={colors.success} />
+          </View>
+        ) : null)}
 
         <Text style={styles.title}>
-          {isGoogleUser ? 'Complete Your Employer Account' : 'Create your employer account'}
+          {isSocialUser ? 'Complete Your Employer Account' : 'Create your employer account'}
         </Text>
         <Text style={styles.subtitle}>
-          {isGoogleUser 
+          {isSocialUser 
             ? 'Just a few more details to finish your profile'
             : 'We\'ll set up your user and organization'
           }
@@ -374,10 +386,10 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <View style={[styles.field, { flex: 1, marginRight: 6 }]}> 
             <Text style={styles.label}>
               First Name <Text style={styles.required}>*</Text>
-              {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
+              {isSocialUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
-              style={[styles.input, isGoogleUser && styles.inputPrefilled]} 
+              style={[styles.input, isSocialUser && styles.inputPrefilled]} 
               value={firstName} 
               onChangeText={setFirstName}
               editable={true}
@@ -388,10 +400,10 @@ export default function EmployerAccountScreen({ navigation, route }) {
           <View style={[styles.field, { flex: 1, marginLeft: 6 }]}> 
             <Text style={styles.label}>
               Last Name <Text style={styles.required}>*</Text>
-              {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
+              {isSocialUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
             </Text>
             <TextInput 
-              style={[styles.input, isGoogleUser && styles.inputPrefilled]} 
+              style={[styles.input, isSocialUser && styles.inputPrefilled]} 
               value={lastName} 
               onChangeText={setLastName}
               editable={true}
@@ -404,14 +416,14 @@ export default function EmployerAccountScreen({ navigation, route }) {
         <View style={styles.field}> 
           <Text style={styles.label}>
             Email Address <Text style={styles.required}>*</Text>
-            {isGoogleUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
+            {isSocialUser && <Text style={styles.prefilledLabel}> ✓ Pre-filled</Text>}
           </Text>
           <View style={styles.emailRow}>
             <TextInput 
               style={[
                 styles.input,
                 { flex: 1 },
-                isGoogleUser && styles.inputPrefilled,
+                isSocialUser && styles.inputPrefilled,
               ]} 
               value={email} 
               onChangeText={setEmail} 
@@ -480,8 +492,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
           />
         </View>
 
-        {/* Only show password fields for non-Google users and unauthenticated users */}
-        {!refopenAPI.token && !isGoogleUser && (
+        {/* Only show password fields for non-social users and unauthenticated users */}
+        {!refopenAPI.token && !isSocialUser && (
           <>
             <View style={styles.field}> 
               <Text style={styles.label}>Password</Text>
@@ -585,8 +597,8 @@ export default function EmployerAccountScreen({ navigation, route }) {
         >
           <Text style={styles.primaryBtnText}>
             {submitting 
-              ? (isGoogleUser ? 'Completing Profile...' : 'Creating Account...') 
-              : (isGoogleUser ? 'Complete Profile' : 'Finish Setup')
+              ? (isSocialUser ? 'Completing Profile...' : 'Creating Account...') 
+              : (isSocialUser ? 'Complete Profile' : 'Finish Setup')
             }
           </Text>
           <Ionicons name="checkmark" size={18} color={colors.white} />
