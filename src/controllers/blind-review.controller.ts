@@ -169,7 +169,7 @@ export async function submitBlindReview(req: HttpRequest, context: InvocationCon
         },
         message: referrerCheck.hasReferrers
           ? `Profile submitted! ${referrerCheck.count} verified referrer(s) at this company can review your profile.`
-          : 'Profile submitted! AI review will be generated shortly (no verified referrers at this company yet).',
+          : 'Profile submitted! Your review is being processed.',
       },
     };
   } catch (error: any) {
