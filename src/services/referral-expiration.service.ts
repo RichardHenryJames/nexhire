@@ -155,6 +155,47 @@ export class ReferralExpirationService {
 
       result.success = result.errors.length === 0;
       
+      // ── Phase 2: Close OTA Completed requests whose timer expired ──
+      // These had at least 1 referral verified (hold already converted), 
+      // but the 14-day window for additional referrals is over.
+      // Mark them as 'Expired' so they move to Closed in the UI.
+      try {
+        const otaCompleted = await dbService.executeQuery(`
+          SELECT rr.RequestID, rr.JobTitle
+          FROM ReferralRequests rr
+          WHERE rr.OpenToAnyCompany = 1
+            AND rr.Status IN ('Completed', 'ProofUploaded')
+            AND rr.ExpiryTime IS NOT NULL
+            AND rr.ExpiryTime <= GETUTCDATE()
+            AND rr.ParentRequestID IS NULL
+        `, []);
+
+        const otaCount = otaCompleted.recordset?.length || 0;
+        if (otaCount > 0) {
+          console.log(`\n🌐 Phase 2: Found ${otaCount} OTA Completed requests with expired timer`);
+          for (const ota of otaCompleted.recordset) {
+            try {
+              await dbService.executeQuery(
+                `UPDATE ReferralRequests SET Status = 'Expired' WHERE RequestID = @param0`,
+                [ota.RequestID]
+              );
+              // Also expire any pending children
+              await dbService.executeQuery(
+                `UPDATE ReferralRequests SET Status = 'Expired' 
+                 WHERE ParentRequestID = @param0 AND Status IN ('Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed')`,
+                [ota.RequestID]
+              );
+              console.log(`   ✅ OTA closed: ${ota.JobTitle?.substring(0, 40)}`);
+              result.totalExpired++;
+            } catch (otaErr: any) {
+              console.warn(`   ⚠️ OTA close failed for ${ota.RequestID}: ${otaErr.message}`);
+            }
+          }
+        }
+      } catch (otaPhaseErr) {
+        console.warn('Non-critical: OTA cleanup phase failed:', otaPhaseErr);
+      }
+
       console.log(`\n📊 Expiration Summary:`);
       console.log(`   Total Expired: ${result.totalExpired}/${result.totalPendingFound}`);
       console.log(`   Holds Released: ${result.totalHoldsReleased}`);
