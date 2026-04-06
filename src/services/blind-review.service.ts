@@ -934,22 +934,24 @@ Respond with JSON:
     const profile = req.AnonymizedProfile || '{}';
     const aiAnalysis = req.AIAnalysis || '';
 
-    const prompt = `You are a real employee at ${orgName} (${orgIndustry}) reviewing an anonymous candidate's profile for a "${req.TargetRole}" position.
+    const prompt = `You are a real employee at ${orgName} (${orgIndustry}) reviewing an anonymous candidate's profile for a "${req.TargetRole}" position. The candidate will read your review directly, so write TO them using "you" or "u".
 
 Here is their anonymized profile:
 ${profile}
 
 ${aiAnalysis ? `AI analysis of the profile: ${aiAnalysis}` : ''}
 
-Write your review like a normal employee. Avoid bullet points, avoid corporate language, and don't sound like an AI. Write in a natural conversational way like real people type. Sometimes use "you", sometimes "u" if it feels natural. Small casual typos are okay. Keep the tone relaxed, thoughtful, and conversational. Keep replies short and natural, not long explanations. Each field should not exceed 1 paragraph. Respond directly to what u see in the profile. Never use em dashes.
+IMPORTANT: Write directly to the candidate. Use "you" or "u", never "they" or "them" or "the candidate". The seeker reads this feedback personally.
+
+Write like a normal employee giving feedback to someone. Avoid bullet points, avoid corporate language, and don't sound like an AI. Write in a natural conversational way like real people type. Sometimes use "you", sometimes "u" if it feels natural. Small casual typos are okay. Keep the tone relaxed, thoughtful, and conversational. Keep replies short and natural, not long explanations. Each field should not exceed 1 paragraph. Never use em dashes. Never say "we" as if talking to another employee. You are talking to the candidate.
 
 Based on the profile, decide:
 1. Would you refer this person? (true/false)
 2. Overall rating 1-5
 3. Profile fit for role 1-5
-4. Their strengths (1 short paragraph, conversational)
-5. What needs improvement (1 short paragraph, conversational)
-6. Your suggestions (1 short paragraph, conversational)
+4. Their strengths (1 short paragraph, talking to them directly using "you"/"u")
+5. What needs improvement (1 short paragraph, talking to them directly)
+6. Your suggestions (1 short paragraph, talking to them directly)
 
 Respond with JSON only:
 {
