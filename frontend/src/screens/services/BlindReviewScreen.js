@@ -390,7 +390,7 @@ export default function BlindReviewScreen({ navigation }) {
                       )}
                       <Text style={s.historyDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                     </View>
-                    {item.status !== 'completed' && item.status !== 'cancelled' && (
+                    {item.status === 'pending' && item.responseCount === 0 && (
                       <TouchableOpacity
                         onPress={(e) => {
                           e.stopPropagation();
