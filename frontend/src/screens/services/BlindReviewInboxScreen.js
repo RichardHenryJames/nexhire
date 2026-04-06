@@ -21,6 +21,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useAuth } from '../../contexts/AuthContext';
 import refopenAPI from '../../services/api';
+import CachedImage from '../../components/CachedImage';
 
 const getScoreColor = (score) => {
   if (score >= 80) return '#10B981';
@@ -412,10 +413,17 @@ export default function BlindReviewInboxScreen({ navigation }) {
             pending.map(item => (
               <TouchableOpacity key={item.requestId} style={s.pendingCard} onPress={() => setSelectedRequest(item)} activeOpacity={0.7}>
                 <View style={s.pendingRow}>
+                  {item.organizationLogo ? (
+                    <CachedImage source={{ uri: item.organizationLogo }} style={{ width: 36, height: 36, borderRadius: 8, marginRight: 12 }} resizeMode="contain" />
+                  ) : (
+                    <View style={{ width: 36, height: 36, borderRadius: 8, marginRight: 12, backgroundColor: colors.border + '40', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="business" size={18} color={colors.textSecondary} />
+                    </View>
+                  )}
                   <View style={s.pendingLeft}>
-                    <Text style={s.pendingRole}>{item.targetRole}</Text>
-                    <Text style={s.pendingMeta}>
-                      {item.anonymizedProfile?.experienceYears || '?'} yrs exp · {item.anonymizedProfile?.skills?.length || 0} skills
+                    <Text style={s.pendingRole} numberOfLines={1}>{item.targetRole}</Text>
+                    <Text style={s.pendingMeta} numberOfLines={1}>
+                      {item.organizationName || ''}{item.anonymizedProfile?.experienceYears > 0 ? ` · ${item.anonymizedProfile.experienceYears} yrs` : ''}{item.anonymizedProfile?.skills?.length > 0 ? ` · ${item.anonymizedProfile.skills.length} skills` : ''}
                     </Text>
                     <Text style={s.pendingDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                   </View>
