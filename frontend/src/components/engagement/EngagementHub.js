@@ -404,26 +404,27 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
             <Text style={[styles.pulseValue, { color: colors.primary }]}>{fakePulse.referrals}</Text>
             <Text style={[styles.pulseLabel, { color: colors.gray600 }]}> referrals today</Text>
           </View>
-          <Text style={[styles.pulseSep, { color: colors.gray400 }]}>·</Text>
-          <View style={styles.pulseChip}>
-            <Text style={[styles.pulseValue, { color: colors.warning }]}>{fakePulse.resumesAnalyzed}</Text>
-            <Text style={[styles.pulseLabel, { color: colors.gray600 }]}> resumes analyzed</Text>
-          </View>
-          <Text style={[styles.pulseSep, { color: colors.gray400 }]}>·</Text>
-          <View style={styles.pulseChip}>
-            <Text style={[styles.pulseValue, { color: colors.accent || '#c084fc' }]}>{fakePulse.resumesCreated}</Text>
-            <Text style={[styles.pulseLabel, { color: colors.gray600 }]}> resumes created</Text>
-          </View>
-          <Text style={[styles.pulseSep, { color: colors.gray400 }]}>·</Text>
-          <View style={styles.pulseChip}>
-            <Text style={[styles.pulseValue, { color: '#38bdf8' }]}>{fakePulse.linkedinOptimized}</Text>
-            <Text style={[styles.pulseLabel, { color: colors.gray600 }]}> LinkedIn optimized</Text>
-          </View>
-          <Text style={[styles.pulseSep, { color: colors.gray400 }]}>·</Text>
-          <View style={styles.pulseChip}>
-            <Text style={[styles.pulseValue, { color: '#a78bfa' }]}>{fakePulse.blindReviewed}</Text>
-            <Text style={[styles.pulseLabel, { color: colors.gray600 }]}> blind reviews done</Text>
-          </View>
+          {(() => {
+            const toolStats = [
+              { value: fakePulse.resumesAnalyzed, label: ' resumes analyzed', color: colors.warning },
+              { value: fakePulse.resumesCreated, label: ' resumes created', color: colors.accent || '#c084fc' },
+              { value: fakePulse.linkedinOptimized, label: ' LinkedIn optimized', color: '#38bdf8' },
+              { value: fakePulse.blindReviewed, label: ' blind reviews done', color: '#a78bfa' },
+            ];
+            // Daily-seeded shuffle so order changes each day but stays stable within the day
+            const d = new Date();
+            const seed = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+            toolStats.sort((a, b) => Math.sin(seed * a.label.length) - Math.sin(seed * b.label.length));
+            return toolStats.map((stat, i) => (
+              <React.Fragment key={stat.label}>
+                <Text style={[styles.pulseSep, { color: colors.gray400 }]}>·</Text>
+                <View style={styles.pulseChip}>
+                  <Text style={[styles.pulseValue, { color: stat.color }]}>{stat.value}</Text>
+                  <Text style={[styles.pulseLabel, { color: colors.gray600 }]}>{stat.label}</Text>
+                </View>
+              </React.Fragment>
+            ));
+          })()}
         </ScrollView>
       </View>
 
