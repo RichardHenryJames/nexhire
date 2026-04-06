@@ -701,14 +701,15 @@ export default function BlindReviewScreen({ navigation }) {
 
       {/* Status badge */}
       <View style={s.statusCard}>
-        <View style={[s.statusBadgePill, { backgroundColor: status === 'completed' ? '#10B98115' : status === 'in_review' ? '#3B82F615' : '#F59E0B15' }]}>
+        <View style={[s.statusBadgePill, { backgroundColor: status === 'completed' ? '#10B98115' : status === 'cancelled' ? (colors.gray500 || '#6B7280') + '15' : status === 'in_review' ? '#3B82F615' : '#F59E0B15' }]}>
           <Ionicons
-            name={status === 'completed' ? 'checkmark-circle' : status === 'in_review' ? 'hourglass' : 'time'}
+            name={status === 'completed' ? 'checkmark-circle' : status === 'cancelled' ? 'information-circle' : status === 'in_review' ? 'hourglass' : 'time'}
             size={16}
-            color={status === 'completed' ? '#10B981' : status === 'in_review' ? '#3B82F6' : '#F59E0B'}
+            color={status === 'completed' ? '#10B981' : status === 'cancelled' ? (colors.gray500 || '#6B7280') : status === 'in_review' ? '#3B82F6' : '#F59E0B'}
           />
-          <Text style={[s.statusBadgeText, { color: status === 'completed' ? '#10B981' : status === 'in_review' ? '#3B82F6' : '#F59E0B' }]}>
+          <Text style={[s.statusBadgeText, { color: status === 'completed' ? '#10B981' : status === 'cancelled' ? (colors.gray500 || '#6B7280') : status === 'in_review' ? '#3B82F6' : '#F59E0B' }]}>
             {status === 'completed' ? 'Review complete. See results below.' :
+             status === 'cancelled' ? 'This review was cancelled. AI insights are still available below.' :
              status === 'in_review' ? 'Feedback received. Compiling insights...' :
              'Your review is being processed...'}
           </Text>
