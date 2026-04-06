@@ -969,10 +969,9 @@ Respond with JSON only:
     });
 
     try {
-      return JSON.parse(aiResult);
+      return JSON.parse(aiResult.text);
     } catch {
-      // Try to extract JSON from response
-      const jsonMatch = aiResult.match(/\{[\s\S]*\}/);
+      const jsonMatch = aiResult.text?.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
       throw new Error('Failed to parse AI response.');
     }
