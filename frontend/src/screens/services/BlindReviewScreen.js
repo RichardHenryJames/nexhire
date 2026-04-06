@@ -408,7 +408,7 @@ export default function BlindReviewScreen({ navigation }) {
                             confirmStyle: 'destructive',
                             onConfirm: async () => {
                               try {
-                                const res = await refopenAPI.apiCall(`/tools/blind-review/cancel/${item.requestId}`, 'DELETE');
+                                const res = await refopenAPI.apiCall(`/tools/blind-review/cancel/${item.requestId}`, { method: 'DELETE' });
                                 if (res?.success) {
                                   showToast('Review cancelled', 'success');
                                   loadHistory();
