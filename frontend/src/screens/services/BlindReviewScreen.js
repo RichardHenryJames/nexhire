@@ -41,6 +41,7 @@ import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
 import { useCustomAlert } from '../../components/CustomAlert';
+import CachedImage from '../../components/CachedImage';
 
 // ── Constants ──────────────────────────────────────────────────
 const ANALYZING_STEPS = [
@@ -378,7 +379,11 @@ export default function BlindReviewScreen({ navigation }) {
             history.map(item => (
               <TouchableOpacity key={item.requestId} style={s.historyCard} onPress={() => viewRequest(item.requestId)} activeOpacity={0.7}>
                 <View style={s.historyRow}>
-                  <View style={[s.statusDot, { backgroundColor: item.status === 'completed' ? '#10B981' : item.status === 'pending' ? '#F59E0B' : '#3B82F6' }]} />
+                  {item.organizationLogo ? (
+                    <CachedImage source={{ uri: item.organizationLogo }} style={{ width: 32, height: 32, borderRadius: 8, marginRight: 12 }} resizeMode="contain" />
+                  ) : (
+                    <View style={[s.statusDot, { backgroundColor: item.status === 'completed' ? '#10B981' : item.status === 'pending' ? '#F59E0B' : '#3B82F6' }]} />
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={s.historyRole}>{item.targetRole}</Text>
                     <Text style={s.historyOrg}>{item.organizationName}</Text>
@@ -1058,8 +1063,8 @@ const makeStyles = (c, isDesktop) => ({
   inner: { flex: 1 },
   scroll: { flex: 1 },
   desktopLayout: { flex: 1, flexDirection: 'row' },
-  desktopLeft: { flex: 5, borderRightWidth: 1, borderRightColor: c.border },
-  desktopRight: { flex: 5, backgroundColor: c.background },
+  desktopLeft: { flex: 3, borderRightWidth: 1, borderRightColor: c.border },
+  desktopRight: { flex: 7, backgroundColor: c.background },
 
   hero: { marginHorizontal: 16, marginTop: 16, borderRadius: 16, padding: 24, alignItems: 'center' },
   heroIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
