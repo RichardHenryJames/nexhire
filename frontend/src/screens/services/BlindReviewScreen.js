@@ -993,9 +993,24 @@ export default function BlindReviewScreen({ navigation }) {
   ) : null;
 
   // ── RENDER ───────────────────────────────────────────────
+  const handleBack = () => {
+    if (view === 'results') {
+      setView('history');
+      loadHistory();
+    } else if (view === 'history') {
+      setView('input');
+    } else {
+      navigation.goBack();
+    }
+  };
+
   return (
     <View style={s.container}>
-      <SubScreenHeader title="Blind Review" fallbackTab="Services" />
+      <SubScreenHeader
+        title="Blind Review"
+        fallbackTab="Services"
+        onBack={(view === 'results' || view === 'history') ? handleBack : undefined}
+      />
 
       {isDesktop ? (
         <View style={s.desktopLayout}>
