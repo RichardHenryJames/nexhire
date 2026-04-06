@@ -629,7 +629,7 @@ export class ReferralService {
                 INNER JOIN ApplicantResumes ar ON rr.ResumeID = ar.ResumeID
                 LEFT JOIN ReferralProofs rp ON rr.RequestID = rp.RequestID
                 ${whereClause}
-                ORDER BY rr.RequestedAt DESC
+                ORDER BY rr.RequestedAt ASC
                 OFFSET ${offset} ROWS
                 FETCH NEXT ${safePageSize} ROWS ONLY
             `;
