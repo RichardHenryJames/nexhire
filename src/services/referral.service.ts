@@ -503,10 +503,17 @@ export class ReferralService {
                 organizationId = referrerOrgResult.recordset[0].OrganizationID;
             }
             
-            // Return ALL requests for this organization (frontend will filter by tab)
-            // Exclude only Cancelled requests - everything else should be visible
-            // Expired requests will show in Closed tab on frontend
-            const statusFilter = `rr.Status NOT IN ('Cancelled')`;
+            // Return requests for this organization (frontend will filter by tab)
+            // Exclude terminal statuses that referrers can't act on
+            // For non-open requests: only show Pending/NotifiedToReferrers/Viewed/Claimed (not yet referred)
+            // For open-to-any: also show Completed (other companies can still refer)
+            // Always exclude expired (past ExpiryTime) regardless of status
+            const statusFilter = `rr.Status NOT IN ('Cancelled', 'Expired', 'Refunded', 'Unverified')
+                AND (rr.ExpiryTime IS NULL OR rr.ExpiryTime > GETUTCDATE())
+                AND (
+                    rr.Status IN ('Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed')
+                    OR (rr.OpenToAnyCompany = 1 AND rr.Status IN ('Completed', 'ProofUploaded', 'Verified'))
+                )`;
             
             // Build where clause - admin sees all, referrer sees only their org
             let whereClause: string;
