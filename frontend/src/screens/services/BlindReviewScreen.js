@@ -431,7 +431,7 @@ export default function BlindReviewScreen({ navigation }) {
                         ? `✓ Review complete${item.responseCount > 0 ? ` (${item.responseCount} review${item.responseCount > 1 ? 's' : ''})` : ''}`
                         : item.responseCount > 0
                           ? `${item.responseCount} review${item.responseCount > 1 ? 's' : ''} received`
-                          : '⏳ Waiting for reviews'}
+                          : '⏳ Processing'}
                     </Text>
                   </View>
                 </View>
