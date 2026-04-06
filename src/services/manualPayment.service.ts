@@ -168,6 +168,11 @@ export const submitManualPayment = async (
       console.error('Failed to send manual payment notification email:', err);
     });
 
+    // Send confirmation email to seeker (async, non-blocking)
+    sendPaymentConfirmationToUser(userId, data, settings.processingTime).catch(err => {
+      console.error('Failed to send payment confirmation to user:', err);
+    });
+
     return {
       success: true,
       message: `Payment proof submitted successfully. Your wallet will be credited within ${settings.processingTime}.`,
@@ -253,6 +258,100 @@ const sendManualPaymentNotification = async (
     console.log(`✅ Manual payment notification sent to ${adminEmails.map(maskEmail).join(', ')} for submission ${submissionId}`);
   } catch (error) {
     console.error('Error sending manual payment notification:', error);
+  }
+};
+
+/**
+ * Send confirmation email to the user who submitted the payment
+ */
+const sendPaymentConfirmationToUser = async (
+  userId: string,
+  data: ManualPaymentSubmission,
+  processingTime: string
+): Promise<void> => {
+  try {
+    const userResult = await dbService.executeQuery(
+      `SELECT FirstName, Email FROM Users WHERE UserID = @param0`,
+      [userId]
+    );
+    const user = userResult.recordset[0];
+    if (!user?.Email) return;
+
+    const appUrl = process.env.APP_URL || 'https://www.refopen.com';
+    const firstName = user.FirstName || 'there';
+    const amount = data.amount.toLocaleString('en-IN');
+    const paymentDate = new Date(data.paymentDate).toLocaleDateString('en-IN', { dateStyle: 'medium' });
+
+    const subject = `Payment of ₹${amount} received. We're on it.`;
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f5f5f5;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:40px 20px;"><tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+  <tr><td style="background:linear-gradient(135deg,#10B981 0%,#059669 100%);padding:32px 40px;text-align:center;">
+    <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700;">Payment Received</h1>
+  </td></tr>
+  <tr><td style="padding:36px 40px;">
+    <p style="color:#1a1a1a;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hi ${firstName},</p>
+    <p style="color:#4a4a4a;font-size:15px;line-height:1.7;margin:0 0 20px 0;">
+      We have received your payment details. Your wallet will be credited within <strong>${processingTime}</strong>.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:8px;margin:0 0 20px 0;">
+      <tr><td style="padding:20px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;font-size:13px;">Amount</td>
+            <td style="padding:6px 0;color:#1a1a1a;font-size:15px;font-weight:700;text-align:right;">₹${amount}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;font-size:13px;">Payment Method</td>
+            <td style="padding:6px 0;color:#1a1a1a;font-size:14px;text-align:right;">${data.paymentMethod}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;font-size:13px;">Reference</td>
+            <td style="padding:6px 0;color:#1a1a1a;font-size:14px;text-align:right;">${data.referenceNumber}</td>
+          </tr>
+          <tr>
+            <td style="padding:6px 0;color:#6b7280;font-size:13px;">Payment Date</td>
+            <td style="padding:6px 0;color:#1a1a1a;font-size:14px;text-align:right;">${paymentDate}</td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+    <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
+      You'll receive another email once your wallet is credited. If you have questions, reach out via <a href="${appUrl}/support" style="color:#4F46E5;text-decoration:none;">Help & Support</a>.
+    </p>
+  </td></tr>
+  <tr><td style="padding:20px 0;border-top:1px solid #e5e7eb;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="text-align:center;">
+      <img src="${appUrl}/refopen-logo.png" alt="RefOpen" width="80" style="margin-bottom:12px;">
+      <p style="margin:0 0 8px 0;color:#9ca3af;font-size:12px;text-align:center;">You received this because you have a RefOpen account.</p>
+      <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+        <a href="${appUrl}/settings" style="color:#6b7280;text-decoration:none;">Email Preferences</a>
+        <span style="color:#d1d5db;margin:0 8px;">|</span>
+        <a href="${appUrl}/support" style="color:#6b7280;text-decoration:none;">Help</a>
+        <span style="color:#d1d5db;margin:0 8px;">|</span>
+        <a href="${appUrl}" style="color:#6b7280;text-decoration:none;">RefOpen</a>
+      </p>
+    </td></tr></table>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+    await EmailService.send({
+      to: user.Email,
+      subject,
+      html,
+      userId,
+      emailType: 'manual_payment_confirmation',
+      referenceType: 'ManualPayment',
+    });
+
+    console.log(`✅ Payment confirmation sent to ${maskEmail(user.Email)}`);
+  } catch (error) {
+    console.error('Error sending payment confirmation to user:', error);
   }
 };
 
