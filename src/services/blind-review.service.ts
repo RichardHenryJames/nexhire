@@ -962,4 +962,37 @@ Respond with JSON:
       organizationLogo: r.OrganizationLogo,
     }));
   }
+
+  /**
+   * Cancel/delete a blind review request (seeker only, before completion)
+   */
+  static async cancelRequest(requestId: string, userId: string): Promise<{ success: boolean; message: string }> {
+    // Verify ownership and status
+    const reqResult = await dbService.executeQuery(
+      `SELECT RequestID, Status, UserID FROM BlindReviewRequests WHERE RequestID = @param0`,
+      [requestId]
+    );
+
+    if (!reqResult.recordset?.length) {
+      throw new Error('Review request not found.');
+    }
+
+    const req = reqResult.recordset[0];
+
+    if (req.UserID !== userId) {
+      throw new Error('You can only delete your own review requests.');
+    }
+
+    if (req.Status === 'completed') {
+      throw new Error('Cannot delete a completed review.');
+    }
+
+    // Soft delete: set status to cancelled
+    await dbService.executeQuery(
+      `UPDATE BlindReviewRequests SET Status = 'cancelled', UpdatedAt = GETUTCDATE() WHERE RequestID = @param0`,
+      [requestId]
+    );
+
+    return { success: true, message: 'Review request cancelled.' };
+  }
 }

@@ -27,6 +27,7 @@ import {
   Animated,
   ActivityIndicator,
   Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,6 +40,7 @@ import { usePricing } from '../../contexts/PricingContext';
 import SignInBottomSheet from '../../components/SignInBottomSheet';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
 
 // ── Constants ──────────────────────────────────────────────────
 const ANALYZING_STEPS = [
@@ -380,11 +382,48 @@ export default function BlindReviewScreen({ navigation }) {
                     <Text style={s.historyRole}>{item.targetRole}</Text>
                     <Text style={s.historyOrg}>{item.organizationName}</Text>
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    {item.aiScore !== null && (
-                      <Text style={[s.historyScore, { color: getScoreColor(item.aiScore) }]}>{item.aiScore}</Text>
+                  <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 10 }}>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      {item.aiScore !== null && (
+                        <Text style={[s.historyScore, { color: getScoreColor(item.aiScore) }]}>{item.aiScore}</Text>
+                      )}
+                      <Text style={s.historyDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                    </View>
+                    {item.status !== 'completed' && item.status !== 'cancelled' && (
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          Alert.alert(
+                            'Cancel Review',
+                            'Are you sure you want to cancel this blind review request?',
+                            [
+                              { text: 'No', style: 'cancel' },
+                              {
+                                text: 'Yes, Cancel',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    const res = await refopenAPI.apiCall(`/tools/blind-review/cancel/${item.requestId}`, 'DELETE');
+                                    if (res?.success) {
+                                      showToast('Review cancelled', 'success');
+                                      loadHistory();
+                                    } else {
+                                      showToast(res?.error || 'Failed to cancel', 'error');
+                                    }
+                                  } catch (err) {
+                                    showToast('Failed to cancel', 'error');
+                                  }
+                                },
+                              },
+                            ]
+                          );
+                        }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={{ padding: 4 }}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={colors.error} />
+                      </TouchableOpacity>
                     )}
-                    <Text style={s.historyDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
                   </View>
                 </View>
                 <View style={s.historyMeta}>

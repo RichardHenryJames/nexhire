@@ -419,3 +419,51 @@ export async function getBlindReviewMyReviews(req: HttpRequest, context: Invocat
     };
   }
 }
+
+// ── Cancel/delete a blind review request ────────────────────────
+
+export async function cancelBlindReview(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  if (req.method === 'OPTIONS') {
+    return { status: 200, headers: corsHeaders };
+  }
+
+  try {
+    let user: any;
+    try { user = authenticate(req); } catch {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        jsonBody: { success: false, error: 'Authentication required.' },
+      };
+    }
+    const userId = user.userId || user.sub;
+
+    const url = new URL(req.url);
+    const parts = url.pathname.split('/');
+    const requestId = parts[parts.length - 1];
+
+    if (!requestId || requestId === 'cancel') {
+      return {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        jsonBody: { success: false, error: 'Request ID is required.' },
+      };
+    }
+
+    const result = await BlindReviewService.cancelRequest(requestId, userId);
+
+    return {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: result,
+    };
+  } catch (error: any) {
+    context.error('Cancel blind review error:', error.message);
+    const isValidation = error.message?.includes('not found') || error.message?.includes('only') || error.message?.includes('Cannot');
+    return {
+      status: isValidation ? 400 : 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: { success: false, error: isValidation ? error.message : 'Something went wrong.' },
+    };
+  }
+}

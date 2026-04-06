@@ -41,6 +41,7 @@ export default function ProfileSlider({ visible, onClose }) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
   const [pendingReferralCount, setPendingReferralCount] = useState(0);
+  const [pendingBlindReviewCount, setPendingBlindReviewCount] = useState(0);
 
   // ⚡ Swipe-to-close: drag the panel left to dismiss (like LinkedIn)
   const panResponder = useRef(
@@ -106,6 +107,15 @@ export default function ProfileSlider({ visible, onClose }) {
                 (r.OpenToAnyCompany && r.Status === 'Completed')
               );
               setPendingReferralCount(active.length);
+            }
+          } catch (e) {}
+        })();
+        // Fetch pending blind review count
+        (async () => {
+          try {
+            const res = await refopenAPI.apiCall('/tools/blind-review/pending');
+            if (res?.success && res.data) {
+              setPendingBlindReviewCount(res.data.length);
             }
           } catch (e) {}
         })();
@@ -229,6 +239,7 @@ export default function ProfileSlider({ visible, onClose }) {
           icon: 'eye-off-outline',
           label: 'Blind Review Inbox',
           onPress: () => navigateTo('BlindReviewInbox'),
+          badge: pendingBlindReviewCount,
         },
       ],
     }]),
