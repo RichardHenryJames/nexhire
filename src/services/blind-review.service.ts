@@ -912,11 +912,6 @@ Respond with JSON:
   }
 
   /**
-   * Check if there are verified referrers at the given company
-   */
-  static async hasReferrersAtCompany(organizationId: number): Promise<{ count: number; hasReferrers: boolean }> {
-
-  /**
    * Generate AI-prefilled review for admin (sounds like a real human employee)
    */
   static async generateAdminPrefill(requestId: string): Promise<any> {
