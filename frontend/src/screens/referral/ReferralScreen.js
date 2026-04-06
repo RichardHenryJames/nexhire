@@ -84,8 +84,10 @@ export default function ReferralScreen({ navigation }) {
   // Current verified company (for Post Job button)
   const [currentVerifiedCompany, setCurrentVerifiedCompany] = useState(null);
   
-  // Draft jobs count (for Publish Jobs button)
+  // Job counts (for My Jobs button visibility)
   const [draftJobsCount, setDraftJobsCount] = useState(0);
+  const [publishedJobsCount, setPublishedJobsCount] = useState(0);
+  const hasPostedJobs = draftJobsCount > 0 || publishedJobsCount > 0;
 
   // Profile slider state (same as HomeScreen)
   const [profileSliderVisible, setProfileSliderVisible] = useState(false);
@@ -164,21 +166,16 @@ export default function ReferralScreen({ navigation }) {
     }
   };
 
-  // Load draft jobs count using dashboard-stats API
-  const loadDraftJobsCount = async () => {
+  // Load job counts (draft + published) using dashboard-stats API
+  const loadJobCounts = async () => {
     try {
-      console.log('📊 Loading draft jobs count from dashboard-stats...');
       const result = await refopenAPI.apiCall('/users/dashboard-stats');
-      console.log('📊 Dashboard stats result:', result);
       if (result.success && result.data) {
-        const count = result.data.draftJobs || 0;
-        console.log('✅ Draft jobs count:', count);
-        setDraftJobsCount(count);
-      } else {
-        console.log('❌ Dashboard stats failed:', result?.error);
+        setDraftJobsCount(result.data.draftJobs || 0);
+        setPublishedJobsCount(result.data.activeJobs || 0);
       }
     } catch (error) {
-      console.error('Error loading draft jobs count:', error);
+      console.error('Error loading job counts:', error);
     }
   };
 
@@ -188,12 +185,12 @@ export default function ReferralScreen({ navigation }) {
     setLoading(true);
     setLoadingRequests(true);
     try {
-      // Load stats, requests, current company, and draft jobs in parallel
+      // Load stats, requests, current company, and job counts in parallel
       await Promise.all([
         loadStats(),
         loadAllRequests(),
         loadCurrentCompany(),
-        loadDraftJobsCount()
+        loadJobCounts()
       ]);
     } catch (error) {
       console.error('Error loading referral data:', error);
@@ -700,33 +697,41 @@ export default function ReferralScreen({ navigation }) {
       <View style={styles.innerContainer}>
         <SubScreenHeader title="Provide Referral" fallbackTab="Home" />
 
-        {/* Post Job / Publish / Earnings buttons row */}
+        {/* Action buttons row */}
         {isVerifiedReferrer && currentVerifiedCompany && (
           <View style={styles.headerButtons}>
+            {/* Primary CTA — always visible */}
             <TouchableOpacity 
               style={styles.postJobButton}
               onPress={() => navigation.navigate('PostReferralJob', {
                 organizationId: currentVerifiedCompany.organizationId
               })}
             >
-              <Ionicons name="add-circle" size={20} color={colors.white} />
+              <Ionicons name="add-circle" size={18} color={colors.white} />
               <Text style={styles.postJobButtonText}>Post Job</Text>
             </TouchableOpacity>
+            {/* My Jobs — only if user has ever posted a job */}
+            {hasPostedJobs && (
+              <TouchableOpacity 
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('EmployerJobs', {
+                  initialTab: draftJobsCount > 0 ? 'draft' : 'published',
+                  organizationId: currentVerifiedCompany.organizationId
+                })}
+              >
+                <Ionicons name="briefcase-outline" size={16} color={colors.primary} />
+                <Text style={styles.secondaryButtonText}>
+                  My Jobs{draftJobsCount > 0 ? ` (${draftJobsCount} draft)` : ''}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {/* Earnings — always visible */}
             <TouchableOpacity 
-              style={styles.publishJobButton}
-              onPress={() => navigation.navigate('EmployerJobs', {
-                initialTab: draftJobsCount > 0 ? 'draft' : 'published'
-              })}
-            >
-              <Ionicons name="cloud-upload" size={20} color={colors.white} />
-              <Text style={styles.postJobButtonText}>Publish{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.postJobButton, { backgroundColor: colors.warning }]}
+              style={styles.secondaryButton}
               onPress={() => navigation.navigate('Earnings')}
             >
-              <Ionicons name="cash-outline" size={20} color={colors.white} />
-              <Text style={styles.postJobButtonText}>Earnings</Text>
+              <Ionicons name="cash-outline" size={16} color={colors.warning} />
+              <Text style={[styles.secondaryButtonText, { color: colors.warning }]}>Earnings</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -876,23 +881,30 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 6,
-  },
-  publishJobButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.success,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderRadius: 8,
     gap: 6,
   },
   postJobButtonText: {
     color: colors.white,
     fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.semibold,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 5,
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
   },
   // Open/Closed Tabs

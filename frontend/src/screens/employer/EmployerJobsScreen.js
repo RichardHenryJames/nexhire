@@ -366,7 +366,15 @@ export default function EmployerJobsScreen({ navigation, route }) {
             {activeTab === 'draft' && (
               <TouchableOpacity 
                 style={localStyles.createJobButton}
-                onPress={() => navigation.navigate('CreateJob')}
+                onPress={() => {
+                  // Referrers use PostReferralJob, employers use CreateJob
+                  const orgId = route.params?.organizationId;
+                  if (isVerifiedReferrer && orgId) {
+                    navigation.navigate('PostReferralJob', { organizationId: orgId });
+                  } else {
+                    navigation.navigate('CreateJob');
+                  }
+                }}
               >
                 <Ionicons name="add-circle" size={20} color={colors.white} />
                 <Text style={localStyles.createJobButtonText}>Create New Job</Text>
