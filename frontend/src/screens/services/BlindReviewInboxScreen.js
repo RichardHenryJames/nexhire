@@ -157,7 +157,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
                   AI: {selectedRequest.aiScore || '-'}
                 </Text>
               </View>
-              <Text style={s.profileRole}>Targeting: {selectedRequest.targetRole}</Text>
+              <Text style={s.profileRole}>Targeting: {selectedRequest.targetRole}{selectedRequest.organizationName ? ` at ${selectedRequest.organizationName}` : ''}</Text>
             </View>
 
             {selectedRequest.anonymizedProfile && (
