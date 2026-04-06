@@ -142,24 +142,12 @@ export async function submitBlindReview(req: HttpRequest, context: InvocationCon
       context.error('Usage recording failed (non-critical):', usageErr.message);
     }
 
-    // Check if there are referrers at this company; if not, trigger AI-only review
-    const referrerCheck = await BlindReviewService.hasReferrersAtCompany(Number(organizationId));
-    if (!referrerCheck.hasReferrers) {
-      context.log(`No referrers at org ${organizationId}, generating AI-only review...`);
-      // Fire and forget — don't block the response
-      BlindReviewService.generateAIOnlyReview(result.requestId).catch(err => {
-        context.error('AI-only review generation failed:', err.message);
-      });
-    }
-
     return {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       jsonBody: {
         success: true,
         data: result,
-        hasReferrers: referrerCheck.hasReferrers,
-        referrerCount: referrerCheck.count,
         usageInfo: {
           totalUsed: usageCount + 1,
           freeUses,
@@ -167,9 +155,7 @@ export async function submitBlindReview(req: HttpRequest, context: InvocationCon
           costPerUse,
           wasFree: isFreeTier,
         },
-        message: referrerCheck.hasReferrers
-          ? `Profile submitted! ${referrerCheck.count} verified referrer(s) at this company can review your profile.`
-          : 'Profile submitted! Your review is being processed.',
+        message: 'Profile submitted! Your review is being processed.',
       },
     };
   } catch (error: any) {
