@@ -685,7 +685,7 @@ ${rawText.substring(0, 8000)}
       }
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr><td align="center">
-      <a href="${appUrl}/blind-review" style="display:inline-block;background:linear-gradient(135deg,#8B5CF6,#6D28D9);color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:700;">
+      <a href="${appUrl}/t/blind-review" style="display:inline-block;background:linear-gradient(135deg,#8B5CF6,#6D28D9);color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:700;">
         ${isComplete ? 'See Your Results' : 'View Review'}
       </a>
     </td></tr></table>
