@@ -27,7 +27,6 @@ import {
   Animated,
   ActivityIndicator,
   Image,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,6 +40,7 @@ import SignInBottomSheet from '../../components/SignInBottomSheet';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import { useCustomAlert } from '../../components/CustomAlert';
 
 // ── Constants ──────────────────────────────────────────────────
 const ANALYZING_STEPS = [
@@ -95,6 +95,7 @@ export default function BlindReviewScreen({ navigation }) {
   const { isDesktop } = useResponsive();
   const { user, isAuthenticated } = useAuth();
   const { pricing } = usePricing();
+  const { showConfirm } = useCustomAlert();
 
   // View state
   const [view, setView] = useState('input'); // input | analyzing | results | history
@@ -393,30 +394,27 @@ export default function BlindReviewScreen({ navigation }) {
                       <TouchableOpacity
                         onPress={(e) => {
                           e.stopPropagation();
-                          Alert.alert(
-                            'Cancel Review',
-                            'Are you sure you want to cancel this blind review request?',
-                            [
-                              { text: 'No', style: 'cancel' },
-                              {
-                                text: 'Yes, Cancel',
-                                style: 'destructive',
-                                onPress: async () => {
-                                  try {
-                                    const res = await refopenAPI.apiCall(`/tools/blind-review/cancel/${item.requestId}`, 'DELETE');
-                                    if (res?.success) {
-                                      showToast('Review cancelled', 'success');
-                                      loadHistory();
-                                    } else {
-                                      showToast(res?.error || 'Failed to cancel', 'error');
-                                    }
-                                  } catch (err) {
-                                    showToast('Failed to cancel', 'error');
-                                  }
-                                },
-                              },
-                            ]
-                          );
+                          showConfirm({
+                            title: 'Cancel Review',
+                            message: 'Are you sure you want to cancel this blind review request?',
+                            icon: 'trash-outline',
+                            iconColor: colors.error,
+                            confirmText: 'Yes, Cancel',
+                            confirmStyle: 'destructive',
+                            onConfirm: async () => {
+                              try {
+                                const res = await refopenAPI.apiCall(`/tools/blind-review/cancel/${item.requestId}`, 'DELETE');
+                                if (res?.success) {
+                                  showToast('Review cancelled', 'success');
+                                  loadHistory();
+                                } else {
+                                  showToast(res?.error || 'Failed to cancel', 'error');
+                                }
+                              } catch (err) {
+                                showToast('Failed to cancel', 'error');
+                              }
+                            },
+                          });
                         }}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         style={{ padding: 4 }}
