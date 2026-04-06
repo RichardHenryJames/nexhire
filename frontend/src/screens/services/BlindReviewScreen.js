@@ -412,7 +412,7 @@ export default function BlindReviewScreen({ navigation }) {
                         showConfirm({
                           title: 'Cancel Review',
                           message: 'Are you sure you want to cancel this blind review request?',
-                          icon: 'trash-outline',
+                          icon: 'close-circle-outline',
                           iconColor: colors.error,
                           confirmText: 'Yes, Cancel',
                           confirmStyle: 'destructive',
@@ -434,7 +434,7 @@ export default function BlindReviewScreen({ navigation }) {
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       style={{ padding: 4 }}
                     >
-                      <Ionicons name="trash-outline" size={14} color={colors.error} />
+                      <Ionicons name="close-circle-outline" size={14} color={colors.error} />
                     </TouchableOpacity>
                   )}
                 </View>
