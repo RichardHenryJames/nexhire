@@ -79,6 +79,7 @@ export default function ReferralTrackingScreen() {
   const { pricing } = usePricing();
   const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [showTrackingMenu, setShowTrackingMenu] = useState(false);
   const [feeTableExpanded, setFeeTableExpanded] = useState(false);
 
   // Convert to Open state
@@ -781,59 +782,49 @@ export default function ReferralTrackingScreen() {
       <SubScreenHeader 
         title="Referral Tracking" 
         onBack={() => navigation.navigate('MyReferralRequests', { initialTab: fromTab || 'action' })}
-        rightContent={isDesktopWeb && (canWithdraw || canConvertToOpen) ? (
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {canWithdraw && (
-              <TouchableOpacity
-                style={[styles.withdrawActionBtn, { paddingVertical: 6, paddingHorizontal: 12 }]}
-                onPress={() => setShowWithdrawConfirm(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="close-circle-outline" size={15} color={colors.white} />
-                <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Withdraw</Text>
-              </TouchableOpacity>
-            )}
-            {canConvertToOpen && (
-              <TouchableOpacity
-                style={[styles.convertOpenBtn, { paddingVertical: 6, paddingHorizontal: 12 }]}
-                onPress={() => setShowConvertModal(true)}
-                activeOpacity={0.7}
-              >
-                <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, opacity: upgradeOpacity }}>
-                  <Ionicons name={showUpgradeTime ? 'timer-outline' : 'globe-outline'} size={15} color={colors.white} />
-                  <Text style={[styles.actionBtnText, { fontSize: 12 }]}>{showUpgradeTime ? (getUpgradeTimeText() || 'Upgrade to Open') : 'Upgrade to Open'}</Text>
-                </Animated.View>
-              </TouchableOpacity>
-            )}
-          </View>
+        rightContent={canWithdraw ? (
+          <TouchableOpacity 
+            style={styles.menuIconBtn}
+            onPress={() => setShowTrackingMenu(v => !v)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
+          </TouchableOpacity>
         ) : null}
       />
 
-      {/* Action buttons bar below header — mobile only */}
-      {!isDesktopWeb && (canWithdraw || canConvertToOpen) && (
+      {/* Dropdown menu for Withdraw */}
+      {showTrackingMenu && (
+        <>
+          <Pressable style={styles.menuBackdrop} onPress={() => setShowTrackingMenu(false)} />
+          <View style={styles.menuDropdown}>
+            <TouchableOpacity 
+              style={[styles.menuItem, { borderBottomWidth: 0 }]}
+              onPress={() => {
+                setShowTrackingMenu(false);
+                setShowWithdrawConfirm(true);
+              }}
+            >
+              <Ionicons name="close-circle-outline" size={20} color={colors.error} />
+              <Text style={[styles.menuItemText, { color: colors.error }]}>Withdraw Request</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      {/* Upgrade to Open button bar */}
+      {canConvertToOpen && (
         <View style={styles.headerButtons}>
-          {canWithdraw && (
-            <TouchableOpacity
-              style={styles.withdrawActionBtn}
-              onPress={() => setShowWithdrawConfirm(true)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close-circle-outline" size={18} color={colors.white} />
-              <Text style={styles.actionBtnText}>Withdraw</Text>
-            </TouchableOpacity>
-          )}
-          {canConvertToOpen && (
-            <TouchableOpacity
-              style={styles.convertOpenBtn}
-              onPress={() => setShowConvertModal(true)}
-              activeOpacity={0.7}
-            >
-              <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, opacity: upgradeOpacity }}>
-                <Ionicons name={showUpgradeTime ? 'timer-outline' : 'globe-outline'} size={18} color={colors.white} />
-                <Text style={styles.actionBtnText}>{showUpgradeTime ? (getUpgradeTimeText() || 'Upgrade to Open') : 'Upgrade to Open'}</Text>
-              </Animated.View>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.convertOpenBtn}
+            onPress={() => setShowConvertModal(true)}
+            activeOpacity={0.7}
+          >
+            <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, opacity: upgradeOpacity }}>
+              <Ionicons name={showUpgradeTime ? 'timer-outline' : 'globe-outline'} size={18} color={colors.white} />
+              <Text style={styles.actionBtnText}>{showUpgradeTime ? (getUpgradeTimeText() || 'Upgrade to Open') : 'Upgrade to Open'}</Text>
+            </Animated.View>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -1559,6 +1550,49 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     color: colors.white,
     fontSize: typography.sizes.sm,
     fontWeight: typography.weights.semibold,
+  },
+  menuIconBtn: {
+    padding: 6,
+    borderRadius: 20,
+  },
+  menuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
+  },
+  menuDropdown: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 88 : 52,
+    right: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 180,
+    zIndex: 1000,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 8,
+    }),
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  menuItemText: {
+    color: colors.text,
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
   },
   // Withdraw confirmation modal — matches MyReferralRequestsScreen
   confirmOverlay: {

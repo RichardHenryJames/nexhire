@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
@@ -95,6 +96,9 @@ export default function ReferralScreen({ navigation }) {
 
   // Messages unread count
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
+
+  // Referrer menu dropdown
+  const [showMenu, setShowMenu] = useState(false);
 
   // ✅ Handle non-verified referrers - show verification prompt only in Open tab
   // They can still see the Closed tab to view past referrals they received
@@ -699,47 +703,64 @@ export default function ReferralScreen({ navigation }) {
           title="Provide Referral" 
           fallbackTab="Home"
           rightContent={
-            isVerifiedReferrer ? (
+            isVerifiedReferrer && currentVerifiedCompany ? (
               <TouchableOpacity 
-                style={styles.earningsHeaderBtn}
-                onPress={() => navigation.navigate('Earnings')}
+                style={styles.menuIconBtn}
+                onPress={() => setShowMenu(v => !v)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="cash-outline" size={20} color="#FCD34D" />
+                <Ionicons name="ellipsis-vertical" size={22} color={colors.text} />
               </TouchableOpacity>
             ) : null
           }
         />
 
-        {/* Action buttons row */}
-        {isVerifiedReferrer && currentVerifiedCompany && (
-          <View style={styles.headerButtons}>
-            {/* Primary CTA — always visible */}
-            <TouchableOpacity 
-              style={[styles.actionPill, { backgroundColor: colors.primary }]}
-              onPress={() => navigation.navigate('PostReferralJob', {
-                organizationId: currentVerifiedCompany.organizationId
-              })}
-            >
-              <Ionicons name="add-circle" size={17} color={colors.white} />
-              <Text style={styles.actionPillText}>Post Job</Text>
-            </TouchableOpacity>
-            {/* My Jobs — only if user has ever posted a job */}
-            {hasPostedJobs && (
+        {/* Dropdown menu */}
+        {showMenu && (
+          <>
+            <Pressable style={styles.menuBackdrop} onPress={() => setShowMenu(false)} />
+            <View style={styles.menuDropdown}>
               <TouchableOpacity 
-                style={[styles.actionPill, { backgroundColor: colors.cardBackground || colors.gray800 }]}
-                onPress={() => navigation.navigate('EmployerJobs', {
-                  initialTab: draftJobsCount > 0 ? 'draft' : 'published',
-                  organizationId: currentVerifiedCompany.organizationId
-                })}
+                style={styles.menuItem}
+                onPress={() => {
+                  setShowMenu(false);
+                  navigation.navigate('PostReferralJob', {
+                    organizationId: currentVerifiedCompany.organizationId
+                  });
+                }}
               >
-                <Ionicons name="briefcase-outline" size={17} color={colors.textSecondary} />
-                <Text style={[styles.actionPillText, { color: colors.textSecondary }]}>
-                  My Jobs{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}
-                </Text>
+                <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                <Text style={[styles.menuItemText, { color: colors.primary }]}>Post Job</Text>
               </TouchableOpacity>
-            )}
-          </View>
+              {hasPostedJobs && (
+                <TouchableOpacity 
+                  style={styles.menuItem}
+                  onPress={() => {
+                    setShowMenu(false);
+                    navigation.navigate('EmployerJobs', {
+                      initialTab: draftJobsCount > 0 ? 'draft' : 'published',
+                      organizationId: currentVerifiedCompany.organizationId
+                    });
+                  }}
+                >
+                  <Ionicons name="briefcase-outline" size={20} color={colors.text} />
+                  <Text style={styles.menuItemText}>
+                    My Jobs{draftJobsCount > 0 ? ` (${draftJobsCount} draft)` : ''}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={[styles.menuItem, { borderBottomWidth: 0 }]}
+                onPress={() => {
+                  setShowMenu(false);
+                  navigation.navigate('Earnings');
+                }}
+              >
+                <Ionicons name="cash-outline" size={20} color="#F59E0B" />
+                <Text style={styles.menuItemText}>Earnings</Text>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
 
         {/* Open/Closed Tabs */}
@@ -877,29 +898,48 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(252, 211, 77, 0.12)',
   },
-  headerButtons: {
+  menuIconBtn: {
+    padding: 6,
+    borderRadius: 20,
+  },
+  menuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
+  },
+  menuDropdown: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 88 : 52,
+    right: 12,
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 180,
+    zIndex: 1000,
+    ...(Platform.OS === 'web' ? {
+      boxShadow: '0 4px 24px rgba(0,0,0,0.25)',
+    } : {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 8,
+    }),
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  actionPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 20,
-    gap: 6,
-  },
-  actionPillText: {
-    color: colors.white,
+  menuItemText: {
+    color: colors.text,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
+    fontWeight: typography.weights.medium,
   },
   // Open/Closed Tabs
   tabsContainer: {
