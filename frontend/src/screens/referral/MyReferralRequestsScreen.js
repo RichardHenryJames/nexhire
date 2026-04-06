@@ -548,8 +548,8 @@ export default function MyReferralRequestsScreen({ route }) {
 
   return (
     <View style={styles.container}>
-      <SubScreenHeader title="My Referral Requests" directBack="Home" />
       <View style={styles.innerContainer}>
+        <SubScreenHeader title="My Referral Requests" directBack="Home" />
         {/* Tabs */}
         {!loading && myRequests.length > 0 && (
           <View style={styles.tabBar}>
@@ -693,14 +693,16 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-    ...(Platform.OS === 'web' && responsive.isDesktop ? {
-      alignItems: 'center',
+    ...(Platform.OS === 'web' ? {
+      overflow: 'hidden',
+      ...(responsive.isDesktop ? { alignItems: 'center' } : {}),
     } : {}),
   },
   innerContainer: {
     width: '100%',
     maxWidth: Platform.OS === 'web' && responsive.isDesktop ? 900 : '100%',
     flex: 1,
+    ...(Platform.OS === 'web' ? { overflow: 'hidden' } : {}),
   },
   tabBar: {
     flexDirection: 'row',
