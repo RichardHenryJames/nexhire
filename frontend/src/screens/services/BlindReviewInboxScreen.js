@@ -142,11 +142,6 @@ export default function BlindReviewInboxScreen({ navigation }) {
         </View>
       ) : (
         <>
-          <TouchableOpacity style={s.backRow} onPress={resetForm} activeOpacity={0.7}>
-            <Ionicons name="arrow-back" size={20} color={colors.primary} />
-            <Text style={s.backRowText}>Back to inbox</Text>
-          </TouchableOpacity>
-
           {/* Anonymity reminder */}
           <View style={s.anonBannerSmall}>
             <Ionicons name="eye-off" size={14} color="#10B981" />
@@ -323,7 +318,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
   // ── RENDER ───────────────────────────────────────────────
   return (
     <View style={s.container}>
-      <SubScreenHeader title="Review Inbox" fallbackTab="Services" />
+      <SubScreenHeader title="Review Inbox" fallbackTab="Services" onBack={selectedRequest ? resetForm : undefined} />
 
       {selectedRequest ? reviewForm : (
         <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
