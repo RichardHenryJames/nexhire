@@ -388,48 +388,14 @@ export default function BlindReviewScreen({ navigation }) {
                     <Text style={s.historyRole}>{item.targetRole}</Text>
                     <Text style={s.historyOrg}>{item.organizationName}</Text>
                   </View>
-                  <View style={{ alignItems: 'flex-end', flexDirection: 'row', gap: 10 }}>
-                    <View style={{ alignItems: 'flex-end' }}>
+                  <View style={{ alignItems: 'flex-end' }}>
                       {item.aiScore !== null && (
                         <Text style={[s.historyScore, { color: getScoreColor(item.aiScore) }]}>{item.aiScore}</Text>
                       )}
                       <Text style={s.historyDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-                    </View>
-                    {item.status === 'pending' && item.responseCount === 0 && (
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          showConfirm({
-                            title: 'Cancel Review',
-                            message: 'Are you sure you want to cancel this blind review request?',
-                            icon: 'trash-outline',
-                            iconColor: colors.error,
-                            confirmText: 'Yes, Cancel',
-                            confirmStyle: 'destructive',
-                            onConfirm: async () => {
-                              try {
-                                const res = await refopenAPI.apiCall(`/tools/blind-review/cancel/${item.requestId}`, { method: 'DELETE' });
-                                if (res?.success) {
-                                  showToast('Review cancelled', 'success');
-                                  loadHistory();
-                                } else {
-                                  showToast(res?.error || 'Failed to cancel', 'error');
-                                }
-                              } catch (err) {
-                                showToast('Failed to cancel', 'error');
-                              }
-                            },
-                          });
-                        }}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        style={{ padding: 4 }}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={colors.error} />
-                      </TouchableOpacity>
-                    )}
                   </View>
                 </View>
-                <View style={s.historyMeta}>
+                <View style={[s.historyMeta, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
                   <View style={[s.statusPill, { backgroundColor: item.status === 'completed' ? '#10B98115' : item.responseCount > 0 ? '#3B82F615' : '#F59E0B15' }]}>
                     <Text style={[s.statusPillText, { color: item.status === 'completed' ? '#10B981' : item.responseCount > 0 ? '#3B82F6' : '#F59E0B' }]}>
                       {item.status === 'completed'
@@ -439,6 +405,38 @@ export default function BlindReviewScreen({ navigation }) {
                           : '⏳ Processing'}
                     </Text>
                   </View>
+                  {item.status === 'pending' && item.responseCount === 0 && (
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        showConfirm({
+                          title: 'Cancel Review',
+                          message: 'Are you sure you want to cancel this blind review request?',
+                          icon: 'trash-outline',
+                          iconColor: colors.error,
+                          confirmText: 'Yes, Cancel',
+                          confirmStyle: 'destructive',
+                          onConfirm: async () => {
+                            try {
+                              const res = await refopenAPI.apiCall(`/tools/blind-review/cancel/${item.requestId}`, { method: 'DELETE' });
+                              if (res?.success) {
+                                showToast('Review cancelled', 'success');
+                                loadHistory();
+                              } else {
+                                showToast(res?.error || 'Failed to cancel', 'error');
+                              }
+                            } catch (err) {
+                              showToast('Failed to cancel', 'error');
+                            }
+                          },
+                        });
+                      }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      style={{ padding: 4 }}
+                    >
+                      <Ionicons name="trash-outline" size={14} color={colors.error} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </TouchableOpacity>
             ))
