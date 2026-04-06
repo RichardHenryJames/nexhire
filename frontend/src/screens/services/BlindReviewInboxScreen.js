@@ -32,7 +32,7 @@ const getScoreColor = (score) => {
 export default function BlindReviewInboxScreen({ navigation }) {
   const { colors } = useTheme();
   const { isDesktop } = useResponsive();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAdmin } = useAuth();
 
   const [tab, setTab] = useState('pending'); // 'pending' | 'history'
   const [pending, setPending] = useState([]);
@@ -50,6 +50,7 @@ export default function BlindReviewInboxScreen({ navigation }) {
   const [suggestions, setSuggestions] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [prefilling, setPrefilling] = useState(false);
   const [error, setError] = useState('');
 
   // Load pending reviews
@@ -222,6 +223,57 @@ export default function BlindReviewInboxScreen({ navigation }) {
               </View>
             )}
           </View>
+
+          {/* AI Prefill for Admin */}
+          {isAdmin && (
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                marginHorizontal: 16,
+                marginBottom: 16,
+                paddingVertical: 12,
+                borderRadius: 10,
+                backgroundColor: '#8B5CF6' + '12',
+                borderWidth: 1,
+                borderColor: '#8B5CF6' + '30',
+                opacity: prefilling ? 0.6 : 1,
+              }}
+              onPress={async () => {
+                setPrefilling(true);
+                try {
+                  const res = await refopenAPI.apiCall(`/tools/blind-review/ai-prefill/${selectedRequest.requestId}`, { method: 'POST' });
+                  if (res?.success && res.data) {
+                    const d = res.data;
+                    if (d.wouldRefer !== undefined) setWouldRefer(d.wouldRefer);
+                    if (d.overallRating) setRating(d.overallRating);
+                    if (d.profileFit) setProfileFit(d.profileFit);
+                    if (d.strengths) setStrengths(d.strengths);
+                    if (d.weaknesses) setWeaknesses(d.weaknesses);
+                    if (d.suggestions) setSuggestions(d.suggestions);
+                  } else {
+                    setError(res?.error || 'AI prefill failed');
+                  }
+                } catch (err) {
+                  setError('AI prefill failed');
+                }
+                setPrefilling(false);
+              }}
+              disabled={prefilling}
+              activeOpacity={0.7}
+            >
+              {prefilling ? (
+                <ActivityIndicator size="small" color="#8B5CF6" />
+              ) : (
+                <Ionicons name="sparkles" size={16} color="#8B5CF6" />
+              )}
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#8B5CF6' }}>
+                {prefilling ? 'Generating...' : 'AI Prefill'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Would Refer */}
           <View style={s.formSection}>

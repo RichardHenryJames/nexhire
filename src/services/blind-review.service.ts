@@ -915,6 +915,75 @@ Respond with JSON:
    * Check if there are verified referrers at the given company
    */
   static async hasReferrersAtCompany(organizationId: number): Promise<{ count: number; hasReferrers: boolean }> {
+
+  /**
+   * Generate AI-prefilled review for admin (sounds like a real human employee)
+   */
+  static async generateAdminPrefill(requestId: string): Promise<any> {
+    const reqResult = await dbService.executeQuery(
+      `SELECT br.AnonymizedProfile, br.TargetRole, br.AIScore, br.AIAnalysis, br.OrganizationID
+       FROM BlindReviewRequests br WHERE br.RequestID = @param0`,
+      [requestId]
+    );
+
+    if (!reqResult.recordset?.length) throw new Error('Review request not found.');
+    const req = reqResult.recordset[0];
+
+    const orgResult = await dbService.executeQuery(
+      `SELECT Name, Industry, Tier FROM Organizations WHERE OrganizationID = @param0`,
+      [req.OrganizationID]
+    );
+    const orgName = orgResult.recordset?.[0]?.Name || 'the company';
+    const orgIndustry = orgResult.recordset?.[0]?.Industry || 'Technology';
+
+    const profile = req.AnonymizedProfile || '{}';
+    const aiAnalysis = req.AIAnalysis || '';
+
+    const prompt = `You are a real employee at ${orgName} (${orgIndustry}) reviewing an anonymous candidate's profile for a "${req.TargetRole}" position.
+
+Here is their anonymized profile:
+${profile}
+
+${aiAnalysis ? `AI analysis of the profile: ${aiAnalysis}` : ''}
+
+Write your review like a normal employee. Avoid bullet points, avoid corporate language, and don't sound like an AI. Write in a natural conversational way like real people type. Sometimes use "you", sometimes "u" if it feels natural. Small casual typos are okay. Keep the tone relaxed, thoughtful, and conversational. Keep replies short and natural, not long explanations. Each field should not exceed 1 paragraph. Respond directly to what u see in the profile. Never use em dashes.
+
+Based on the profile, decide:
+1. Would you refer this person? (true/false)
+2. Overall rating 1-5
+3. Profile fit for role 1-5
+4. Their strengths (1 short paragraph, conversational)
+5. What needs improvement (1 short paragraph, conversational)
+6. Your suggestions (1 short paragraph, conversational)
+
+Respond with JSON only:
+{
+  "wouldRefer": true/false,
+  "overallRating": 1-5,
+  "profileFit": 1-5,
+  "strengths": "short conversational paragraph",
+  "weaknesses": "short conversational paragraph",
+  "suggestions": "short conversational paragraph"
+}`;
+
+    const aiResult = await AIService.call({
+      prompt,
+      groqApiKey: GROQ_API_KEY,
+      geminiApiKey: GEMINI_API_KEY,
+      options: { temperature: 0.7, maxTokens: 1024, jsonMode: true },
+    });
+
+    try {
+      return JSON.parse(aiResult);
+    } catch {
+      // Try to extract JSON from response
+      const jsonMatch = aiResult.match(/\{[\s\S]*\}/);
+      if (jsonMatch) return JSON.parse(jsonMatch[0]);
+      throw new Error('Failed to parse AI response.');
+    }
+  }
+
+  static async hasReferrersAtCompany(organizationId: number): Promise<{ count: number; hasReferrers: boolean }> {
     const result = await dbService.executeQuery(
       `SELECT COUNT(*) AS cnt 
        FROM Users u 

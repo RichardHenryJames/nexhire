@@ -2056,7 +2056,7 @@ app.http("tools-resume-analyzer", {
 });
 
 import { analyzeLinkedIn } from "./src/controllers/linkedin-optimizer.controller";
-import { submitBlindReview, getBlindReviewStatus, getBlindReviewHistory, getBlindReviewPending, submitBlindReviewResponse, getBlindReviewMyReviews, cancelBlindReview } from "./src/controllers/blind-review.controller";
+import { submitBlindReview, getBlindReviewStatus, getBlindReviewHistory, getBlindReviewPending, submitBlindReviewResponse, getBlindReviewMyReviews, cancelBlindReview, aiPrefillBlindReview } from "./src/controllers/blind-review.controller";
 
 /**
  * LinkedIn Profile Optimizer - Analyze and optimize LinkedIn profiles
@@ -2150,6 +2150,13 @@ app.http("tools-blind-review-cancel", {
   authLevel: "anonymous",
   route: "tools/blind-review/cancel/{id}",
   handler: cancelBlindReview,
+});
+
+app.http("tools-blind-review-ai-prefill", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/blind-review/ai-prefill/{id}",
+  handler: aiPrefillBlindReview,
 });
 
 // ========================================================================

@@ -453,3 +453,63 @@ export async function cancelBlindReview(req: HttpRequest, context: InvocationCon
     };
   }
 }
+
+// ── AI prefill for admin (generates human-sounding review) ──────
+
+export async function aiPrefillBlindReview(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  if (req.method === 'OPTIONS') {
+    return { status: 200, headers: corsHeaders };
+  }
+
+  try {
+    let user: any;
+    try { user = authenticate(req); } catch {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        jsonBody: { success: false, error: 'Authentication required.' },
+      };
+    }
+    const userId = user.userId || user.sub;
+
+    // Admin check
+    const adminCheck = await dbService.executeQuery(
+      `SELECT UserType FROM Users WHERE UserID = @param0`,
+      [userId]
+    );
+    if (adminCheck.recordset?.[0]?.UserType !== 'Admin') {
+      return {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        jsonBody: { success: false, error: 'Admin access required.' },
+      };
+    }
+
+    const url = new URL(req.url);
+    const parts = url.pathname.split('/');
+    const requestId = parts[parts.length - 1];
+
+    if (!requestId || requestId === 'ai-prefill') {
+      return {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        jsonBody: { success: false, error: 'Request ID is required.' },
+      };
+    }
+
+    const prefill = await BlindReviewService.generateAdminPrefill(requestId);
+
+    return {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: { success: true, data: prefill },
+    };
+  } catch (error: any) {
+    context.error('AI prefill error:', error.message);
+    return {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: { success: false, error: error.message || 'Failed to generate AI prefill.' },
+    };
+  }
+}
