@@ -130,6 +130,19 @@ export default function MyReferralRequestsScreen({ route }) {
     return diffMs > 0 && diffMs <= 5 * 24 * 60 * 60 * 1000; // within 5 days
   };
 
+  // Get remaining time text for a request
+  const getTimeRemaining = (request) => {
+    const expiryDate = request.ExpiryTime
+      ? new Date(request.ExpiryTime)
+      : new Date(new Date(request.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+    const diffMs = expiryDate - new Date();
+    if (diffMs <= 0) return null;
+    const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+    const diffHours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    if (diffDays >= 1) return `${diffDays}d ${diffHours}h left`;
+    return `${diffHours}h left`;
+  };
+
   // Split requests into 3 categories: Action Needed / In Progress / Closed
   const ACTION_STATUSES = ['ProofUploaded', 'Completed'];
   const IN_PROGRESS_STATUSES = ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'];
@@ -503,9 +516,9 @@ export default function MyReferralRequestsScreen({ route }) {
             </View>
           ) : isExpiringSoon(request) ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="globe-outline" size={14} color={'#8B5CF6'} />
-              <Text style={{ fontSize: 11, fontWeight: '600', color: '#8B5CF6' }}>Go Open</Text>
-              <Ionicons name="chevron-forward" size={16} color={'#8B5CF6'} />
+              <Ionicons name="timer-outline" size={14} color={colors.warning} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.warning }}>{getTimeRemaining(request) || 'Expiring'}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.warning} />
             </View>
           ) : (
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />

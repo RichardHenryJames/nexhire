@@ -13,6 +13,7 @@ import {
   Modal,
   Pressable,
   TextInput,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -53,6 +54,28 @@ export default function ReferralTrackingScreen() {
   // const [referrerConversation, setReferrerConversation] = useState(null); // Conversation with referrer if exists
   // const [referrerUserIds, setReferrerUserIds] = useState([]); // All referrers who interacted with this request
   const [messageExpanded, setMessageExpanded] = useState(false);
+
+  // Animated toggle for Upgrade to Open button: alternates between time remaining and label
+  const [showUpgradeTime, setShowUpgradeTime] = useState(false);
+  const upgradeOpacity = React.useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!request || request.OpenToAnyCompany) return;
+    const interval = setInterval(() => {
+      Animated.timing(upgradeOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+        setShowUpgradeTime(prev => !prev);
+        Animated.timing(upgradeOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [request]);
+  const getUpgradeTimeText = () => {
+    if (!request?.ExpiryTime) return null;
+    const diffMs = new Date(request.ExpiryTime) - new Date();
+    if (diffMs <= 0) return 'Expired';
+    const d = Math.floor(diffMs / (24*60*60*1000));
+    const h = Math.floor((diffMs % (24*60*60*1000)) / (60*60*1000));
+    return d >= 1 ? `${d}d ${h}h left` : `${h}h left`;
+  };
   const { pricing } = usePricing();
   const [showWithdrawConfirm, setShowWithdrawConfirm] = useState(false);
   const [withdrawing, setWithdrawing] = useState(false);
@@ -776,8 +799,10 @@ export default function ReferralTrackingScreen() {
                 onPress={() => setShowConvertModal(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="globe-outline" size={15} color={colors.white} />
-                <Text style={[styles.actionBtnText, { fontSize: 12 }]}>Upgrade to Open</Text>
+                <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, opacity: upgradeOpacity }}>
+                  <Ionicons name={showUpgradeTime ? 'timer-outline' : 'globe-outline'} size={15} color={colors.white} />
+                  <Text style={[styles.actionBtnText, { fontSize: 12 }]}>{showUpgradeTime ? (getUpgradeTimeText() || 'Upgrade to Open') : 'Upgrade to Open'}</Text>
+                </Animated.View>
               </TouchableOpacity>
             )}
           </View>
@@ -803,8 +828,10 @@ export default function ReferralTrackingScreen() {
               onPress={() => setShowConvertModal(true)}
               activeOpacity={0.7}
             >
-              <Ionicons name="globe-outline" size={18} color={colors.white} />
-              <Text style={styles.actionBtnText}>Upgrade to Open</Text>
+              <Animated.View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, opacity: upgradeOpacity }}>
+                <Ionicons name={showUpgradeTime ? 'timer-outline' : 'globe-outline'} size={18} color={colors.white} />
+                <Text style={styles.actionBtnText}>{showUpgradeTime ? (getUpgradeTimeText() || 'Upgrade to Open') : 'Upgrade to Open'}</Text>
+              </Animated.View>
             </TouchableOpacity>
           )}
         </View>
