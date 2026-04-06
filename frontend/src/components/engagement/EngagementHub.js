@@ -353,10 +353,10 @@ export default function EngagementHub({ navigation, dashboardStats = {}, applica
     return {
       active:    Math.max(10, Math.round(baseActive + 140 * timeMul + jitter)),  // ~10 at 3am, ~180 at 1pm
       referrals: refNow,                                                          // ~5 at midnight → 150–349 by 11pm, always ↑
-      resumesAnalyzed: Math.max(6, Math.round((300 + (hash(3) % 200)) * cumFraction)), // ~6 at midnight -> 300-499 by end of day, always up
-      resumesCreated: Math.max(3, Math.round((120 + (hash(4) % 80)) * cumFraction)),   // ~3 at midnight -> 120-199 by end of day, always up
-      linkedinOptimized: Math.max(2, Math.round((80 + (hash(5) % 60)) * cumFraction)), // ~2 at midnight -> 80-139 by end of day, always up
-      blindReviewed: Math.max(4, Math.round((200 + (hash(6) % 150)) * cumFraction)),   // ~4 at midnight -> 200-349 by end of day, always up
+      resumesAnalyzed: Math.max(4, Math.round((200 + (hash(3) % 150)) * cumFraction)), // ~4 at midnight -> 200-349 by end of day
+      resumesCreated: Math.max(3, Math.round((120 + (hash(4) % 80)) * cumFraction)),   // ~3 at midnight -> 120-199 by end of day
+      linkedinOptimized: Math.max(2, Math.round((80 + (hash(5) % 60)) * cumFraction)), // ~2 at midnight -> 80-139 by end of day
+      blindReviewed: Math.max(6, Math.round((300 + (hash(6) % 200)) * cumFraction)),   // ~6 at midnight -> 300-499 by end of day
     };
   }, []);
 
