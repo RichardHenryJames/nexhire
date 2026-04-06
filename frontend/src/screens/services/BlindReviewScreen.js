@@ -396,13 +396,15 @@ export default function BlindReviewScreen({ navigation }) {
                   </View>
                 </View>
                 <View style={[s.historyMeta, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}>
-                  <View style={[s.statusPill, { backgroundColor: item.status === 'completed' ? '#10B98115' : item.responseCount > 0 ? '#3B82F615' : '#F59E0B15' }]}>
-                    <Text style={[s.statusPillText, { color: item.status === 'completed' ? '#10B981' : item.responseCount > 0 ? '#3B82F6' : '#F59E0B' }]}>
-                      {item.status === 'completed'
-                        ? `✓ Review complete${item.responseCount > 0 ? ` (${item.responseCount} review${item.responseCount > 1 ? 's' : ''})` : ''}`
-                        : item.responseCount > 0
-                          ? `${item.responseCount} review${item.responseCount > 1 ? 's' : ''} received`
-                          : '⏳ Processing'}
+                  <View style={[s.statusPill, { backgroundColor: item.status === 'completed' ? '#10B98115' : item.status === 'cancelled' ? (colors.gray500 || '#6B7280') + '15' : item.responseCount > 0 ? '#3B82F615' : '#F59E0B15' }]}>
+                    <Text style={[s.statusPillText, { color: item.status === 'completed' ? '#10B981' : item.status === 'cancelled' ? (colors.gray500 || '#6B7280') : item.responseCount > 0 ? '#3B82F6' : '#F59E0B' }]}>
+                      {item.status === 'cancelled'
+                        ? 'Cancelled'
+                        : item.status === 'completed'
+                          ? `✓ Review complete${item.responseCount > 0 ? ` (${item.responseCount} review${item.responseCount > 1 ? 's' : ''})` : ''}`
+                          : item.responseCount > 0
+                            ? `${item.responseCount} review${item.responseCount > 1 ? 's' : ''} received`
+                            : '⏳ Processing'}
                     </Text>
                   </View>
                   {item.status === 'pending' && item.responseCount === 0 && (
