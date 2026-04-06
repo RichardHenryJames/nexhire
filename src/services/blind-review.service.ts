@@ -565,8 +565,12 @@ ${rawText.substring(0, 8000)}
 
     // Check the request exists and is reviewable
     const reqResult = await dbService.executeQuery(
-      `SELECT br.RequestID, br.Status, br.ExpiresAt, br.OrganizationID, br.UserID, br.ResponseCount
+      `SELECT br.RequestID, br.Status, br.ExpiresAt, br.OrganizationID, br.UserID, br.ResponseCount,
+              br.TargetRole, u.Email as SeekerEmail, u.FirstName as SeekerFirstName,
+              o.Name as CompanyName
        FROM BlindReviewRequests br
+       JOIN Users u ON br.UserID = u.UserID
+       JOIN Organizations o ON br.OrganizationID = o.OrganizationID
        WHERE br.RequestID = @param0 AND br.Status IN ('pending', 'in_review') AND br.ExpiresAt > GETUTCDATE()`,
       [requestId]
     );
@@ -638,6 +642,76 @@ ${rawText.substring(0, 8000)}
       await this.aggregateFeedback(requestId);
     } catch (err) {
       console.error('Feedback aggregation failed (non-critical):', err);
+    }
+
+    // Notify the seeker (in-app + email) — fire-and-forget
+    try {
+      const companyName = req.CompanyName || 'the company';
+      const seekerEmail = req.SeekerEmail;
+      const seekerName = req.SeekerFirstName || 'there';
+      const targetRole = req.TargetRole || 'your target role';
+
+      // In-app notification
+      const { default: InAppNotificationService } = await import('./inAppNotification.service');
+      if (newStatus === 'completed') {
+        await InAppNotificationService.notifyBlindReviewCompleted(req.UserID, companyName, newCount, requestId);
+      } else {
+        await InAppNotificationService.notifyBlindReviewResponse(req.UserID, companyName, newCount, requestId);
+      }
+
+      // Email notification
+      if (seekerEmail) {
+        const { EmailService } = await import('./emailService');
+        const appUrl = process.env.APP_URL || 'https://www.refopen.com';
+        const isComplete = newStatus === 'completed';
+        const subject = isComplete
+          ? `Your blind review for ${companyName} is complete`
+          : `An insider at ${companyName} reviewed your profile`;
+        const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#f5f5f5;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;padding:40px 20px;"><tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+  <tr><td style="background:linear-gradient(135deg,#8B5CF6 0%,#6D28D9 100%);padding:32px 40px;text-align:center;">
+    <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700;">${isComplete ? 'Your Blind Review is Complete' : 'New Review Received'}</h1>
+  </td></tr>
+  <tr><td style="padding:36px 40px;">
+    <p style="color:#1a1a1a;font-size:16px;line-height:1.6;margin:0 0 16px 0;">Hi ${seekerName},</p>
+    <p style="color:#4a4a4a;font-size:15px;line-height:1.7;margin:0 0 16px 0;">
+      ${isComplete
+        ? `<strong>${newCount} insider${newCount > 1 ? 's' : ''}</strong> at <strong>${companyName}</strong> have reviewed your profile for <strong>${targetRole}</strong>. Your final referrability score and detailed feedback are ready.`
+        : `An insider at <strong>${companyName}</strong> just reviewed your anonymous profile for <strong>${targetRole}</strong>. You now have <strong>${newCount}</strong> review${newCount > 1 ? 's' : ''}.`
+      }
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;"><tr><td align="center">
+      <a href="${appUrl}/blind-review" style="display:inline-block;background:linear-gradient(135deg,#8B5CF6,#6D28D9);color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:16px;font-weight:700;">
+        ${isComplete ? 'See Your Results' : 'View Review'}
+      </a>
+    </td></tr></table>
+    <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:16px 0 0 0;">
+      Your identity was never shared with the reviewer. All feedback is anonymous.
+    </p>
+  </td></tr>
+  <tr><td style="padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+    <p style="margin:0;color:#9ca3af;font-size:12px;">RefOpen &middot; <a href="${appUrl}" style="color:#6b7280;text-decoration:none;">refopen.com</a></p>
+  </td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
+
+        await EmailService.send({
+          to: seekerEmail,
+          subject,
+          html,
+          userId: req.UserID,
+          emailType: 'blind_review_response',
+          referenceType: 'BlindReviewRequest',
+          referenceId: requestId,
+        });
+      }
+    } catch (notifErr) {
+      console.error('Blind review notification failed (non-critical):', notifErr);
     }
 
     return {

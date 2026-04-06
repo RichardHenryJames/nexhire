@@ -32,7 +32,9 @@ export type InAppNotificationType =
   | 'job_recommendations'
   | 'referrer_digest'
   | 'become_verified'
-  | 'referral_expiring';
+  | 'referral_expiring'
+  | 'blind_review_response'
+  | 'blind_review_completed';
 
 interface CreateNotificationParams {
   userId: string;
@@ -535,6 +537,33 @@ export class InAppNotificationService {
       referenceId: requestId,
     });
   }
-}
+  /** Blind review: a referrer submitted their review */
+  static async notifyBlindReviewResponse(seekerUserId: string, companyName: string, responseCount: number, requestId: string) {
+    const reviewerWord = responseCount === 1 ? 'An insider' : `Insider #${responseCount}`;
+    await this.createSafe({
+      userId: seekerUserId,
+      title: `\uD83D\uDC40 ${reviewerWord} at ${companyName} reviewed your profile`,
+      body: `${responseCount === 1 ? 'Your first review is in!' : `You now have ${responseCount} reviews.`} See what they said about your profile.`,
+      icon: 'eye',
+      actionUrl: `/blind-review`,
+      actionLabel: 'View Review',
+      notificationType: 'blind_review_response',
+      referenceId: requestId,
+    });
+  }
+
+  /** Blind review: review is complete (3+ responses) */
+  static async notifyBlindReviewCompleted(seekerUserId: string, companyName: string, responseCount: number, requestId: string) {
+    await this.createSafe({
+      userId: seekerUserId,
+      title: `\u2705 Your blind review for ${companyName} is complete`,
+      body: `${responseCount} insiders reviewed your profile. Your final results and referrability score are ready.`,
+      icon: 'checkmark-circle',
+      actionUrl: `/blind-review`,
+      actionLabel: 'See Results',
+      notificationType: 'blind_review_completed',
+      referenceId: requestId,
+    });
+  }}
 
 export default InAppNotificationService;
