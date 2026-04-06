@@ -425,9 +425,13 @@ export default function BlindReviewScreen({ navigation }) {
                   </View>
                 </View>
                 <View style={s.historyMeta}>
-                  <View style={[s.statusPill, { backgroundColor: item.status === 'completed' ? '#10B98115' : '#F59E0B15' }]}>
-                    <Text style={[s.statusPillText, { color: item.status === 'completed' ? '#10B981' : '#F59E0B' }]}>
-                      {item.status === 'completed' ? '✓ Review complete' : item.status === 'in_review' ? '⏳ In progress' : '⏳ Processing'}
+                  <View style={[s.statusPill, { backgroundColor: item.status === 'completed' ? '#10B98115' : item.responseCount > 0 ? '#3B82F615' : '#F59E0B15' }]}>
+                    <Text style={[s.statusPillText, { color: item.status === 'completed' ? '#10B981' : item.responseCount > 0 ? '#3B82F6' : '#F59E0B' }]}>
+                      {item.status === 'completed'
+                        ? `✓ Review complete${item.responseCount > 0 ? ` (${item.responseCount} review${item.responseCount > 1 ? 's' : ''})` : ''}`
+                        : item.responseCount > 0
+                          ? `${item.responseCount} review${item.responseCount > 1 ? 's' : ''} received`
+                          : '⏳ Waiting for reviews'}
                     </Text>
                   </View>
                 </View>
