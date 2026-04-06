@@ -258,7 +258,7 @@ export default function NotificationsScreen() {
     } else if (url.startsWith('/services/linkedin-optimizer')) {
       navigation.navigate('LinkedInOptimizer');
     } else if (url.startsWith('/services/blind-review') || url.startsWith('/t/blind-review') || url === '/blind-review') {
-      navigation.navigate('BlindReview');
+      navigation.navigate('BlindReview', { openHistory: true });
     }
   };
 

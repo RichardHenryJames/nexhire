@@ -91,7 +91,7 @@ const ScoreRing = ({ score, size = 120, strokeWidth = 10, colors }) => {
 };
 
 // ── Main Component ─────────────────────────────────────────────
-export default function BlindReviewScreen({ navigation }) {
+export default function BlindReviewScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { isDesktop } = useResponsive();
   const { user, isAuthenticated } = useAuth();
@@ -100,6 +100,15 @@ export default function BlindReviewScreen({ navigation }) {
 
   // View state
   const [view, setView] = useState('input'); // input | analyzing | results | history
+
+  // Auto-open history when coming from notification
+  useEffect(() => {
+    if (route?.params?.openHistory) {
+      setView('history');
+      loadHistory();
+      navigation.setParams({ openHistory: undefined });
+    }
+  }, [route?.params?.openHistory]);
   const [sourceType, setSourceType] = useState('resume');
 
   // Form fields
