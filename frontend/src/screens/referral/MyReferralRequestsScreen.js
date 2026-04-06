@@ -175,12 +175,11 @@ export default function MyReferralRequestsScreen({ route }) {
       }
       return false;
     });
-    // Sort: convert-to-open eligible (expiring soon) first, then by oldest first
+    // Sort by time remaining (least time first = most urgent at top)
     return filtered.sort((a, b) => {
-      const aExpiring = isExpiringSoon(a) ? 0 : 1;
-      const bExpiring = isExpiringSoon(b) ? 0 : 1;
-      if (aExpiring !== bExpiring) return aExpiring - bExpiring;
-      return new Date(a.RequestedAt) - new Date(b.RequestedAt);
+      const aExpiry = a.ExpiryTime ? new Date(a.ExpiryTime) : new Date(new Date(a.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+      const bExpiry = b.ExpiryTime ? new Date(b.ExpiryTime) : new Date(new Date(b.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
+      return aExpiry - bExpiry;
     });
   }, [myRequests]);
 
