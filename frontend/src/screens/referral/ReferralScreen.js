@@ -695,44 +695,50 @@ export default function ReferralScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
-        <SubScreenHeader title="Provide Referral" fallbackTab="Home" />
+        <SubScreenHeader 
+          title="Provide Referral" 
+          fallbackTab="Home"
+          rightContent={
+            isVerifiedReferrer ? (
+              <TouchableOpacity 
+                style={styles.earningsHeaderBtn}
+                onPress={() => navigation.navigate('Earnings')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="cash-outline" size={20} color="#FCD34D" />
+              </TouchableOpacity>
+            ) : null
+          }
+        />
 
         {/* Action buttons row */}
         {isVerifiedReferrer && currentVerifiedCompany && (
           <View style={styles.headerButtons}>
             {/* Primary CTA — always visible */}
             <TouchableOpacity 
-              style={styles.postJobButton}
+              style={[styles.actionPill, { backgroundColor: colors.primary }]}
               onPress={() => navigation.navigate('PostReferralJob', {
                 organizationId: currentVerifiedCompany.organizationId
               })}
             >
-              <Ionicons name="add-circle" size={18} color={colors.white} />
-              <Text style={styles.postJobButtonText}>Post Job</Text>
+              <Ionicons name="add-circle" size={17} color={colors.white} />
+              <Text style={styles.actionPillText}>Post Job</Text>
             </TouchableOpacity>
             {/* My Jobs — only if user has ever posted a job */}
             {hasPostedJobs && (
               <TouchableOpacity 
-                style={styles.secondaryButton}
+                style={[styles.actionPill, { backgroundColor: colors.cardBackground || colors.gray800 }]}
                 onPress={() => navigation.navigate('EmployerJobs', {
                   initialTab: draftJobsCount > 0 ? 'draft' : 'published',
                   organizationId: currentVerifiedCompany.organizationId
                 })}
               >
-                <Ionicons name="briefcase-outline" size={16} color={colors.primary} />
-                <Text style={styles.secondaryButtonText}>
-                  My Jobs{draftJobsCount > 0 ? ` (${draftJobsCount} draft)` : ''}
+                <Ionicons name="briefcase-outline" size={17} color={colors.textSecondary} />
+                <Text style={[styles.actionPillText, { color: colors.textSecondary }]}>
+                  My Jobs{draftJobsCount > 0 ? ` (${draftJobsCount})` : ''}
                 </Text>
               </TouchableOpacity>
             )}
-            {/* Earnings — always visible */}
-            <TouchableOpacity 
-              style={styles.secondaryButton}
-              onPress={() => navigation.navigate('Earnings')}
-            >
-              <Ionicons name="cash-outline" size={16} color={colors.warning} />
-              <Text style={[styles.secondaryButtonText, { color: colors.warning }]}>Earnings</Text>
-            </TouchableOpacity>
           </View>
         )}
 
@@ -866,6 +872,11 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     fontSize: 10,
     fontWeight: typography.weights.bold,
   },
+  earningsHeaderBtn: {
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(252, 211, 77, 0.12)',
+  },
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -877,34 +888,17 @@ const createStyles = (colors, responsive = {}) => StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  postJobButton: {
+  actionPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 8,
+    borderRadius: 20,
     gap: 6,
   },
-  postJobButtonText: {
+  actionPillText: {
     color: colors.white,
     fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-  },
-  secondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 5,
-  },
-  secondaryButtonText: {
-    color: colors.primary,
-    fontSize: typography.sizes.xs,
     fontWeight: typography.weights.semibold,
   },
   // Open/Closed Tabs
