@@ -693,8 +693,18 @@ ${rawText.substring(0, 8000)}
       Your identity was never shared with the reviewer. All feedback is anonymous.
     </p>
   </td></tr>
-  <tr><td style="padding:20px 40px;border-top:1px solid #e5e7eb;text-align:center;">
-    <p style="margin:0;color:#9ca3af;font-size:12px;">RefOpen &middot; <a href="${appUrl}" style="color:#6b7280;text-decoration:none;">refopen.com</a></p>
+  <tr><td style="padding:20px 0;border-top:1px solid #e5e7eb;">
+    <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="text-align:center;">
+      <img src="${appUrl}/refopen-logo.png" alt="RefOpen" width="80" style="margin-bottom:12px;">
+      <p style="margin:0 0 8px 0;color:#9ca3af;font-size:12px;text-align:center;">You received this because you have a RefOpen account.</p>
+      <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+        <a href="${appUrl}/settings" style="color:#6b7280;text-decoration:none;">Email Preferences</a>
+        <span style="color:#d1d5db;margin:0 8px;">|</span>
+        <a href="${appUrl}/support" style="color:#6b7280;text-decoration:none;">Help</a>
+        <span style="color:#d1d5db;margin:0 8px;">|</span>
+        <a href="${appUrl}" style="color:#6b7280;text-decoration:none;">RefOpen</a>
+      </p>
+    </td></tr></table>
   </td></tr>
 </table>
 </td></tr></table>
