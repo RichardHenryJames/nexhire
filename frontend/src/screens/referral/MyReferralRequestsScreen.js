@@ -130,17 +130,19 @@ export default function MyReferralRequestsScreen({ route }) {
     return diffMs > 0 && diffMs <= 5 * 24 * 60 * 60 * 1000; // within 5 days
   };
 
-  // Get remaining time text for a request
+  // Get remaining time text + color for a request
   const getTimeRemaining = (request) => {
     const expiryDate = request.ExpiryTime
       ? new Date(request.ExpiryTime)
       : new Date(new Date(request.RequestedAt).getTime() + 14 * 24 * 60 * 60 * 1000);
     const diffMs = expiryDate - new Date();
-    if (diffMs <= 0) return null;
+    if (diffMs <= 0) return { text: 'Expired', color: '#EF4444' };
     const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
     const diffHours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-    if (diffDays >= 1) return `${diffDays}d ${diffHours}h left`;
-    return `${diffHours}h left`;
+    const text = diffDays >= 1 ? `${diffDays}d ${diffHours}h left` : `${diffHours}h left`;
+    // Color: green (>7d) -> yellow (3-7d) -> orange (1-3d) -> red (<1d)
+    const color = diffDays > 7 ? '#10B981' : diffDays > 3 ? '#F59E0B' : diffDays >= 1 ? '#F97316' : '#EF4444';
+    return { text, color };
   };
 
   // Split requests into 3 categories: Action Needed / In Progress / Closed
@@ -516,9 +518,15 @@ export default function MyReferralRequestsScreen({ route }) {
             </View>
           ) : isExpiringSoon(request) ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="timer-outline" size={14} color={colors.warning} />
-              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.warning }}>{getTimeRemaining(request) || 'Expiring'}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.warning} />
+              <Ionicons name="timer-outline" size={14} color={getTimeRemaining(request).color} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: getTimeRemaining(request).color }}>{getTimeRemaining(request).text}</Text>
+              <Ionicons name="chevron-forward" size={16} color={getTimeRemaining(request).color} />
+            </View>
+          ) : !CLOSED_STATUSES.includes(request.Status) && getTimeRemaining(request) ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="timer-outline" size={14} color={getTimeRemaining(request).color} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: getTimeRemaining(request).color }}>{getTimeRemaining(request).text}</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </View>
           ) : (
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} style={{ marginLeft: 4 }} />

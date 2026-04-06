@@ -468,7 +468,7 @@ export default function ReferralTrackingScreen() {
           if (diffMs <= 0) return null;
           const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
           const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const expiryColor = diffDays > 3 ? colors.success : diffDays >= 1 ? colors.warning : colors.error;
+          const expiryColor = diffDays > 7 ? colors.success : diffDays > 3 ? colors.warning : diffDays >= 1 ? '#F97316' : colors.error;
           const expiryText = diffDays >= 1 ? `${diffDays}d ${diffHours}h remaining` : `${diffHours}h remaining`;
           const showConvertHint = !request?.OpenToAnyCompany && diffDays <= 5;
           return (

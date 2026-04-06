@@ -4908,12 +4908,12 @@ app.timer("expiringRequestNudgeTimer", {
 });
 
 // ========================================================================
-// TIMER TRIGGER - REFERRAL EXPIRATION (Every day at 2 AM UTC = 7:30 AM IST)
+// TIMER TRIGGER - REFERRAL EXPIRATION (Every 1 hour)
 // ========================================================================
 // Expires pending referral requests older than 14 days and releases wallet holds
 
 app.timer("referralExpirationTimer", {
-  schedule: "0 0 2 * * *", // Every day at 2:00 AM UTC
+  schedule: "0 0 * * * *", // Every 1 hour
   handler: async (myTimer: Timer, context: InvocationContext) => {
     const startTime = Date.now();
     const executionId = `expire_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
