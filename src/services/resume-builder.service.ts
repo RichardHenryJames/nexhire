@@ -943,7 +943,7 @@ Score criteria: keyword match (40%), experience relevance (30%), skills alignmen
       options: {
         temperature: 0.7,
         maxTokens: 2048,
-        providerOrder: ['gemini', 'groq'],
+        providerOrder: ['groq', 'gemini'],
       },
     });
     return result.text;

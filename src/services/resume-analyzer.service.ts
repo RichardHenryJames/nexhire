@@ -1078,7 +1078,7 @@ ANALYSIS RULES:
       options: {
         temperature: 0.3,
         maxTokens: 8192,
-        providerOrder: ['gemini', 'groq'],
+        providerOrder: ['groq', 'gemini'],
       },
     });
 
