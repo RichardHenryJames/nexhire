@@ -557,7 +557,46 @@ export default function AdminSupportScreen() {
               {/* Response Input */}
               {selectedTicket.Status !== 'Closed' && (
                 <>
-                  <Text style={styles.modalLabel}>Send Reply</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={styles.modalLabel}>Send Reply</Text>
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 8,
+                        backgroundColor: '#8B5CF6' + '12',
+                        borderWidth: 1,
+                        borderColor: '#8B5CF6' + '30',
+                      }}
+                      onPress={async () => {
+                        try {
+                          setUpdating(true);
+                          const res = await refopenAPI.apiCall(`/support/tickets/${selectedTicket.TicketID}/ai-prefill`, { method: 'POST' });
+                          if (res?.success && res.data?.reply) {
+                            setAdminResponse(res.data.reply);
+                          } else {
+                            showToast(res?.error || 'AI draft failed', 'error');
+                          }
+                        } catch (err) {
+                          showToast('AI draft failed', 'error');
+                        } finally {
+                          setUpdating(false);
+                        }
+                      }}
+                      disabled={updating}
+                      activeOpacity={0.7}
+                    >
+                      {updating ? (
+                        <ActivityIndicator size="small" color="#8B5CF6" />
+                      ) : (
+                        <Ionicons name="sparkles" size={14} color="#8B5CF6" />
+                      )}
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: '#8B5CF6' }}>AI Draft</Text>
+                    </TouchableOpacity>
+                  </View>
                   <TextInput
                     style={styles.responseInput}
                     placeholder="Type your reply to the user..."

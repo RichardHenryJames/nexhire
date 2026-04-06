@@ -218,6 +218,7 @@ import {
   getMessages,
   closeTicket,
   refundReferral,
+  aiPrefillSupportReply,
 } from "./src/controllers/support.controller";
 
 // Import social share controller
@@ -1773,6 +1774,13 @@ app.http("support-referral-refund", {
   authLevel: "anonymous",
   route: "support/referral-refund",
   handler: withErrorHandling(refundReferral),
+});
+
+app.http("support-ai-prefill", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "support/tickets/{ticketId}/ai-prefill",
+  handler: aiPrefillSupportReply,
 });
 
 // ========================================================================

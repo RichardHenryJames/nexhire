@@ -580,3 +580,68 @@ export const refundReferral = withAuth(async (
         };
     }
 });
+
+/**
+ * POST /support/tickets/:ticketId/ai-prefill
+ * Admin-only: Generate AI draft reply for a support ticket
+ */
+export const aiPrefillSupportReply = withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const user = authenticate(req);
+
+    // Admin check
+    const adminCheck = await dbService.executeQuery(
+        `SELECT UserType FROM Users WHERE UserID = @param0`,
+        [user.userId]
+    );
+    if (adminCheck.recordset?.[0]?.UserType !== 'Admin') {
+        throw new AuthorizationError('Admin access required');
+    }
+
+    const ticketId = req.params?.ticketId;
+    if (!ticketId) throw new ValidationError('Ticket ID is required');
+
+    // Get ticket + messages
+    const ticketResult = await dbService.executeQuery(
+        `SELECT t.Subject, t.Description, t.Category, t.Status, t.Priority,
+                u.FirstName, u.Email
+         FROM SupportTickets t
+         JOIN Users u ON t.UserID = u.UserID
+         WHERE t.TicketID = @param0`,
+        [ticketId]
+    );
+    if (!ticketResult.recordset?.length) throw new NotFoundError('Ticket not found');
+    const ticket = ticketResult.recordset[0];
+
+    const msgResult = await dbService.executeQuery(
+        `SELECT Content, SenderType, CreatedAt FROM SupportMessages
+         WHERE TicketID = @param0 ORDER BY CreatedAt ASC`,
+        [ticketId]
+    );
+    const conversation = (msgResult.recordset || []).map((m: any) =>
+        `${m.SenderType}: ${m.Content}`
+    ).join('\n\n');
+
+    const { AIService } = await import('../services/ai.service');
+    const aiResult = await AIService.call({
+        prompt: `You are a customer support agent for RefOpen, a job referral platform. A user named ${ticket.FirstName || 'the user'} has a support ticket.
+
+Ticket Subject: ${ticket.Subject}
+Category: ${ticket.Category}
+Priority: ${ticket.Priority}
+Original Message: ${ticket.Description}
+
+${conversation ? `Conversation so far:\n${conversation}` : ''}
+
+Write a helpful reply as RefOpen customer care. Be friendly, empathetic, and solution-oriented. Write in a natural conversational way. Don't sound robotic or use corporate jargon. Use the user's first name if available. Keep it short, 1-2 paragraphs max. Never use em dashes. Address the user's issue directly and provide next steps if applicable.
+
+Respond with just the reply text, no JSON, no formatting.`,
+        groqApiKey: process.env.GROQ_BLIND_REVIEW_API_KEY || '',
+        geminiApiKey: process.env.GEMINI_BLIND_REVIEW_API_KEY || '',
+        options: { temperature: 0.6, maxTokens: 512 },
+    });
+
+    return {
+        status: 200,
+        jsonBody: successResponse({ reply: aiResult.text }, 'AI draft generated')
+    };
+});
