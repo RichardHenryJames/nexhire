@@ -256,7 +256,7 @@ if (Test-Path $indexPath) {
     # NOTE: Google AdSense script is loaded dynamically by AdCard component
     # to avoid "ads on screens without publisher content" violation
     $seoTags = @"
-    <link rel="preload" as="image" href="/refopen-logo.png" />
+    <link rel="preload" as="image" href="/refopen-icon.png" />
     <meta name="google-site-verification" content="d2gTyIhcv5i6OYtnNqXg3zOY5nKXykW8_3-QZ4XtD8g" />
     <meta name="description" content="RefOpen - India's first all-in-one career platform. Get referred to Google, Amazon, Microsoft & 500+ top companies. AI Resume Analyzer, AI Resume Builder, Interview Prep, Salary Checker, LinkedIn Optimizer & 125K+ jobs. One app for your entire job search journey." />
     <meta name="keywords" content="refer, referral, job refer, ask for referral, get referred, job referrals, employee referrals, referral request, refer me, refer job, company referral, ask referral, request referral, job referral platform, get job referral, how to get referral, referral for job, job search, find jobs, job apply, apply for job, job application, job vacancy, job openings, fresher jobs, experienced jobs, IT jobs, tech jobs, software jobs, resume, upload resume, resume analyzer, ats resume checker, resume builder, ai resume builder, interview prep, mock interview, salary checker, salary spy, linkedin optimizer, offer negotiation, career tools, ai career tools, job portal, job hunting, career opportunities, hiring, work from home jobs, remote jobs, internship, placement, hire talent, earn rewards, referral bonus, careers at refopen" />
@@ -267,7 +267,7 @@ if (Test-Path $indexPath) {
     <meta property="og:url" content="https://refopen.com/" />
     <meta property="og:title" content="RefOpen - India's All-in-One Career Platform | Referrals, AI Resume, Interview Prep" />
     <meta property="og:description" content="India's first all-in-one career platform. Get referred to 500+ top companies. AI Resume Analyzer, Resume Builder, Interview Prep, Salary Checker & 125K+ jobs." />
-    <meta property="og:image" content="https://refopen.com/refopen-logo.png" />
+    <meta property="og:image" content="https://refopen.com/refopen-icon.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
     <meta property="og:site_name" content="RefOpen" />
@@ -275,7 +275,7 @@ if (Test-Path $indexPath) {
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="RefOpen - India's All-in-One Career Platform" />
     <meta name="twitter:description" content="Get referred to Google, Amazon, Microsoft & 500+ companies. AI Resume Analyzer, Resume Builder, Interview Prep, Salary Checker & 125K+ jobs. One app for everything." />
-    <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
+    <meta name="twitter:image" content="https://refopen.com/refopen-icon.png" />
     <meta name="twitter:site" content="@refaborr" />
     <meta name="twitter:creator" content="@refaborr" />
     <link rel="manifest" href="/manifest.json" />
@@ -284,7 +284,6 @@ if (Test-Path $indexPath) {
     <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
     <link rel="dns-prefetch" href="https://refopen-api-func.azurewebsites.net" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png" />
@@ -305,11 +304,11 @@ if (Test-Path $indexPath) {
       "url": "https://refopen.com",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://refopen.com/refopen-logo.png",
+        "url": "https://refopen.com/refopen-icon.png",
         "width": 512,
         "height": 512
       },
-      "image": "https://refopen.com/refopen-logo.png",
+      "image": "https://refopen.com/refopen-icon.png",
       "sameAs": [
         "https://www.linkedin.com/company/refopen"
       ],
