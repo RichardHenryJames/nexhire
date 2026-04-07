@@ -20,6 +20,8 @@ export default function DesktopNavBar() {
   const [showMeDropdown, setShowMeDropdown] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingReferralCount, setPendingReferralCount] = useState(0);
+  const [pendingBlindReviewCount, setPendingBlindReviewCount] = useState(0);
   const { unreadCount: messageUnreadCount } = useUnreadMessages();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -121,7 +123,7 @@ export default function DesktopNavBar() {
     return () => window.removeEventListener('popstate', onPopState);
   }, [getTabFromPath]);
 
-  // Fetch wallet balance + notification unread count
+  // Fetch wallet balance + notification unread count + referrer badges
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -132,6 +134,24 @@ export default function DesktopNavBar() {
         if (walletRes?.success) setWalletBalance(walletRes.data?.Balance ?? walletRes.data?.balance ?? 0);
         if (notifRes?.success) setUnreadCount(notifRes.data?.count || 0);
       } catch {}
+      // Referrer badges
+      if (isVerifiedReferrer || isAdmin) {
+        try {
+          const [refRes, brRes] = await Promise.all([
+            refopenAPI.getAvailableReferralRequests(1, 100).catch(() => null),
+            refopenAPI.apiCall('/tools/blind-review/pending').catch(() => null),
+          ]);
+          if (refRes?.success && refRes.data) {
+            const requests = Array.isArray(refRes.data) ? refRes.data : (refRes.data.requests || []);
+            const active = requests.filter(r =>
+              ['Pending', 'NotifiedToReferrers', 'Viewed', 'Claimed'].includes(r.Status) ||
+              (r.OpenToAnyCompany && r.Status === 'Completed')
+            );
+            setPendingReferralCount(active.length);
+          }
+          if (brRes?.success && brRes.data) setPendingBlindReviewCount(brRes.data.length);
+        } catch {}
+      }
     };
     fetchData();
     const interval = setInterval(fetchData, 30000);
@@ -210,6 +230,11 @@ export default function DesktopNavBar() {
         <Ionicons name={item.icon} size={18} color={colors.textSecondary} />
         <Text style={[styles.dropdownItemText, { color: colors.text }]}>{item.label}</Text>
         {item.right && <Text style={[styles.dropdownItemRight, { color: colors.primary }]}>{item.right}</Text>}
+        {item.badge > 0 && (
+          <View style={{ backgroundColor: '#EF4444', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 5 }}>
+            <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{item.badge > 99 ? '99+' : item.badge}</Text>
+          </View>
+        )}
       </View>
     );
 
@@ -476,28 +501,41 @@ export default function DesktopNavBar() {
 
                 <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
 
-                {/* Account section */}
-                <Text style={[styles.sectionLabel, { color: colors.text }]}>Account</Text>
+                {/* Wallet & Rewards */}
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>Wallet & Rewards</Text>
                 {[
                   { icon: 'wallet-outline', label: 'Wallet', screen: 'Wallet', right: walletBalance !== null ? `₹${walletBalance}` : null },
                   ...(isVerifiedReferrer || isAdmin ? [{ icon: 'trending-up-outline', label: 'Earnings', screen: 'Earnings' }] : []),
-                  { icon: 'settings-outline', label: 'Settings & Privacy', screen: 'Settings' },
+                  { icon: 'megaphone-outline', label: 'Social Share', screen: 'ShareEarn' },
                 ].map(item => renderDropdownLink(item))}
 
                 <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
 
-                {/* Manage section */}
-                <Text style={[styles.sectionLabel, { color: colors.text }]}>Manage</Text>
+                {/* Your Activity */}
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>Your Activity</Text>
                 {[
-                  { icon: 'send-outline', label: 'Referral Requests', screen: 'MyReferralRequests' },
+                  { icon: 'send-outline', label: 'My Referral Requests', screen: 'MyReferralRequests' },
+                  { icon: 'eye-outline', label: 'Who Viewed My Profile', screen: 'ProfileViews' },
                   { icon: 'bookmark-outline', label: 'Saved Jobs', screen: 'SavedJobs' },
                   { icon: 'document-text-outline', label: 'Applications', screen: 'Applications' },
-                  { icon: 'megaphone-outline', label: 'Social Share', screen: 'ShareEarn' },
                 ].map(item => renderDropdownLink(item))}
+
+                <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
+
+                {/* Referrer */}
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>{isVerifiedReferrer || isAdmin ? 'Referrer' : 'Referrer'}</Text>
                 {isVerifiedReferrer || isAdmin
-                  ? <>{renderDropdownLink({ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral' })}{renderDropdownLink({ icon: 'eye-off-outline', label: 'Blind Review Inbox', screen: 'BlindReviewInbox' })}</>
-                  : renderDropdownLink({ icon: 'shield-checkmark-outline', label: 'Become Referrer', screen: 'BecomeReferrer' })
+                  ? <>{renderDropdownLink({ icon: 'people-outline', label: 'Provide Referral', screen: 'Referral', badge: pendingReferralCount })}{renderDropdownLink({ icon: 'eye-off-outline', label: 'Blind Review Inbox', screen: 'BlindReviewInbox', badge: pendingBlindReviewCount })}</>
+                  : renderDropdownLink({ icon: 'shield-checkmark-outline', label: 'Become a Referrer', screen: 'BecomeReferrer' })
                 }
+
+                <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
+
+                {/* More */}
+                <Text style={[styles.sectionLabel, { color: colors.text }]}>More</Text>
+                {[
+                  { icon: 'settings-outline', label: 'Settings & Privacy', screen: 'Settings' },
+                ].map(item => renderDropdownLink(item))}
 
                 <View style={[styles.dropdownDivider, { backgroundColor: colors.border }]} />
 
