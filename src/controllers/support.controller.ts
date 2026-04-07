@@ -602,7 +602,7 @@ export const aiPrefillSupportReply = withErrorHandling(async (req: HttpRequest, 
 
     // Get ticket + messages
     const ticketResult = await dbService.executeQuery(
-        `SELECT t.Subject, t.Description, t.Category, t.Status, t.Priority,
+        `SELECT t.Subject, t.Message, t.Category, t.Status, t.Priority,
                 u.FirstName, u.Email
          FROM SupportTickets t
          JOIN Users u ON t.UserID = u.UserID
@@ -613,12 +613,12 @@ export const aiPrefillSupportReply = withErrorHandling(async (req: HttpRequest, 
     const ticket = ticketResult.recordset[0];
 
     const msgResult = await dbService.executeQuery(
-        `SELECT Content, SenderType, CreatedAt FROM SupportMessages
+        `SELECT Message, SenderType, CreatedAt FROM SupportMessages
          WHERE TicketID = @param0 ORDER BY CreatedAt ASC`,
         [ticketId]
     );
     const conversation = (msgResult.recordset || []).map((m: any) =>
-        `${m.SenderType}: ${m.Content}`
+        `${m.SenderType}: ${m.Message}`
     ).join('\n\n');
 
     const { AIService } = await import('../services/ai.service');
@@ -628,7 +628,7 @@ export const aiPrefillSupportReply = withErrorHandling(async (req: HttpRequest, 
 Ticket Subject: ${ticket.Subject}
 Category: ${ticket.Category}
 Priority: ${ticket.Priority}
-Original Message: ${ticket.Description}
+Original Message: ${ticket.Message}
 
 ${conversation ? `Conversation so far:\n${conversation}` : ''}
 
