@@ -194,7 +194,6 @@ export default function ProfileSlider({ visible, onClose }) {
           icon: 'trending-up-outline',
           label: 'Earnings',
           onPress: () => navigateTo('Earnings'),
-          highlight: true,
         }] : []),
         {
           icon: 'megaphone-outline',
@@ -223,9 +222,8 @@ export default function ProfileSlider({ visible, onClose }) {
       items: [
         {
           icon: 'shield-checkmark-outline',
-          label: 'Become a Referrer 🚀',
+          label: 'Become a Referrer',
           onPress: () => navigateTo('BecomeReferrer'),
-          highlight: true,
         },
       ],
     }] : [{
