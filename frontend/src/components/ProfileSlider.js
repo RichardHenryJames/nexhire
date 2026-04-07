@@ -19,13 +19,11 @@ import {
 } from 'react-native';
 import CachedImage from './CachedImage';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { showToast } from './Toast';
 import refopenAPI from '../services/api';
-import { frontendConfig } from '../config/appConfig';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SLIDER_WIDTH = Math.min(SCREEN_WIDTH * 0.78, 340);
@@ -36,7 +34,6 @@ export default function ProfileSlider({ visible, onClose }) {
   const navigation = useNavigation();
   const slideAnim = useRef(new Animated.Value(-SLIDER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
-  const newBadgePulse = useRef(new Animated.Value(0.6)).current;
   const [mounted, setMounted] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [walletBalance, setWalletBalance] = useState(null);
@@ -73,13 +70,6 @@ export default function ProfileSlider({ visible, onClose }) {
 
   useEffect(() => {
     if (visible) {
-      // Pulse animation for NEW badge
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(newBadgePulse, { toValue: 1, duration: 1200, useNativeDriver: true }),
-          Animated.timing(newBadgePulse, { toValue: 0.6, duration: 1200, useNativeDriver: true }),
-        ])
-      ).start();
       // Refresh verification status and wallet balance when slider opens
       refreshVerificationStatus();
       (async () => {
@@ -614,22 +604,6 @@ export default function ProfileSlider({ visible, onClose }) {
                   }} numberOfLines={1}>
                     {item.label}
                   </Text>
-                  {item.highlight && (
-                    <Animated.View style={{ opacity: newBadgePulse }}>
-                      <LinearGradient
-                        colors={[colors.indigo, colors.primary, colors.pink]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={{
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                          borderRadius: 8,
-                        }}
-                      >
-                        <Text style={{ color: colors.white, fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>NEW</Text>
-                      </LinearGradient>
-                    </Animated.View>
-                  )}
                   {item.rightText && (
                     <Text style={{
                       color: colors.primary,
