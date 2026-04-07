@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
 import useResponsive from '../../hooks/useResponsive';
+import usePageSEO from '../../hooks/usePageSEO';
 import refopenAPI from '../../services/api';
 import { typography } from '../../styles/theme';
 import { showToast } from '../../components/Toast';
@@ -27,6 +28,11 @@ export default function AskReferralScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { pricing } = usePricing();
   const responsive = useResponsive();
+  usePageSEO({
+    title: 'Ask for Job Referral at Google, Amazon, Microsoft & 500+ Companies | RefOpen',
+    description: 'Get employee referrals at top companies. Connect with verified employees and boost your chances of getting hired by 10x with RefOpen.',
+    path: '/ask-referral',
+  });
   const isDesktop = Platform.OS === 'web' && responsive.isDesktop;
   const s = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 

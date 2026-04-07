@@ -1,0 +1,33 @@
+{
+  "name": "RefOpen - Job Referrals & Career Platform",
+  "short_name": "RefOpen",
+  "description": "India's first all-in-one career platform. Get referred to 500+ top companies, AI Resume Analyzer, Resume Builder, Interview Prep, Salary Checker & 125K+ jobs.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366F1",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-IN",
+  "categories": ["business", "productivity", "education"],
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "/refopen-small-logo.jpg",
+      "sizes": "180x180",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/refopen-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

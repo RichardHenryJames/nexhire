@@ -190,7 +190,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
     try {
       const url = Platform.OS === 'web'
         ? window.location.href
-        : `https://app.refopen.com/careers/job/${jobId}`;
+        : `https://refopen.com/careers/job/${jobId}`;
       if (Platform.OS === 'web') {
         if (navigator.share) {
           await navigator.share({ title: job.Title, text: `${job.Title} at RefOpen`, url });

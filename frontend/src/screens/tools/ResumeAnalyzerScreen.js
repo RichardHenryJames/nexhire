@@ -31,6 +31,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { useResponsive } from '../../hooks/useResponsive';
+import usePageSEO from '../../hooks/usePageSEO';
 import { useAuth } from '../../contexts/AuthContext';
 import { typography, spacing, borderRadius } from '../../styles/theme';
 import SignInBottomSheet from '../../components/SignInBottomSheet';
@@ -227,6 +228,11 @@ function AccordionSection({ title, icon, borderColor, children, defaultOpen = fa
 export default function ResumeAnalyzerScreen({ navigation, route }) {
   const { colors } = useTheme();
   const { width, isMobile, isTablet, isDesktop } = useResponsive();
+  usePageSEO({
+    title: 'Free AI Resume Analyzer & ATS Checker | RefOpen',
+    description: 'Analyze your resume with AI. Get ATS compatibility score, keyword suggestions, and actionable feedback to land more interviews. Free tool by RefOpen.',
+    path: '/resume-analyzer',
+  });
   const styles = useMemo(() => createStyles(colors, width, isMobile, isTablet, isDesktop), [colors, width, isMobile, isTablet, isDesktop]);
 
   const { user, loginWithGoogle, googleAuthAvailable } = useAuth();

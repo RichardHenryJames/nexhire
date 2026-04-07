@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import useResponsive from '../../hooks/useResponsive';
+import usePageSEO from '../../hooks/usePageSEO';
 import { typography } from '../../styles/theme';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import { ResponsiveContainer } from '../../components/common/ResponsiveLayout';
@@ -220,6 +221,46 @@ export const BLOG_ARTICLES = [
     date: 'November 22, 2025',
     author: 'RefOpen Team',
   },
+  {
+    id: 'hidden-job-market',
+    title: 'The Hidden Job Market: 70% of Jobs Are Never Posted Online',
+    excerpt: 'Most jobs are filled before they ever hit a job board. Learn how to access the hidden job market through referrals, networking, and insider strategies.',
+    image: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800',
+    category: 'Job Search',
+    readTime: '9 min read',
+    date: 'April 5, 2026',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'ai-reshaping-hiring',
+    title: 'How AI Is Reshaping Hiring in 2026 — And What It Means for You',
+    excerpt: 'From AI resume screeners to automated interviews, technology is transforming recruitment. Here\'s how to stay ahead and use AI to your advantage.',
+    image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800',
+    category: 'Industry Trends',
+    readTime: '10 min read',
+    date: 'April 3, 2026',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'employee-referral-psychology',
+    title: 'The Psychology Behind Employee Referrals: Why Companies Trust Them More',
+    excerpt: 'Referred hires stay 70% longer and perform 25% better. Dive into the science of social proof, trust networks, and why referrals outperform every other hiring channel.',
+    image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800',
+    category: 'Career Tips',
+    readTime: '8 min read',
+    date: 'March 28, 2026',
+    author: 'RefOpen Team',
+  },
+  {
+    id: 'india-startup-vs-mnc',
+    title: 'Indian Startup vs MNC in 2026: Which Career Path Is Right for You?',
+    excerpt: 'Swiggy or Google? Razorpay or Microsoft? Compare compensation, growth speed, work culture, and long-term prospects to make the right career choice.',
+    image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800',
+    category: 'Career Growth',
+    readTime: '11 min read',
+    date: 'March 22, 2026',
+    author: 'RefOpen Team',
+  },
 ];
 
 const BlogCard = ({ article, onPress, colors, styles }) => {
@@ -248,6 +289,12 @@ export default function BlogListScreen() {
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive, isDark), [colors, responsive, isDark]);
 
+  usePageSEO({
+    title: 'Career Blog - Job Search Tips, Interview Guides & More | RefOpen',
+    description: 'Expert career advice: resume tips, interview preparation, salary negotiation, networking strategies, and job search guides. Read the RefOpen career blog.',
+    path: '/blog',
+  });
+
   // Smart back navigation handler
   const handleBackPress = () => {
     const navState = navigation.getState();
@@ -263,6 +310,11 @@ export default function BlogListScreen() {
   const handleArticlePress = (article) => {
     navigation.navigate('BlogArticle', { articleId: article.id });
   };
+
+  // Sort articles by date descending (newest first)
+  const sortedArticles = useMemo(() => {
+    return [...BLOG_ARTICLES].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, []);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -291,8 +343,8 @@ export default function BlogListScreen() {
       <View style={styles.featuredSection}>
         <Text style={styles.sectionTitle}>Featured</Text>
         <BlogCard 
-          article={BLOG_ARTICLES[0]} 
-          onPress={() => handleArticlePress(BLOG_ARTICLES[0])}
+          article={sortedArticles[0]} 
+          onPress={() => handleArticlePress(sortedArticles[0])}
           colors={colors}
           styles={styles}
         />
@@ -301,7 +353,7 @@ export default function BlogListScreen() {
       {/* All Articles */}
       <View style={styles.articlesSection}>
         <Text style={styles.sectionTitle}>Latest Articles</Text>
-        {BLOG_ARTICLES.slice(1).map((article) => (
+        {sortedArticles.slice(1).map((article) => (
           <BlogCard 
             key={article.id}
             article={article} 

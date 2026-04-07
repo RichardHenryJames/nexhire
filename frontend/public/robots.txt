@@ -6,6 +6,7 @@ Allow: /
 
 # Sitemap location
 Sitemap: https://refopen.com/sitemap.xml
+Sitemap: https://www.refopen.com/sitemap.xml
 
 # Disallow admin and private routes
 Disallow: /api/

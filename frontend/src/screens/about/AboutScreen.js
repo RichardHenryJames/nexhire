@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import useResponsive from '../../hooks/useResponsive';
+import usePageSEO from '../../hooks/usePageSEO';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -482,6 +483,11 @@ export default function AboutScreenNew() {
   const { colors, isDark } = useTheme();
   const { isAuthenticated } = useAuth();
   const { isDesktop, isTablet, isMobile } = useResponsive();
+  usePageSEO({
+    title: "About RefOpen - India's First All-in-One Career Platform",
+    description: "Learn about RefOpen — India's first platform combining job search, employee referrals, AI resume tools, and career growth in one place.",
+    path: '/about',
+  });
 
   // Navigate to Main if logged in, Auth (Login) if logged out
   const goToApp = () => navigation.navigate(isAuthenticated ? 'Main' : 'Auth');

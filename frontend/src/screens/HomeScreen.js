@@ -26,6 +26,7 @@ import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
 import AdCard from '../components/ads/AdCard'; // Google AdSense Ad
 import useResponsive from '../hooks/useResponsive';
+import usePageSEO from '../hooks/usePageSEO';
 import DesktopLayout from '../components/layout/DesktopLayout';
 import { ResponsiveContainer, ResponsiveGrid } from '../components/common/ResponsiveLayout';
 import { showToast } from '../components/Toast';
@@ -102,6 +103,11 @@ const { needsVerification, showVerificationModal } = useEmailVerification();
 const { colors } = useTheme();
 const responsive = useResponsive();
 const { isMobile, isDesktop, isTablet, contentWidth, gridColumns, statColumns } = responsive;
+usePageSEO({
+  title: "RefOpen - Find Jobs, Get Referrals, AI Career Tools | India's #1 Platform",
+  description: "India's first all-in-one career platform. Find jobs, get employee referrals at Google, Amazon, Microsoft & 500+ top companies. AI Resume Analyzer, Resume Builder, Interview Prep & 125K+ jobs.",
+  path: '/',
+});
 const styles = React.useMemo(() => createStyles(colors, responsive), [colors, responsive]);
 const [refreshing, setRefreshing] = useState(false);
 

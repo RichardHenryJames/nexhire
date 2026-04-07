@@ -276,6 +276,13 @@ if (Test-Path $indexPath) {
     <meta name="twitter:title" content="RefOpen - India's All-in-One Career Platform" />
     <meta name="twitter:description" content="Get referred to Google, Amazon, Microsoft & 500+ companies. AI Resume Analyzer, Resume Builder, Interview Prep, Salary Checker & 125K+ jobs. One app for everything." />
     <meta name="twitter:image" content="https://refopen.com/refopen-logo.png" />
+    <meta name="twitter:site" content="@refaborr" />
+    <meta name="twitter:creator" content="@refaborr" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+    <link rel="dns-prefetch" href="https://refopen-api-func.azurewebsites.net" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/jpeg" href="/favicon.jpg" />
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
@@ -497,13 +504,7 @@ if (Test-Path $indexPath) {
         <p>Contact: support@refopen.com</p>
       </footer>
     </div>
-    <script>
-      // Remove SEO content after React app loads
-      window.addEventListener('DOMContentLoaded', function() {
-        var seoContent = document.getElementById('seo-content');
-        if (seoContent) seoContent.remove();
-      });
-    </script>
+    <!-- SEO content remains for crawlers - visually hidden via clip-rect -->
 "@
     
     # Add static content before <div id="root">
