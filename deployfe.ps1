@@ -272,6 +272,9 @@ if (Test-Path $indexPath) {
     <meta property="og:image:height" content="512" />
     <meta property="og:site_name" content="RefOpen" />
     <meta property="og:locale" content="en_IN" />
+    <meta property="article:author" content="RefOpen" />
+    <meta property="article:published_time" content="2024-01-01T00:00:00+05:30" />
+    <meta property="article:modified_time" content="2026-04-07T00:00:00+05:30" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="RefOpen - India's All-in-One Career Platform" />
     <meta name="twitter:description" content="Get referred to Google, Amazon, Microsoft & 500+ companies. AI Resume Analyzer, Resume Builder, Interview Prep, Salary Checker & 125K+ jobs. One app for everything." />
