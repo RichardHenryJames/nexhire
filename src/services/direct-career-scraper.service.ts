@@ -945,6 +945,12 @@ export class DirectCareerScraperService {
       if (m) return Math.max(0, Math.min(parseInt(m[1]), 50));
     }
     if (content.includes('senior') || content.includes('lead')) return 5;
+    if (content.includes('staff') || content.includes('principal')) return 8;
+    // Detect numeric/Roman numeral levels (e.g., "Engineer III", "SDE 3", "Developer IV")
+    const titleLower = title.toLowerCase();
+    if (/\b(iv|4)\b/.test(titleLower)) return 8;
+    if (/\b(iii|3)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower)) return 5;
+    if (/\b(ii|2)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower)) return 2;
     if (content.includes('mid') || content.includes('intermediate')) return 3;
     if (content.includes('junior') || content.includes('entry')) return 0;
     return 0;
