@@ -939,30 +939,48 @@ export class DirectCareerScraperService {
 
   private static extractMinExperience(title: string, description: string): number {
     const content = `${title} ${description}`.toLowerCase();
-    const patterns = [/(\d+)\+?\s*years?\s+(?:of\s+)?experience/, /(\d+)-\d+\s*years/];
-    for (const p of patterns) {
-      const m = content.match(p);
-      if (m) return Math.max(0, Math.min(parseInt(m[1]), 50));
-    }
-    if (content.includes('senior') || content.includes('lead')) return 5;
-    if (content.includes('staff') || content.includes('principal')) return 8;
-    // Detect numeric/Roman numeral levels (e.g., "Engineer III", "SDE 3", "Developer IV")
     const titleLower = title.toLowerCase();
-    if (/\b(iv|4)\b/.test(titleLower)) return 8;
+
+    // Pattern 1: Explicit ranges — "3-5 years", "5 to 8 years"
+    const rangeMatch = content.match(/(\d{1,2})\s*[-–—to]+\s*\d{1,2}\s*\+?\s*(?:years?|yrs?)\s*(?:of\s+)?(?:experience|exp|relevant|professional|work|industry)?/i);
+    if (rangeMatch) { const v = parseInt(rangeMatch[1]); if (v >= 0 && v <= 30) return v; }
+
+    // Pattern 2: "X+ years experience", "minimum X years", "at least X years"
+    const minPatterns = [
+      /(\d{1,2})\+?\s*(?:years?|yrs?)\s*(?:of\s+)?(?:experience|exp|relevant|professional|work|industry|hands[- ]on)/i,
+      /(?:minimum|min|at\s*least|over|more\s*than)\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)/i,
+      /(?:experience|exp)\s*[:;]\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)/i,
+      /(\d{1,2})\+?\s*(?:years?|yrs?)\s*(?:in|with|working)/i,
+    ];
+    for (const p of minPatterns) {
+      const m = content.match(p);
+      if (m) { const v = parseInt(m[1]); if (v >= 1 && v <= 30) return v; }
+    }
+
+    // Pattern 3: Title-based seniority
+    if (/\bstaff\b/i.test(titleLower) && /engineer|developer|architect|scientist/i.test(titleLower)) return 8;
+    if (/\bprincipal\b/i.test(titleLower) && /engineer|developer|architect|scientist/i.test(titleLower)) return 8;
+    if (/\b(iv|4)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower)) return 8;
     if (/\b(iii|3)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower)) return 5;
-    if (/\b(ii|2)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower)) return 2;
+    if (/\b(ii|2)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower) && !/iii|iv/i.test(titleLower)) return 2;
+    if (/\bsenior\b|\blead\b/i.test(titleLower) && /engineer|developer|architect|scientist|analyst/i.test(titleLower)) return 5;
+    if (content.includes('senior') || content.includes('lead')) return 5;
+    if (/\bdirector\b|\bvp\b|\bchief\b/i.test(titleLower)) return 10;
+    if (/\bmanager\b/i.test(titleLower) && !/account|case|shift|store|warehouse|retail/i.test(titleLower)) return 5;
     if (content.includes('mid') || content.includes('intermediate')) return 3;
-    if (content.includes('junior') || content.includes('entry')) return 0;
+    if (/\bjunior\b|\bentry\b|\bintern\b|\bfresher\b|\bgraduate\b/i.test(titleLower)) return 0;
     return 0;
   }
 
   private static extractMaxExperience(title: string, description: string): number {
     const minExp = this.extractMinExperience(title, description);
     const content = `${title} ${description}`.toLowerCase();
-    const rangeMatch = content.match(/(\d+)-(\d+)\s*years/);
+    // Check for explicit range
+    const rangeMatch = content.match(/(\d{1,2})\s*[-–—to]+\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)/i);
     if (rangeMatch) return Math.max(minExp, Math.min(parseInt(rangeMatch[2]), 50));
-    if (content.includes('senior') || content.includes('lead')) return Math.max(minExp + 5, 10);
-    if (content.includes('mid')) return Math.max(minExp + 3, 7);
+    if (minExp >= 8) return Math.max(minExp + 5, 13);
+    if (minExp >= 5) return Math.max(minExp + 5, 10);
+    if (minExp >= 3) return Math.max(minExp + 4, 7);
     return Math.max(minExp + 3, 5);
   }
 }

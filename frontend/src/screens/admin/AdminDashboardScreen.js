@@ -1477,17 +1477,43 @@ export default function AdminDashboardScreen() {
   );
   };
 
+  const [companyFilter, setCompanyFilter] = useState('');
+
   const renderCompaniesTab = () => {
     if (tabLoading.referrals && !companiesWithReferrers.length) {
       return <TabLoadingSpinner />;
     }
+    const filtered = companyFilter.trim()
+      ? companiesWithReferrers.filter(c =>
+          (c.CompanyName || '').toLowerCase().includes(companyFilter.toLowerCase()) ||
+          (c.Industry || '').toLowerCase().includes(companyFilter.toLowerCase()) ||
+          (c.ReferrerNames || '').toLowerCase().includes(companyFilter.toLowerCase())
+        )
+      : companiesWithReferrers;
     return (
     <>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Companies with Referrers</Text>
-        <Text style={styles.sectionSubtitle}>{companiesWithReferrers.length} companies</Text>
+        <Text style={styles.sectionSubtitle}>{filtered.length} of {companiesWithReferrers.length} companies</Text>
       </View>
-      {companiesWithReferrers.map((company, index) => (
+      <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12 }}>
+          <Ionicons name="search" size={16} color={colors.textSecondary} />
+          <TextInput
+            style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: 14, color: colors.text }}
+            placeholder="Filter by company, industry, or referrer..."
+            placeholderTextColor={colors.textSecondary}
+            value={companyFilter}
+            onChangeText={setCompanyFilter}
+          />
+          {companyFilter.length > 0 && (
+            <TouchableOpacity onPress={() => setCompanyFilter('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      {filtered.map((company, index) => (
         <View key={company.OrganizationID || index} style={styles.referralCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {company.LogoURL ? (
