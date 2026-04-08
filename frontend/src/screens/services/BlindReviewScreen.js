@@ -641,9 +641,6 @@ export default function BlindReviewScreen({ navigation, route }) {
                   </>
                 )}
               </TouchableOpacity>
-              {isFreeUse && (
-                <Text style={s.freeLabel}>✨ First review is free</Text>
-              )}
             </View>
           )}
         </>

@@ -9,8 +9,10 @@ import {
   Platform,
   RefreshControl,
   TextInput,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -53,6 +55,46 @@ export default function JobsLandingScreen({ navigation, route }) {
   const [workplaceTypes, setWorkplaceTypes] = useState(() => getCached(CACHE_KEYS.JOBS_WORKPLACE_TYPES) || []);
   const [searchQuery, setSearchQuery] = useState('');
   const abortRef = useRef(null);
+
+  // FAB counts
+  const [savedCount, setSavedCount] = useState(0);
+  const [appliedCount, setAppliedCount] = useState(0);
+  const [myReferralRequestsCount, setMyReferralRequestsCount] = useState(0);
+
+  // FAB expand/collapse animation
+  const [fabOpen, setFabOpen] = useState(false);
+  const fabAnim = useRef(new Animated.Value(0)).current;
+  const toggleFab = useCallback(() => {
+    const toValue = fabOpen ? 0 : 1;
+    Animated.spring(fabAnim, { toValue, useNativeDriver: true, friction: 6, tension: 80 }).start();
+    setFabOpen(prev => !prev);
+  }, [fabOpen, fabAnim]);
+
+  // Load FAB badge counts
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      const loadCounts = async () => {
+        try {
+          const [appliedRes, savedRes, referralRes] = await Promise.all([
+            refopenAPI.getMyApplications(1, 1),
+            refopenAPI.getMySavedJobs(1, 1),
+            isJobSeeker ? refopenAPI.getMyReferralRequests(1, 500) : Promise.resolve(null),
+          ]);
+          if (appliedRes?.success) setAppliedCount(Number(appliedRes.meta?.total || 0));
+          if (savedRes?.success) setSavedCount(Number(savedRes.meta?.total || 0));
+          if (referralRes?.success) {
+            const active = (referralRes.data?.requests || []).filter(r =>
+              !['Cancelled', 'Expired', 'Verified', 'Unverified', 'Refunded'].includes(r.Status)
+            );
+            setMyReferralRequestsCount(active.length);
+          }
+        } catch {}
+      };
+      const timer = setTimeout(loadCounts, 100);
+      return () => clearTimeout(timer);
+    }, [user])
+  );
 
   // Filter modal state (opens in-place, navigates to JobsList on apply)
   const EMPTY_FILTERS = {
@@ -451,9 +493,92 @@ export default function JobsLandingScreen({ navigation, route }) {
         }
       />
       
-      <DesktopLayout>
-        {mainContent}
-      </DesktopLayout>
+      <View style={{ flex: 1 }}>
+        <DesktopLayout>
+          {mainContent}
+        </DesktopLayout>
+
+        {/* Floating Action Button - Expandable (same as JobsScreen) */}
+        {user && (
+          <View style={styles.fabContainerTop} pointerEvents="box-none">
+            {/* Main FAB Toggle */}
+            <TouchableOpacity
+              style={[styles.fab, styles.fabMain]}
+              onPress={toggleFab}
+              activeOpacity={0.8}
+            >
+              <Animated.View style={{ transform: [{ rotate: fabAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] }) }] }}>
+                <Ionicons name="add" size={24} color={colors.white} />
+              </Animated.View>
+              {!fabOpen && (savedCount + appliedCount + myReferralRequestsCount) > 0 && (
+                <View style={styles.fabBadge}>
+                  <Text style={styles.fabBadgeText}>{savedCount + appliedCount + myReferralRequestsCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            {/* Child FAB 1: Saved Jobs */}
+            <Animated.View pointerEvents={fabOpen ? 'auto' : 'none'} style={{
+              opacity: fabAnim,
+              transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-10, 0] }) }, { scale: fabAnim }],
+            }}>
+              <TouchableOpacity
+                style={[styles.fab, styles.fabSaved]}
+                onPress={() => { navigation.navigate('SavedJobs'); toggleFab(); }}
+                activeOpacity={0.8}
+                pointerEvents={fabOpen ? 'auto' : 'none'}
+              >
+                <Ionicons name="bookmark" size={20} color={colors.white} />
+                {savedCount > 0 && (
+                  <View style={styles.fabBadge}>
+                    <Text style={styles.fabBadgeText}>{savedCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Child FAB 2: Applications */}
+            <Animated.View pointerEvents={fabOpen ? 'auto' : 'none'} style={{
+              opacity: fabAnim,
+              transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-15, 0] }) }, { scale: fabAnim }],
+            }}>
+              <TouchableOpacity
+                style={[styles.fab, styles.fabApplications]}
+                onPress={() => { navigation.navigate('Applications'); toggleFab(); }}
+                activeOpacity={0.8}
+                pointerEvents={fabOpen ? 'auto' : 'none'}
+              >
+                <Ionicons name="briefcase" size={20} color={colors.white} />
+                {appliedCount > 0 && (
+                  <View style={styles.fabBadge}>
+                    <Text style={styles.fabBadgeText}>{appliedCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+
+            {/* Child FAB 3: Referral Requests */}
+            <Animated.View pointerEvents={fabOpen ? 'auto' : 'none'} style={{
+              opacity: fabAnim,
+              transform: [{ translateY: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }, { scale: fabAnim }],
+            }}>
+              <TouchableOpacity
+                style={[styles.fab, styles.fabReferralRequests]}
+                onPress={() => { navigation.navigate('MyReferralRequests'); toggleFab(); }}
+                activeOpacity={0.8}
+                pointerEvents={fabOpen ? 'auto' : 'none'}
+              >
+                <Ionicons name="people" size={20} color={colors.white} />
+                {myReferralRequestsCount > 0 && (
+                  <View style={styles.fabBadge}>
+                    <Text style={styles.fabBadgeText}>{myReferralRequestsCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        )}
+      </View>
 
       <FilterModal
         visible={showFilterModal}
@@ -626,6 +751,62 @@ const createStyles = (colors, responsive = {}) => {
     chipText: {
       fontSize: 13,
       fontWeight: '500',
+    },
+    // Floating Action Buttons
+    fabContainerTop: {
+      position: 'absolute',
+      right: 16,
+      top: 170,
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 8,
+      zIndex: 10,
+    },
+    fab: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      justifyContent: 'center',
+      alignItems: 'center',
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      elevation: 6,
+    },
+    fabMain: {
+      backgroundColor: colors.primary,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+    },
+    fabSaved: {
+      backgroundColor: colors.primary,
+    },
+    fabApplications: {
+      backgroundColor: colors.primary,
+    },
+    fabReferralRequests: {
+      backgroundColor: colors.primary,
+    },
+    fabBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      backgroundColor: colors.error,
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 4,
+      borderWidth: 2,
+      borderColor: colors.surface,
+    },
+    fabBadgeText: {
+      color: colors.white,
+      fontSize: 11,
+      fontWeight: '700',
     },
     // Desktop LinkedIn-style layout
     desktopLayout: {
