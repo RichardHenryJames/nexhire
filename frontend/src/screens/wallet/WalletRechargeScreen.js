@@ -600,8 +600,7 @@ export default function WalletRechargeScreen({ navigation, route }) {
         <Ionicons name="information-circle" size={20} color={colors.primary} />
         <Text style={styles.infoText}>
           Maximum recharge: ₹1,00,000{'\n'}
-          Instant credit after payment{'\n'}
-          Wallet balance is non-withdrawable and can only be used for RefOpen services
+          Instant credit after payment
         </Text>
       </View>
 
