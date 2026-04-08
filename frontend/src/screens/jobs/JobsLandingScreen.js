@@ -296,6 +296,7 @@ export default function JobsLandingScreen({ navigation, route }) {
                   onPress={() => goToJob(job)}
                   hideApply
                   hideReferral
+                  hideSave
                   currentUserId={user?.UserID}
                 />
               </View>
