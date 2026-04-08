@@ -386,7 +386,9 @@ export class JobService {
 
         // \ud83d\ude80 OPTIMIZATION: Experience filters - use range comparison
         if (f.experienceMin) {
-            whereClause += ` AND (j.ExperienceMax IS NULL OR j.ExperienceMax >= @param${paramIndex})`;
+            // Job's minimum requirement must be at or above user's level
+            // e.g. user selects "10-20 yrs" → only show jobs requiring 10+ min, not 5-10 jobs
+            whereClause += ` AND (j.ExperienceMin IS NULL OR j.ExperienceMin >= @param${paramIndex})`;
             queryParams.push(Number(f.experienceMin));
             paramIndex++;
         }
