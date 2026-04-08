@@ -192,11 +192,11 @@ export default function JobsLandingScreen({ navigation, route }) {
     if (!isRefresh && !hasCached(CACHE_KEYS.RECENT_JOBS)) setLoading(true);
 
     try {
-      // Parallel fetch: recommended, F500, recent (page 2 for variety), reference data
+      // Parallel fetch: recommended (personalized), F500, recent (newest, no personalization), reference data
       const [recRes, f500Res, recentRes, refRes] = await Promise.all([
         refopenAPI.getJobs(1, 6, {}).catch(() => ({ success: false })),
         refopenAPI.getJobs(1, 6, { isFortune500: true }).catch(() => ({ success: false })),
-        refopenAPI.getJobs(2, 6, {}).catch(() => ({ success: false })),
+        refopenAPI.getJobs(1, 6, { sortBy: 'newest', dontPersonalize: true }).catch(() => ({ success: false })),
         refopenAPI.getBulkReferenceMetadata(['JobType', 'WorkplaceType']).catch(() => ({ success: false })),
       ]);
 
@@ -296,7 +296,6 @@ export default function JobsLandingScreen({ navigation, route }) {
                   onPress={() => goToJob(job)}
                   hideApply
                   hideReferral
-                  hideSave
                   currentUserId={user?.UserID}
                 />
               </View>

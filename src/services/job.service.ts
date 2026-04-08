@@ -46,6 +46,9 @@ export class JobService {
         preferredRoles: string | null;
         isFresher: boolean;
         totalExperienceMonths: number;
+        primarySkills: string | null;
+        preferredIndustries: string | null;
+        minimumSalary: number;
     }> {
         if (!userId) {
             return {
@@ -56,7 +59,10 @@ export class JobService {
                 latestJobTitle: null,
                 preferredRoles: null,
                 isFresher: false,
-                totalExperienceMonths: 0
+                totalExperienceMonths: 0,
+                primarySkills: null,
+                preferredIndustries: null,
+                minimumSalary: 0
             };
         }
 
@@ -70,6 +76,9 @@ export class JobService {
                 a.GraduationYear AS graduationYear,
                 CAST(a.PreferredRoles AS NVARCHAR(MAX)) AS preferredRoles,
                 a.CurrentJobTitle AS currentJobTitle,
+                CAST(a.PrimarySkills AS NVARCHAR(MAX)) AS primarySkills,
+                a.PreferredIndustries AS preferredIndustries,
+                ISNULL(a.MinimumSalary, 0) AS minimumSalary,
                 (
                     SELECT TOP 1 we.JobTitle
                     FROM WorkExperiences we
@@ -113,7 +122,10 @@ export class JobService {
             latestJobTitle: row?.latestJobTitle ?? null,
             preferredRoles: row?.preferredRoles ?? null,
             isFresher,
-            totalExperienceMonths: totalExpMonths
+            totalExperienceMonths: totalExpMonths,
+            primarySkills: row?.primarySkills ?? null,
+            preferredIndustries: row?.preferredIndustries ?? null,
+            minimumSalary: parseFloat(row?.minimumSalary) || 0
         };
     }
 
@@ -164,6 +176,17 @@ export class JobService {
                  AND LOWER(LTRIM(RTRIM(o.Size))) = LOWER(LTRIM(RTRIM(${preferredCompanySizeParam})))
                 THEN 1 ELSE 0
             END)
+            +
+            (CASE
+                WHEN NULLIF(LTRIM(RTRIM(o.Industry)), '') IS NOT NULL
+                 AND EXISTS (
+                    SELECT 1
+                    FROM pind
+                    WHERE o.Industry LIKE '%' + pind.v + '%'
+                       OR pind.v LIKE '%' + LOWER(LTRIM(RTRIM(o.Industry))) + '%'
+                 )
+                THEN 2 ELSE 0
+            END)
         )`;
     }
 
@@ -190,7 +213,8 @@ export class JobService {
     private static buildPersonalizationCtesSql(
         preferredJobTypesParam: string,
         preferredWorkTypesParam: string,
-        preferredLocationsParam: string
+        preferredLocationsParam: string,
+        preferredIndustriesParam?: string
     ): string {
         // These CTEs are independent of Jobs, so SQL Server can compute them once.
         // 🚀 PERF: Title scoring (rtitles/rtok) moved to app layer — see scoreTitleInApp().
@@ -209,6 +233,11 @@ export class JobService {
             ploc AS (
                 SELECT LTRIM(RTRIM(value)) AS v
                 FROM STRING_SPLIT(${preferredLocationsParam}, ',')
+                WHERE NULLIF(LTRIM(RTRIM(value)), '') IS NOT NULL
+            ),
+            pind AS (
+                SELECT LOWER(LTRIM(RTRIM(value))) AS v
+                FROM STRING_SPLIT(ISNULL(${preferredIndustriesParam || "''"},  ''), ',')
                 WHERE NULLIF(LTRIM(RTRIM(value)), '') IS NOT NULL
             )
         `;
@@ -612,6 +641,7 @@ export class JobService {
         const pwtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredWorkTypes); paramIndex++;
         const plocParam = `@param${paramIndex}`; dataParams.push(personalization.preferredLocations); paramIndex++;
         const pcsParam = `@param${paramIndex}`; dataParams.push(personalization.preferredCompanySize); paramIndex++;
+        const pindParam = `@param${paramIndex}`; dataParams.push(personalization.preferredIndustries); paramIndex++;
 
         // Build combined pipe-separated titles: latestJobTitle + preferredRoles + AI's preferredRoleTitles
         // This ensures scoring considers ALL relevant role titles, not just the single latest one
@@ -637,7 +667,7 @@ export class JobService {
             || f.roleTitlePersonalization === false
             || f.roleTitlePersonalization === 0;
         // NEW: Skip personalization if dontPersonalize=true is passed from frontend
-        const skipPersonalization = f.dontPersonalize === true;
+        const skipPersonalization = f.dontPersonalize === true || f.dontPersonalize === 'true';
         const hasRoleTitle = combinedTitles.length > 0;
         const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
@@ -676,6 +706,8 @@ export class JobService {
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
                 ISNULL(o.Size, '') as OrganizationSize,
+                ISNULL(o.Industry, '') as OrganizationIndustry,
+                j.SalaryRangeMin,
                 ISNULL(o.Tier, 'Standard') as OrganizationTier${hasAppliedColumn}
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
@@ -719,6 +751,14 @@ export class JobService {
                 .map((s: string) => s.trim().toLowerCase()).filter(Boolean);
             const prefCompanySize = (personalization.preferredCompanySize || '').trim().toLowerCase();
 
+            // Parse skill keywords for matching against job title (3+ char tokens)
+            const skillKeywords = (personalization.primarySkills || '').split(',')
+                .map((s: string) => s.trim().toLowerCase()).filter((s: string) => s.length >= 3);
+            // Parse preferred industries
+            const prefIndustries = (personalization.preferredIndustries || '').split(',')
+                .map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+            const minSalary = personalization.minimumSalary || 0;
+
             // Score preference + title in JS (~30ms for 3,225 rows)
             const wpOrder: Record<number, number> = { 444: 1, 442: 2, 443: 3 };
             const scored = allRows.map((row: any) => {
@@ -734,6 +774,26 @@ export class JobService {
                 if (prefLocations.some((pl: string) => loc.includes(pl) || city.includes(pl) || country.includes(pl))) prefScore += 2;
                 const orgSize = ((row as any).OrganizationSize || '').trim().toLowerCase();
                 if (prefCompanySize && orgSize && orgSize === prefCompanySize) prefScore += 1;
+
+                // Industry match: +2 pts if org industry matches any preferred industry
+                const orgIndustry = ((row as any).OrganizationIndustry || '').trim().toLowerCase();
+                if (orgIndustry && prefIndustries.some((pi: string) => orgIndustry.includes(pi) || pi.includes(orgIndustry))) prefScore += 2;
+
+                // Skills match: +1 pt per skill keyword found in job title (max +4)
+                if (skillKeywords.length > 0) {
+                    const titleLower = (row.Title || '').toLowerCase();
+                    let skillHits = 0;
+                    for (const sk of skillKeywords) {
+                        if (titleLower.includes(sk)) skillHits++;
+                    }
+                    prefScore += Math.min(skillHits, 4);
+                }
+
+                // Salary floor: -2 pts if job salary is below user's minimum (when both are set)
+                if (minSalary > 0 && row.SalaryRangeMin && row.SalaryRangeMin > 0 && row.SalaryRangeMin < minSalary) {
+                    prefScore -= 2;
+                }
+
                 (row as any)._prefScore = prefScore;
 
                 // Title score
@@ -1282,6 +1342,7 @@ export class JobService {
             const pwtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredWorkTypes); paramIndex++;
             const plocParam = `@param${paramIndex}`; dataParams.push(personalization.preferredLocations); paramIndex++;
             const pcsParam = `@param${paramIndex}`; dataParams.push(personalization.preferredCompanySize); paramIndex++;
+            const pindParam = `@param${paramIndex}`; dataParams.push(personalization.preferredIndustries); paramIndex++;
 
             // Build combined pipe-separated titles for scoring (same as getJobs)
             const titleParts: string[] = [];
@@ -1292,7 +1353,7 @@ export class JobService {
             }
             const combinedTitles = titleParts.join('|') || '';
 
-            const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam);
+            const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam, pindParam);
 
             const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
             const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
@@ -1300,7 +1361,7 @@ export class JobService {
                 || f.roleTitlePersonalization === false
                 || f.roleTitlePersonalization === 0;
             // NEW: Skip personalization if dontPersonalize=true is passed from frontend
-            const skipPersonalization = f.dontPersonalize === true;
+            const skipPersonalization = f.dontPersonalize === true || f.dontPersonalize === 'true';
             const hasRoleTitle = combinedTitles.length > 0;
             const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
