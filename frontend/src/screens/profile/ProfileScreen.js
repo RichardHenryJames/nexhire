@@ -615,6 +615,9 @@ export default function ProfileScreen({ navigation, route }) {
                   {jobSeekerProfile.institution && (
                     <Text style={styles.educationInstitution}>{jobSeekerProfile.institution}</Text>
                   )}
+                  {jobSeekerProfile.graduationYear && (
+                    <Text style={styles.educationInstitution}>Class of {jobSeekerProfile.graduationYear}</Text>
+                  )}
                 </View>
               </View>
             ) : (
