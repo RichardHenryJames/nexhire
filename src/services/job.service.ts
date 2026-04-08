@@ -93,15 +93,19 @@ export class JobService {
         const row = result.recordset?.[0];
         
         // User is fresher if:
-        // 1. No work experience OR total experience < 12 months
+        // 1. Has SOME profile data AND (no work experience OR total experience < 12 months)
         // 2. OR graduation year is >= current year (still in college or just graduated)
+        // NOTE: Empty profile (all nulls) is NOT treated as fresher — user may be experienced but just didn't fill profile
         const totalExpMonths = row?.totalExperienceMonths ?? 0;
         const workExpCount = row?.workExperienceCount ?? 0;
         const graduationYearStr = row?.graduationYear ?? '';
         const graduationYear = parseInt(graduationYearStr, 10) || 0;
         const currentYear = new Date().getFullYear();
         
-        const isFresherByExperience = workExpCount === 0 || totalExpMonths < 12;
+        const hasAnyProfileData = !!(row?.preferredJobTypes || row?.preferredWorkTypes || row?.preferredRoles 
+            || row?.currentJobTitle || row?.latestJobTitle || graduationYear > 0 || totalExpMonths > 0);
+        
+        const isFresherByExperience = hasAnyProfileData && (workExpCount === 0 || totalExpMonths < 12);
         const isFresherByEducation = graduationYear > 0 && graduationYear >= currentYear; // Still studying or graduating this year
         const isFresher = isFresherByExperience || isFresherByEducation;
         
@@ -121,11 +125,28 @@ export class JobService {
         preferredJobTypesParam: string,
         preferredWorkTypesParam: string,
         preferredLocationsParam: string,
-        preferredCompanySizeParam: string
+        preferredCompanySizeParam: string,
+        isFresher: boolean = false
     ): string {
         // Scores are additive; higher means better match.
         // Weights: WorkplaceType=4 (highest), JobType=2, Location=2, CompanySize=1
         // PERF: expects CTEs `pjt`, `pwt`, `ploc` to exist so STRING_SPLIT runs once per request.
+        const fresherBoost = isFresher ? `
+            +
+            (CASE
+                WHEN (j.ExperienceMin IS NULL OR j.ExperienceMin <= 2) THEN 6
+                WHEN j.ExperienceMin <= 4 THEN 2
+                WHEN j.ExperienceMin >= 5 THEN -3
+                ELSE 0
+            END)
+            +
+            (CASE
+                WHEN j.Title LIKE '%Senior%' OR j.Title LIKE '%Lead%' OR j.Title LIKE '%Principal%'
+                  OR j.Title LIKE '%Staff%' OR j.Title LIKE '%Director%' OR j.Title LIKE '%VP%'
+                  OR j.Title LIKE '%Chief%' OR j.Title LIKE '%Architect%'
+                THEN -4
+                ELSE 0
+            END)` : '';
         return `(
             (CASE
                 WHEN EXISTS (
@@ -164,6 +185,7 @@ export class JobService {
                  AND LOWER(LTRIM(RTRIM(o.Size))) = LOWER(LTRIM(RTRIM(${preferredCompanySizeParam})))
                 THEN 1 ELSE 0
             END)
+            ${fresherBoost}
         )`;
     }
 
@@ -582,26 +604,11 @@ export class JobService {
         // Fetch personalization once (fast indexed lookup) to avoid per-row correlated subqueries
         const personalization = await this.getApplicantPersonalization(excludeUserApplications);
 
-        // 🎓 FRESHER FILTERING: For freshers (< 1 year experience), show only entry-level Engineer jobs
+        // 🎓 FRESHER HANDLING: For freshers (< 1 year experience), remove senior title exclusion
+        // and instead use scoring to rank entry-level jobs first (but still show all jobs)
         // BUT: If user has a current job title, prioritize that over fresher status
-        // Example: A user with "Senior Software Engineer" title but only 6 months logged experience
-        //          should still see SSE jobs, not be restricted to entry-level
         const hasJobTitle = personalization.latestJobTitle && personalization.latestJobTitle.trim().length > 0;
-        
-        if (personalization.isFresher && !f.skipFresherFilter && !hasJobTitle) {
-            // Only apply fresher filter if user has NO job title set
-            whereClause += ` AND j.Title LIKE '%Engineer%'
-                AND j.Title NOT LIKE '%Senior%'
-                AND j.Title NOT LIKE '%Lead%'
-                AND j.Title NOT LIKE '%Principal%'
-                AND j.Title NOT LIKE '%Staff%'
-                AND j.Title NOT LIKE '%Head%'
-                AND j.Title NOT LIKE '%Director%'
-                AND j.Title NOT LIKE '%Manager%'
-                AND j.Title NOT LIKE '%VP%'
-                AND j.Title NOT LIKE '%Chief%'
-                AND j.Title NOT LIKE '%Architect%'`;
-        }
+        const applyFresherBoost = personalization.isFresher && !f.skipFresherFilter && !hasJobTitle;
 
         // Add personalization parameters — only needed for the non-useRoleTitleScore path (SQL CTEs).
         // For useRoleTitleScore, we skip CTEs and do all scoring in JS, so these params are unused in SQL
@@ -631,7 +638,7 @@ export class JobService {
 
         const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam);
 
-        const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
+        const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam, applyFresherBoost);
         const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
         const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
             || f.roleTitlePersonalization === false
@@ -734,6 +741,17 @@ export class JobService {
                 if (prefLocations.some((pl: string) => loc.includes(pl) || city.includes(pl) || country.includes(pl))) prefScore += 2;
                 const orgSize = ((row as any).OrganizationSize || '').trim().toLowerCase();
                 if (prefCompanySize && orgSize && orgSize === prefCompanySize) prefScore += 1;
+
+                // 🎓 Fresher boost: rank entry-level jobs first, penalize senior roles
+                if (applyFresherBoost) {
+                    const expMin = row.ExperienceMin ?? 0;
+                    if (expMin <= 2) prefScore += 6;
+                    else if (expMin <= 4) prefScore += 2;
+                    else if (expMin >= 5) prefScore -= 3;
+                    const titleLower = (row.Title || '').toLowerCase();
+                    if (/senior|lead|principal|staff|director|vp|chief|architect/i.test(titleLower)) prefScore -= 4;
+                }
+
                 (row as any)._prefScore = prefScore;
 
                 // Title score
@@ -1294,7 +1312,7 @@ export class JobService {
 
             const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam);
 
-            const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
+            const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam, false);
             const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
             const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
                 || f.roleTitlePersonalization === false
