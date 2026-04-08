@@ -651,6 +651,18 @@ export class JobService {
         // Workplace type ordering: Remote (444) > Hybrid (442) > Onsite (443)
         const workplaceOrderSql = `CASE j.WorkplaceTypeID WHEN 444 THEN 1 WHEN 442 THEN 2 WHEN 443 THEN 3 ELSE 4 END`;
 
+        // Experience relevance: when filtering by experience (e.g. Fresher chip), rank tighter-range jobs first
+        // Also applies for empty-profile users (no preferences at all) — show lower-exp jobs first as safer default
+        const expMaxFilter = Number(f.experienceMax) || 0;
+        const hasExpFilter = expMaxFilter > 0;
+        const hasEmptyProfile = !personalization.preferredJobTypes && !personalization.preferredWorkTypes 
+            && !personalization.preferredLocations && !personalization.latestJobTitle && !personalization.preferredRoles;
+        const applyExpRelevance = hasExpFilter || (hasEmptyProfile && !hasSearchText && !skipPersonalization);
+        const expRelevanceTarget = hasExpFilter ? expMaxFilter : 3; // Empty profile defaults to entry/mid (≤3)
+        const experienceRelevanceSql = applyExpRelevance
+            ? `CASE WHEN ISNULL(j.ExperienceMax, 99) <= ${Math.min(expRelevanceTarget, 50)} THEN 0 WHEN ISNULL(j.ExperienceMax, 99) <= ${Math.min(expRelevanceTarget + 1, 50)} THEN 1 WHEN ISNULL(j.ExperienceMax, 99) <= ${Math.min(expRelevanceTarget + 3, 50)} THEN 2 ELSE 3 END`
+            : null;
+
         // HasApplied: For user-facing APIs (no excludeAppliedJobs), add LEFT JOIN to flag applied jobs
         const includeHasApplied = !!excludeUserApplications && !excludeAppliedJobs;
         let hasAppliedJoin = '';
@@ -762,6 +774,15 @@ export class JobService {
             // Sort: India first > titleScore DESC > prefScore DESC > workplace order > recency
             // No tier boosting — JobsLandingScreen has dedicated Top MNC section
             scored.sort((a: any, b: any) => {
+                // Experience relevance: when filtering by exp or empty profile, tighter ranges first
+                if (applyExpRelevance) {
+                    const aMax = a.ExperienceMax ?? 99;
+                    const bMax = b.ExperienceMax ?? 99;
+                    const target = expRelevanceTarget;
+                    const aRank = aMax <= target ? 0 : aMax <= target + 1 ? 1 : aMax <= target + 3 ? 2 : 3;
+                    const bRank = bMax <= target ? 0 : bMax <= target + 1 ? 1 : bMax <= target + 3 ? 2 : 3;
+                    if (aRank !== bRank) return aRank - bRank;
+                }
                 // India jobs first
                 const countryA = (a.Country || '').toLowerCase();
                 const countryB = (b.Country || '').toLowerCase();
@@ -788,11 +809,12 @@ export class JobService {
             //   j.CountryRank (0=India, 1=Other) — indexed in IX_Jobs_SortRank
             //   j.TierRank (0=Elite, 1=Premium, 2=Standard) — indexed in IX_Jobs_SortRank
             // This avoids CASE WHEN on every row and enables index-assisted ORDER BY
+            const expRelevancePrefix = experienceRelevanceSql ? `${experienceRelevanceSql}, ` : '';
             const orderPrefix = skipPersonalization
-                ? `j.CountryRank, j.TierRank, ${workplaceOrderSql}, `
+                ? `${expRelevancePrefix}j.CountryRank, j.TierRank, ${workplaceOrderSql}, `
                 : (hasSearchText
-                    ? `j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
-                    : `j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
+                    ? `${expRelevancePrefix}j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
+                    : `${expRelevancePrefix}j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
 
             const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
             dataQuery += ` ORDER BY ${orderPrefix}${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
