@@ -15,7 +15,7 @@ const getContextConfig = (colors) => ({
     itemPrefix: 'Request referral for',
     // Trust-first messaging
     trustTitle: 'You only pay if you get referred',
-    trustPoints: ['Money is held, not charged upfront', 'Auto-released in 14 days if no referral'],
+    trustPoints: ['Money is held, not charged upfront', 'Auto-released to wallet in 14 days if no referral'],
     amountVerb: 'reserved',
     amountNote: '',
     steps: [

@@ -254,7 +254,7 @@ export default function AskReferralScreen({ navigation, route }) {
       {/* Refund badge (right after mode badge) */}
       <View style={s.refundBadge}>
         <Ionicons name="shield-checkmark-outline" size={14} color={colors.success} />
-        <Text style={s.refundText}>Full refund if no referral received</Text>
+        <Text style={s.refundText}>Full refund to wallet if no referral received</Text>
       </View>
 
       <Text style={s.summaryTitle}>Order Summary</Text>
@@ -329,7 +329,7 @@ export default function AskReferralScreen({ navigation, route }) {
       {!isDesktop && (
         <View style={s.refundBadgeMobile}>
           <Ionicons name="shield-checkmark-outline" size={13} color={colors.success} />
-          <Text style={s.refundTextMobile}>Full refund if no referral received</Text>
+          <Text style={s.refundTextMobile}>Full refund to wallet if no referral received</Text>
         </View>
       )}
 

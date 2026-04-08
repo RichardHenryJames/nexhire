@@ -70,7 +70,7 @@ export default function PricingScreen() {
             <View style={styles.hero}>
               <Text style={styles.heroTitle}>Simple, Transparent Pricing</Text>
               <Text style={styles.heroSub}>
-                Pay only when someone actually refers you. No subscriptions, no hidden fees.
+                Pay only when someone actually refers you. No subscriptions. Cancel anytime.
               </Text>
             </View>
 
@@ -103,7 +103,7 @@ export default function PricingScreen() {
                 </View>
                 <View style={styles.benefitRow}>
                   <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                  <Text style={styles.benefitText}>Auto-refund if no one picks up in 2 weeks</Text>
+                  <Text style={styles.benefitText}>Auto-refund to wallet if no one picks up in 2 weeks</Text>
                 </View>
               </View>
             </View>
@@ -135,7 +135,7 @@ export default function PricingScreen() {
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: colors.text }}>Full refund if no one refers you</Text>
+                    <Text style={{ fontSize: 13, color: colors.text }}>Full refund to wallet if no one refers you</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />

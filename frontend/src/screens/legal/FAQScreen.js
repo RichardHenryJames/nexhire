@@ -185,7 +185,7 @@ export default function FAQScreen() {
         },
         {
           question: 'How do I get a refund?',
-          answer: 'Refunds are processed as per our Refund Policy:\n• Create a support ticket with transaction details\n• Refunds for technical failures are processed automatically\n• Processing time: 5-7 business days\n\nNote: Referral request fees and AI Jobs access fees are non-refundable once service is used. Wallet recharge amounts can be refunded if unused.'
+          answer: 'Refunds are processed as per our Refund Policy:\n• Create a support ticket with transaction details\n• Refunds for technical failures are processed automatically\n• Processing time: 5-7 business days\n\nNote: Referral request fees and AI Jobs access fees are non-refundable once service is used. Wallet recharge amounts are non-withdrawable and can only be used for RefOpen services. Unused amounts remain in your wallet and do not expire.'
         },
         {
           question: 'What if my payment verification is rejected?',

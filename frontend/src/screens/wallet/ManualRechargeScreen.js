@@ -740,6 +740,9 @@ const ManualRechargeScreen = ({ navigation, route }) => {
             <Text style={{ fontSize: 9, color: colors.gray500, fontStyle: 'italic', textAlign: 'center' }}>
               🔒 Secure payments powered by Rocana
             </Text>
+            <Text style={{ fontSize: 9, color: colors.warning || '#F59E0B', textAlign: 'center', marginTop: 4 }}>
+              Wallet balance is non-withdrawable and can only be used for RefOpen services
+            </Text>
           </View>
         </View>
 
