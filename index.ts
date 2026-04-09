@@ -2043,7 +2043,7 @@ app.http("storage-delete", {
 // TOOLS - PUBLIC AI-POWERED UTILITIES
 // ========================================================================
 
-import { analyzeResume } from "./src/controllers/resume-analyzer.controller";
+import { analyzeResume, getResumeAnalyzerHistory } from "./src/controllers/resume-analyzer.controller";
 
 /**
  * Resume Analyzer - Analyze resume against job descriptions
@@ -2061,6 +2061,13 @@ app.http("tools-resume-analyzer", {
   authLevel: "anonymous",
   route: "tools/resume-analyzer",
   handler: analyzeResume,
+});
+
+app.http("tools-resume-analyzer-history", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "tools/resume-analyzer/history",
+  handler: getResumeAnalyzerHistory,
 });
 
 import { analyzeLinkedIn } from "./src/controllers/linkedin-optimizer.controller";

@@ -378,3 +378,56 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
     };
   }
 }
+
+/**
+ * GET /api/tools/resume-analyzer/history
+ * Returns past resume analyses for the authenticated user
+ */
+export async function getResumeAnalyzerHistory(req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
+  if (req.method === 'OPTIONS') {
+    return { status: 200, headers: corsHeaders };
+  }
+
+  try {
+    let user: any;
+    try { user = authenticate(req); } catch {
+      return {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        jsonBody: { success: false, error: 'Authentication required.' },
+      };
+    }
+
+    const result = await dbService.executeQuery(
+      `SELECT ResumeMetadataID, FileName, LastMatchScore, LastJobUrl, LastAnalyzedAt, AIModel, AnalysisCount
+       FROM ResumeMetadata
+       WHERE UserID = @param0 AND LastAnalyzedAt IS NOT NULL
+       ORDER BY LastAnalyzedAt DESC`,
+      [user.userId]
+    );
+
+    return {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: {
+        success: true,
+        data: (result.recordset || []).map((r: any) => ({
+          id: r.ResumeMetadataID,
+          fileName: r.FileName,
+          matchScore: r.LastMatchScore,
+          jobUrl: r.LastJobUrl,
+          analyzedAt: r.LastAnalyzedAt,
+          aiModel: r.AIModel,
+          analysisCount: r.AnalysisCount,
+        })),
+      },
+    };
+  } catch (error: any) {
+    context.error('Resume analyzer history error:', error.message);
+    return {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      jsonBody: { success: false, error: 'Failed to load history.' },
+    };
+  }
+}

@@ -645,6 +645,15 @@ export default function BlindReviewScreen({ navigation, route }) {
           )}
         </>
       )}
+
+      {/* Need Help */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Support')}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginBottom: 10 }}
+      >
+        <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
+        <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Need Help?</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 
@@ -760,6 +769,37 @@ export default function BlindReviewScreen({ navigation, route }) {
             <Ionicons name="chevron-forward" size={18} color="#fff" />
           </Animated.View>
         </TouchableOpacity>
+      )}
+
+      {/* Score Breakdown */}
+      {aiAnalysis?.breakdown && (
+        <View style={{ marginHorizontal: 16, marginBottom: 16, padding: 16, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 12 }}>Score Breakdown</Text>
+          {[
+            { label: 'Technical Skills', key: 'technicalSkills', icon: 'code-slash' },
+            { label: 'Experience Relevance', key: 'experienceRelevance', icon: 'briefcase' },
+            { label: 'Company Fit', key: 'companyFit', icon: 'business' },
+            { label: 'Standout Factor', key: 'standoutFactor', icon: 'star' },
+          ].map(dim => {
+            const val = aiAnalysis.breakdown[dim.key] || 0;
+            const pct = Math.min(100, (val / 25) * 100);
+            const barColor = val >= 20 ? '#10B981' : val >= 15 ? '#3B82F6' : val >= 10 ? '#F59E0B' : '#EF4444';
+            return (
+              <View key={dim.key} style={{ marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                    <Ionicons name={dim.icon} size={14} color={colors.textSecondary} />
+                    <Text style={{ fontSize: 13, color: colors.text, fontWeight: '600' }}>{dim.label}</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: barColor, minWidth: 36, textAlign: 'right' }}>{val}/25</Text>
+                </View>
+                <View style={{ height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' }}>
+                  <View style={{ height: 8, width: `${pct}%`, backgroundColor: barColor, borderRadius: 4 }} />
+                </View>
+              </View>
+            );
+          })}
+        </View>
       )}
 
       {/* AI Strengths */}

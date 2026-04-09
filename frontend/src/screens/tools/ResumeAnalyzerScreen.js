@@ -669,6 +669,15 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
           )}
         </LinearGradient>
       </TouchableOpacity>
+
+      {/* Need Help */}
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Support')}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16, marginBottom: 10 }}
+      >
+        <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
+        <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Need Help?</Text>
+      </TouchableOpacity>
     </View>
   );
 
