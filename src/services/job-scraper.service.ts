@@ -2658,52 +2658,98 @@ Apply now to join a dynamic team that's building the future! 🌟`;
     return 'United States';
   }
 
-  private static extractMinExperience(title: string, description: string): number {
-    const content = `${title} ${description}`.toLowerCase();
+  /**
+   * Detect seniority level from text using word-boundary regex.
+   * Returns: 'intern' | 'junior' | 'mid' | 'senior' | 'lead' | 'principal' | null
+   * Priority: title keywords > description keywords (title is authoritative)
+   */
+  private static detectLevel(title: string, description: string): string | null {
     const titleLower = title.toLowerCase();
+    const descLower = description.toLowerCase();
 
-    // Pattern 1: Explicit ranges — "3-5 years", "5 to 8 years"
-    const rangeMatch = content.match(/(\d{1,2})\s*[-–—to]+\s*\d{1,2}\s*\+?\s*(?:years?|yrs?)\s*(?:of\s+)?(?:experience|exp|relevant|professional|work|industry)?/i);
-    if (rangeMatch) { const v = parseInt(rangeMatch[1]); if (v >= 0 && v <= 30) return v; }
-
-    // Pattern 2: "X+ years experience", "minimum X years", "at least X years"
-    const minPatterns = [
-      /(\d{1,2})\+?\s*(?:years?|yrs?)\s*(?:of\s+)?(?:experience|exp|relevant|professional|work|industry|hands[- ]on)/i,
-      /(?:minimum|min|at\s*least|over|more\s*than)\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)/i,
-      /(?:experience|exp)\s*[:;]\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)/i,
-      /(\d{1,2})\+?\s*(?:years?|yrs?)\s*(?:in|with|working)/i,
+    // Word boundary patterns — won't match substrings like "leadership" for "lead"
+    const levels: Array<{ level: string; patterns: RegExp[] }> = [
+      { level: 'intern',     patterns: [/\bintern\b/, /\binternship\b/] },
+      { level: 'junior',     patterns: [/\bjunior\b/, /\bjr\.?\b/, /\bentry[\s-]?level\b/, /\bnew\s+grad/i, /\bnew\s+college\s+grad/i, /\bfresher\b/] },
+      { level: 'mid',        patterns: [/\bmid[\s-]?level\b/, /\bmid[\s-]?senior\b/, /\bintermediate\b/] },
+      { level: 'senior',     patterns: [/\bsenior\b/, /\bsr\.?\b/, /\bstaff\b/] },
+      { level: 'lead',       patterns: [/\blead\b(?!\s*(time|generation|gen|scoring|nurtur|qualif))/, /\bprincipal\b/, /\barchitect\b/, /\bdirector\b/, /\bvp\b/, /\bhead\s+of\b/] },
     ];
-    for (const p of minPatterns) {
-      const m = content.match(p);
-      if (m) { const v = parseInt(m[1]); if (v >= 1 && v <= 30) return v; }
+
+    // Check title first (most reliable signal)
+    for (const { level, patterns } of levels) {
+      for (const pattern of patterns) {
+        if (pattern.test(titleLower)) return level;
+      }
     }
 
-    // Pattern 3: Title-based seniority
-    if (/\bstaff\b/i.test(titleLower) && /engineer|developer|architect|scientist/i.test(titleLower)) return 8;
-    if (/\bprincipal\b/i.test(titleLower) && /engineer|developer|architect|scientist/i.test(titleLower)) return 8;
-    if (/\b(iv|4)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower)) return 8;
-    if (/\b(iii|3)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower)) return 5;
-    if (/\b(ii|2)\b/.test(titleLower) && /engineer|developer|sde|swe/i.test(titleLower) && !/iii|iv/i.test(titleLower)) return 2;
-    if (/\bsenior\b|\blead\b/i.test(titleLower) && /engineer|developer|architect|scientist|analyst/i.test(titleLower)) return 5;
-    if (content.includes('senior') || content.includes('lead')) return 5;
-    if (/\bdirector\b|\bvp\b|\bchief\b/i.test(titleLower)) return 10;
-    if (/\bmanager\b/i.test(titleLower) && !/account|case|shift|store|warehouse|retail/i.test(titleLower)) return 5;
-    if (content.includes('mid') || content.includes('intermediate')) return 3;
-    if (/\bjunior\b|\bentry\b|\bintern\b|\bfresher\b|\bgraduate\b/i.test(titleLower)) return 0;
+    // Fallback: check description (less reliable, only for explicit role mentions)
+    // Only check description for strong signals, not loose matches
+    for (const { level, patterns } of levels) {
+      for (const pattern of patterns) {
+        if (pattern.test(descLower)) return level;
+      }
+    }
+
+    return null;
+  }
+
+  private static extractMinExperience(title: string, description: string): number {
+    const content = `${title} ${description}`.toLowerCase();
     
-    return 0;
+    // 1. Regex: explicit experience mentions (most reliable)
+    const expPatterns = [
+      /(\d+)\+?\s*years?\s+(?:of\s+)?experience/,
+      /(\d+)\s*-\s*\d+\s*years?\s+(?:of\s+)?experience/,
+      /(\d+)\s*-\s*\d+\s*years/,
+      /experience\s*:?\s*(\d+)\+?\s*years?/,
+      /minimum\s+(\d+)\s*years?/,
+      /at\s+least\s+(\d+)\s*years?/,
+    ];
+
+    for (const pattern of expPatterns) {
+      const match = content.match(pattern);
+      if (match) {
+        const exp = parseInt(match[1]);
+        return Math.max(0, Math.min(exp, 50));
+      }
+    }
+
+    // 2. Level-based heuristic (title priority, word boundaries)
+    const level = this.detectLevel(title, description);
+    switch (level) {
+      case 'intern':    return 0;
+      case 'junior':    return 0;
+      case 'mid':       return 2;
+      case 'senior':    return 5;
+      case 'lead':      return 7;
+      case 'principal': return 10;
+      default:          return 0;
+    }
   }
 
   private static extractMaxExperience(title: string, description: string): number {
     const minExp = this.extractMinExperience(title, description);
     const content = `${title} ${description}`.toLowerCase();
-    // Check for explicit range
-    const rangeMatch = content.match(/(\d{1,2})\s*[-–—to]+\s*(\d{1,2})\s*\+?\s*(?:years?|yrs?)/i);
-    if (rangeMatch) return Math.max(minExp, Math.min(parseInt(rangeMatch[2]), 50));
-    if (minExp >= 8) return Math.max(minExp + 5, 13);
-    if (minExp >= 5) return Math.max(minExp + 5, 10);
-    if (minExp >= 3) return Math.max(minExp + 4, 7);
-    return Math.max(minExp + 3, 5);
+    
+    // 1. Explicit range in text
+    const rangeMatch = content.match(/(\d+)\s*-\s*(\d+)\s*years/);
+    if (rangeMatch) {
+      const maxExp = parseInt(rangeMatch[2]);
+      return Math.max(minExp, Math.min(maxExp, 50));
+    }
+
+    // 2. Level-based max
+    const level = this.detectLevel(title, description);
+    switch (level) {
+      case 'intern':    return Math.max(minExp, 1);
+      case 'junior':    return Math.max(minExp, 2);
+      case 'mid':       return Math.max(minExp, 5);
+      case 'senior':    return Math.max(minExp, 10);
+      case 'lead':      return Math.max(minExp, 15);
+      case 'principal': return Math.max(minExp, 20);
+      default:          return Math.max(minExp + 3, 5);
+    }
   }
 
   private static detectWorkplaceType(location: string = '', title: string = '', description: string = ''): string {
