@@ -42,13 +42,11 @@ export class JobService {
         preferredWorkTypes: string | null;
         preferredLocations: string | null;
         preferredCompanySize: string | null;
+        preferredIndustries: string | null;
         latestJobTitle: string | null;
         preferredRoles: string | null;
         isFresher: boolean;
         totalExperienceMonths: number;
-        primarySkills: string | null;
-        preferredIndustries: string | null;
-        minimumSalary: number;
     }> {
         if (!userId) {
             return {
@@ -56,13 +54,11 @@ export class JobService {
                 preferredWorkTypes: null,
                 preferredLocations: null,
                 preferredCompanySize: null,
+                preferredIndustries: null,
                 latestJobTitle: null,
                 preferredRoles: null,
                 isFresher: false,
-                totalExperienceMonths: 0,
-                primarySkills: null,
-                preferredIndustries: null,
-                minimumSalary: 0
+                totalExperienceMonths: 0
             };
         }
 
@@ -72,13 +68,11 @@ export class JobService {
                 a.PreferredWorkTypes AS preferredWorkTypes,
                 a.PreferredLocations AS preferredLocations,
                 a.PreferredCompanySize AS preferredCompanySize,
+                a.PreferredIndustries AS preferredIndustries,
                 ISNULL(a.TotalExperienceMonths, 0) AS totalExperienceMonths,
                 a.GraduationYear AS graduationYear,
                 CAST(a.PreferredRoles AS NVARCHAR(MAX)) AS preferredRoles,
                 a.CurrentJobTitle AS currentJobTitle,
-                CAST(a.PrimarySkills AS NVARCHAR(MAX)) AS primarySkills,
-                a.PreferredIndustries AS preferredIndustries,
-                ISNULL(a.MinimumSalary, 0) AS minimumSalary,
                 (
                     SELECT TOP 1 we.JobTitle
                     FROM WorkExperiences we
@@ -102,15 +96,19 @@ export class JobService {
         const row = result.recordset?.[0];
         
         // User is fresher if:
-        // 1. No work experience OR total experience < 12 months
+        // 1. Has SOME profile data AND (no work experience OR total experience < 12 months)
         // 2. OR graduation year is >= current year (still in college or just graduated)
+        // NOTE: Empty profile (all nulls) is NOT treated as fresher — user may be experienced but just didn't fill profile
         const totalExpMonths = row?.totalExperienceMonths ?? 0;
         const workExpCount = row?.workExperienceCount ?? 0;
         const graduationYearStr = row?.graduationYear ?? '';
         const graduationYear = parseInt(graduationYearStr, 10) || 0;
         const currentYear = new Date().getFullYear();
         
-        const isFresherByExperience = workExpCount === 0 || totalExpMonths < 12;
+        const hasAnyProfileData = !!(row?.preferredJobTypes || row?.preferredWorkTypes || row?.preferredRoles 
+            || row?.currentJobTitle || row?.latestJobTitle || graduationYear > 0 || totalExpMonths > 0);
+        
+        const isFresherByExperience = hasAnyProfileData && (workExpCount === 0 || totalExpMonths < 12);
         const isFresherByEducation = graduationYear > 0 && graduationYear >= currentYear; // Still studying or graduating this year
         const isFresher = isFresherByExperience || isFresherByEducation;
         
@@ -119,13 +117,11 @@ export class JobService {
             preferredWorkTypes: row?.preferredWorkTypes ?? null,
             preferredLocations: row?.preferredLocations ?? null,
             preferredCompanySize: row?.preferredCompanySize ?? null,
+            preferredIndustries: row?.preferredIndustries ?? null,
             latestJobTitle: row?.latestJobTitle ?? null,
             preferredRoles: row?.preferredRoles ?? null,
             isFresher,
-            totalExperienceMonths: totalExpMonths,
-            primarySkills: row?.primarySkills ?? null,
-            preferredIndustries: row?.preferredIndustries ?? null,
-            minimumSalary: parseFloat(row?.minimumSalary) || 0
+            totalExperienceMonths: totalExpMonths
         };
     }
 
@@ -133,11 +129,28 @@ export class JobService {
         preferredJobTypesParam: string,
         preferredWorkTypesParam: string,
         preferredLocationsParam: string,
-        preferredCompanySizeParam: string
+        preferredCompanySizeParam: string,
+        isFresher: boolean = false
     ): string {
         // Scores are additive; higher means better match.
         // Weights: WorkplaceType=4 (highest), JobType=2, Location=2, CompanySize=1
         // PERF: expects CTEs `pjt`, `pwt`, `ploc` to exist so STRING_SPLIT runs once per request.
+        const fresherBoost = isFresher ? `
+            +
+            (CASE
+                WHEN (j.ExperienceMin IS NULL OR j.ExperienceMin <= 2) THEN 6
+                WHEN j.ExperienceMin <= 4 THEN 2
+                WHEN j.ExperienceMin >= 5 THEN -3
+                ELSE 0
+            END)
+            +
+            (CASE
+                WHEN j.Title LIKE '%Senior%' OR j.Title LIKE '%Lead%' OR j.Title LIKE '%Principal%'
+                  OR j.Title LIKE '%Staff%' OR j.Title LIKE '%Director%' OR j.Title LIKE '%VP%'
+                  OR j.Title LIKE '%Chief%' OR j.Title LIKE '%Architect%'
+                THEN -4
+                ELSE 0
+            END)` : '';
         return `(
             (CASE
                 WHEN EXISTS (
@@ -176,17 +189,7 @@ export class JobService {
                  AND LOWER(LTRIM(RTRIM(o.Size))) = LOWER(LTRIM(RTRIM(${preferredCompanySizeParam})))
                 THEN 1 ELSE 0
             END)
-            +
-            (CASE
-                WHEN NULLIF(LTRIM(RTRIM(o.Industry)), '') IS NOT NULL
-                 AND EXISTS (
-                    SELECT 1
-                    FROM pind
-                    WHERE o.Industry LIKE '%' + pind.v + '%'
-                       OR pind.v LIKE '%' + LOWER(LTRIM(RTRIM(o.Industry))) + '%'
-                 )
-                THEN 2 ELSE 0
-            END)
+            ${fresherBoost}
         )`;
     }
 
@@ -213,8 +216,7 @@ export class JobService {
     private static buildPersonalizationCtesSql(
         preferredJobTypesParam: string,
         preferredWorkTypesParam: string,
-        preferredLocationsParam: string,
-        preferredIndustriesParam?: string
+        preferredLocationsParam: string
     ): string {
         // These CTEs are independent of Jobs, so SQL Server can compute them once.
         // 🚀 PERF: Title scoring (rtitles/rtok) moved to app layer — see scoreTitleInApp().
@@ -233,11 +235,6 @@ export class JobService {
             ploc AS (
                 SELECT LTRIM(RTRIM(value)) AS v
                 FROM STRING_SPLIT(${preferredLocationsParam}, ',')
-                WHERE NULLIF(LTRIM(RTRIM(value)), '') IS NOT NULL
-            ),
-            pind AS (
-                SELECT LOWER(LTRIM(RTRIM(value))) AS v
-                FROM STRING_SPLIT(ISNULL(${preferredIndustriesParam || "''"},  ''), ',')
                 WHERE NULLIF(LTRIM(RTRIM(value)), '') IS NOT NULL
             )
         `;
@@ -393,7 +390,9 @@ export class JobService {
 
         // \ud83d\ude80 OPTIMIZATION: Experience filters - use range comparison
         if (f.experienceMin) {
-            whereClause += ` AND (j.ExperienceMax IS NULL OR j.ExperienceMax >= @param${paramIndex})`;
+            // Job's minimum requirement must be at or above user's level
+            // e.g. user selects "10-20 yrs" → only show jobs requiring 10+ min, not 5-10 jobs
+            whereClause += ` AND (j.ExperienceMin IS NULL OR j.ExperienceMin >= @param${paramIndex})`;
             queryParams.push(Number(f.experienceMin));
             paramIndex++;
         }
@@ -611,26 +610,11 @@ export class JobService {
         // Fetch personalization once (fast indexed lookup) to avoid per-row correlated subqueries
         const personalization = await this.getApplicantPersonalization(excludeUserApplications);
 
-        // 🎓 FRESHER FILTERING: For freshers (< 1 year experience), show only entry-level Engineer jobs
+        // 🎓 FRESHER HANDLING: For freshers (< 1 year experience), remove senior title exclusion
+        // and instead use scoring to rank entry-level jobs first (but still show all jobs)
         // BUT: If user has a current job title, prioritize that over fresher status
-        // Example: A user with "Senior Software Engineer" title but only 6 months logged experience
-        //          should still see SSE jobs, not be restricted to entry-level
         const hasJobTitle = personalization.latestJobTitle && personalization.latestJobTitle.trim().length > 0;
-        
-        if (personalization.isFresher && !f.skipFresherFilter && !hasJobTitle) {
-            // Only apply fresher filter if user has NO job title set
-            whereClause += ` AND j.Title LIKE '%Engineer%'
-                AND j.Title NOT LIKE '%Senior%'
-                AND j.Title NOT LIKE '%Lead%'
-                AND j.Title NOT LIKE '%Principal%'
-                AND j.Title NOT LIKE '%Staff%'
-                AND j.Title NOT LIKE '%Head%'
-                AND j.Title NOT LIKE '%Director%'
-                AND j.Title NOT LIKE '%Manager%'
-                AND j.Title NOT LIKE '%VP%'
-                AND j.Title NOT LIKE '%Chief%'
-                AND j.Title NOT LIKE '%Architect%'`;
-        }
+        const applyFresherBoost = personalization.isFresher && !f.skipFresherFilter && !hasJobTitle;
 
         // Add personalization parameters — only needed for the non-useRoleTitleScore path (SQL CTEs).
         // For useRoleTitleScore, we skip CTEs and do all scoring in JS, so these params are unused in SQL
@@ -641,7 +625,6 @@ export class JobService {
         const pwtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredWorkTypes); paramIndex++;
         const plocParam = `@param${paramIndex}`; dataParams.push(personalization.preferredLocations); paramIndex++;
         const pcsParam = `@param${paramIndex}`; dataParams.push(personalization.preferredCompanySize); paramIndex++;
-        const pindParam = `@param${paramIndex}`; dataParams.push(personalization.preferredIndustries); paramIndex++;
 
         // Build combined pipe-separated titles: latestJobTitle + preferredRoles + AI's preferredRoleTitles
         // This ensures scoring considers ALL relevant role titles, not just the single latest one
@@ -661,18 +644,30 @@ export class JobService {
 
         const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam);
 
-        const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
+        const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam, applyFresherBoost);
         const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
         const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
             || f.roleTitlePersonalization === false
             || f.roleTitlePersonalization === 0;
         // NEW: Skip personalization if dontPersonalize=true is passed from frontend
-        const skipPersonalization = f.dontPersonalize === true || f.dontPersonalize === 'true';
+        const skipPersonalization = f.dontPersonalize === true;
         const hasRoleTitle = combinedTitles.length > 0;
         const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
         // Workplace type ordering: Remote (444) > Hybrid (442) > Onsite (443)
         const workplaceOrderSql = `CASE j.WorkplaceTypeID WHEN 444 THEN 1 WHEN 442 THEN 2 WHEN 443 THEN 3 ELSE 4 END`;
+
+        // Experience relevance: when filtering by experience (e.g. Fresher chip), rank tighter-range jobs first
+        // Also applies for empty-profile users (no preferences at all) — show lower-exp jobs first as safer default
+        const expMaxFilter = Number(f.experienceMax) || 0;
+        const hasExpFilter = expMaxFilter > 0;
+        const hasEmptyProfile = !personalization.preferredJobTypes && !personalization.preferredWorkTypes 
+            && !personalization.preferredLocations && !personalization.latestJobTitle && !personalization.preferredRoles;
+        const applyExpRelevance = hasExpFilter || (hasEmptyProfile && !hasSearchText && !skipPersonalization);
+        const expRelevanceTarget = hasExpFilter ? expMaxFilter : 3; // Empty profile defaults to entry/mid (≤3)
+        const experienceRelevanceSql = applyExpRelevance
+            ? `CASE WHEN ISNULL(j.ExperienceMax, 99) <= ${Math.min(expRelevanceTarget, 50)} THEN 0 WHEN ISNULL(j.ExperienceMax, 99) <= ${Math.min(expRelevanceTarget + 1, 50)} THEN 1 WHEN ISNULL(j.ExperienceMax, 99) <= ${Math.min(expRelevanceTarget + 3, 50)} THEN 2 ELSE 3 END`
+            : null;
 
         // HasApplied: For user-facing APIs (no excludeAppliedJobs), add LEFT JOIN to flag applied jobs
         const includeHasApplied = !!excludeUserApplications && !excludeAppliedJobs;
@@ -706,8 +701,7 @@ export class JobService {
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
                 ISNULL(o.Size, '') as OrganizationSize,
-                ISNULL(o.Industry, '') as OrganizationIndustry,
-                j.SalaryRangeMin,
+                ISNULL(j.Department, '') as Department,
                 ISNULL(o.Tier, 'Standard') as OrganizationTier${hasAppliedColumn}
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
@@ -751,13 +745,38 @@ export class JobService {
                 .map((s: string) => s.trim().toLowerCase()).filter(Boolean);
             const prefCompanySize = (personalization.preferredCompanySize || '').trim().toLowerCase();
 
-            // Parse skill keywords for matching against job title (3+ char tokens)
-            const skillKeywords = (personalization.primarySkills || '').split(',')
-                .map((s: string) => s.trim().toLowerCase()).filter((s: string) => s.length >= 3);
-            // Parse preferred industries
-            const prefIndustries = (personalization.preferredIndustries || '').split(',')
-                .map((s: string) => s.trim().toLowerCase()).filter(Boolean);
-            const minSalary = personalization.minimumSalary || 0;
+            // Department matching: extract department keywords from user's job title + preferred roles
+            const DEPT_KEYWORD_MAP: Record<string, string[]> = {
+                'engineering': ['engineer', 'developer', 'sde', 'swe', 'sse', 'ssw', 'devops', 'backend', 'frontend', 'fullstack', 'full stack', 'ios', 'android', 'architect', 'programmer', 'coder', 'administrator', 'sre', 'infrastructure', 'embedded', 'web dev', 'python dev', 'java dev', '.net dev', 'aws dev', 'cloud', 'sharepoint', 'automation'],
+                'technology': ['technical', 'technology', 'it analyst', 'it assistant', 'systems', 'system', 'tech lead', 'agile', 'scrum', 'consultant', 'implementation'],
+                'sales': ['sales', 'business development', 'account executive', 'account manager', 'bdm', 'bdr', 'inside sales', 'gtm'],
+                'marketing': ['marketing', 'growth', 'seo', 'content', 'brand', 'digital marketing', 'market research'],
+                'finance': ['finance', 'wealth', 'banking', 'accounting', 'audit', 'financial', 'investment', 'budget', 'forecasting', 'quantitative', 'royalty'],
+                'design': ['design', 'designer', 'ui', 'ux', 'graphic', 'creative', 'visual'],
+                'management': ['manager', 'management', 'director', 'head', 'vp', 'chief', 'supervisor', 'founder', 'ceo', 'cto', 'coo', 'program director', 'trainee', 'team lead'],
+                'product': ['product manager', 'product owner', 'product designer', 'pmts', 'pmo'],
+                'data science': ['data scientist', 'data analyst', 'data engineer', 'analytics', 'analyst', 'ml ', 'machine learning', 'big data', 'ai engineer', 'ai ml'],
+                'human resources': ['hr', 'recruiter', 'talent', 'people ops', 'human resource', 'compensation', 'benefits'],
+                'legal': ['legal', 'compliance', 'counsel', 'attorney', 'lawyer'],
+                'customer success': ['customer success', 'customer support', 'customer service', 'service executive', 'process associate'],
+                'operations': ['operations', 'logistics', 'supply chain', 'transportation', 'construction', 'production', 'specialist'],
+                'research': ['researcher', 'research', 'academic', 'counsellor'],
+            };
+            const userTitleLower = (personalization.latestJobTitle || personalization.preferredRoles || '').toLowerCase();
+            const matchedDepts: string[] = [];
+            // Priority 1: Use explicitly set preferred industries (from onboarding card / settings)
+            const explicitIndustries = (personalization.preferredIndustries || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+            if (explicitIndustries.length > 0) {
+                matchedDepts.push(...explicitIndustries);
+            }
+            // Priority 2: Infer from job title if no explicit industries set
+            if (matchedDepts.length === 0 && userTitleLower) {
+                for (const [dept, keywords] of Object.entries(DEPT_KEYWORD_MAP)) {
+                    if (keywords.some(kw => userTitleLower.includes(kw))) {
+                        matchedDepts.push(dept);
+                    }
+                }
+            }
 
             // Score preference + title in JS (~30ms for 3,225 rows)
             const wpOrder: Record<number, number> = { 444: 1, 442: 2, 443: 3 };
@@ -775,23 +794,22 @@ export class JobService {
                 const orgSize = ((row as any).OrganizationSize || '').trim().toLowerCase();
                 if (prefCompanySize && orgSize && orgSize === prefCompanySize) prefScore += 1;
 
-                // Industry match: +2 pts if org industry matches any preferred industry
-                const orgIndustry = ((row as any).OrganizationIndustry || '').trim().toLowerCase();
-                if (orgIndustry && prefIndustries.some((pi: string) => orgIndustry.includes(pi) || pi.includes(orgIndustry))) prefScore += 2;
-
-                // Skills match: +1 pt per skill keyword found in job title (max +4)
-                if (skillKeywords.length > 0) {
+                // 🎓 Fresher boost: rank entry-level jobs first, penalize senior roles
+                if (applyFresherBoost) {
+                    const expMin = row.ExperienceMin ?? 0;
+                    if (expMin <= 2) prefScore += 6;
+                    else if (expMin <= 4) prefScore += 2;
+                    else if (expMin >= 5) prefScore -= 3;
                     const titleLower = (row.Title || '').toLowerCase();
-                    let skillHits = 0;
-                    for (const sk of skillKeywords) {
-                        if (titleLower.includes(sk)) skillHits++;
-                    }
-                    prefScore += Math.min(skillHits, 4);
+                    if (/senior|lead|principal|staff|director|vp|chief|architect/i.test(titleLower)) prefScore -= 4;
                 }
 
-                // Salary floor: -2 pts if job salary is below user's minimum (when both are set)
-                if (minSalary > 0 && row.SalaryRangeMin && row.SalaryRangeMin > 0 && row.SalaryRangeMin < minSalary) {
-                    prefScore -= 2;
+                // Department matching: boost jobs in departments that match user's role
+                if (matchedDepts.length > 0) {
+                    const jobDept = (row.Department || '').toLowerCase();
+                    if (jobDept && matchedDepts.some(d => jobDept.includes(d) || d.includes(jobDept))) {
+                        prefScore += 3;
+                    }
                 }
 
                 (row as any)._prefScore = prefScore;
@@ -804,6 +822,15 @@ export class JobService {
             // Sort: India first > titleScore DESC > prefScore DESC > workplace order > recency
             // No tier boosting — JobsLandingScreen has dedicated Top MNC section
             scored.sort((a: any, b: any) => {
+                // Experience relevance: when filtering by exp or empty profile, tighter ranges first
+                if (applyExpRelevance) {
+                    const aMax = a.ExperienceMax ?? 99;
+                    const bMax = b.ExperienceMax ?? 99;
+                    const target = expRelevanceTarget;
+                    const aRank = aMax <= target ? 0 : aMax <= target + 1 ? 1 : aMax <= target + 3 ? 2 : 3;
+                    const bRank = bMax <= target ? 0 : bMax <= target + 1 ? 1 : bMax <= target + 3 ? 2 : 3;
+                    if (aRank !== bRank) return aRank - bRank;
+                }
                 // India jobs first
                 const countryA = (a.Country || '').toLowerCase();
                 const countryB = (b.Country || '').toLowerCase();
@@ -830,11 +857,12 @@ export class JobService {
             //   j.CountryRank (0=India, 1=Other) — indexed in IX_Jobs_SortRank
             //   j.TierRank (0=Elite, 1=Premium, 2=Standard) — indexed in IX_Jobs_SortRank
             // This avoids CASE WHEN on every row and enables index-assisted ORDER BY
+            const expRelevancePrefix = experienceRelevanceSql ? `${experienceRelevanceSql}, ` : '';
             const orderPrefix = skipPersonalization
-                ? `j.CountryRank, j.TierRank, ${workplaceOrderSql}, `
+                ? `${expRelevancePrefix}j.CountryRank, j.TierRank, ${workplaceOrderSql}, `
                 : (hasSearchText
-                    ? `j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
-                    : `j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
+                    ? `${expRelevancePrefix}j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `
+                    : `${expRelevancePrefix}j.CountryRank, j.TierRank, ${preferenceScoreSql} DESC, ${workplaceOrderSql}, `);
 
             const offset = noPaging ? 0 : (pageNum - 1) * pageSizeNum;
             dataQuery += ` ORDER BY ${orderPrefix}${normalizedSort} ${normalizedOrder}, j.JobID ${normalizedOrder} 
@@ -1342,7 +1370,6 @@ export class JobService {
             const pwtParam = `@param${paramIndex}`; dataParams.push(personalization.preferredWorkTypes); paramIndex++;
             const plocParam = `@param${paramIndex}`; dataParams.push(personalization.preferredLocations); paramIndex++;
             const pcsParam = `@param${paramIndex}`; dataParams.push(personalization.preferredCompanySize); paramIndex++;
-            const pindParam = `@param${paramIndex}`; dataParams.push(personalization.preferredIndustries); paramIndex++;
 
             // Build combined pipe-separated titles for scoring (same as getJobs)
             const titleParts: string[] = [];
@@ -1353,15 +1380,15 @@ export class JobService {
             }
             const combinedTitles = titleParts.join('|') || '';
 
-            const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam, pindParam);
+            const personalizationCtes = this.buildPersonalizationCtesSql(pjtParam, pwtParam, plocParam);
 
-            const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam);
+            const preferenceScoreSql = this.buildPreferenceScoreSql(pjtParam, pwtParam, plocParam, pcsParam, false);
             const hasSearchText = ((f.search || f.q || '') as any).toString().trim().length > 0;
             const roleTitlePersonalizationDisabled = ['false', '0', 'no', 'off'].includes(String(f.roleTitlePersonalization ?? '').toLowerCase())
                 || f.roleTitlePersonalization === false
                 || f.roleTitlePersonalization === 0;
             // NEW: Skip personalization if dontPersonalize=true is passed from frontend
-            const skipPersonalization = f.dontPersonalize === true || f.dontPersonalize === 'true';
+            const skipPersonalization = f.dontPersonalize === true;
             const hasRoleTitle = combinedTitles.length > 0;
             const useRoleTitleScore = !skipPersonalization && !hasSearchText && !roleTitlePersonalizationDisabled && hasRoleTitle;
 
