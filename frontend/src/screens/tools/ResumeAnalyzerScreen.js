@@ -264,6 +264,19 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
   const [mobileView, setMobileView] = useState('input');
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
+  // ── History ──
+  const [historyItems, setHistoryItems] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const loadHistory = async () => {
+    if (!user) return;
+    setLoadingHistory(true);
+    try {
+      const res = await refopenAPI.apiCall('/tools/resume-analyzer/history');
+      if (res?.success) setHistoryItems(res.data || []);
+    } catch {} finally { setLoadingHistory(false); }
+  };
+
   // ── FAQ modal ──
   const [showFaqModal, setShowFaqModal] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState(null);
@@ -1052,6 +1065,17 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
             {mobileView === 'input' && (
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
                 {renderHeroCard()}
+                {/* History toggle */}
+                {user && (
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginBottom: 8 }}
+                    onPress={() => { loadHistory(); transitionTo('history'); }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="time-outline" size={16} color={colors.primary} />
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>View Past Analyses</Text>
+                  </TouchableOpacity>
+                )}
                 {renderInputSection()}
                 <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                   <Ionicons name="shield-checkmark" size={14} color={colors.textSecondary} />
@@ -1071,6 +1095,58 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
                   {renderResults()}
                 </View>
               </View>
+            )}
+            {mobileView === 'history' && (
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 16 }}
+                  onPress={() => transitionTo('input')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="arrow-back" size={18} color={colors.primary} />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary }}>Back to Analyzer</Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 16 }}>Analysis History</Text>
+                {loadingHistory ? (
+                  <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+                ) : historyItems.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingTop: 40 }}>
+                    <Ionicons name="document-text-outline" size={60} color={colors.border} />
+                    <Text style={{ fontSize: 15, color: colors.textSecondary, marginTop: 12 }}>No past analyses yet</Text>
+                    <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 4 }}>Analyze a resume to see it here</Text>
+                  </View>
+                ) : (
+                  historyItems.map((item) => {
+                    const score = item.matchScore || 0;
+                    const scoreColor = score >= 80 ? '#10B981' : score >= 60 ? '#3B82F6' : score >= 40 ? '#F59E0B' : '#EF4444';
+                    const date = item.analyzedAt ? new Date(item.analyzedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                    return (
+                      <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <View style={{ flex: 1, marginRight: 12 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>{item.fileName || 'Resume'}</Text>
+                            {item.jobUrl && (
+                              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 3 }} numberOfLines={1}>{item.jobUrl}</Text>
+                            )}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                              <Text style={{ fontSize: 11, color: colors.textMuted }}>{date}</Text>
+                              {item.aiModel && (
+                                <View style={{ backgroundColor: colors.primary + '15', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                  <Text style={{ fontSize: 10, color: colors.primary, fontWeight: '600' }}>{item.aiModel.includes('gemini') ? 'Gemini' : 'Groq'}</Text>
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                          <View style={{ alignItems: 'center', minWidth: 50 }}>
+                            <Text style={{ fontSize: 24, fontWeight: '800', color: scoreColor }}>{score}</Text>
+                            <Text style={{ fontSize: 10, color: colors.textSecondary }}>/100</Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })
+                )}
+              </ScrollView>
             )}
           </Animated.View>
         )}
