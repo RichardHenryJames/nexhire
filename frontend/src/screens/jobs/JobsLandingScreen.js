@@ -60,6 +60,7 @@ export default function JobsLandingScreen({ navigation, route }) {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const [selectedDepts, setSelectedDepts] = useState([]);
+  const [customRole, setCustomRole] = useState('');
   const [savingPrefs, setSavingPrefs] = useState(false);
 
   // Check if user needs onboarding (no preferences set)
@@ -84,17 +85,19 @@ export default function JobsLandingScreen({ navigation, route }) {
     try {
       const userId = user.UserID || user.userId || user.id || user.sub;
       // Save selected departments directly as preferred industries
+      const depts = [...selectedDepts.filter(d => d !== 'Other')];
+      if (customRole.trim()) depts.push(customRole.trim());
       const payload = {
-        preferredIndustries: selectedDepts.join(','),
+        preferredIndustries: depts.join(','),
       };
       await refopenAPI.updateApplicantProfile(userId, payload);
       setShowOnboarding(false);
       setOnboardingDismissed(true);
       // Refresh jobs with new preferences
       loadData(true);
-      showToast('Preferences saved! Jobs are now personalized.', 'success');
+      showToast('Got it! We\'ll show you the most relevant jobs.', 'success');
     } catch {
-      showToast('Failed to save preferences', 'error');
+      showToast('Something went wrong. Please try again.', 'error');
     } finally {
       setSavingPrefs(false);
     }
@@ -527,8 +530,17 @@ export default function JobsLandingScreen({ navigation, route }) {
                   <Text style={{ fontSize: 12, fontWeight: '600', color: sel ? colors.white : colors.text }}>{dept}</Text>
                 </TouchableOpacity>
               );
-            })}
-          </View>
+            })}n          </View>
+          {selectedDepts.includes('Other') && (
+            <TextInput
+              style={[styles.onboardingTextInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+              placeholder="E.g., Nurse, Content Writer, Chef..."
+              placeholderTextColor={colors.gray400}
+              value={customRole}
+              onChangeText={setCustomRole}
+              returnKeyType="done"
+            />
+          )}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
             <TouchableOpacity
               style={[styles.onboardingSaveBtn, { backgroundColor: selectedDepts.length > 0 ? colors.primary : colors.gray400 }]}
@@ -861,6 +873,15 @@ const createStyles = (colors, responsive = {}) => {
       paddingVertical: 10,
       borderRadius: 8,
       alignItems: 'center',
+    },
+    onboardingTextInput: {
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      fontSize: 13,
+      marginBottom: 12,
+      ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
     },
     // Floating Action Buttons
     fabContainerTop: {
