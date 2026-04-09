@@ -122,6 +122,7 @@ export default function ResumeBuilderScreen({ navigation, route }) {
 
   // List view
   const [projects, setProjects] = useState([]);
+  const [showAllProjects, setShowAllProjects] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [templatePreviews, setTemplatePreviews] = useState({});
 
@@ -815,58 +816,70 @@ export default function ResumeBuilderScreen({ navigation, route }) {
             )}
 
             <View style={styles.projectsGrid}>
-              {projects.map((project) => (
+              {projects.slice(0, showAllProjects ? projects.length : 5).map((project) => (
                 <TouchableOpacity
                   key={project.ProjectID}
                   style={styles.projectCard}
                   onPress={() => openProject(project.ProjectID)}
                   activeOpacity={0.7}
                 >
-                  <View style={styles.projectCardTop}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                     <LinearGradient
                       colors={TEMPLATE_GRADIENTS[project.TemplateSlug] || TEMPLATE_GRADIENTS.classic}
                       style={styles.projectThumb}
                     >
-                      <Ionicons name="document-text" size={24} color="rgba(255,255,255,0.8)" />
+                      <Ionicons name="document-text" size={18} color="rgba(255,255,255,0.8)" />
                     </LinearGradient>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={styles.projectTitle} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
+                        <TouchableOpacity
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (Platform.OS === 'web') {
+                              const newTitle = window.prompt('Rename resume:', project.Title || 'My Resume');
+                              if (newTitle?.trim()) {
+                                setProjects(prev => prev.map(p => p.ProjectID === project.ProjectID ? { ...p, Title: newTitle.trim() } : p));
+                                refopenAPI.apiCall(`/resume-builder/projects/${project.ProjectID}`, {
+                                  method: 'PUT', body: JSON.stringify({ title: newTitle.trim() }),
+                                }).catch(() => {});
+                              }
+                            }
+                          }}
+                        >
+                          <Ionicons name="create-outline" size={12} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.captionText}>
+                        {project.TemplateName || 'Classic'} • {new Date(project.UpdatedAt).toLocaleDateString()}
+                      </Text>
+                    </View>
                     <TouchableOpacity
                       style={styles.deleteBtn}
                       onPress={() => handleDeleteProject(project.ProjectID)}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <Ionicons name="trash-outline" size={15} color={colors.error} />
+                      <Ionicons name="trash-outline" size={14} color={colors.error} />
                     </TouchableOpacity>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Text style={styles.projectTitle} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
-                    <TouchableOpacity
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        if (Platform.OS === 'web') {
-                          const newTitle = window.prompt('Rename resume:', project.Title || 'My Resume');
-                          if (newTitle?.trim()) {
-                            setProjects(prev => prev.map(p => p.ProjectID === project.ProjectID ? { ...p, Title: newTitle.trim() } : p));
-                            refopenAPI.apiCall(`/resume-builder/projects/${project.ProjectID}`, {
-                              method: 'PUT', body: JSON.stringify({ title: newTitle.trim() }),
-                            }).catch(() => {});
-                          }
-                        }
-                      }}
-                    >
-                      <Ionicons name="create-outline" size={13} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.captionText}>
-                    {project.TemplateName || 'Classic'} • Updated {new Date(project.UpdatedAt).toLocaleDateString()}
-                  </Text>
-                  <View style={styles.projectCta}>
-                    <Text style={[styles.bodyTextBold, { color: colors.primary, fontSize: 13 }]}>Edit Resume</Text>
-                    <Ionicons name="arrow-forward" size={14} color={colors.primary} />
                   </View>
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* Show More / Show Less */}
+            {projects.length > 5 && (
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 12 }}
+                onPress={() => setShowAllProjects(prev => !prev)}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                  {showAllProjects ? 'Show Less' : `Show All ${projects.length} Resumes`}
+                </Text>
+                <Ionicons name={showAllProjects ? 'chevron-up' : 'chevron-down'} size={16} color={colors.primary} />
+              </TouchableOpacity>
+            )}
 
             {projects.length === 0 && (
               <View style={styles.emptyState}>
@@ -1408,15 +1421,11 @@ const createStyles = (colors, isMobile, isTablet, isDesktop) =>
     },
     projectCard: {
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.border,
-      padding: 16,
+      padding: 12,
       width: isDesktop ? '48%' : '100%',
-      ...Platform.select({
-        web: { boxShadow: '0 1px 6px rgba(0,0,0,0.06)' },
-        default: { elevation: 2 },
-      }),
     },
     projectCardTop: {
       flexDirection: 'row',
@@ -1425,21 +1434,21 @@ const createStyles = (colors, isMobile, isTablet, isDesktop) =>
       marginBottom: 12,
     },
     projectThumb: {
-      width: 52,
-      height: 68,
-      borderRadius: 10,
+      width: 36,
+      height: 44,
+      borderRadius: 8,
       justifyContent: 'center',
       alignItems: 'center',
     },
     deleteBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 28,
+      height: 28,
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
       backgroundColor: colors.error + '12',
     },
-    projectTitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 },
+    projectTitle: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 2 },
     projectCta: {
       flexDirection: 'row',
       alignItems: 'center',

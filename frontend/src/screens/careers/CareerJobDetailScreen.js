@@ -92,7 +92,32 @@ export default function CareerJobDetailScreen({ route, navigation }) {
   const responsive = useResponsive();
   const { isMobile, isDesktop } = responsive;
   const { width: windowWidth } = useWindowDimensions();
-  const detailScreen = isAuthenticated ? 'CareerJobDetail' : 'CareerJobDetailPublic';
+  // Determine which stack we're in from the route name (not auth state)
+  // A logged-in user visiting /careers/job/xxx lands on CareerJobDetailPublic, not CareerJobDetail
+  const isPublicStack = route?.name?.endsWith('Public');
+  const detailScreen = isPublicStack ? 'CareerJobDetailPublic' : 'CareerJobDetail';
+  const careersScreen = isPublicStack ? 'CareersPublic' : 'Careers';
+
+  // Convert plain text (with \n and •) to HTML for RenderHtml
+  const textToHtml = (text) => {
+    if (!text) return null;
+    if (text.includes('<p>') || text.includes('<br') || text.includes('<li>') || text.includes('<ul>')) return text;
+    return text
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*')) {
+          return `<li>${trimmed.replace(/^[•\-\*]\s*/, '')}</li>`;
+        }
+        if (trimmed.endsWith(':') && trimmed.length < 60) {
+          return `<h3>${trimmed}</h3>`;
+        }
+        return `<p>${trimmed}</p>`;
+      })
+      .join('')
+      .replace(/(<li>.*?<\/li>)+/g, (match) => `<ul>${match}</ul>`);
+  };
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -141,10 +166,12 @@ export default function CareerJobDetailScreen({ route, navigation }) {
       .slice(0, 4);
   }, [job, allJobs]);
 
-  const fmtSalary = (min, max) => {
+  const fmtSalary = (min, max, jobType) => {
     if (!min && !max) return null;
-    const f = v => v >= 100000 ? `${(v / 100000).toFixed(0)}L` : v.toLocaleString();
-    return min && max ? `₹${f(min)} - ₹${f(max)}/yr` : min ? `₹${f(min)}+/yr` : `Up to ₹${f(max)}/yr`;
+    const isMonthly = jobType === 'Internship' || (max && max < 100000) || (min && !max && min < 100000);
+    const f = v => v >= 100000 ? `${(v / 100000).toFixed(1).replace(/\.0$/, '')}L` : v.toLocaleString('en-IN');
+    const suffix = isMonthly ? '/month' : '/yr';
+    return min && max ? `₹${f(min)} - ₹${f(max)}${suffix}` : min ? `₹${f(min)}+${suffix}` : `Up to ₹${f(max)}${suffix}`;
   };
 
   const ago = (d) => {
@@ -252,7 +279,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
       <View style={styles.breadcrumb}>
-        <TouchableOpacity onPress={() => navigation.navigate('Careers')}><Text style={styles.breadcrumbLink}>Careers</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate(careersScreen)}><Text style={styles.breadcrumbLink}>Careers</Text></TouchableOpacity>
         <Ionicons name="chevron-forward" size={14} color={colors.textSecondary} />
         <Text style={styles.breadcrumbCurrent} numberOfLines={1}>{job?.Title || 'Job Details'}</Text>
       </View>
@@ -302,14 +329,14 @@ export default function CareerJobDetailScreen({ route, navigation }) {
         <Ionicons name="alert-circle-outline" size={48} color={colors.gray400} />
         <Text style={styles.emptyTitle}>Job not found</Text>
         <Text style={styles.emptySub}>This position may no longer be available</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate('Careers')}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.navigate(careersScreen)}>
           <Text style={styles.backBtnT}>Browse all openings</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  const salary = fmtSalary(job.SalaryMin, job.SalaryMax);
+  const salary = fmtSalary(job.SalaryMin, job.SalaryMax, job.JobType);
   const skills = (job.Skills || '').split(',').map(s => s.trim()).filter(Boolean);
   const intern = job.JobType === 'Internship';
 
@@ -422,7 +449,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
             <View style={styles.section}>
               <RenderHtml
                 contentWidth={contentWidth}
-                source={{ html: job.Description || '<p>No description available.</p>' }}
+                source={{ html: textToHtml(job.Description) || '<p>No description available.</p>' }}
                 tagsStyles={htmlTagsStyles}
                 renderersProps={htmlRenderersProps}
                 systemFonts={htmlSystemFonts}
@@ -431,13 +458,13 @@ export default function CareerJobDetailScreen({ route, navigation }) {
               />
             </View>
 
-            {/* Requirements — show in left column on mobile only (desktop shows in sidebar) */}
-            {!isDesktop && job.Requirements && (
+            {/* Requirements */}
+            {job.Requirements && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Requirements</Text>
                 <RenderHtml
                   contentWidth={contentWidth}
-                  source={{ html: job.Requirements }}
+                  source={{ html: textToHtml(job.Requirements) }}
                   tagsStyles={htmlTagsStyles}
                   renderersProps={htmlRenderersProps}
                   systemFonts={htmlSystemFonts}
@@ -446,13 +473,13 @@ export default function CareerJobDetailScreen({ route, navigation }) {
               </View>
             )}
 
-            {/* Responsibilities — show in left column on mobile only */}
-            {!isDesktop && job.Responsibilities && (
+            {/* Responsibilities */}
+            {job.Responsibilities && (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Responsibilities</Text>
                 <RenderHtml
                   contentWidth={contentWidth}
-                  source={{ html: job.Responsibilities }}
+                  source={{ html: textToHtml(job.Responsibilities) }}
                   tagsStyles={htmlTagsStyles}
                   renderersProps={htmlRenderersProps}
                   systemFonts={htmlSystemFonts}
@@ -504,35 +531,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
                 </Text>
               </TouchableOpacity>
 
-              {/* Requirements in sidebar (desktop) */}
-              {job.Requirements && (
-                <View style={[styles.sideCard, { marginTop: 16, alignItems: 'flex-start' }]}>
-                  <Text style={[styles.sideCompanyName, { fontSize: 16, marginBottom: 10 }]}>Requirements</Text>
-                  <RenderHtml
-                    contentWidth={240}
-                    source={{ html: job.Requirements }}
-                    tagsStyles={htmlTagsStyles}
-                    renderersProps={htmlRenderersProps}
-                    systemFonts={htmlSystemFonts}
-                    defaultTextProps={{ selectable: true }}
-                  />
-                </View>
-              )}
 
-              {/* Responsibilities in sidebar (desktop) */}
-              {job.Responsibilities && (
-                <View style={[styles.sideCard, { marginTop: 12, alignItems: 'flex-start' }]}>
-                  <Text style={[styles.sideCompanyName, { fontSize: 16, marginBottom: 10 }]}>Responsibilities</Text>
-                  <RenderHtml
-                    contentWidth={240}
-                    source={{ html: job.Responsibilities }}
-                    tagsStyles={htmlTagsStyles}
-                    renderersProps={htmlRenderersProps}
-                    systemFonts={htmlSystemFonts}
-                    defaultTextProps={{ selectable: true }}
-                  />
-                </View>
-              )}
             </View>
           )}
         </View>
@@ -558,7 +557,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
             <View style={styles.similarGrid}>
               {similarJobs.map((sj) => {
                 const sjApplied = appliedJobIds.has(sj.CareerJobID);
-                const sjSalary = fmtSalary(sj.SalaryMin, sj.SalaryMax);
+                const sjSalary = fmtSalary(sj.SalaryMin, sj.SalaryMax, sj.JobType);
                 return (
                   <TouchableOpacity
                     key={sj.CareerJobID}
@@ -610,7 +609,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
               <Ionicons name="logo-twitter" size={24} color={BRAND} />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate('Careers')}>
+          <TouchableOpacity style={styles.ctaBtn} onPress={() => navigation.navigate(careersScreen)}>
             <Ionicons name="arrow-back" size={16} color="#fff" />
             <Text style={styles.ctaBtnT}>View All Openings</Text>
           </TouchableOpacity>

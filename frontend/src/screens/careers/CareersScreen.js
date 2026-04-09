@@ -30,6 +30,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRoute } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import useResponsive from '../../hooks/useResponsive';
@@ -54,11 +55,14 @@ const PERK_IMAGES = {
 export default function CareersScreen({ navigation }) {
   const { colors } = useTheme();
   const { isAuthenticated } = useAuth();
+  const currentRoute = useRoute();
   const responsive = useResponsive();
   const { isMobile, isDesktop } = responsive;
 
-  // Navigate to the correct screen based on which stack we're in (public vs authenticated)
-  const detailScreen = isAuthenticated ? 'CareerJobDetail' : 'CareerJobDetailPublic';
+  // Determine which stack we're in from the route name (not auth state)
+  // A logged-in user visiting /careers lands on CareersPublic (root stack), not Careers (MainStack)
+  const isPublicStack = currentRoute?.name?.endsWith('Public');
+  const detailScreen = isPublicStack ? 'CareerJobDetailPublic' : 'CareerJobDetail';
 
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,10 +110,12 @@ export default function CareersScreen({ navigation }) {
 
   const strip = (html) => html ? html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : '';
 
-  const fmtSalary = (min, max) => {
+  const fmtSalary = (min, max, jobType) => {
     if (!min && !max) return null;
-    const f = v => v >= 100000 ? `${(v / 100000).toFixed(0)}L` : v.toLocaleString();
-    return min && max ? `₹${f(min)} - ₹${f(max)}/yr` : min ? `₹${f(min)}+/yr` : `Up to ₹${f(max)}/yr`;
+    const isMonthly = jobType === 'Internship' || (max && max < 100000) || (min && !max && min < 100000);
+    const f = v => v >= 100000 ? `${(v / 100000).toFixed(1).replace(/\.0$/, '')}L` : v.toLocaleString('en-IN');
+    const suffix = isMonthly ? '/month' : '/yr';
+    return min && max ? `₹${f(min)} - ₹${f(max)}${suffix}` : min ? `₹${f(min)}+${suffix}` : `Up to ₹${f(max)}${suffix}`;
   };
 
   const ago = (d) => {
@@ -123,7 +129,7 @@ export default function CareersScreen({ navigation }) {
 
   const renderCard = (job) => {
     const applied = appliedJobIds.has(job.CareerJobID);
-    const salary = fmtSalary(job.SalaryMin, job.SalaryMax);
+    const salary = fmtSalary(job.SalaryMin, job.SalaryMax, job.JobType);
     const skills = (job.Skills || '').split(',').map(s => s.trim()).filter(Boolean);
     const intern = job.JobType === 'Internship';
     const desc = strip(job.Description);
