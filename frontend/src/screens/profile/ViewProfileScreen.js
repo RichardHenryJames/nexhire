@@ -436,6 +436,30 @@ export default function ViewProfileScreen() {
           </View>
         )}
 
+        {/* Resume Section */}
+        {profile.primaryResume && profile.primaryResume.ResumeURL && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="document-text-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Resume</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.educationCard}
+              onPress={() => Linking.openURL(profile.primaryResume.ResumeURL)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.educationIcon}>
+                <Ionicons name="document-attach" size={24} color={colors.primary} />
+              </View>
+              <View style={styles.educationDetails}>
+                <Text style={styles.educationDegree}>{profile.primaryResume.ResumeLabel || 'Resume'}</Text>
+                <Text style={styles.educationField}>View resume</Text>
+              </View>
+              <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Skills Section */}
         {profile.PrimarySkills && (
           <View style={styles.section}>

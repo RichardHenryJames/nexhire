@@ -629,6 +629,52 @@ export default function ProfileScreen({ navigation, route }) {
           </View>
         )}
 
+        {/* Resume Section - Always visible */}
+        {!loadingSections && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="document-text-outline" size={22} color={colors.primary} />
+              <Text style={styles.sectionHeading}>Resume</Text>
+              {jobSeekerProfile.resumes?.length > 0 && (
+                <TouchableOpacity onPress={() => navigation.navigate('ResumeUpload')} style={styles.editIconButton}>
+                  <Ionicons name="create-outline" size={18} color={colors.primary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            {(() => {
+              const primaryResume = jobSeekerProfile.resumes?.find(r => r.IsPrimary && !r.IsDeleted) || jobSeekerProfile.resumes?.find(r => !r.IsDeleted);
+              if (primaryResume) {
+                return (
+                  <TouchableOpacity
+                    style={styles.educationCard}
+                    onPress={() => primaryResume.ResumeURL ? Linking.openURL(primaryResume.ResumeURL) : null}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.educationIcon}>
+                      <Ionicons name="document-attach" size={24} color={colors.primary} />
+                    </View>
+                    <View style={styles.educationDetails}>
+                      <Text style={styles.educationDegree}>{primaryResume.ResumeLabel || 'Resume'}</Text>
+                      <Text style={styles.educationField}>
+                        {primaryResume.IsPrimary ? 'Primary resume' : 'Resume'}
+                        {primaryResume.CreatedAt ? ` · Uploaded ${new Date(primaryResume.CreatedAt).toLocaleDateString()}` : ''}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: colors.primary, marginTop: 4 }}>Tap to view</Text>
+                    </View>
+                    <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                );
+              }
+              return (
+                <TouchableOpacity style={styles.emptySectionCta} onPress={() => navigation.navigate('ResumeUpload')} activeOpacity={0.7}>
+                  <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                  <Text style={styles.emptySectionCtaText}>Upload your resume to stand out</Text>
+                </TouchableOpacity>
+              );
+            })()}
+          </View>
+        )}
+
         {/* Skills Section - Always visible */}
         {!loadingSections && (
           <View style={styles.section}>

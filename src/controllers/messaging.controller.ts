@@ -509,7 +509,10 @@ export const getPublicProfile = withAuth(async (req: HttpRequest, context: Invoc
         Institution: profile.Institution,
         HighestEducation: profile.HighestEducation,
         FieldOfStudy: profile.FieldOfStudy,
-        GraduationYear: profile.GraduationYear
+        GraduationYear: profile.GraduationYear,
+
+        // Include primary resume (for public viewing)
+        primaryResume: profile.resumes?.find((r: any) => r.IsPrimary && !r.IsDeleted) || profile.resumes?.find((r: any) => !r.IsDeleted) || null
       };
 
       return { status: 200, headers: getCorsSafe(req), jsonBody: successResponse(publicProfile, 'Public profile retrieved successfully') };
