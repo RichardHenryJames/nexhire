@@ -530,7 +530,8 @@ export default function JobsLandingScreen({ navigation, route }) {
                   <Text style={{ fontSize: 12, fontWeight: '600', color: sel ? colors.white : colors.text }}>{dept}</Text>
                 </TouchableOpacity>
               );
-            })}n          </View>
+            })}
+          </View>
           {selectedDepts.includes('Other') && (
             <TextInput
               style={[styles.onboardingTextInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
