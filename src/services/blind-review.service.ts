@@ -53,11 +53,17 @@ export interface AnonymizedProfile {
 }
 
 export interface AIScoreResult {
-  score: number;            // 0-100
-  strengths: string[];
-  weaknesses: string[];
-  redFlags: string[];
-  recommendation: string;   // One-line verdict
+  score: number;            // 0-100 from rubric
+  breakdown?: {             // Per-dimension scores
+    technicalSkills: number;
+    experienceRelevance: number;
+    companyFit: number;
+    standoutFactor: number;
+  };
+  strengths: string[];      // Specific strengths with evidence
+  weaknesses: string[];     // Actionable gaps with advice
+  redFlags: string[];       // True deal-breakers
+  recommendation: string;   // Direct, honest verdict
 }
 
 export interface BlindReviewResult {
@@ -273,14 +279,29 @@ Strip ONLY personal identifiers from this profile:
 - KEEP: job titles, skills, years of experience, education level, field of study, GPA, certifications
 - KEEP: project descriptions, technologies, achievements
 
-## TASK 2: SCORE
-Evaluate how likely a hiring insider at ${companyName} (${companyIndustry || 'Technology'} industry) would refer this person for a "${targetRole}" role.
-Score from 0-100 where:
-- 90-100: Slam dunk — perfect fit, would immediately refer
-- 70-89: Strong candidate — would refer with confidence  
-- 50-69: Decent — would consider referring, some gaps
-- 30-49: Weak — significant gaps, unlikely to refer
-- 0-29: Not a fit — major misalignment
+## TASK 2: SCORE — BE BRUTALLY HONEST
+You are evaluating whether a hiring insider at ${companyName} (${companyIndustry || 'Technology'} industry) would actually refer this person for a "${targetRole}" role.
+
+SCORING RUBRIC — Rate each dimension separately, then sum:
+1. Technical Skills Match (0-25): Does the candidate have the specific tech stack ${companyName} uses for "${targetRole}"? Deduct heavily for missing core skills.
+2. Experience Relevance (0-25): Is their work experience directly relevant? A backend developer targeting a frontend role loses points. Years alone don't matter — relevance does.
+3. Company/Brand Fit (0-25): Have they worked at companies of similar caliber? Tier-1 tech company experience for a ${companyName} role matters. Startups vs enterprise experience matters.
+4. Standout Factor (0-25): What makes them memorable? Open source contributions, publications, patents, leadership at scale, or unique achievements. Most candidates score 5-10 here.
+
+CRITICAL CALIBRATION RULES:
+- Average candidates should score 45-55. This is the MEDIAN, not 75.
+- A fresh graduate with no relevant experience should score 15-25.
+- Only candidates who have done the EXACT same role at a DIRECT competitor should score 85+.
+- If the profile is sparse/incomplete, score LOW (20-35) — don't assume hidden strengths.
+- Generic skills like "Python, Java, SQL" without context of HOW they were used = low technical score.
+- If they have 0-2 years experience and targeting a Senior role = red flag, score accordingly.
+- NEVER give 85 as a default. Use the full 0-100 range.
+
+FEEDBACK RULES — Be the career mentor they need:
+- In strengths: Be specific. Not "good skills" but "3 years of hands-on Kubernetes experience at scale (200+ microservices) is directly relevant to ${companyName}'s infrastructure"
+- In gaps: Be actionable. Not "needs more experience" but "Missing distributed systems experience — ${companyName}'s ${targetRole} requires designing systems handling 10M+ requests/day. Recommend: build a side project with message queues (Kafka/RabbitMQ)"
+- In dealBreakers: Only list true blockers that would make a referrer say no. Empty array if none.
+- In verdict: Be direct and honest. "You're a strong mid-level candidate but this is a senior role at a top company — you need 2 more years of system design experience before applying" is better than "Good candidate"
 
 ## PROFILE TO ANALYZE:
 ${rawText.substring(0, 8000)}
@@ -314,11 +335,17 @@ ${rawText.substring(0, 8000)}
     "summary": "<3-4 sentence professional summary. Include company names and key technologies. Only remove the person's name.>"
   },
   "aiScore": {
-    "score": <0-100>,
-    "strengths": ["<strength1>", "<strength2>", "<strength3>"],
-    "weaknesses": ["<weakness1>", "<weakness2>"],
-    "redFlags": ["<flag1>"] or [],
-    "recommendation": "<one sentence verdict>"
+    "score": <0-100 total from rubric above>,
+    "breakdown": {
+      "technicalSkills": <0-25>,
+      "experienceRelevance": <0-25>,
+      "companyFit": <0-25>,
+      "standoutFactor": <0-25>
+    },
+    "strengths": ["<specific strength with evidence from their profile>", "<another specific strength>", "<third>"],
+    "gaps": ["<specific gap + actionable advice on how to close it>", "<another gap + what to do>"],
+    "dealBreakers": ["<true blocker if any>"] or [],
+    "verdict": "<2-3 sentences. Be direct, honest, and helpful. Tell them exactly where they stand and what to do next.>"
   }
 }`;
   }
@@ -369,10 +396,11 @@ ${rawText.substring(0, 8000)}
         },
         aiScore: {
           score: Math.min(100, Math.max(0, as2.score || 50)),
+          breakdown: as2.breakdown || null,
           strengths: Array.isArray(as2.strengths) ? as2.strengths : [],
-          weaknesses: Array.isArray(as2.weaknesses) ? as2.weaknesses : [],
-          redFlags: Array.isArray(as2.redFlags) ? as2.redFlags : [],
-          recommendation: as2.recommendation || 'Analysis complete.',
+          weaknesses: Array.isArray(as2.gaps || as2.weaknesses) ? (as2.gaps || as2.weaknesses) : [],
+          redFlags: Array.isArray(as2.dealBreakers || as2.redFlags) ? (as2.dealBreakers || as2.redFlags) : [],
+          recommendation: as2.verdict || as2.recommendation || 'Analysis complete.',
         },
       };
     } catch (err) {

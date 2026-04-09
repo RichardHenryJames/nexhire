@@ -481,6 +481,9 @@ export class UserActivityService {
   static async getAnalyticsDashboard(days: number = 30): Promise<any> {
     try {
       const combinedQuery = `
+        -- Safety: drop stale temp table if a previous call errored mid-query on the same pooled connection
+        IF OBJECT_ID('tempdb..#FL') IS NOT NULL DROP TABLE #FL;
+
         -- Step 1: Pre-filter all activity logs into temp table ONCE
         -- This avoids re-scanning UserActivityLogs (29k+ rows) and re-evaluating
         -- the NOT IN exclusion subquery for each of the 10 analytics queries
