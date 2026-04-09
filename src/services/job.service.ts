@@ -42,6 +42,7 @@ export class JobService {
         preferredWorkTypes: string | null;
         preferredLocations: string | null;
         preferredCompanySize: string | null;
+        preferredIndustries: string | null;
         latestJobTitle: string | null;
         preferredRoles: string | null;
         isFresher: boolean;
@@ -53,6 +54,7 @@ export class JobService {
                 preferredWorkTypes: null,
                 preferredLocations: null,
                 preferredCompanySize: null,
+                preferredIndustries: null,
                 latestJobTitle: null,
                 preferredRoles: null,
                 isFresher: false,
@@ -66,6 +68,7 @@ export class JobService {
                 a.PreferredWorkTypes AS preferredWorkTypes,
                 a.PreferredLocations AS preferredLocations,
                 a.PreferredCompanySize AS preferredCompanySize,
+                a.PreferredIndustries AS preferredIndustries,
                 ISNULL(a.TotalExperienceMonths, 0) AS totalExperienceMonths,
                 a.GraduationYear AS graduationYear,
                 CAST(a.PreferredRoles AS NVARCHAR(MAX)) AS preferredRoles,
@@ -114,6 +117,7 @@ export class JobService {
             preferredWorkTypes: row?.preferredWorkTypes ?? null,
             preferredLocations: row?.preferredLocations ?? null,
             preferredCompanySize: row?.preferredCompanySize ?? null,
+            preferredIndustries: row?.preferredIndustries ?? null,
             latestJobTitle: row?.latestJobTitle ?? null,
             preferredRoles: row?.preferredRoles ?? null,
             isFresher,
@@ -697,6 +701,7 @@ export class JobService {
                 o.Name as OrganizationName,
                 ISNULL(o.LogoURL, '') as OrganizationLogo,
                 ISNULL(o.Size, '') as OrganizationSize,
+                ISNULL(j.Department, '') as Department,
                 ISNULL(o.Tier, 'Standard') as OrganizationTier${hasAppliedColumn}
             FROM Jobs j
             INNER JOIN ReferenceMetadata jt ON j.JobTypeID = jt.ReferenceID AND jt.RefType = 'JobType'
@@ -740,6 +745,39 @@ export class JobService {
                 .map((s: string) => s.trim().toLowerCase()).filter(Boolean);
             const prefCompanySize = (personalization.preferredCompanySize || '').trim().toLowerCase();
 
+            // Department matching: extract department keywords from user's job title + preferred roles
+            const DEPT_KEYWORD_MAP: Record<string, string[]> = {
+                'engineering': ['engineer', 'developer', 'sde', 'swe', 'sse', 'ssw', 'devops', 'backend', 'frontend', 'fullstack', 'full stack', 'ios', 'android', 'architect', 'programmer', 'coder', 'administrator', 'sre', 'infrastructure', 'embedded', 'web dev', 'python dev', 'java dev', '.net dev', 'aws dev', 'cloud', 'sharepoint', 'automation'],
+                'technology': ['technical', 'technology', 'it analyst', 'it assistant', 'systems', 'system', 'tech lead', 'agile', 'scrum', 'consultant', 'implementation'],
+                'sales': ['sales', 'business development', 'account executive', 'account manager', 'bdm', 'bdr', 'inside sales', 'gtm'],
+                'marketing': ['marketing', 'growth', 'seo', 'content', 'brand', 'digital marketing', 'market research'],
+                'finance': ['finance', 'wealth', 'banking', 'accounting', 'audit', 'financial', 'investment', 'budget', 'forecasting', 'quantitative', 'royalty'],
+                'design': ['design', 'designer', 'ui', 'ux', 'graphic', 'creative', 'visual'],
+                'management': ['manager', 'management', 'director', 'head', 'vp', 'chief', 'supervisor', 'founder', 'ceo', 'cto', 'coo', 'program director', 'trainee', 'team lead'],
+                'product': ['product manager', 'product owner', 'product designer', 'pmts', 'pmo'],
+                'data science': ['data scientist', 'data analyst', 'data engineer', 'analytics', 'analyst', 'ml ', 'machine learning', 'big data', 'ai engineer', 'ai ml'],
+                'human resources': ['hr', 'recruiter', 'talent', 'people ops', 'human resource', 'compensation', 'benefits'],
+                'legal': ['legal', 'compliance', 'counsel', 'attorney', 'lawyer'],
+                'customer success': ['customer success', 'customer support', 'customer service', 'service executive', 'process associate'],
+                'operations': ['operations', 'logistics', 'supply chain', 'transportation', 'construction', 'production', 'specialist'],
+                'research': ['researcher', 'research', 'academic', 'counsellor'],
+            };
+            const userTitleLower = (personalization.latestJobTitle || personalization.preferredRoles || '').toLowerCase();
+            const matchedDepts: string[] = [];
+            // Priority 1: Use explicitly set preferred industries (from onboarding card / settings)
+            const explicitIndustries = (personalization.preferredIndustries || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+            if (explicitIndustries.length > 0) {
+                matchedDepts.push(...explicitIndustries);
+            }
+            // Priority 2: Infer from job title if no explicit industries set
+            if (matchedDepts.length === 0 && userTitleLower) {
+                for (const [dept, keywords] of Object.entries(DEPT_KEYWORD_MAP)) {
+                    if (keywords.some(kw => userTitleLower.includes(kw))) {
+                        matchedDepts.push(dept);
+                    }
+                }
+            }
+
             // Score preference + title in JS (~30ms for 3,225 rows)
             const wpOrder: Record<number, number> = { 444: 1, 442: 2, 443: 3 };
             const scored = allRows.map((row: any) => {
@@ -764,6 +802,14 @@ export class JobService {
                     else if (expMin >= 5) prefScore -= 3;
                     const titleLower = (row.Title || '').toLowerCase();
                     if (/senior|lead|principal|staff|director|vp|chief|architect/i.test(titleLower)) prefScore -= 4;
+                }
+
+                // Department matching: boost jobs in departments that match user's role
+                if (matchedDepts.length > 0) {
+                    const jobDept = (row.Department || '').toLowerCase();
+                    if (jobDept && matchedDepts.some(d => jobDept.includes(d) || d.includes(jobDept))) {
+                        prefScore += 3;
+                    }
                 }
 
                 (row as any)._prefScore = prefScore;

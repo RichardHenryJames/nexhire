@@ -855,6 +855,23 @@ export default function SettingsScreen({ navigation, route }) {
               placeholderTextColor={colors.gray400}
             />
             <View style={styles.chipContainer}>
+              {/* Show custom roles (saved from onboarding/other sources) that aren't in reference data */}
+              {jobSeekerProfile.preferredRoles
+                .filter(r => !(referenceData.jobRoles || []).some(ref => ref.Value === r))
+                .map((role) => (
+                <TouchableOpacity
+                  key={role}
+                  style={[styles.chip, styles.chipSelected]}
+                  onPress={() => {
+                    setJobSeekerProfile(prev => ({
+                      ...prev,
+                      preferredRoles: prev.preferredRoles.filter(v => v !== role)
+                    }));
+                  }}
+                >
+                  <Text style={[styles.chipText, styles.chipTextSelected]}>{role}</Text>
+                </TouchableOpacity>
+              ))}
               {(referenceData.jobRoles || [])
                 .filter(role => {
                   const val = role.Value;
@@ -946,6 +963,54 @@ export default function SettingsScreen({ navigation, route }) {
                     jobSeekerProfile.preferredWorkTypes.includes(type.Value) && styles.chipTextSelected
                   ]}>
                     {type.Value}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Preferred Industries / Departments</Text>
+            <View style={styles.chipContainer}>
+              {/* Show custom industries saved from onboarding that aren't in reference data */}
+              {jobSeekerProfile.preferredIndustries
+                .filter(ind => !(referenceData.industries || []).some(ref => ref.Value === ind))
+                .map((ind) => (
+                <TouchableOpacity
+                  key={ind}
+                  style={[styles.chip, styles.chipSelected]}
+                  onPress={() => {
+                    setJobSeekerProfile(prev => ({
+                      ...prev,
+                      preferredIndustries: prev.preferredIndustries.filter(v => v !== ind)
+                    }));
+                  }}
+                >
+                  <Text style={[styles.chipText, styles.chipTextSelected]}>{ind}</Text>
+                </TouchableOpacity>
+              ))}
+              {(referenceData.industries || []).map((ind) => (
+                <TouchableOpacity
+                  key={ind.MetadataID || ind.Value}
+                  style={[
+                    styles.chip,
+                    jobSeekerProfile.preferredIndustries.includes(ind.Value) && styles.chipSelected
+                  ]}
+                  onPress={() => {
+                    const val = ind.Value;
+                    setJobSeekerProfile(prev => ({
+                      ...prev,
+                      preferredIndustries: prev.preferredIndustries.includes(val)
+                        ? prev.preferredIndustries.filter(v => v !== val)
+                        : [...prev.preferredIndustries, val]
+                    }));
+                  }}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    jobSeekerProfile.preferredIndustries.includes(ind.Value) && styles.chipTextSelected
+                  ]}>
+                    {ind.Value}
                   </Text>
                 </TouchableOpacity>
               ))}

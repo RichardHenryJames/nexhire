@@ -56,6 +56,50 @@ export default function JobsLandingScreen({ navigation, route }) {
   const [searchQuery, setSearchQuery] = useState('');
   const abortRef = useRef(null);
 
+  // Onboarding card — shown once for users without preferences
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const [selectedDepts, setSelectedDepts] = useState([]);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  // Check if user needs onboarding (no preferences set)
+  useEffect(() => {
+    if (!user || !isJobSeeker || onboardingDismissed) return;
+    (async () => {
+      try {
+        const userId = user.UserID || user.userId || user.id || user.sub;
+        const res = await refopenAPI.getApplicantProfile(userId);
+        if (res?.success && res.data) {
+          const p = res.data;
+          const hasPrefs = p.PreferredJobTypes || p.PreferredWorkTypes || p.PreferredRoles || p.PreferredLocations || p.PreferredIndustries;
+          setShowOnboarding(!hasPrefs);
+        }
+      } catch {}
+    })();
+  }, [user, isJobSeeker, onboardingDismissed]);
+
+  const handleSavePreferences = async () => {
+    if (selectedDepts.length === 0) return;
+    setSavingPrefs(true);
+    try {
+      const userId = user.UserID || user.userId || user.id || user.sub;
+      // Save selected departments directly as preferred industries
+      const payload = {
+        preferredIndustries: selectedDepts.join(','),
+      };
+      await refopenAPI.updateApplicantProfile(userId, payload);
+      setShowOnboarding(false);
+      setOnboardingDismissed(true);
+      // Refresh jobs with new preferences
+      loadData(true);
+      showToast('Preferences saved! Jobs are now personalized.', 'success');
+    } catch {
+      showToast('Failed to save preferences', 'error');
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
   // FAB counts
   const [savedCount, setSavedCount] = useState(0);
   const [appliedCount, setAppliedCount] = useState(0);
@@ -458,6 +502,52 @@ export default function JobsLandingScreen({ navigation, route }) {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Onboarding card for users without preferences */}
+      {showOnboarding && !onboardingDismissed && (
+        <View style={[styles.onboardingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="sparkles" size={18} color={colors.primary} />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>Help us find better jobs for you</Text>
+            </View>
+            <TouchableOpacity onPress={() => setOnboardingDismissed(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 10 }}>What roles interest you?</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+            {['Engineering', 'Sales', 'Marketing', 'Finance', 'Design', 'Management', 'Product', 'Data & Analytics', 'HR', 'Other'].map(dept => {
+              const sel = selectedDepts.includes(dept);
+              return (
+                <TouchableOpacity
+                  key={dept}
+                  onPress={() => setSelectedDepts(prev => sel ? prev.filter(d => d !== dept) : [...prev, dept])}
+                  style={[styles.onboardingChip, sel && { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: sel ? colors.white : colors.text }}>{dept}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
+            <TouchableOpacity
+              style={[styles.onboardingSaveBtn, { backgroundColor: selectedDepts.length > 0 ? colors.primary : colors.gray400 }]}
+              onPress={handleSavePreferences}
+              disabled={selectedDepts.length === 0 || savingPrefs}
+            >
+              {savingPrefs ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={{ fontSize: 13, fontWeight: '700', color: colors.white }}>Show me jobs →</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setOnboardingDismissed(true)}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>Skip for now</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {renderSection('Recommended for You', 'sparkles-outline', recommendedJobs, { recommended: true }, loading)}
       {renderSection('Top MNC Jobs', 'business-outline', topMncJobs, { isFortune500: true }, loading)}
       {renderSection('Recent Jobs', 'time-outline', recentJobs, { sortBy: 'newest' }, loading)}
@@ -751,6 +841,26 @@ const createStyles = (colors, responsive = {}) => {
     chipText: {
       fontSize: 13,
       fontWeight: '500',
+    },
+    // Onboarding card
+    onboardingCard: {
+      marginBottom: 16,
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+    },
+    onboardingChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    onboardingSaveBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
+      alignItems: 'center',
     },
     // Floating Action Buttons
     fabContainerTop: {
