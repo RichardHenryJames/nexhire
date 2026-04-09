@@ -636,7 +636,7 @@ export default function ProfileScreen({ navigation, route }) {
               <Ionicons name="document-text-outline" size={22} color={colors.primary} />
               <Text style={styles.sectionHeading}>Resume</Text>
               {jobSeekerProfile.resumes?.length > 0 && (
-                <TouchableOpacity onPress={() => navigation.navigate('ResumeUpload')} style={styles.editIconButton}>
+                <TouchableOpacity onPress={() => navigation.navigate('Settings', { openModal: 'resumes' })} style={styles.editIconButton}>
                   <Ionicons name="create-outline" size={18} color={colors.primary} />
                 </TouchableOpacity>
               )}
@@ -661,7 +661,6 @@ export default function ProfileScreen({ navigation, route }) {
                       </Text>
                       <Text style={{ fontSize: 12, color: colors.primary, marginTop: 4 }}>Tap to view</Text>
                     </View>
-                    <Ionicons name="open-outline" size={16} color={colors.textSecondary} />
                   </TouchableOpacity>
                 );
               }
