@@ -57,6 +57,9 @@ export default function CareersScreen({ navigation }) {
   const responsive = useResponsive();
   const { isMobile, isDesktop } = responsive;
 
+  // Navigate to the correct screen based on which stack we're in (public vs authenticated)
+  const detailScreen = isAuthenticated ? 'CareerJobDetail' : 'CareerJobDetailPublic';
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -129,7 +132,7 @@ export default function CareersScreen({ navigation }) {
       <TouchableOpacity
         key={job.CareerJobID}
         style={styles.card}
-        onPress={() => navigation.navigate('CareerJobDetail', { jobId: job.CareerJobID })}
+        onPress={() => navigation.navigate(detailScreen, { jobId: job.CareerJobID })}
         activeOpacity={0.7}
       >
         {/* Card Header */}
@@ -224,7 +227,7 @@ export default function CareersScreen({ navigation }) {
           <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
             {myApplications.map((app, i) => (
               <TouchableOpacity key={app.ApplicationID || i} style={styles.myAppItem}
-                onPress={() => { setShowMyApps(false); navigation.navigate('CareerJobDetail', { jobId: app.CareerJobID }); }}>
+                onPress={() => { setShowMyApps(false); navigation.navigate(detailScreen, { jobId: app.CareerJobID }); }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.myAppTitle}>{app.Title || 'Position'}</Text>
                   <Text style={styles.myAppMeta}>{app.Department} • {app.Location}</Text>

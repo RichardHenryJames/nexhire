@@ -92,6 +92,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
   const responsive = useResponsive();
   const { isMobile, isDesktop } = responsive;
   const { width: windowWidth } = useWindowDimensions();
+  const detailScreen = isAuthenticated ? 'CareerJobDetail' : 'CareerJobDetailPublic';
 
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -269,7 +270,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
           <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
             {myApplications.map((app, i) => (
               <TouchableOpacity key={app.ApplicationID || i} style={styles.myAppItem}
-                onPress={() => { setShowMyApps(false); navigation.push('CareerJobDetail', { jobId: app.CareerJobID }); }}>
+                onPress={() => { setShowMyApps(false); navigation.push(detailScreen, { jobId: app.CareerJobID }); }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.myAppTitle}>{app.Title || 'Position'}</Text>
                   <Text style={styles.myAppMeta}>{app.Department} \u2022 {app.Location}</Text>
@@ -562,7 +563,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
                   <TouchableOpacity
                     key={sj.CareerJobID}
                     style={styles.similarCard}
-                    onPress={() => navigation.push('CareerJobDetail', { jobId: sj.CareerJobID })}
+                    onPress={() => navigation.push(detailScreen, { jobId: sj.CareerJobID })}
                     activeOpacity={0.7}
                   >
                     <View style={styles.similarCardHead}>
