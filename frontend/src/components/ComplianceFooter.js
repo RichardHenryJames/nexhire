@@ -29,7 +29,8 @@ export default function ComplianceFooter({ currentPage }) {
   };
 
   const handleEmailPress = () => {
-    navigation.navigate('Support');
+    const supportScreen = isPublicStack ? 'SupportPublic' : 'Support';
+    navigation.navigate(supportScreen);
   };
 
   const handleWebsitePress = () => {

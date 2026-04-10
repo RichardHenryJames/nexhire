@@ -1356,6 +1356,54 @@ ${EMAIL_FOOTER.replace('{{footerText}}', 'Jobs matched based on your profile pre
                                 </tr>
                             </table>
                             
+                            <!-- Free Tools Section -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="background: #F0F9FF; border: 1px solid #BAE6FD; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="padding: 24px;">
+                                        <p style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 15px; font-weight: 700; text-align: center;">🚀 While you wait — try these free tools</p>
+                                        <table width="100%" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <a href="{{appUrl}}/resume-analyzer" style="color: #4F46E5; text-decoration: none; font-size: 14px; font-weight: 600;">📄 Resume Analyzer</a>
+                                                    <span style="color: #64748B; font-size: 13px;"> — AI scores your resume & finds gaps (Free)</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <a href="{{appUrl}}/resume-builder" style="color: #4F46E5; text-decoration: none; font-size: 14px; font-weight: 600;">📝 Resume Builder</a>
+                                                    <span style="color: #64748B; font-size: 13px;"> — Build ATS-friendly resume (1 free template)</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <a href="{{appUrl}}/services/linkedin-optimizer" style="color: #4F46E5; text-decoration: none; font-size: 14px; font-weight: 600;">🔗 LinkedIn Optimizer</a>
+                                                    <span style="color: #64748B; font-size: 13px;"> — AI reviews & improves your profile (Free)</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 8px 0;">
+                                                    <a href="{{appUrl}}/services/blind-review" style="color: #4F46E5; text-decoration: none; font-size: 14px; font-weight: 600;">👁️ Blind Review</a>
+                                                    <span style="color: #64748B; font-size: 13px;"> — Get anonymous feedback from employees at your dream companies (Free)</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Get Referred CTA -->
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
+                                <tr>
+                                    <td style="background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%); border: 1px solid #C7D2FE; border-radius: 8px; padding: 20px; text-align: center;">
+                                        <p style="margin: 0 0 8px 0; font-size: 16px; font-weight: 700; color: #4F46E5;">Get Referred to Google, Microsoft, Amazon & 500+ more</p>
+                                        <p style="margin: 0 0 14px 0; font-size: 13px; color: #64748B;">Verified employees at top companies refer you directly</p>
+                                        <a href="{{appUrl}}" style="display: inline-block; background: #4F46E5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                                            Browse 45,000+ Jobs & Get Referred →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
                             <p style="color: #64748B; font-size: 13px; line-height: 1.6; margin: 0 0 20px 0;">
                                 We appreciate your interest in joining RefOpen. We review every application personally and aim to respond within 5-7 business days.
                             </p>

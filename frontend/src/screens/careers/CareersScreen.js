@@ -357,6 +357,52 @@ export default function CareersScreen({ navigation }) {
         <View style={styles.whySection}>
           <Text style={styles.whyTitle}>Why RefOpen?</Text>
           <Text style={styles.whySub}>Join a team that's building India's most impactful job referral platform</Text>
+
+        {/* ── Explore RefOpen — Free Tools Section ── */}
+        <View style={{ marginTop: 48, marginBottom: 8 }}>
+          <Text style={{ fontSize: 22, fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: 4 }}>More than just careers</Text>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: 20 }}>Explore free tools used by 10,000+ job seekers</Text>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
+            {[
+              { icon: 'document-text-outline', title: 'Resume Analyzer', desc: 'AI scores your resume', tag: 'FREE', screen: isPublicStack ? 'ResumeAnalyzerPublic' : 'ResumeAnalyzer', color: '#3b82f6' },
+              { icon: 'create-outline', title: 'Resume Builder', desc: 'ATS-friendly resume', tag: '1 FREE', screen: isPublicStack ? 'ResumeBuilderPublic' : 'ResumeBuilder', color: '#8b5cf6' },
+              { icon: 'logo-linkedin', title: 'LinkedIn Optimizer', desc: 'Improve your profile', tag: 'FREE', screen: isPublicStack ? 'LinkedInOptimizerPublic' : 'LinkedInOptimizer', color: '#0077b5' },
+              { icon: 'eye-outline', title: 'Blind Review', desc: 'Feedback from dream company employees', tag: 'FREE', screen: isPublicStack ? 'BlindReviewPublic' : 'BlindReview', color: '#f59e0b' },
+              { icon: 'briefcase-outline', title: '45,000+ Jobs', desc: 'Apply to top MNCs', tag: 'FREE', screen: isAuthenticated ? 'Main' : 'AboutUs', color: '#10b981', params: isAuthenticated ? { screen: 'MainTabs', params: { screen: 'Jobs' } } : undefined },
+            ].map((tool, i) => (
+              <TouchableOpacity key={i} onPress={() => navigation.navigate(tool.screen, tool.params)}
+                style={{ width: isMobile ? '100%' : 180, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: isMobile ? 'flex-start' : 'center', flexDirection: isMobile ? 'row' : 'column', gap: isMobile ? 12 : 6 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: tool.color + '15', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name={tool.icon} size={20} color={tool.color} />
+                </View>
+                <View style={isMobile ? { flex: 1 } : { alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>{tool.title}</Text>
+                    <View style={{ backgroundColor: '#22c55e20', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 9, fontWeight: '700', color: '#22c55e' }}>{tool.tag}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2, textAlign: isMobile ? 'left' : 'center' }}>{tool.desc}</Text>
+                </View>
+                {isMobile && <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Ask Referral — full width highlighted CTA */}
+          <TouchableOpacity onPress={() => navigation.navigate(isPublicStack ? 'AskReferralPublic' : 'AskReferral')}
+            style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginTop: 12, backgroundColor: BRAND + '12', borderWidth: 1, borderColor: BRAND + '30' }}>
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: BRAND + '20', justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name="rocket-outline" size={22} color={BRAND} />
+            </View>
+            <View style={{ flex: 1, marginLeft: 14 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: BRAND }}>Get Referred to Google, Microsoft, Amazon & 500+ more</Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>Verified employees at top companies refer you directly</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={18} color={BRAND} />
+          </TouchableOpacity>
+        </View>
           <View style={styles.perksGrid}>
             {[
               { icon: 'rocket-outline', title: 'Early Stage Impact', desc: 'Your code ships to production daily. Shape the product from day one. Every engineer has a voice in architecture decisions.', img: PERK_IMAGES.impact },
@@ -406,7 +452,7 @@ export default function CareersScreen({ navigation }) {
         </View>
 
         {/* Blog link */}
-        <TouchableOpacity style={styles.blogBanner} onPress={() => navigation.navigate('Blog')}>
+        <TouchableOpacity style={styles.blogBanner} onPress={() => navigation.navigate(isPublicStack ? 'BlogPublic' : 'Blog')}>
           <Ionicons name="newspaper-outline" size={22} color={BRAND} />
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.blogTitle}>Read our Career Blog</Text>
