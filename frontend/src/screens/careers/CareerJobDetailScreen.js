@@ -687,15 +687,29 @@ export default function CareerJobDetailScreen({ route, navigation }) {
 
               {/* Divider */}
               <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 12 }} />
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: 14 }}>Free tools to boost your job search</Text>
 
-              {/* Tool Cards */}
+              {/* Ask Referral — TOP highlighted CTA */}
+              <TouchableOpacity onPress={() => { setShowSuccessModal(false); navigation.navigate(isPublicStack ? 'AskReferralPublic' : 'AskReferral'); }}
+                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 10, marginBottom: 14, backgroundColor: BRAND + '12', borderWidth: 1, borderColor: BRAND + '30' }}>
+                <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: BRAND + '20', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="rocket-outline" size={22} color={BRAND} />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: BRAND }}>Get Referred to Google, Microsoft, Amazon & 500+</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>Verified employees refer you directly</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={18} color={BRAND} />
+              </TouchableOpacity>
+
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, textAlign: 'center', marginBottom: 10 }}>Also try these — all free</Text>
+
+              {/* Tool Cards — reordered by conversion potential */}
               {[
+                { icon: 'eye-outline', title: 'Blind Review', desc: 'Get anonymous feedback from employees at your dream companies', tag: 'FREE', screen: isPublicStack ? 'BlindReviewPublic' : 'BlindReview', color: '#f59e0b' },
+                { icon: 'briefcase-outline', title: 'Browse 45,000+ Jobs', desc: 'Apply directly to top companies', tag: 'FREE', screen: isAuthenticated ? 'Main' : 'AboutUs', color: '#10b981', params: isAuthenticated ? { screen: 'MainTabs', params: { screen: 'Jobs' } } : undefined },
                 { icon: 'document-text-outline', title: 'Resume Analyzer', desc: 'AI scores your resume & finds gaps', tag: 'FREE', screen: isPublicStack ? 'ResumeAnalyzerPublic' : 'ResumeAnalyzer', color: '#3b82f6' },
                 { icon: 'create-outline', title: 'Resume Builder', desc: 'Build an ATS-friendly resume (1 free)', tag: '1 FREE', screen: isPublicStack ? 'ResumeBuilderPublic' : 'ResumeBuilder', color: '#8b5cf6' },
                 { icon: 'logo-linkedin', title: 'LinkedIn Optimizer', desc: 'AI reviews & improves your profile', tag: 'FREE', screen: isPublicStack ? 'LinkedInOptimizerPublic' : 'LinkedInOptimizer', color: '#0077b5' },
-                { icon: 'eye-outline', title: 'Blind Review', desc: 'Get anonymous feedback from employees at your dream companies', tag: 'FREE', screen: isPublicStack ? 'BlindReviewPublic' : 'BlindReview', color: '#f59e0b' },
-                { icon: 'briefcase-outline', title: 'Browse 45,000+ Jobs', desc: 'Apply directly to top companies', tag: 'FREE', screen: isAuthenticated ? 'Main' : 'AboutUs', color: '#10b981', params: isAuthenticated ? { screen: 'MainTabs', params: { screen: 'Jobs' } } : undefined },
               ].map((tool, i) => (
                 <TouchableOpacity key={i} onPress={() => { setShowSuccessModal(false); navigation.navigate(tool.screen, tool.params); }}
                   style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 8, backgroundColor: colors.surface }}>
@@ -714,19 +728,6 @@ export default function CareerJobDetailScreen({ route, navigation }) {
                   <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
               ))}
-
-              {/* Ask Referral — highlighted CTA */}
-              <TouchableOpacity onPress={() => { setShowSuccessModal(false); navigation.navigate(isPublicStack ? 'AskReferralPublic' : 'AskReferral'); }}
-                style={{ flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 10, marginTop: 4, marginBottom: 8, backgroundColor: BRAND + '12', borderWidth: 1, borderColor: BRAND + '30' }}>
-                <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: BRAND + '20', justifyContent: 'center', alignItems: 'center' }}>
-                  <Ionicons name="rocket-outline" size={20} color={BRAND} />
-                </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: BRAND }}>Get Referred to Google, Microsoft, Amazon & 500+ more</Text>
-                  <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>Verified employees refer you directly</Text>
-                </View>
-                <Ionicons name="arrow-forward" size={16} color={BRAND} />
-              </TouchableOpacity>
 
               {/* Close */}
               <TouchableOpacity onPress={() => setShowSuccessModal(false)} style={{ alignItems: 'center', paddingVertical: 12 }}>
