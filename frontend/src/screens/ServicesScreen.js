@@ -136,7 +136,7 @@ const getServices = (colors) => [
 ];
 
 // ── Service Card Component ──────────────────────────────────
-function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested }) {
+function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested, isPro }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -313,6 +313,7 @@ export default function ServicesScreen({ navigation }) {
               index={index}
               isDesktop={isDesktop}
               isInterested={interestedServices.has(service.screen)}
+              isPro={isPro}
             />
           ))}
         </View>

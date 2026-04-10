@@ -232,16 +232,16 @@ export default function ConfirmPurchaseModal({
                 {isPro && contextType === 'referral' && !extraInfo && proCreditsRemaining === 0 && (
                   <Text style={{ fontSize: 12, color: '#D4A45A', marginTop: 6 }}>0 free Pro credits left this month — using wallet</Text>
                 )}
+                {/* Access days inside card */}
+                {accessDays && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
+                    <Ionicons name="time-outline" size={14} color={colors.primary} />
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>{accessDays}-day access</Text>
+                  </View>
+                )}
               </View>
             )}
 
-            {/* ── Access days ── */}
-            {accessDays && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <Ionicons name="time-outline" size={14} color={colors.primary} />
-                <Text style={{ fontSize: 12, color: colors.textSecondary }}>{accessDays}-day access</Text>
-              </View>
-            )}
           </ScrollView>
 
           {/* ── CTA ───────────────────────────────────────── */}
