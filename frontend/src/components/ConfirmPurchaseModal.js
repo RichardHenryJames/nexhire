@@ -264,21 +264,37 @@ export default function ConfirmPurchaseModal({
           <View style={styles.footer}>
             {insufficient ? (
               <>
-                {/* Pro upsell — shown when balance is insufficient */}
+                {/* Pro upsell — contextual messaging based on what user is trying to do */}
                 {(contextType === 'referral' || contextType === 'tool' || contextType === 'ai-jobs') && (
                   <TouchableOpacity
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, backgroundColor: '#4F46E5' + '12', borderWidth: 1, borderColor: '#4F46E5' + '30', marginBottom: 12 }}
+                    style={{ padding: 14, borderRadius: 12, backgroundColor: '#4F46E5' + '10', borderWidth: 1.5, borderColor: '#4F46E5' + '35', marginBottom: 12 }}
                     onPress={() => { onCancel?.(); navigation.navigate('Pricing'); }}
                     activeOpacity={0.7}
                   >
-                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#4F46E5' + '20', justifyContent: 'center', alignItems: 'center' }}>
-                      <Ionicons name="diamond-outline" size={18} color="#4F46E5" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#4F46E5' + '20', justifyContent: 'center', alignItems: 'center' }}>
+                        <Ionicons name="diamond" size={18} color="#4F46E5" />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#4F46E5' }}>
+                          {requiredAmount >= 400 ? 'Get this for ₹199 with Pro' : contextType === 'referral' ? 'Get this referral FREE with Pro' : 'Unlock with Pro'}
+                        </Text>
+                      </View>
+                      <Ionicons name="arrow-forward" size={16} color="#4F46E5" />
                     </View>
-                    <View style={{ flex: 1, marginLeft: 10 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#4F46E5' }}>RefOpen Pro — ₹149/month</Text>
-                      <Text style={{ fontSize: 11, color: colors.textSecondary }}>3 referrals/month + unlimited tools</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {[
+                        requiredAmount >= 400 ? 'Open-to-Any at ₹199 (save ₹250)' : '3 referrals/month FREE',
+                        'Unlimited AI tools',
+                        'All resume templates',
+                        '₹149/month',
+                      ].map((perk, i) => (
+                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Ionicons name="checkmark-circle" size={13} color="#4F46E5" />
+                          <Text style={{ fontSize: 11, color: '#4F46E5', fontWeight: '600' }}>{perk}</Text>
+                        </View>
+                      ))}
                     </View>
-                    <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity style={styles.btnPrimary} onPress={onAddMoney} activeOpacity={0.85}>
