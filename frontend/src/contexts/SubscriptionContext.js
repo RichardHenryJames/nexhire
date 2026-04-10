@@ -3,7 +3,8 @@
  * Fetches once on login, exposes isPro, referralsRemaining, refresh
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import refopenAPI from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -54,6 +55,22 @@ export const SubscriptionProvider = ({ children }) => {
       setSubscription(defaultStatus);
     }
   }, [isAuthenticated, user?.UserID]);
+
+  // Periodic refresh every 10 minutes (catches mid-session expiry / monthly reset)
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const interval = setInterval(refreshSubscription, 10 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, refreshSubscription]);
+
+  // Refresh when app comes to foreground
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshSubscription();
+    });
+    return () => sub?.remove();
+  }, [isAuthenticated, refreshSubscription]);
 
   return (
     <SubscriptionContext.Provider value={{ subscription, loading, refreshSubscription }}>

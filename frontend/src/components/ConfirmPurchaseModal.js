@@ -206,6 +206,9 @@ export default function ConfirmPurchaseModal({
               <View style={styles.amountCard}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {isPro && contextType === 'referral' && extraInfo && (
+                      <Text style={{ fontSize: 14, color: colors.textSecondary, textDecorationLine: 'line-through' }}>₹449</Text>
+                    )}
                     <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>₹{requiredAmount}</Text>
                     {extraInfo ? <Text style={{ fontSize: 12, color: colors.textSecondary }}>({extraInfo})</Text> : null}
                   </View>
@@ -214,6 +217,10 @@ export default function ConfirmPurchaseModal({
                     <Text style={{ fontSize: 15, fontWeight: '700', color: insufficient ? colors.error : colors.success }}>₹{Number(currentBalance).toFixed(0)}</Text>
                   </View>
                 </View>
+                {/* Pro OTA savings line */}
+                {isPro && contextType === 'referral' && extraInfo && (
+                  <Text style={{ fontSize: 12, color: '#D4A45A', marginTop: 6, fontWeight: '600' }}>₹250 off with Pro</Text>
+                )}
                 {/* Trust line inside amount card */}
                 {config.trustTitle && (
                   <Text style={{ fontSize: 12, color: colors.success, marginTop: 8 }}>✅ ₹{requiredAmount} held, not charged. Refunded if no one refers you.</Text>

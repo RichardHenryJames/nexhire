@@ -198,6 +198,18 @@ export class SubscriptionService {
    */
   static async useReferralCredit(userId: string): Promise<boolean> {
     const config = await this.getProConfig();
+
+    // First: reset monthly credits if reset date has passed (lazy reset)
+    await dbService.executeQuery(
+      `UPDATE Users SET MonthlyReferralsUsed = 0, 
+             MonthlyReferralsResetAt = DATEADD(MONTH, 1, DATEFROMPARTS(YEAR(GETUTCDATE()), MONTH(GETUTCDATE()), 1))
+       WHERE UserID = @param0 
+         AND SubscriptionTier = 'pro'
+         AND MonthlyReferralsResetAt IS NOT NULL 
+         AND MonthlyReferralsResetAt <= GETUTCDATE()`,
+      [userId]
+    );
+
     // Atomic: only increment if under limit and still Pro
     const result = await dbService.executeQuery(
       `UPDATE Users SET MonthlyReferralsUsed = MonthlyReferralsUsed + 1 

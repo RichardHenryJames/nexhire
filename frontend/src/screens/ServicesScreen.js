@@ -23,6 +23,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
+import { usePricing } from '../contexts/PricingContext';
 import { useResponsive } from '../hooks/useResponsive';
 import { useFocusEffect } from '@react-navigation/native';
 import refopenAPI from '../services/api';
@@ -42,6 +44,7 @@ const getServices = (colors) => [
     gradient: [colors.primaryDark, colors.primary],
     ready: true,
     free: true,
+    freeKey: 'aiResumeFreeUses',
     screen: 'ResumeAnalyzer',
   },
   {
@@ -53,6 +56,7 @@ const getServices = (colors) => [
     gradient: [colors.accentDark, colors.accentLight],
     ready: true,
     free: false,
+    proUnlimited: true,
     screen: 'ResumeBuilder',
   },
   {
@@ -64,6 +68,7 @@ const getServices = (colors) => [
     gradient: ['#0A66C2', '#004182'],
     ready: true,
     free: true,
+    freeKey: 'linkedInOptimizerFreeUses',
     screen: 'LinkedInOptimizer',
   },
   {
@@ -75,6 +80,7 @@ const getServices = (colors) => [
     gradient: [colors.accentDark, colors.accentLight],
     ready: true,
     free: true,
+    freeKey: 'blindReviewFreeUses',
     screen: 'BlindReview',
   },
   {
@@ -191,9 +197,9 @@ function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested 
             <View style={[styles.lockBadge, { backgroundColor: colors.gray200 || colors.border }]}>
               <Ionicons name="lock-closed" size={12} color={colors.gray500} />
             </View>
-          ) : service.free ? (
-            <View style={[styles.requestedBadge, { backgroundColor: '#10B981' + '15' }]}>
-              <Text style={{ fontSize: 11, fontWeight: '800', color: '#10B981', letterSpacing: 0.5 }}>FREE</Text>
+          ) : isPro && (service.free || service.proUnlimited) ? (
+            <View style={[styles.requestedBadge, { backgroundColor: '#D4A45A' + '15' }]}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#D4A45A', letterSpacing: 0.5 }}>UNLIMITED</Text>
             </View>
           ) : null}
         </View>
@@ -211,10 +217,15 @@ function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested 
 
         {/* CTA */}
         <View style={[styles.ctaRow, { borderTopColor: colors.border }]}>
-          {isReady && service.free ? (
+          {isReady && isPro && (service.free || service.proUnlimited) ? (
             <>
-              <Text style={[styles.ctaText, { color: '#10B981' }]}>Try Free</Text>
-              <Ionicons name="arrow-forward" size={16} color="#10B981" />
+              <Text style={[styles.ctaText, { color: '#D4A45A' }]}>Try Free</Text>
+              <Ionicons name="arrow-forward" size={16} color="#D4A45A" />
+            </>
+          ) : isReady && service.free ? (
+            <>
+              <Text style={[styles.ctaText, { color: colors.primary }]}>Try Free</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.primary} />
             </>
           ) : isReady ? (
             <>
@@ -237,6 +248,9 @@ function ServiceCard({ service, onPress, colors, index, isDesktop, isInterested 
 export default function ServicesScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const { isDesktop } = useResponsive();
+  const { subscription } = useSubscription();
+  const { pricing } = usePricing();
+  const isPro = subscription?.isPro;
   const [interestedServices, setInterestedServices] = useState(new Set());
 
   const fetchInterests = useCallback(async () => {
