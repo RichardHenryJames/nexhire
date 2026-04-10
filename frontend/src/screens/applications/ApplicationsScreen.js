@@ -17,6 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import refopenAPI from '../../services/api';
 import { getReferralCostForJob } from '../../utils/pricingUtils';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
@@ -40,6 +41,8 @@ export default function ApplicationsScreen({ navigation }) {
   const { isEmployer, isJobSeeker, user } = useAuth();
   const { colors } = useTheme();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
+  const { subscription, refreshSubscription } = useSubscription();
+  const proHasCredits = subscription?.isPro && (subscription?.referralsRemaining || 0) > 0;
   const responsive = useResponsive();
   const { showConfirm } = useCustomAlert();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -338,6 +341,7 @@ export default function ApplicationsScreen({ navigation }) {
           setReferralCompanyName(referralConfirmData.companyName || '');
           setReferralBroadcastTime(broadcastTime);
           setShowReferralSuccessOverlay(true);
+          refreshSubscription?.();
           
           const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || getJobTierCost(referralConfirmData.job || {});
           const availableBalance = res.data?.availableBalanceAfter;
@@ -397,6 +401,7 @@ export default function ApplicationsScreen({ navigation }) {
         setReferralCompanyName(job.OrganizationName || job.CompanyName || '');
         setReferralBroadcastTime(broadcastTime);
         setShowReferralSuccessOverlay(true);
+        refreshSubscription?.();
         
         const amountDeducted = res.data?.amountDeducted || 39;
         const balanceAfter = res.data?.walletBalanceAfter;
@@ -857,6 +862,8 @@ export default function ApplicationsScreen({ navigation }) {
         requiredAmount={referralConfirmData.requiredAmount}
         contextType="referral"
         itemName={referralConfirmData.jobTitle}
+        isFree={proHasCredits}
+        proCreditsRemaining={subscription?.referralsRemaining}
         onProceed={async () => {
           setShowReferralConfirmModal(false);
 
