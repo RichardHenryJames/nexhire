@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -135,6 +136,7 @@ export default function ConfirmPurchaseModal({
   onProceed,
   onCancel,
   onAddMoney,
+  onSubscribePro,
   contextType = 'generic',
   itemName = '',
   accessDays = null,
@@ -143,6 +145,7 @@ export default function ConfirmPurchaseModal({
   originalPrice = null,
 }) {
   const { colors } = useTheme();
+  const navigation = useNavigation();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const CONFIGS = useMemo(() => getContextConfig(colors), [colors]);
@@ -261,6 +264,23 @@ export default function ConfirmPurchaseModal({
           <View style={styles.footer}>
             {insufficient ? (
               <>
+                {/* Pro upsell — shown when balance is insufficient */}
+                {(contextType === 'referral' || contextType === 'tool' || contextType === 'ai-jobs') && (
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 10, backgroundColor: '#4F46E5' + '12', borderWidth: 1, borderColor: '#4F46E5' + '30', marginBottom: 12 }}
+                    onPress={() => { onCancel?.(); navigation.navigate('Pricing'); }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#4F46E5' + '20', justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="diamond-outline" size={18} color="#4F46E5" />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#4F46E5' }}>RefOpen Pro — ₹149/month</Text>
+                      <Text style={{ fontSize: 11, color: colors.textSecondary }}>3 referrals/month + unlimited tools</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#4F46E5" />
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={styles.btnPrimary} onPress={onAddMoney} activeOpacity={0.85}>
                   <Text style={styles.btnPrimaryText}>{config.insufficientCta(needToAdd)}</Text>
                 </TouchableOpacity>

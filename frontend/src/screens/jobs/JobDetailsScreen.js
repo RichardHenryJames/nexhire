@@ -1305,6 +1305,28 @@ const { jobId, fromReferralRequest } = route.params || {};
         </View>
       )}
 
+      {/* Blind Review CTA — contextual with company name */}
+      {user && !job.IsArchived && (
+        <TouchableOpacity
+          style={[styles.section, { flexDirection: 'row', alignItems: 'center', padding: 14, marginHorizontal: isMobile ? 16 : 0, marginBottom: 16, backgroundColor: '#f59e0b10', borderWidth: 1, borderColor: '#f59e0b30', borderRadius: 12 }]}
+          onPress={() => navigation.navigate('BlindReview')}
+          activeOpacity={0.7}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#f59e0b20', justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="eye-outline" size={22} color="#f59e0b" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Not sure if you're a fit?</Text>
+              <View style={{ backgroundColor: '#22c55e20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#22c55e' }}>FREE</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{job?.OrganizationName ? `Get anonymous feedback from ${job.OrganizationName} employees` : 'Get anonymous feedback from employees at this company'}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#f59e0b" />
+        </TouchableOpacity>
+      )}
 
       
       {/* Show archived job notice */}

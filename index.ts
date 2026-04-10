@@ -4082,6 +4082,65 @@ app.http("careers-job-by-id", {
   },
 });
 
+// ============================================================
+// SUBSCRIPTION — RefOpen Pro
+// ============================================================
+
+// GET /subscription/status — Get current subscription status
+app.http("subscription-status", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "subscription/status",
+  handler: withErrorHandling(withAuth(async (req, context, user) => {
+    const { SubscriptionService } = await import("./src/services/subscription.service");
+    const status = await SubscriptionService.getStatus(user.userId);
+    const config = await SubscriptionService.getProConfig();
+    return {
+      status: 200,
+      jsonBody: { success: true, data: { ...status, pricing: config } }
+    };
+  })),
+});
+
+// POST /subscription/subscribe — Subscribe to Pro
+app.http("subscription-subscribe", {
+  methods: ["POST", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "subscription/subscribe",
+  handler: withErrorHandling(withAuth(async (req, context, user) => {
+    const body = await req.json() as any;
+    const plan = body.plan;
+    if (!plan || !['monthly', 'semi_annual'].includes(plan)) {
+      return { status: 400, jsonBody: { success: false, error: "Plan must be 'monthly' or 'semi_annual'" } };
+    }
+    const { SubscriptionService } = await import("./src/services/subscription.service");
+    try {
+      const result = await SubscriptionService.subscribe(user.userId, plan);
+      return { status: 200, jsonBody: { success: true, data: result } };
+    } catch (err: any) {
+      if (err.name === 'InsufficientBalanceError') {
+        return { status: 402, jsonBody: { success: false, error: err.message, errorCode: 'INSUFFICIENT_BALANCE', data: err.data } };
+      }
+      throw err;
+    }
+  })),
+});
+
+// GET /subscription/config — Get Pro plan pricing (public, no auth)
+app.http("subscription-config", {
+  methods: ["GET", "OPTIONS"],
+  authLevel: "anonymous",
+  route: "subscription/config",
+  handler: withErrorHandling(async (req: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> => {
+    const { SubscriptionService } = await import("./src/services/subscription.service");
+    const config = await SubscriptionService.getProConfig();
+    return {
+      status: 200,
+      jsonBody: { success: true, data: config }
+    };
+  }),
+});
+
 app.http("careers-apply", {
   methods: ["POST", "OPTIONS"],
   authLevel: "anonymous",
