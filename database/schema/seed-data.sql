@@ -1321,6 +1321,12 @@ INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, I
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (23, N'RESUME_BUILDER_PREMIUM_DURATION_HOURS', 168, N'Resume Builder Premium access duration in hours (7 days)', 1, '2026-03-04T00:00:00.000Z', '2026-03-04T00:00:00.000Z');
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (24, N'LINKEDIN_OPTIMIZER_FREE_USES', 1, N'Free LinkedIn optimizer uses per user', 1, '2026-03-30T00:00:00.000Z', '2026-03-30T00:00:00.000Z');
 INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (25, N'LINKEDIN_OPTIMIZER_COST', 29, N'Cost per LinkedIn optimization after free tier (INR)', 1, '2026-03-30T00:00:00.000Z', '2026-03-30T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (26, N'BLIND_REVIEW_FREE_USES', 1, N'Free Blind Review uses per user', 1, '2026-04-10T00:00:00.000Z', '2026-04-10T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (27, N'BLIND_REVIEW_COST', 49, N'Cost per Blind Review after free tier (INR)', 1, '2026-04-10T00:00:00.000Z', '2026-04-10T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (28, N'PRO_MONTHLY_PRICE', 149, N'RefOpen Pro monthly subscription price (INR)', 1, '2026-04-10T00:00:00.000Z', '2026-04-10T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (29, N'PRO_SEMI_ANNUAL_PRICE', 799, N'RefOpen Pro 6-month subscription price (INR)', 1, '2026-04-10T00:00:00.000Z', '2026-04-10T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (30, N'PRO_MONTHLY_REFERRALS', 3, N'Free referral credits per month for Pro users', 1, '2026-04-10T00:00:00.000Z', '2026-04-10T00:00:00.000Z');
+INSERT INTO PricingSettings (SettingID, SettingKey, SettingValue, Description, IsActive, CreatedAt, UpdatedAt) VALUES (31, N'PRO_OTA_DISCOUNT_PRICE', 199, N'Discounted Open-to-Any referral price for Pro users (INR)', 1, '2026-04-10T00:00:00.000Z', '2026-04-10T00:00:00.000Z');
 SET IDENTITY_INSERT PricingSettings OFF;
 GO
 

@@ -2204,6 +2204,11 @@ BEGIN
         TermsVersion NVARCHAR(20) NULL,
         PrivacyPolicyAcceptedAt DATETIME2(7) NULL,
         PrivacyPolicyVersion NVARCHAR(20) NULL,
+        SubscriptionTier NVARCHAR(20) NOT NULL DEFAULT ('free'),
+        SubscriptionExpiresAt DATETIME2(7) NULL,
+        SubscriptionStartedAt DATETIME2(7) NULL,
+        MonthlyReferralsUsed INT NOT NULL DEFAULT (0),
+        MonthlyReferralsResetAt DATETIME2(7) NULL,
         CONSTRAINT PK__Users__1788CCACBE5F9458 PRIMARY KEY (UserID)
     );
     PRINT 'Created table Users';
