@@ -271,7 +271,7 @@ export default function ConfirmPurchaseModal({
                     activeOpacity={0.8}
                   >
                     <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a1a', textAlign: 'center' }}>
-                      {requiredAmount >= 400 ? 'Get this for ₹199 with Pro →' : contextType === 'referral' ? 'Get this FREE with Pro →' : 'Unlock with Pro →'}
+                      {contextType === 'ai-jobs' ? 'Always on with Pro →' : requiredAmount >= 400 ? 'Get this for ₹199 with Pro →' : contextType === 'referral' ? 'Get this FREE with Pro →' : contextType === 'tool' ? 'Unlimited with Pro →' : 'Unlock with Pro →'}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -294,7 +294,7 @@ export default function ConfirmPurchaseModal({
                     activeOpacity={0.8}
                   >
                     <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a1a', textAlign: 'center' }}>
-                      {requiredAmount >= 400 ? 'Get this for ₹199 with Pro →' : contextType === 'referral' ? 'Get this FREE with Pro →' : 'Unlock with Pro →'}
+                      {contextType === 'ai-jobs' ? 'Always on with Pro →' : requiredAmount >= 400 ? 'Get this for ₹199 with Pro →' : contextType === 'referral' ? 'Get this FREE with Pro →' : contextType === 'tool' ? 'Unlimited with Pro →' : 'Unlock with Pro →'}
                     </Text>
                   </TouchableOpacity>
                 )}
