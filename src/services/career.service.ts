@@ -98,7 +98,7 @@ export class CareerService {
 
     const application = result.recordset[0];
 
-    // Send confirmation email (non-blocking — don't fail the application if email fails)
+    // Send confirmation email — fire-and-forget (don't await, don't block the response)
     try {
       const template = TemplateService.render('career_application_received', {
         applicantName: data.fullName || 'there',
@@ -108,7 +108,8 @@ export class CareerService {
         jobType: job.JobType,
         appliedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }),
       });
-      await EmailService.send({
+      // Intentionally NOT awaiting — email is fire-and-forget to prevent Azure Function timeout
+      EmailService.send({
         to: data.email,
         subject: template.subject,
         html: template.html,
@@ -117,9 +118,11 @@ export class CareerService {
         emailType: 'career_application_received',
         referenceType: 'CareerApplication',
         referenceId: application.ApplicationID,
+      }).catch((emailError: any) => {
+        console.warn('Career application email failed (non-blocking):', emailError.message);
       });
-    } catch (emailError: any) {
-      console.warn('Career application email failed (non-blocking):', emailError.message);
+    } catch (templateError: any) {
+      console.warn('Career application email template error:', templateError.message);
     }
 
     return application;

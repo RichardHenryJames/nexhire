@@ -123,6 +123,8 @@ export default function ResumeBuilderScreen({ navigation, route }) {
   // List view
   const [projects, setProjects] = useState([]);
   const [showAllProjects, setShowAllProjects] = useState(false);
+  const [renamingProjectId, setRenamingProjectId] = useState(null);
+  const [renameText, setRenameText] = useState('');
   const [templates, setTemplates] = useState([]);
   const [templatePreviews, setTemplatePreviews] = useState({});
 
@@ -831,26 +833,48 @@ export default function ResumeBuilderScreen({ navigation, route }) {
                       <Ionicons name="document-text" size={18} color="rgba(255,255,255,0.8)" />
                     </LinearGradient>
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={styles.projectTitle} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
-                        <TouchableOpacity
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            if (Platform.OS === 'web') {
-                              const newTitle = window.prompt('Rename resume:', project.Title || 'My Resume');
-                              if (newTitle?.trim()) {
-                                setProjects(prev => prev.map(p => p.ProjectID === project.ProjectID ? { ...p, Title: newTitle.trim() } : p));
-                                refopenAPI.apiCall(`/resume-builder/projects/${project.ProjectID}`, {
-                                  method: 'PUT', body: JSON.stringify({ title: newTitle.trim() }),
-                                }).catch(() => {});
-                              }
+                      {renamingProjectId === project.ProjectID ? (
+                        <TextInput
+                          style={{ fontSize: 14, fontWeight: '600', color: colors.text, borderBottomWidth: 1, borderBottomColor: colors.primary, paddingVertical: 2, marginBottom: 2 }}
+                          value={renameText}
+                          onChangeText={setRenameText}
+                          autoFocus
+                          selectTextOnFocus
+                          onBlur={() => {
+                            if (renameText.trim() && renameText.trim() !== project.Title) {
+                              setProjects(prev => prev.map(p => p.ProjectID === project.ProjectID ? { ...p, Title: renameText.trim() } : p));
+                              refopenAPI.apiCall(`/resume-builder/projects/${project.ProjectID}`, {
+                                method: 'PUT', body: JSON.stringify({ title: renameText.trim() }),
+                              }).catch(() => {});
                             }
+                            setRenamingProjectId(null);
                           }}
-                        >
-                          <Ionicons name="create-outline" size={12} color={colors.textSecondary} />
-                        </TouchableOpacity>
-                      </View>
+                          onSubmitEditing={() => {
+                            if (renameText.trim() && renameText.trim() !== project.Title) {
+                              setProjects(prev => prev.map(p => p.ProjectID === project.ProjectID ? { ...p, Title: renameText.trim() } : p));
+                              refopenAPI.apiCall(`/resume-builder/projects/${project.ProjectID}`, {
+                                method: 'PUT', body: JSON.stringify({ title: renameText.trim() }),
+                              }).catch(() => {});
+                            }
+                            setRenamingProjectId(null);
+                          }}
+                          returnKeyType="done"
+                        />
+                      ) : (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={styles.projectTitle} numberOfLines={1}>{project.Title || 'Untitled Resume'}</Text>
+                          <TouchableOpacity
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              setRenameText(project.Title || 'My Resume');
+                              setRenamingProjectId(project.ProjectID);
+                            }}
+                          >
+                            <Ionicons name="create-outline" size={12} color={colors.textSecondary} />
+                          </TouchableOpacity>
+                        </View>
+                      )}
                       <Text style={styles.captionText}>
                         {project.TemplateName || 'Classic'} • {new Date(project.UpdatedAt).toLocaleDateString()}
                       </Text>
@@ -919,22 +943,43 @@ export default function ResumeBuilderScreen({ navigation, route }) {
     return (
       <View style={styles.container}>
         <SubScreenHeader
-          title={activeProject?.Title || 'Edit Resume'}
+          title={renamingProjectId === activeProject?.ProjectID ? '' : (activeProject?.Title || 'Edit Resume')}
+          centerContent={renamingProjectId === activeProject?.ProjectID ? (
+            <TextInput
+              style={{ fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center', borderBottomWidth: 1, borderBottomColor: colors.primary, paddingVertical: 2, minWidth: 150 }}
+              value={renameText}
+              onChangeText={setRenameText}
+              autoFocus
+              selectTextOnFocus
+              onBlur={() => {
+                if (renameText.trim()) {
+                  setActiveProject(prev => ({ ...prev, Title: renameText.trim() }));
+                  refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}`, {
+                    method: 'PUT', body: JSON.stringify({ title: renameText.trim() }),
+                  }).catch(() => {});
+                }
+                setRenamingProjectId(null);
+              }}
+              onSubmitEditing={() => {
+                if (renameText.trim()) {
+                  setActiveProject(prev => ({ ...prev, Title: renameText.trim() }));
+                  refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}`, {
+                    method: 'PUT', body: JSON.stringify({ title: renameText.trim() }),
+                  }).catch(() => {});
+                }
+                setRenamingProjectId(null);
+              }}
+              returnKeyType="done"
+            />
+          ) : null}
           onBack={handleBack}
           fallbackTab="Services"
           subtitle={
             <TouchableOpacity
               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}
               onPress={() => {
-                if (Platform.OS === 'web') {
-                  const newTitle = window.prompt('Rename resume:', activeProject?.Title || 'My Resume');
-                  if (newTitle?.trim()) {
-                    setActiveProject(prev => ({ ...prev, Title: newTitle.trim() }));
-                    refopenAPI.apiCall(`/resume-builder/projects/${activeProject.ProjectID}`, {
-                      method: 'PUT', body: JSON.stringify({ title: newTitle.trim() }),
-                    }).catch(() => {});
-                  }
-                }
+                setRenameText(activeProject?.Title || 'My Resume');
+                setRenamingProjectId(activeProject?.ProjectID);
               }}
             >
               <Ionicons name="create-outline" size={12} color={colors.textSecondary} />

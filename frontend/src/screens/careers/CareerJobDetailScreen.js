@@ -168,6 +168,7 @@ export default function CareerJobDetailScreen({ route, navigation }) {
 
   const fmtSalary = (min, max, jobType) => {
     if (!min && !max) return null;
+    if (min === 0 && max === 0) return 'Unpaid • Perks + Incentives';
     const isMonthly = jobType === 'Internship' || (max && max < 100000) || (min && !max && min < 100000);
     const f = v => v >= 100000 ? `${(v / 100000).toFixed(1).replace(/\.0$/, '')}L` : v.toLocaleString('en-IN');
     const suffix = isMonthly ? '/month' : '/yr';

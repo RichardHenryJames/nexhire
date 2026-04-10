@@ -4105,17 +4105,23 @@ app.http("careers-apply", {
       return { status: 400, jsonBody: { success: false, error: "careerJobId and resumeURL are required" } };
     }
     const { CareerService } = await import("./src/services/career.service");
-    const result = await CareerService.applyToCareerJob({
-      careerJobId: body.careerJobId,
-      userId: user.userId,
-      fullName: body.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
-      email: body.email || user.email,
-      phone: body.phone,
-      resumeURL: body.resumeURL,
-      coverLetter: body.coverLetter,
-      linkedInURL: body.linkedInURL,
-    });
-    return { status: 201, jsonBody: { success: true, data: result, message: "Application submitted successfully" } };
+    try {
+      const result = await CareerService.applyToCareerJob({
+        careerJobId: body.careerJobId,
+        userId: user.userId,
+        fullName: body.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim(),
+        email: body.email || user.email,
+        phone: body.phone,
+        resumeURL: body.resumeURL,
+        coverLetter: body.coverLetter,
+        linkedInURL: body.linkedInURL,
+      });
+      return { status: 201, jsonBody: { success: true, data: result, message: "Application submitted successfully" } };
+    } catch (err: any) {
+      if (err.name === 'NotFoundError') return { status: 404, jsonBody: { success: false, error: err.message } };
+      if (err.name === 'ConflictError') return { status: 409, jsonBody: { success: false, error: err.message } };
+      throw err;
+    }
   }),
 });
 
