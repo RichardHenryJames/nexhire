@@ -16,6 +16,7 @@ import { useCustomAlert } from '../CustomAlert';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import refopenAPI from '../../services/api';
 
 // CROSS-PLATFORM FILE SYSTEM HANDLER
@@ -99,6 +100,7 @@ export default function UserProfileHeader({
 }) {
   const { colors } = useTheme();
   const { showAlert } = useCustomAlert();
+  const { subscription } = useSubscription();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [uploading, setUploading] = useState(false);
   const [showPicViewer, setShowPicViewer] = useState(false);
@@ -633,7 +635,7 @@ export default function UserProfileHeader({
 
         {/* User Info */}
         <View style={styles.infoSection}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
             <Text style={[styles.userName, { marginBottom: 0 }]}>
               {user?.FirstName?.charAt(0).toUpperCase() + user?.FirstName?.slice(1).toLowerCase()} {user?.LastName?.charAt(0).toUpperCase() + user?.LastName?.slice(1).toLowerCase()}
             </Text>
@@ -644,6 +646,11 @@ export default function UserProfileHeader({
                 color={colors.primary} 
                 style={{ marginLeft: 6 }} 
               />
+            )}
+            {subscription?.isPro && (
+              <View style={{ marginLeft: 6, backgroundColor: '#D4A45A', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 }}>PRO</Text>
+              </View>
             )}
             {isVerifiedReferrer && (
               <TouchableOpacity

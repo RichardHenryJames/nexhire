@@ -104,7 +104,7 @@ export class SubscriptionService {
     
     // Check wallet balance
     const walletResult = await dbService.executeQuery(
-      `SELECT WalletID, Balance FROM Wallets WHERE UserID = @param0`,
+      `SELECT WalletID, Balance, CurrencyID FROM Wallets WHERE UserID = @param0`,
       [userId]
     );
     const wallet = walletResult.recordset[0];
@@ -129,55 +129,85 @@ export class SubscriptionService {
     // Monthly referrals reset date (1st of next month)
     const nextReset = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    // Deduct from wallet
-    await dbService.executeQuery(
-      `UPDATE Wallets SET Balance = Balance - @param1 WHERE WalletID = @param0`,
-      [wallet.WalletID, price]
-    );
+    // All-or-nothing: use a SQL transaction
+    const transaction = await dbService.beginTransaction();
+    try {
+      // Re-check balance inside transaction (prevent race condition)
+      const freshWallet = await dbService.executeTransactionQuery(
+        transaction,
+        `SELECT Balance FROM Wallets WITH (UPDLOCK) WHERE WalletID = @param0`,
+        [wallet.WalletID]
+      );
+      if (!freshWallet.recordset[0] || freshWallet.recordset[0].Balance < price) {
+        await transaction.rollback();
+        throw Object.assign(new Error(`Insufficient balance. Need ₹${price}, have ₹${freshWallet.recordset[0]?.Balance?.toFixed(2) || 0}`), {
+          name: 'InsufficientBalanceError',
+          data: { currentBalance: freshWallet.recordset[0]?.Balance || 0, requiredAmount: price }
+        });
+      }
+      const currentBalance = freshWallet.recordset[0].Balance;
 
-    // Record transaction
-    const { AuthService } = await import('./auth.service');
-    const txnId = AuthService.generateUniqueId();
-    await dbService.executeQuery(
-      `INSERT INTO WalletTransactions (TransactionID, WalletID, TransactionType, Amount, BalanceBefore, BalanceAfter, Source, Description, Status)
-       VALUES (@param0, @param1, 'Debit', @param2, @param3, @param4, 'PRO_SUBSCRIPTION', @param5, 'Completed')`,
-      [txnId, wallet.WalletID, price, wallet.Balance, wallet.Balance - price,
-       `RefOpen Pro ${plan === 'monthly' ? '1 month' : '6 months'} subscription`]
-    );
+      // Deduct from wallet
+      await dbService.executeTransactionQuery(
+        transaction,
+        `UPDATE Wallets SET Balance = Balance - @param1 WHERE WalletID = @param0`,
+        [wallet.WalletID, price]
+      );
 
-    // Update user subscription
-    await dbService.executeQuery(
-      `UPDATE Users SET 
-        SubscriptionTier = 'pro',
-        SubscriptionStartedAt = CASE WHEN SubscriptionTier != 'pro' THEN GETUTCDATE() ELSE SubscriptionStartedAt END,
-        SubscriptionExpiresAt = @param1,
-        MonthlyReferralsUsed = CASE WHEN SubscriptionTier != 'pro' THEN 0 ELSE MonthlyReferralsUsed END,
-        MonthlyReferralsResetAt = CASE WHEN MonthlyReferralsResetAt IS NULL OR SubscriptionTier != 'pro' THEN @param2 ELSE MonthlyReferralsResetAt END
-       WHERE UserID = @param0`,
-      [userId, expiresAt, nextReset]
-    );
+      // Record transaction (include CurrencyID)
+      const { AuthService } = await import('./auth.service');
+      const txnId = AuthService.generateUniqueId();
+      await dbService.executeTransactionQuery(
+        transaction,
+        `INSERT INTO WalletTransactions (TransactionID, WalletID, TransactionType, Amount, BalanceBefore, BalanceAfter, CurrencyID, Source, Description, Status)
+         VALUES (@param0, @param1, 'Debit', @param2, @param3, @param4, @param5, 'PRO_SUBSCRIPTION', @param6, 'Completed')`,
+        [txnId, wallet.WalletID, price, currentBalance, currentBalance - price, wallet.CurrencyID || 4,
+         `RefOpen Pro ${plan === 'monthly' ? '1 month' : '6 months'} subscription`]
+      );
 
-    return {
-      success: true,
-      tier: 'pro',
-      expiresAt: expiresAt.toISOString(),
-      amountCharged: price,
-      message: `Welcome to RefOpen Pro! Your subscription is active until ${expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
-    };
+      // Update user subscription
+      await dbService.executeTransactionQuery(
+        transaction,
+        `UPDATE Users SET 
+          SubscriptionTier = 'pro',
+          SubscriptionStartedAt = CASE WHEN SubscriptionTier != 'pro' THEN GETUTCDATE() ELSE SubscriptionStartedAt END,
+          SubscriptionExpiresAt = @param1,
+          MonthlyReferralsUsed = CASE WHEN SubscriptionTier != 'pro' THEN 0 ELSE MonthlyReferralsUsed END,
+          MonthlyReferralsResetAt = CASE WHEN MonthlyReferralsResetAt IS NULL OR SubscriptionTier != 'pro' THEN @param2 ELSE MonthlyReferralsResetAt END
+         WHERE UserID = @param0`,
+        [userId, expiresAt, nextReset]
+      );
+
+      await transaction.commit();
+
+      return {
+        success: true,
+        tier: 'pro',
+        expiresAt: expiresAt.toISOString(),
+        amountCharged: price,
+        message: `Welcome to RefOpen Pro! Your subscription is active until ${expiresAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}.`,
+      };
+    } catch (err) {
+      try { await transaction.rollback(); } catch (_) { /* already rolled back */ }
+      throw err;
+    }
   }
 
   /**
    * Use a Pro referral credit (returns true if credit was available and used)
    */
   static async useReferralCredit(userId: string): Promise<boolean> {
-    const status = await this.getStatus(userId);
-    if (!status.isPro || status.referralsRemaining <= 0) return false;
-
-    await dbService.executeQuery(
-      `UPDATE Users SET MonthlyReferralsUsed = MonthlyReferralsUsed + 1 WHERE UserID = @param0`,
-      [userId]
+    const config = await this.getProConfig();
+    // Atomic: only increment if under limit and still Pro
+    const result = await dbService.executeQuery(
+      `UPDATE Users SET MonthlyReferralsUsed = MonthlyReferralsUsed + 1 
+       WHERE UserID = @param0 
+         AND SubscriptionTier = 'pro' 
+         AND SubscriptionExpiresAt > GETUTCDATE()
+         AND MonthlyReferralsUsed < @param1`,
+      [userId, config.monthlyReferrals]
     );
-    return true;
+    return (result.rowsAffected?.[0] || 0) > 0;
   }
 
   /**

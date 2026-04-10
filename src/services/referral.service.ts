@@ -191,10 +191,9 @@ export class ReferralService {
             
             if (!dto.openToAnyCompany) {
                 // Specific company referral — check if Pro user has credits
-                const proStatus = await SubscriptionService.getStatus(userId);
-                if (proStatus.isPro && proStatus.referralsRemaining > 0) {
-                    // Use Pro credit — no wallet hold needed
-                    await SubscriptionService.useReferralCredit(userId);
+                const creditUsed = await SubscriptionService.useReferralCredit(userId);
+                if (creditUsed) {
+                    // Pro credit consumed atomically — no wallet hold needed
                     usedProCredit = true;
                     REFERRAL_REQUEST_COST = 0;
                 }

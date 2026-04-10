@@ -72,6 +72,7 @@ export default function PricingScreen() {
 
   const handleSubscribe = useCallback(async (plan) => {
     if (!isAuthenticated) { navigation.navigate('Auth'); showToast('Please log in to subscribe', 'info'); return; }
+    if (subscribing) return; // Prevent double-click
     setSubscribing(true);
     try {
       const res = await refopenAPI.subscribeToPro(plan);
@@ -161,8 +162,8 @@ export default function PricingScreen() {
                   <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center' }}>{row.free}</Text>
                   </View>
-                  <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: row.highlight ? '#D4A45A' + '20' : '#D4A45A' + '10' }}>
-                    <Text style={{ fontSize: 12, fontWeight: row.highlight ? '700' : '500', color: '#1a1a1a', textAlign: 'center' }}>{row.pro}</Text>
+                  <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D4A45A' + '15' }}>
+                    <Text style={{ fontSize: 12, fontWeight: row.highlight ? '700' : '500', color: row.highlight ? '#D4A45A' : colors.text, textAlign: 'center' }}>{row.pro}</Text>
                   </View>
                 </View>
               ))}
