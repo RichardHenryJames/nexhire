@@ -160,7 +160,13 @@ export async function analyzeResume(req: HttpRequest, context: InvocationContext
       [userId]
     );
     const usageCount = usageResult.recordset?.[0]?.cnt || 0;
-    const isFreeTier = usageCount < freeUses;
+    let isFreeTier = usageCount < freeUses;
+
+    // Pro users get unlimited access — override free tier check
+    if (!isFreeTier) {
+      const { SubscriptionService } = await import('../services/subscription.service');
+      if (await SubscriptionService.hasUnlimitedToolAccess(userId)) isFreeTier = true;
+    }
 
     if (!isFreeTier) {
       // Check balance first (don't debit yet — debit only after successful analysis)

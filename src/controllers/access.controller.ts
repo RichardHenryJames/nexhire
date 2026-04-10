@@ -44,9 +44,13 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
 
     let result: AccessStatusResult;
 
+    // Check Pro subscription once for all access types
+    const { SubscriptionService } = await import('../services/subscription.service');
+    const isPro = await SubscriptionService.hasUnlimitedToolAccess(user.userId);
+
     switch (accessType) {
       case 'ai_jobs':
-        const aiHasAccess = await AIJobRecommendationService.hasActiveAIAccess(user.userId);
+        const aiHasAccess = isPro || await AIJobRecommendationService.hasActiveAIAccess(user.userId);
         const aiCost = await PricingService.getAIJobsCost();
         const aiDurationHours = await PricingService.getAIAccessDurationHours();
         const aiDurationDays = Math.floor(aiDurationHours / 24);
@@ -89,8 +93,8 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
             jsonBody: { success: false, error: 'Missing slug parameter for resume_template access check' }
           };
         }
-        // Classic template is always free
-        if (templateSlug === 'classic') {
+        // Classic template is always free, Pro users get all templates
+        if (templateSlug === 'classic' || isPro) {
           result = {
             type: 'resume_template',
             hasActiveAccess: true,
@@ -149,7 +153,7 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
         } catch (e) {
           raUsageCount = 0;
         }
-        const raIsFree = raUsageCount < raFreeUses;
+        const raIsFree = isPro || raUsageCount < raFreeUses;
         result = {
           type: 'resume_analysis',
           hasActiveAccess: raIsFree,
@@ -178,7 +182,7 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
         } catch (e) {
           liUsageCount = 0;
         }
-        const liIsFree = liUsageCount < liFreeUses;
+        const liIsFree = isPro || liUsageCount < liFreeUses;
         result = {
           type: 'linkedin_optimization',
           hasActiveAccess: liIsFree,
@@ -207,7 +211,7 @@ export const checkAccessStatus = withAuth(async (req: HttpRequest, context: Invo
         } catch (e) {
           brUsageCount = 0;
         }
-        const brIsFree = brUsageCount < brFreeUses;
+        const brIsFree = isPro || brUsageCount < brFreeUses;
         result = {
           type: 'blind_review',
           hasActiveAccess: brIsFree,

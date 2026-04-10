@@ -52,6 +52,7 @@ import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { JobProvider } from './src/contexts/JobContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
 import { PricingProvider } from './src/contexts/PricingContext';
+import { SubscriptionProvider } from './src/contexts/SubscriptionContext';
 import { UnreadMessagesProvider } from './src/contexts/UnreadMessagesContext';
 import { AlertProvider } from './src/components/CustomAlert';
 import { EmailVerificationProvider } from './src/contexts/EmailVerificationContext';
@@ -289,6 +290,7 @@ function ThemedAppRoot() {
       <SafeAreaProvider style={{ flex: 1 }}>
         <PricingProvider>
           <AuthProvider>
+            <SubscriptionProvider>
             <UnreadMessagesProvider>
             <JobProvider>
               <NavigationContainer
@@ -322,6 +324,7 @@ function ThemedAppRoot() {
               </NavigationContainer>
             </JobProvider>
             </UnreadMessagesProvider>
+            </SubscriptionProvider>
           </AuthProvider>
         </PricingProvider>
       </SafeAreaProvider>

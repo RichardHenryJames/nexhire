@@ -51,7 +51,7 @@ const FeatureRow = ({ icon, label, value, sub, colors }) => (
     </View>
     <Text style={{ fontSize: 15, fontWeight: '700', color: value === 'Free' ? (colors.success) : colors.text }}>{value}</Text>
   </View>
-);
+);import { useSubscription } from '../../contexts/SubscriptionContext';
 
 
 
@@ -61,6 +61,7 @@ export default function PricingScreen() {
   const { colors } = useTheme();
   const { user, isAuthenticated } = useAuth();
   const { pricing } = usePricing();
+  const { subscription, refreshSubscription } = useSubscription();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [subscribing, setSubscribing] = useState(false);
@@ -73,6 +74,7 @@ export default function PricingScreen() {
       const res = await refopenAPI.subscribeToPro(plan);
       if (res?.success) {
         showToast(res.data?.message || 'Welcome to RefOpen Pro! 🎉', 'success');
+        refreshSubscription();
       } else if (res?.errorCode === 'INSUFFICIENT_BALANCE') {
         showToast(`Insufficient balance. Need ₹${plan === 'monthly' ? pricing.proMonthlyPrice : pricing.proSemiAnnualPrice}`, 'error');
         navigation.navigate('WalletRecharge');
@@ -156,7 +158,18 @@ export default function PricingScreen() {
               ))}
             </View>
 
-            {/* ── Subscribe CTA ── */}
+            {/* ── Subscribe CTA or Active Plan ── */}
+            {subscription?.isPro ? (
+              <View style={{ backgroundColor: '#22c55e15', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 8, borderWidth: 1, borderColor: '#22c55e40' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#22c55e' }}>You're on Pro!</Text>
+                </View>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>
+                  {subscription.referralsRemaining}/{subscription.referralsIncluded} referrals left · {subscription.daysRemaining} days remaining
+                </Text>
+              </View>
+            ) : (
             <TouchableOpacity
               style={{ backgroundColor: BRAND, paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 8, flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: subscribing ? 0.6 : 1 }}
               onPress={() => handleSubscribe(selectedPlan)}
@@ -171,7 +184,10 @@ export default function PricingScreen() {
                 </>
               )}
             </TouchableOpacity>
-            <Text style={{ fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>Paid from wallet balance. Cancel anytime. No auto-renewal.</Text>
+            )}
+            {!subscription?.isPro && (
+              <Text style={{ fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>Paid from wallet balance. Cancel anytime. No auto-renewal.</Text>
+            )}
 
             {/* ── How it works (simplified) ── */}
             <View style={{ borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 20 }}>

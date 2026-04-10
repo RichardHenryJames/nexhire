@@ -82,7 +82,13 @@ export async function submitBlindReview(req: HttpRequest, context: InvocationCon
       [userId]
     );
     const usageCount = usageResult.recordset?.[0]?.cnt || 0;
-    const isFreeTier = usageCount < freeUses;
+    let isFreeTier = usageCount < freeUses;
+
+    // Pro users get unlimited access
+    if (!isFreeTier) {
+      const { SubscriptionService } = await import('../services/subscription.service');
+      if (await SubscriptionService.hasUnlimitedToolAccess(userId)) isFreeTier = true;
+    }
 
     if (!isFreeTier) {
       try {
