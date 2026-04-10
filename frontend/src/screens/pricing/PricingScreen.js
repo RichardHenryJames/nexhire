@@ -82,7 +82,14 @@ export default function PricingScreen() {
         showToast(res?.error || 'Failed to subscribe', 'error');
       }
     } catch (e) {
-      showToast('Failed to subscribe. Please try again.', 'error');
+      // 402 = insufficient balance — apiCall throws but data is in e.data
+      if (e?.status === 402 || e?.data?.errorCode === 'INSUFFICIENT_BALANCE') {
+        const needed = selectedPlan === 'monthly' ? pricing.proMonthlyPrice : pricing.proSemiAnnualPrice;
+        showToast(`Need ₹${needed} in wallet to subscribe. Please recharge.`, 'error');
+        navigation.navigate('WalletRecharge');
+      } else {
+        showToast(e?.data?.error || e?.message || 'Failed to subscribe. Please try again.', 'error');
+      }
     } finally { setSubscribing(false); }
   }, [isAuthenticated, navigation, pricing]);
 
