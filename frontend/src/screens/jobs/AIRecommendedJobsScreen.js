@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import useResponsive from '../../hooks/useResponsive';
 import refopenAPI from '../../services/api';
 import { getReferralCostForJob } from '../../utils/pricingUtils';
@@ -44,6 +45,8 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [walletModalData, setWalletModalData] = useState({ currentBalance: 0, requiredAmount: pricing.referralRequestCost, note: '' });
+  const { subscription, refreshSubscription } = useSubscription();
+  const proHasCredits = subscription?.isPro && (subscription?.referralsRemaining || 0) > 0;
 
   // 💰 Tier-based cost helper
   const getJobTierCost = (job) => getReferralCostForJob(job, pricing);
@@ -213,6 +216,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
 
         showToast(message, 'success');
         invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
+        refreshSubscription?.(); // Update Pro credits remaining
       } else {
         if (res.errorCode === 'INSUFFICIENT_WALLET_BALANCE') {
           showToast('Insufficient balance. Recharging...', 'info');
@@ -250,21 +254,23 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       return;
     }
 
-    // Check wallet balance
-    try {
-      const walletBalance = await refopenAPI.getWalletBalance();
+    // Pro users with credits skip wallet check — backend handles it
+    if (!proHasCredits) {
+      // Check wallet balance
+      try {
+        const walletBalance = await refopenAPI.getWalletBalance();
 
-      if (walletBalance?.success) {
-        const balance = walletBalance.data?.balance || 0;
+        if (walletBalance?.success) {
+          const balance = walletBalance.data?.balance || 0;
 
-        if (balance < getJobTierCost(job)) {
-          setWalletModalData({
-            currentBalance: balance,
-            requiredAmount: getJobTierCost(job),
-            note: 'Recharge your wallet to ask for a referral.',
-          });
-          setShowWalletModal(true);
-          return;
+          if (balance < getJobTierCost(job)) {
+            setWalletModalData({
+              currentBalance: balance,
+              requiredAmount: getJobTierCost(job),
+              note: 'Recharge your wallet to ask for a referral.',
+            });
+            setShowWalletModal(true);
+            return;
         }
 
       } else {
@@ -276,6 +282,7 @@ export default function AIRecommendedJobsScreen({ navigation }) {
       showToast('Unable to check wallet balance. Please try again.', 'error');
       return;
     }
+    } // end !proHasCredits
 
     // If user has primary resume, quick referral
     if (!primaryResumeLoadedRef.current) await loadPrimaryResume();

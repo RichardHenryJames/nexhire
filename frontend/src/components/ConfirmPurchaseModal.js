@@ -172,7 +172,7 @@ export default function ConfirmPurchaseModal({
             </View>
             {isPro && (
               <View style={{ backgroundColor: '#D4A45A', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 }}>{isFree ? 'FREE WITH PRO' : 'PRO'}</Text>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 }}>PRO</Text>
               </View>
             )}
           </View>
@@ -196,7 +196,7 @@ export default function ConfirmPurchaseModal({
               <View style={[styles.amountCard, { borderColor: '#D4A45A40', backgroundColor: '#D4A45A10' }]}>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: '#D4A45A' }}>FREE</Text>
                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
-                  Using 1 of {proCreditsRemaining} credits this month. No wallet charge.
+                  Using 1 of {proCreditsRemaining} {proCreditsRemaining === 1 ? 'credit' : 'credits'} this month. No wallet charge.
                 </Text>
               </View>
             )}
@@ -252,7 +252,7 @@ export default function ConfirmPurchaseModal({
                 <TouchableOpacity style={[styles.btnPrimary, { backgroundColor: '#D4A45A' }]} onPress={onProceed} activeOpacity={0.85}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                     <Ionicons name={config.proceedIcon} size={16} color="#1a1a1a" />
-                    <Text style={[styles.btnPrimaryText, { color: '#1a1a1a' }]}>{config.proceedText} — FREE</Text>
+                    <Text style={[styles.btnPrimaryText, { color: '#1a1a1a' }]}>{config.proceedText}</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.btnTextOnly} onPress={onCancel} activeOpacity={0.7}>

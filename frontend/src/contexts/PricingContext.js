@@ -46,7 +46,9 @@ const DEFAULT_PRICING = {
   proOtaDiscountPrice: 199,
   // Blind Review & LinkedIn Optimizer free uses
   blindReviewFreeUses: 1,
+  blindReviewCost: 49,
   linkedInOptimizerFreeUses: 1,
+  linkedInOptimizerCost: 29,
 };
 
 const PricingContext = createContext({

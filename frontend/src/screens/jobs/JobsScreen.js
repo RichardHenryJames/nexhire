@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import TabHeader from '../../components/TabHeader';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import { usePricing } from '../../contexts/PricingContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import refopenAPI from '../../services/api';
 import { getReferralCostForJob } from '../../utils/pricingUtils';
 import JobCard from '../../components/jobs/JobCard';
@@ -233,6 +234,8 @@ export default function JobsScreen({ navigation, route }) {
   const { user, isJobSeeker } = useAuth();
   const { colors } = useTheme();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
+  const { subscription, refreshSubscription } = useSubscription();
+  const proHasCredits = subscription?.isPro && (subscription?.referralsRemaining || 0) > 0;
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet, gridColumns, contentWidth } = responsive;
   const isDesktopWeb = Platform.OS === 'web' && isDesktop;
@@ -1548,6 +1551,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           setReferralCompanyName(job.OrganizationName || '');
           setReferralBroadcastTime(broadcastTime);
           setShowReferralSuccessOverlay(true);
+          refreshSubscription?.(); // Update Pro credits remaining
           
           showToast('Referral request sent successfully', 'success');
           invalidateCache(CACHE_KEYS.REFERRER_REQUESTS, CACHE_KEYS.WALLET_BALANCE, CACHE_KEYS.DASHBOARD_STATS);
@@ -2305,6 +2309,8 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         requiredAmount={referralConfirmData.requiredAmount}
         contextType="referral"
         itemName={referralConfirmData.jobTitle}
+        isFree={proHasCredits}
+        proCreditsRemaining={subscription?.referralsRemaining}
         onProceed={async () => {
           setShowReferralConfirmModal(false);
           

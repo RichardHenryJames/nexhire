@@ -53,7 +53,9 @@ async function getPricing(request: HttpRequest, context: InvocationContext): Pro
           aiResumeFreeUses: settings.AI_RESUME_FREE_USES,
           // Blind Review & LinkedIn Optimizer free uses
           blindReviewFreeUses: settings.BLIND_REVIEW_FREE_USES || 1,
+          blindReviewCost: settings.BLIND_REVIEW_COST || 49,
           linkedInOptimizerFreeUses: settings.LINKEDIN_OPTIMIZER_FREE_USES || 1,
+          linkedInOptimizerCost: settings.LINKEDIN_OPTIMIZER_COST || 29,
           // RefOpen Pro Subscription
           proMonthlyPrice: settings.PRO_MONTHLY_PRICE || 149,
           proSemiAnnualPrice: settings.PRO_SEMI_ANNUAL_PRICE || 799,

@@ -23,6 +23,7 @@ import CachedImage from '../../components/CachedImage';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { invalidateCache, CACHE_KEYS } from '../../utils/homeCache';
 import { usePricing } from '../../contexts/PricingContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
@@ -37,6 +38,7 @@ const { jobId, fromReferralRequest } = route.params || {};
   const { user, isJobSeeker, isEmployer } = useAuth();
   const { colors } = useTheme();
   const { pricing } = usePricing(); // 💰 DB-driven pricing
+  const { subscription, refreshSubscription } = useSubscription();
   const responsive = useResponsive();
   const { isMobile, isDesktop, isTablet, contentWidth } = responsive;
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
@@ -89,6 +91,10 @@ const { jobId, fromReferralRequest } = route.params || {};
 
   // 💰 Tier-based referral cost (updates when job loads)
   const tierCost = job ? getReferralCostForJob(job, pricing) : pricing.referralRequestCost;
+
+  // Pro credit: specific job referrals are FREE if user has credits remaining
+  const proHasCredits = subscription?.isPro && (subscription?.referralsRemaining || 0) > 0;
+  const isProFreeReferral = proHasCredits;
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
@@ -339,6 +345,7 @@ const { jobId, fromReferralRequest } = route.params || {};
           setReferralCompanyName(job?.OrganizationName || '');
           setReferralBroadcastTime(broadcastTime);
           setShowReferralSuccessOverlay(true);
+          refreshSubscription?.(); // Update Pro credits remaining
           
           const amountHeld = res.data?.amountHeld || res.data?.amountDeducted || tierCost;
           const availableBalance = res.data?.availableBalanceAfter;
@@ -1489,6 +1496,8 @@ const { jobId, fromReferralRequest } = route.params || {};
         requiredAmount={referralConfirmData.requiredAmount}
         contextType="referral"
         itemName={job?.Title || 'this job'}
+        isFree={isProFreeReferral}
+        proCreditsRemaining={subscription?.referralsRemaining}
         onProceed={handleReferralConfirmProceed}
         onAddMoney={() => {
           setShowReferralConfirmModal(false);
