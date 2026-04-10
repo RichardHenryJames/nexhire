@@ -541,7 +541,7 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       <ResumeUploadModal visible={showResumeModal} onClose={()=>setShowResumeModal(false)} onResumeSelected={handleResumeSelected} user={user} jobTitle={jobTitle||'Job Application'}/>
-      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} extraInfo={openToAny ? 'Open Mode' : 'Specific Mode'} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
+      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={openToAny ? (jobTitle || 'all matching roles') : (selectedCompany?.name ? `${jobTitle || 'this role'} at ${selectedCompany.name}` : (jobTitle || 'this job'))} extraInfo={openToAny ? 'All companies' : ''} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
       <ReferralSuccessOverlay visible={showSuccessOverlay} onComplete={()=>{setShowSuccessOverlay(false);navigation.goBack();}} duration={3500} companyName={referralCompanyName} broadcastTime={referralBroadcastTime} isOpenToAny={referralCompanyName==='All Companies'}/>
     </KeyboardAvoidingView>
   );

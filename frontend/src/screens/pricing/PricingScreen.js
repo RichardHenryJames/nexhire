@@ -135,15 +135,15 @@ export default function PricingScreen() {
                 <View style={{ flex: 1, padding: 14, alignItems: 'center' }}>
                   <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Free</Text>
                 </View>
-                <View style={{ flex: 1, padding: 14, alignItems: 'center', backgroundColor: BRAND + '08' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: BRAND }}>💎 Pro</Text>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: BRAND }}>₹{selectedPlan === 'monthly' ? pricing.proMonthlyPrice : Math.round(pricing.proSemiAnnualPrice / 6)}/mo</Text>
+                <View style={{ flex: 1, padding: 14, alignItems: 'center', backgroundColor: '#D4A45A' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a1a' }}>💎 Pro</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#1a1a1a' }}>₹{selectedPlan === 'monthly' ? pricing.proMonthlyPrice : Math.round(pricing.proSemiAnnualPrice / 6)}/mo</Text>
                 </View>
               </View>
 
               {/* Feature rows */}
               {[
-                { feature: 'Browse & apply to jobs', free: '✅ 45,000+', pro: '✅ 45,000+' },
+                { feature: 'Browse & apply to jobs', free: '✅', pro: '✅' },
                 { feature: 'Referrals', free: `₹${pricing.referralRequestCost}–${pricing.eliteReferralCost}/each`, pro: '3 FREE/month\nthen pay-per-use', highlight: true },
                 { feature: 'Open-to-Any Referral', free: `₹${pricing.openToAnyReferralCost}`, pro: `₹${pricing.proOtaDiscountPrice}`, highlight: true },
                 { feature: 'Resume Analyzer', free: `${pricing.aiResumeFreeUses} free`, pro: '✅ Unlimited', highlight: true },
@@ -161,8 +161,8 @@ export default function PricingScreen() {
                   <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center' }}>{row.free}</Text>
                   </View>
-                  <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: row.highlight ? BRAND + '06' : BRAND + '03' }}>
-                    <Text style={{ fontSize: 12, fontWeight: row.highlight ? '700' : '500', color: row.highlight ? BRAND : colors.text, textAlign: 'center' }}>{row.pro}</Text>
+                  <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: row.highlight ? '#D4A45A' + '20' : '#D4A45A' + '10' }}>
+                    <Text style={{ fontSize: 12, fontWeight: row.highlight ? '700' : '500', color: '#1a1a1a', textAlign: 'center' }}>{row.pro}</Text>
                   </View>
                 </View>
               ))}
@@ -181,14 +181,14 @@ export default function PricingScreen() {
               </View>
             ) : (
             <TouchableOpacity
-              style={{ backgroundColor: BRAND, paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 8, flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: subscribing ? 0.6 : 1 }}
+              style={{ backgroundColor: '#D4A45A', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 8, flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: subscribing ? 0.6 : 1 }}
               onPress={() => handleSubscribe(selectedPlan)}
               disabled={subscribing}
             >
-              {subscribing ? <ActivityIndicator size="small" color="#fff" /> : (
+              {subscribing ? <ActivityIndicator size="small" color="#1a1a1a" /> : (
                 <>
-                  <Ionicons name="diamond-outline" size={20} color="#fff" />
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>
+                  <Ionicons name="diamond" size={20} color="#1a1a1a" />
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#1a1a1a' }}>
                     Get Pro — ₹{selectedPlan === 'monthly' ? pricing.proMonthlyPrice + '/month' : pricing.proSemiAnnualPrice + '/6 months'}
                   </Text>
                 </>
