@@ -14,6 +14,7 @@ import JobCard from '../../components/jobs/JobCard';
 import AdCard from '../../components/ads/AdCard';
 import FilterModal from '../../components/jobs/FilterModal';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
+import SocialProofBar from '../../components/SocialProofBar';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
 import { createStyles } from './JobsScreen.styles';
@@ -2238,6 +2239,7 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
           scrollEventThrottle={16}
         >
           <ResponsiveContainer style={styles.jobListResponsive}>
+            <SocialProofBar />
             {renderList()}
           
           {/* Loading More Indicator */}

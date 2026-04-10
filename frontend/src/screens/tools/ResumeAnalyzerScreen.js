@@ -38,6 +38,7 @@ import SignInBottomSheet from '../../components/SignInBottomSheet';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import { usePricing } from '../../contexts/PricingContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import refopenAPI from '../../services/api';
 
 // ──────────────────────────── Constants ────────────────────────────
@@ -237,6 +238,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
 
   const { user, loginWithGoogle, googleAuthAvailable } = useAuth();
   const { pricing } = usePricing();
+  const { subscription } = useSubscription();
   const userId = route?.params?.userId || user?.UserID || null;
 
   // ── Wallet + Payment ──
@@ -246,7 +248,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
   const analysisCost = pricing.aiResumeAnalysisCost || 29;
   const freeUses = pricing.aiResumeFreeUses || 2;
   const [usageCount, setUsageCount] = useState(0);
-  const isFreeUse = usageCount < freeUses;
+  const isFreeUse = subscription?.isPro || usageCount < freeUses;
 
   // ── Core state ──
   const [selectedFile, setSelectedFile] = useState(null);

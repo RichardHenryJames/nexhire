@@ -969,6 +969,10 @@ const { jobId, fromReferralRequest } = route.params || {};
       scrollEventThrottle={16}
     >
       <ResponsiveContainer style={styles.contentWrapper}>
+      {/* Social proof bar - top */}
+      {!job.IsArchived && (
+        <SocialProofBar style={{ marginHorizontal: isMobile ? 16 : 0, marginBottom: 12 }} />
+      )}
       {/* Header */}
       <View style={styles.header} onLayout={handleHeaderLayout}>
         <View style={styles.companyHeader}>
@@ -1312,11 +1316,6 @@ const { jobId, fromReferralRequest } = route.params || {};
             {job.OrganizationDescription}
           </Text>
         </View>
-      )}
-
-      {/* Social proof bar */}
-      {!job.IsArchived && (
-        <SocialProofBar style={{ marginHorizontal: isMobile ? 16 : 0, marginBottom: 12 }} />
       )}
 
       {/* Blind Review CTA — contextual with company name */}

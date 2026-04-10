@@ -29,6 +29,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import SignInBottomSheet from '../../components/SignInBottomSheet';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import refopenAPI from '../../services/api';
@@ -125,7 +126,8 @@ export default function LinkedInOptimizerScreen({ navigation }) {
   const [usageCount, setUsageCount] = useState(0);
   const [optimizerCost, setOptimizerCost] = useState(29);
   const [freeUses, setFreeUses] = useState(1);
-  const isFreeUse = usageCount < freeUses;
+  const { subscription } = useSubscription();
+  const isFreeUse = subscription?.isPro || usageCount < freeUses;
 
   // Animations
   const stepAnim = useRef(new Animated.Value(0)).current;
