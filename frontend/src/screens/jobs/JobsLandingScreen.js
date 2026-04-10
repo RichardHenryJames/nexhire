@@ -23,6 +23,7 @@ import TabHeader from '../../components/TabHeader';
 import DesktopLayout from '../../components/layout/DesktopLayout';
 import FilterModal from '../../components/jobs/FilterModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
+import SocialProofBar from '../../components/SocialProofBar';
 import { usePricing } from '../../contexts/PricingContext';
 import { showToast } from '../../components/Toast';
 import { getCached, hasCached, setCache, CACHE_KEYS } from '../../utils/homeCache';
@@ -505,6 +506,9 @@ export default function JobsLandingScreen({ navigation, route }) {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Social proof bar */}
+      <SocialProofBar style={{ marginHorizontal: 0, marginBottom: 8 }} />
+
       {/* Onboarding card for users without preferences */}
       {showOnboarding && !onboardingDismissed && (
         <View style={[styles.onboardingCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -559,6 +563,30 @@ export default function JobsLandingScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </View>
+      )}
+
+      {/* 💰 Wallet recharge nudge — show when user has low balance */}
+      {user && isJobSeeker && aiWalletBalance !== null && aiWalletBalance < 30 && !loading && (
+        <TouchableOpacity
+          style={[styles.section, { flexDirection: 'row', alignItems: 'center', padding: isMobile ? 14 : 20, backgroundColor: colors.primary + '08', borderWidth: 1, borderColor: colors.primary + '25' }]}
+          onPress={() => navigation.navigate('WalletRecharge')}
+          activeOpacity={0.7}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="wallet-outline" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>
+              {aiWalletBalance === 0 ? 'Add money to get referred' : `Only ₹${Math.round(aiWalletBalance)} left`}
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+              {aiWalletBalance === 0 ? 'Recharge your wallet to ask for referrals at top companies' : 'Recharge to keep getting referrals at top companies'}
+            </Text>
+          </View>
+          <View style={{ backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Recharge</Text>
+          </View>
+        </TouchableOpacity>
       )}
 
       {renderSection('Recommended for You', 'sparkles-outline', recommendedJobs, { recommended: true }, loading)}

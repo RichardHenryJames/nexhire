@@ -610,6 +610,10 @@ export default function JobsScreen({ navigation, route }) {
   const [savedIds, setSavedIds] = useState(new Set());
   const [smartPaginating, setSmartPaginating] = useState(false);
   
+  // Post-apply referral upsell
+  const [showPostApplyUpsell, setShowPostApplyUpsell] = useState(false);
+  const [postApplyJob, setPostApplyJob] = useState(null);
+
   // My Referral Requests count for FAB badge
   const [myReferralRequestsCount, setMyReferralRequestsCount] = useState(0);
 
@@ -1573,16 +1577,19 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         if (res?.success) {
           setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
           setAppliedCount(c => (Number(c) || 0) + 1);
-          // Always remove from saved locally (backend auto-removes later)
-            removeSavedJobLocally(id);
-          // Mark as applied in list (show "Applied" badge instead of removing)
+          removeSavedJobLocally(id);
           setJobs(prev => prev.map(j => (j.JobID || j.id) === id ? { ...j, HasApplied: 1 } : j));
-          showToast('Application submitted successfully', 'success');
           invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
-
-          // 🔧 FIXED: Reload primary resume after successful application
-          primaryResumeLoadedRef.current = false; // Reset the loaded flag
-          await loadPrimaryResume(); // Reload primary resume
+          primaryResumeLoadedRef.current = false;
+          await loadPrimaryResume();
+          // Show referral upsell
+          const referredAlready = referredJobIds.has(id);
+          if (isJobSeeker && !referredAlready) {
+            setPostApplyJob(pendingJobForApplication);
+            setShowPostApplyUpsell(true);
+          } else {
+            showToast('Application submitted successfully', 'success');
+          }
         } else {
           showToast('Failed to submit application. Please try again.', 'error');
         }
@@ -1605,11 +1612,17 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
       if (res?.success) {
         setAppliedIds(prev => { const n = new Set(prev); n.add(id); return n; });
         setAppliedCount(c => (Number(c) || 0) + 1);
-        removeSavedJobLocally(id); // ensure removal if it was saved
-        // Mark as applied in list (show "Applied" badge instead of removing)
+        removeSavedJobLocally(id);
         setJobs(prev => prev.map(j => (j.JobID || j.id) === id ? { ...j, HasApplied: 1 } : j));
-        showToast('Application submitted', 'success');
         invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_SAVED_IDS);
+        // Show referral upsell
+        const referredAlready = referredJobIds.has(id);
+        if (isJobSeeker && !referredAlready) {
+          setPostApplyJob(job);
+          setShowPostApplyUpsell(true);
+        } else {
+          showToast('Application submitted', 'success');
+        }
       } else {
         showToast('Failed to submit application. Please try again.', 'error');
       }
@@ -2357,6 +2370,40 @@ const apiStartTime = (typeof performance !== 'undefined' && performance.now) ? p
         }}
         onCancel={() => setShowReferralConfirmModal(false)}
       />
+
+      {/* 🚀 Post-Apply Referral Upsell Modal */}
+      <Modal visible={showPostApplyUpsell} transparent onRequestClose={() => setShowPostApplyUpsell(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: colors.background, borderRadius: 16, width: '100%', maxWidth: 400, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+            <View style={{ backgroundColor: colors.success + '15', paddingVertical: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.success + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
+                <Ionicons name="checkmark-circle" size={32} color={colors.success} />
+              </View>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Application Submitted!</Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>{postApplyJob?.Title} at {postApplyJob?.OrganizationName}</Text>
+            </View>
+            <View style={{ padding: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: 6 }}>15x your chances with a referral</Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 19, marginBottom: 16 }}>
+                Referred candidates are 15x more likely to get hired. Get an employee at {postApplyJob?.OrganizationName || 'this company'} to refer you.
+              </Text>
+              <TouchableOpacity
+                style={{ backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+                onPress={() => { setShowPostApplyUpsell(false); if (postApplyJob) handleAskReferral(postApplyJob); }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="people" size={18} color="#fff" />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
+                  {proHasCredits ? 'Get Referred — FREE with Pro' : `Get Referred — ₹${postApplyJob ? getJobTierCost(postApplyJob) : pricing.referralRequestCost}`}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ paddingVertical: 12, alignItems: 'center', marginTop: 6 }} onPress={() => setShowPostApplyUpsell(false)} activeOpacity={0.7}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>Maybe later</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* 🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay

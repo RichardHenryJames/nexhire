@@ -117,11 +117,14 @@ export default function AskReferralScreen({ navigation, route }) {
 
   const [referrersOnline, setReferrersOnline] = useState(() => {
     const d = new Date(); const seed = d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
-    const hash = Math.abs(Math.floor(Math.sin(seed*6)*10000));
+    const hash = Math.abs(Math.floor(Math.sin(seed*1)*10000));
     const hr = d.getHours(), min = d.getMinutes();
     const TOD = [.08,.06,.05,.04,.04,.06,.12,.25,.45,.65,.82,.95,1,.98,.95,.88,.78,.65,.5,.38,.28,.2,.14,.1];
     const tm = TOD[hr]+(TOD[(hr+1)%24]-TOD[hr])*(min/60);
-    return Math.max(1000,Math.round(3000+(hash%5000)+13000*tm+((Math.abs(Math.floor(Math.sin((seed+Math.floor((hr*60+min)/2))*11)*100))%201)-100)));
+    const base = 40 + (hash % 60);
+    const slot = Math.floor((hr*60+min)/2);
+    const jitter = (Math.abs(Math.floor(Math.sin((seed+slot)*7)*100))%7)-3;
+    return Math.max(10, Math.round(base + 140*tm + jitter));
   });
 
   // Ticker
@@ -140,11 +143,14 @@ export default function AskReferralScreen({ navigation, route }) {
 
   useEffect(() => { const iv = setInterval(() => {
     const d = new Date(); const seed = d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
-    const hash = Math.abs(Math.floor(Math.sin(seed*6)*10000));
+    const hash = Math.abs(Math.floor(Math.sin(seed*1)*10000));
     const hr = d.getHours(), min = d.getMinutes();
     const TOD = [.08,.06,.05,.04,.04,.06,.12,.25,.45,.65,.82,.95,1,.98,.95,.88,.78,.65,.5,.38,.28,.2,.14,.1];
     const tm = TOD[hr]+(TOD[(hr+1)%24]-TOD[hr])*(min/60);
-    setReferrersOnline(Math.max(1000,Math.round(3000+(hash%5000)+13000*tm+((Math.abs(Math.floor(Math.sin((seed+Math.floor((hr*60+min)/2))*11)*100))%201)-100))));
+    const base = 40 + (hash % 60);
+    const slot = Math.floor((hr*60+min)/2);
+    const jitter = (Math.abs(Math.floor(Math.sin((seed+slot)*7)*100))%7)-3;
+    setReferrersOnline(Math.max(10, Math.round(base + 140*tm + jitter)));
   }, 120000); return () => clearInterval(iv); }, []);
 
   // Pricing

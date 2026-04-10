@@ -162,6 +162,7 @@ export const getAdminDashboardUsers = withAuth(async (
     const hasBalance = url.searchParams.get('hasBalance') || 'all'; // all, yes, no
     const hasReferrals = url.searchParams.get('hasReferrals') || 'all'; // all, yes, no
     const hasReferralsAsked = url.searchParams.get('hasReferralsAsked') || 'all'; // all, yes, no
+    const subscriptionStatus = url.searchParams.get('subscriptionStatus') || 'all'; // all, pro, free
 
     // Build WHERE clause dynamically
     let whereConditions = ["u.UserType != 'Admin'"];
@@ -211,6 +212,13 @@ export const getAdminDashboardUsers = withAuth(async (
       whereConditions.push('u.CreatedAt >= DATEADD(day, -7, GETUTCDATE())');
     } else if (signupPeriod === 'month') {
       whereConditions.push('u.CreatedAt >= DATEADD(day, -30, GETUTCDATE())');
+    }
+
+    // Subscription status filter
+    if (subscriptionStatus === 'pro') {
+      whereConditions.push("u.SubscriptionTier = 'pro' AND u.SubscriptionExpiresAt > GETUTCDATE()");
+    } else if (subscriptionStatus === 'free') {
+      whereConditions.push("(u.SubscriptionTier = 'free' OR u.SubscriptionTier IS NULL OR u.SubscriptionExpiresAt <= GETUTCDATE())");
     }
 
     const whereClause = whereConditions.join(' AND ');

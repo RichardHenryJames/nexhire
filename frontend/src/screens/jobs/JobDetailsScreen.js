@@ -28,6 +28,7 @@ import { typography } from '../../styles/theme';
 import ResumeUploadModal from '../../components/ResumeUploadModal';
 import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 import ReferralSuccessOverlay from '../../components/ReferralSuccessOverlay';
+import SocialProofBar from '../../components/SocialProofBar';
 import { showToast } from '../../components/Toast';
 import { useCustomAlert } from '../../components/CustomAlert';
 import useResponsive from '../../hooks/useResponsive';
@@ -1313,6 +1314,11 @@ const { jobId, fromReferralRequest } = route.params || {};
         </View>
       )}
 
+      {/* Social proof bar */}
+      {!job.IsArchived && (
+        <SocialProofBar style={{ marginHorizontal: isMobile ? 16 : 0, marginBottom: 12 }} />
+      )}
+
       {/* Blind Review CTA — contextual with company name */}
       {user && !job.IsArchived && (
         <TouchableOpacity
@@ -1525,6 +1531,56 @@ const { jobId, fromReferralRequest } = route.params || {};
           setShowWalletModal(true);
         }}
       />
+
+      {/* 🚀 Post-Apply Referral Upsell Modal */}
+      <Modal visible={showPostApplyUpsell} transparent onRequestClose={() => { setShowPostApplyUpsell(false); navigation.goBack(); }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: colors.background, borderRadius: 16, width: '100%', maxWidth: 400, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+            {/* Success header */}
+            <View style={{ backgroundColor: colors.success + '15', paddingVertical: 20, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.success + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 10 }}>
+                <Ionicons name="checkmark-circle" size={32} color={colors.success} />
+              </View>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>Application Submitted!</Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>{job?.Title} at {job?.OrganizationName}</Text>
+            </View>
+
+            {/* Upsell body */}
+            <View style={{ padding: 20 }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, textAlign: 'center', marginBottom: 6 }}>
+                15x your chances with a referral
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 19, marginBottom: 16 }}>
+                Referred candidates are 15x more likely to get hired. Get an employee at {job?.OrganizationName || 'this company'} to refer you.
+              </Text>
+
+              {/* Referral CTA */}
+              <TouchableOpacity
+                style={{ backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+                onPress={() => {
+                  setShowPostApplyUpsell(false);
+                  handleAskReferral();
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="people" size={18} color="#fff" />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>
+                  {isProFreeReferral ? 'Get Referred — FREE with Pro' : `Get Referred — ₹${tierCost}`}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Skip */}
+              <TouchableOpacity
+                style={{ paddingVertical: 12, alignItems: 'center', marginTop: 6 }}
+                onPress={() => { setShowPostApplyUpsell(false); navigation.goBack(); }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>Maybe later</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* 🎉 Referral Success Overlay */}
       <ReferralSuccessOverlay

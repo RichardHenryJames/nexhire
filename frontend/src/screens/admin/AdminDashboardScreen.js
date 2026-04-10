@@ -59,7 +59,8 @@ export default function AdminDashboardScreen() {
     hasApplications: 'all',
     hasBalance: 'all',
     hasReferrals: 'all',
-    hasReferralsAsked: 'all'
+    hasReferralsAsked: 'all',
+    subscriptionStatus: 'all'
   });
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [referralsData, setReferralsData] = useState(null);
@@ -190,7 +191,8 @@ export default function AdminDashboardScreen() {
         hasApplications: filters.hasApplications || 'all',
         hasBalance: filters.hasBalance || 'all',
         hasReferrals: filters.hasReferrals || 'all',
-        hasReferralsAsked: filters.hasReferralsAsked || 'all'
+        hasReferralsAsked: filters.hasReferralsAsked || 'all',
+        subscriptionStatus: filters.subscriptionStatus || 'all'
       });
       
       const response = await refopenAPI.apiCall(`/management/dashboard/users?${params.toString()}`);
@@ -816,7 +818,8 @@ export default function AdminDashboardScreen() {
       hasApplications: 'all',
       hasBalance: 'all',
       hasReferrals: 'all',
-      hasReferralsAsked: 'all'
+      hasReferralsAsked: 'all',
+      subscriptionStatus: 'all'
     };
     setUsersFilters(defaultFilters);
     loadUsers(1, defaultFilters);
@@ -832,7 +835,8 @@ export default function AdminDashboardScreen() {
       usersFilters.hasApplications !== 'all' ||
       usersFilters.hasBalance !== 'all' ||
       usersFilters.hasReferrals !== 'all' ||
-      usersFilters.hasReferralsAsked !== 'all';
+      usersFilters.hasReferralsAsked !== 'all' ||
+      usersFilters.subscriptionStatus !== 'all';
   };
 
   // Filter dropdown component
@@ -984,6 +988,16 @@ export default function AdminDashboardScreen() {
               { value: 'inactive', label: 'Inactive' }
             ]}
             onChange={(val) => handleFilterChange('accountStatus', val)}
+          />
+          <FilterDropdown
+            label="Plan"
+            value={usersFilters.subscriptionStatus}
+            options={[
+              { value: 'all', label: 'All Plans' },
+              { value: 'pro', label: '💎 Pro' },
+              { value: 'free', label: 'Free' }
+            ]}
+            onChange={(val) => handleFilterChange('subscriptionStatus', val)}
           />
           <FilterDropdown
             label="Signup"

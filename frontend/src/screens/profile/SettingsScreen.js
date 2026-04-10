@@ -1561,18 +1561,18 @@ export default function SettingsScreen({ navigation, route }) {
         {/* Subscription Plan Card */}
         {isJobSeeker && (
           <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', padding: 16, marginHorizontal: 16, marginBottom: 12, borderRadius: 12, borderWidth: 1, borderColor: subscription?.isPro ? '#4F46E5' + '40' : colors.border, backgroundColor: subscription?.isPro ? '#4F46E5' + '08' : colors.surface }}
+            style={{ flexDirection: 'row', alignItems: 'center', padding: 16, marginHorizontal: 16, marginBottom: 12, borderRadius: 12, borderWidth: 1, borderColor: subscription?.isPro ? '#D4A45A' + '40' : colors.border, backgroundColor: subscription?.isPro ? '#D4A45A' + '08' : colors.surface }}
             onPress={() => navigation.navigate('Pricing')}
           >
-            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: subscription?.isPro ? '#4F46E5' + '20' : colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
-              <Ionicons name={subscription?.isPro ? 'diamond' : 'diamond-outline'} size={22} color={subscription?.isPro ? '#4F46E5' : colors.primary} />
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: subscription?.isPro ? '#D4A45A' + '20' : colors.primary + '15', justifyContent: 'center', alignItems: 'center' }}>
+              <Ionicons name={subscription?.isPro ? 'diamond' : 'diamond-outline'} size={22} color={subscription?.isPro ? '#D4A45A' : colors.primary} />
             </View>
             <View style={{ flex: 1, marginLeft: 14 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{subscription?.isPro ? 'RefOpen Pro' : 'Free Plan'}</Text>
                 {subscription?.isPro && (
-                  <View style={{ backgroundColor: '#4F46E5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>PRO</Text>
+                  <View style={{ backgroundColor: '#D4A45A', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#1a1a1a' }}>PRO</Text>
                   </View>
                 )}
               </View>
