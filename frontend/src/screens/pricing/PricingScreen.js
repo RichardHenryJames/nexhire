@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -182,10 +183,16 @@ export default function PricingScreen() {
               </View>
             ) : (
             <TouchableOpacity
-              style={{ backgroundColor: '#D4A45A', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 8, flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: subscribing ? 0.6 : 1 }}
               onPress={() => handleSubscribe(selectedPlan)}
               disabled={subscribing}
+              style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 8, opacity: subscribing ? 0.6 : 1 }}
             >
+              <LinearGradient
+                colors={['#E8C97A', '#D4A45A', '#C4944A']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+              >
               {subscribing ? <ActivityIndicator size="small" color="#1a1a1a" /> : (
                 <>
                   <Ionicons name="diamond" size={20} color="#1a1a1a" />
@@ -194,6 +201,7 @@ export default function PricingScreen() {
                   </Text>
                 </>
               )}
+              </LinearGradient>
             </TouchableOpacity>
             )}
             {!subscription?.isPro && (
