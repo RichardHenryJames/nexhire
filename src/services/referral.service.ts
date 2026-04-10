@@ -170,7 +170,7 @@ export class ReferralService {
             }
 
             // Get referral cost based on org tier (open-to-any uses highest tier cost)
-            const REFERRAL_REQUEST_COST = dto.openToAnyCompany
+            let REFERRAL_REQUEST_COST = dto.openToAnyCompany
                 ? await PricingService.getOpenToAnyCost()
                 : await PricingService.getReferralCostByTier(organizationTier);
             
@@ -184,18 +184,42 @@ export class ReferralService {
             
             const userId = userResult.recordset[0].UserID;
 
-            // Check AVAILABLE wallet balance (balance minus active holds)
-            const walletInfo = await WalletService.getAvailableBalance(userId);
+            // ── Pro subscription check ──
+            // Pro users: use credit for specific referrals (not OTA), get OTA at discount price
+            const { SubscriptionService } = await import('./subscription.service');
+            let usedProCredit = false;
             
-            if (walletInfo.availableBalance < REFERRAL_REQUEST_COST) {
-                throw new ValidationError('INSUFFICIENT_WALLET_BALANCE', {
-                    currentBalance: walletInfo.balance,
-                    availableBalance: walletInfo.availableBalance,
-                    holdAmount: walletInfo.holdAmount,
-                    requiredAmount: REFERRAL_REQUEST_COST,
-                    shortfall: REFERRAL_REQUEST_COST - walletInfo.availableBalance,
-                    message: `Insufficient available balance. You have ₹${walletInfo.holdAmount} on hold for pending referrals.`
-                });
+            if (!dto.openToAnyCompany) {
+                // Specific company referral — check if Pro user has credits
+                const creditUsed = await SubscriptionService.useReferralCredit(userId);
+                if (creditUsed) {
+                    // Pro credit consumed atomically — no wallet hold needed
+                    usedProCredit = true;
+                    REFERRAL_REQUEST_COST = 0;
+                }
+            } else {
+                // Open-to-Any — Pro users get discounted price
+                const proStatus = await SubscriptionService.getStatus(userId);
+                if (proStatus.isPro) {
+                    const proConfig = await SubscriptionService.getProConfig();
+                    REFERRAL_REQUEST_COST = proConfig.otaDiscountPrice;
+                }
+            }
+
+            // Check wallet balance (skip if Pro credit was used)
+            if (!usedProCredit) {
+                const walletInfo = await WalletService.getAvailableBalance(userId);
+                
+                if (walletInfo.availableBalance < REFERRAL_REQUEST_COST) {
+                    throw new ValidationError('INSUFFICIENT_WALLET_BALANCE', {
+                        currentBalance: walletInfo.balance,
+                        availableBalance: walletInfo.availableBalance,
+                        holdAmount: walletInfo.holdAmount,
+                        requiredAmount: REFERRAL_REQUEST_COST,
+                        shortfall: REFERRAL_REQUEST_COST - walletInfo.availableBalance,
+                        message: `Insufficient available balance. You have ₹${walletInfo.holdAmount} on hold for pending referrals.`
+                    });
+                }
             }
 
             // Determine referral type from presence of ExtJobID vs JobID
@@ -305,13 +329,17 @@ export class ReferralService {
             }
 
             // NOW CREATE HOLD (after referral request exists for foreign key)
-            // Funds are reserved but not deducted - will be deducted when referrer completes
-            const holdResult = await WalletService.createHold(
-                userId,
-                REFERRAL_REQUEST_COST,
-                requestId,
-                `Referral request for ${dto.jobTitle || internalJobTitle || 'job'} at ${dto.companyName || 'company'}`
-            );
+            // Skip hold if Pro credit was used (no money involved)
+            let holdResult: any = { HoldID: null, AvailableBalanceAfter: 0 };
+            if (!usedProCredit && REFERRAL_REQUEST_COST > 0) {
+                // Funds are reserved but not deducted - will be deducted when referrer completes
+                holdResult = await WalletService.createHold(
+                    userId,
+                    REFERRAL_REQUEST_COST,
+                    requestId,
+                    `Referral request for ${dto.jobTitle || internalJobTitle || 'job'} at ${dto.companyName || 'company'}`
+                );
+            }
 
             const createdRequest = await this.getReferralRequestById(requestId);
             

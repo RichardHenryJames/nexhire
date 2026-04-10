@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePricing } from '../../contexts/PricingContext';
+import { useSubscription } from '../../contexts/SubscriptionContext';
 import useResponsive from '../../hooks/useResponsive';
 import usePageSEO from '../../hooks/usePageSEO';
 import refopenAPI from '../../services/api';
@@ -27,6 +28,7 @@ export default function AskReferralScreen({ navigation, route }) {
   const { user, isJobSeeker, isAuthenticated } = useAuth();
   const { colors } = useTheme();
   const { pricing } = usePricing();
+  const { subscription, refreshSubscription } = useSubscription();
   const responsive = useResponsive();
   usePageSEO({
     title: 'Ask for Job Referral at Google, Amazon, Microsoft & 500+ Companies | RefOpen',
@@ -147,12 +149,16 @@ export default function AskReferralScreen({ navigation, route }) {
 
   // Pricing
   const effectiveCost = useMemo(() => {
-    if (openToAny) return pricing.openToAnyReferralCost;
+    if (openToAny) return subscription?.isPro ? (pricing.proOtaDiscountPrice || 199) : pricing.openToAnyReferralCost;
     const t = selectedCompany?.tier||'Standard';
     if (t==='Elite') return pricing.eliteReferralCost||199;
     if (t==='Premium') return pricing.premiumReferralCost||99;
     return pricing.referralRequestCost;
-  }, [openToAny, selectedCompany, pricing]);
+  }, [openToAny, selectedCompany, pricing, subscription]);
+
+  // Pro credit: non-OTA referrals are FREE if user has credits remaining
+  const proHasCredits = subscription?.isPro && (subscription?.referralsRemaining || 0) > 0;
+  const isProFreeReferral = proHasCredits && !openToAny;
 
   // Progressive reveal triggers
   useEffect(() => { advance(1); }, []); // show first field immediately
@@ -204,6 +210,8 @@ export default function AskReferralScreen({ navigation, route }) {
         setReferralCompanyName(openToAny?'All Companies':(selectedCompany?.name||'')); setReferralBroadcastTime((Date.now()-t0)/1000); setShowSuccessOverlay(true);
         invalidateCache(CACHE_KEYS.REFERRER_REQUESTS,CACHE_KEYS.WALLET_BALANCE,CACHE_KEYS.DASHBOARD_STATS);
         if(result.data?.availableBalanceAfter!==undefined) setWalletBalance(result.data.availableBalanceAfter);
+        // Refresh Pro subscription status (updates remaining credits)
+        refreshSubscription?.();
         setJobTitle('');setJobId('');setJobUrl('');setReferralMessage('');setSelectedCompany(null);setOpenToAny(true);setMinSalary('');setPreferredLocations('');setErrors({});setStep(1);
       } else if (result.errorCode==='INSUFFICIENT_WALLET_BALANCE') {
         setWalletBalance(result.data?.currentBalance||0); setShowConfirmModal(true);
@@ -541,7 +549,7 @@ export default function AskReferralScreen({ navigation, route }) {
       )}
 
       <ResumeUploadModal visible={showResumeModal} onClose={()=>setShowResumeModal(false)} onResumeSelected={handleResumeSelected} user={user} jobTitle={jobTitle||'Job Application'}/>
-      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={jobTitle||'this job'} extraInfo={openToAny ? 'Open Mode' : 'Specific Mode'} originalPrice={openToAny ? 899 : null} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
+      <ConfirmPurchaseModal visible={showConfirmModal} currentBalance={walletBalance} requiredAmount={effectiveCost} contextType="referral" itemName={openToAny ? (jobTitle || 'all matching roles') : (selectedCompany?.name ? `${jobTitle || 'this role'} at ${selectedCompany.name}` : (jobTitle || 'this job'))} extraInfo={openToAny ? 'All companies' : ''} isFree={isProFreeReferral} proCreditsRemaining={subscription?.referralsRemaining} onProceed={async()=>{setShowConfirmModal(false);await handleSubmit();}} onAddMoney={()=>{setShowConfirmModal(false);navigation.navigate('WalletRecharge');}} onCancel={()=>setShowConfirmModal(false)}/>
       <ReferralSuccessOverlay visible={showSuccessOverlay} onComplete={()=>{setShowSuccessOverlay(false);navigation.goBack();}} duration={3500} companyName={referralCompanyName} broadcastTime={referralBroadcastTime} isOpenToAny={referralCompanyName==='All Companies'}/>
     </KeyboardAvoidingView>
   );

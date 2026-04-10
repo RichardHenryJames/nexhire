@@ -51,6 +51,17 @@ async function getPricing(request: HttpRequest, context: InvocationContext): Pro
           // AI Resume
           aiResumeAnalysisCost: settings.AI_RESUME_ANALYSIS_COST,
           aiResumeFreeUses: settings.AI_RESUME_FREE_USES,
+          // Blind Review & LinkedIn Optimizer free uses
+          blindReviewFreeUses: settings.BLIND_REVIEW_FREE_USES || 1,
+          linkedInOptimizerFreeUses: settings.LINKEDIN_OPTIMIZER_FREE_USES || 1,
+          // RefOpen Pro Subscription
+          proMonthlyPrice: settings.PRO_MONTHLY_PRICE || 149,
+          proSemiAnnualPrice: settings.PRO_SEMI_ANNUAL_PRICE || 799,
+          proMonthlyReferrals: settings.PRO_MONTHLY_REFERRALS || 3,
+          proOtaDiscountPrice: settings.PRO_OTA_DISCOUNT_PRICE || 199,
+          // Resume Builder Premium
+          resumeBuilderPremiumCost: settings.RESUME_BUILDER_PREMIUM_COST,
+          resumeBuilderPremiumDurationDays: settings.RESUME_BUILDER_PREMIUM_DURATION_DAYS,
         }
       })
     };

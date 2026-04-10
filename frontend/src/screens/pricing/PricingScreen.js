@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   ScrollView,
   View,
@@ -7,14 +7,19 @@ import {
   Platform,
   TouchableOpacity,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { usePricing } from '../../contexts/PricingContext';
 import useResponsive from '../../hooks/useResponsive';
 import ComplianceFooter from '../../components/ComplianceFooter';
 import SubScreenHeader from '../../components/SubScreenHeader';
+import refopenAPI from '../../services/api';
+import { showToast } from '../../components/Toast';
+import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 
 // ─── Helpers ───────────────────────────────────────────────
 const fmt = (v) => `₹${v}`;
@@ -47,7 +52,7 @@ const FeatureRow = ({ icon, label, value, sub, colors }) => (
     </View>
     <Text style={{ fontSize: 15, fontWeight: '700', color: value === 'Free' ? (colors.success) : colors.text }}>{value}</Text>
   </View>
-);
+);import { useSubscription } from '../../contexts/SubscriptionContext';
 
 
 
@@ -55,9 +60,44 @@ const FeatureRow = ({ icon, label, value, sub, colors }) => (
 export default function PricingScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const { user, isAuthenticated } = useAuth();
   const { pricing } = usePricing();
+  const { subscription, refreshSubscription } = useSubscription();
   const responsive = useResponsive();
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
+  const [subscribing, setSubscribing] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('monthly');
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+  const [insufficientData, setInsufficientData] = useState({ needed: 0, balance: 0 });
+
+  const handleSubscribe = useCallback(async (plan) => {
+    if (!isAuthenticated) { navigation.navigate('Auth'); showToast('Please log in to subscribe', 'info'); return; }
+    if (subscribing) return; // Prevent double-click
+    setSubscribing(true);
+    try {
+      const res = await refopenAPI.subscribeToPro(plan);
+      if (res?.success) {
+        showToast(res.data?.message || 'Welcome to RefOpen Pro! 🎉', 'success');
+        refreshSubscription();
+      } else if (res?.errorCode === 'INSUFFICIENT_BALANCE') {
+        const needed = plan === 'monthly' ? pricing.proMonthlyPrice : pricing.proSemiAnnualPrice;
+        setInsufficientData({ needed, balance: res.data?.currentBalance || 0 });
+        setShowInsufficientModal(true);
+      } else {
+        showToast(res?.error || 'Failed to subscribe', 'error');
+      }
+    } catch (e) {
+      if (e?.status === 402 || e?.data?.errorCode === 'INSUFFICIENT_BALANCE') {
+        const needed = selectedPlan === 'monthly' ? pricing.proMonthlyPrice : pricing.proSemiAnnualPrice;
+        setInsufficientData({ needed, balance: e?.data?.data?.currentBalance || 0 });
+        setShowInsufficientModal(true);
+      } else {
+        showToast(e?.data?.error || e?.message || 'Failed to subscribe. Please try again.', 'error');
+      }
+    } finally { setSubscribing(false); }
+  }, [isAuthenticated, navigation, pricing, selectedPlan]);
+
+  const BRAND = '#4F46E5';
 
   return (
     <View style={styles.container}>
@@ -69,146 +109,115 @@ export default function PricingScreen() {
             {/* ── Hero ── */}
             <View style={styles.hero}>
               <Text style={styles.heroTitle}>Simple, Transparent Pricing</Text>
-              <Text style={styles.heroSub}>
-                Pay only when someone actually refers you. No subscriptions. Cancel anytime.
-              </Text>
+              <Text style={styles.heroSub}>One table. No surprises.</Text>
             </View>
 
-            {/* ── Referral Pricing Card ── */}
-            <View style={styles.pricingCard}>
-              <View style={styles.pricingCardAccent} />
-              <View style={styles.pricingCardInner}>
-                <View style={styles.pricingIconRow}>
-                  <View style={styles.pricingIconCircle}>
-                    <Ionicons name="send-outline" size={24} color={colors.primary} />
-                  </View>
-                  <Badge text="PER REQUEST" color={colors.primary} bg={colors.primary + '14'} />
-                </View>
+            {/* ── Plan toggle ── */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 20, gap: 8 }}>
+              <TouchableOpacity onPress={() => setSelectedPlan('monthly')}
+                style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, backgroundColor: selectedPlan === 'monthly' ? BRAND : colors.surface, borderWidth: 1, borderColor: selectedPlan === 'monthly' ? BRAND : colors.border }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: selectedPlan === 'monthly' ? '#fff' : colors.text }}>Monthly</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSelectedPlan('semi_annual')}
+                style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 24, backgroundColor: selectedPlan === 'semi_annual' ? BRAND : colors.surface, borderWidth: 1, borderColor: selectedPlan === 'semi_annual' ? BRAND : colors.border }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: selectedPlan === 'semi_annual' ? '#fff' : colors.text }}>6 Months</Text>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: selectedPlan === 'semi_annual' ? '#fff' : colors.success, textAlign: 'center' }}>Save 11%</Text>
+              </TouchableOpacity>
+            </View>
 
-                <Text style={styles.pricingLabel}>Referral Request</Text>
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceRange}>{fmt(pricing.referralRequestCost)} – {fmt(pricing.eliteReferralCost)}</Text>
-                </View>
-                <Text style={styles.priceNote}>Exact price shown when you send a request</Text>
+            {/* ══════ SINGLE COMPARISON TABLE ══════ */}
+            <View style={{ borderRadius: 16, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, overflow: 'hidden', marginBottom: 20 }}>
 
-                <View style={styles.pricingDivider} />
-
-                <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                  <Text style={styles.benefitText}>Direct request to verified employees</Text>
+              {/* Header row */}
+              <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <View style={{ flex: 2, padding: 14 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textSecondary }}>Feature</Text>
                 </View>
-                <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                  <Text style={styles.benefitText}>You're only charged when someone refers you</Text>
+                <View style={{ flex: 1, padding: 14, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>Free</Text>
                 </View>
-                <View style={styles.benefitRow}>
-                  <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-                  <Text style={styles.benefitText}>Auto-refund to wallet if no one picks up in 2 weeks</Text>
+                <View style={{ flex: 1, padding: 14, alignItems: 'center', backgroundColor: '#D4A45A' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a1a' }}>💎 Pro</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#1a1a1a' }}>₹{selectedPlan === 'monthly' ? pricing.proMonthlyPrice : Math.round(pricing.proSemiAnnualPrice / 6)}/mo</Text>
                 </View>
               </View>
+
+              {/* Feature rows */}
+              {[
+                { feature: 'Browse & apply to jobs', free: '✅', pro: '✅' },
+                { feature: 'Referrals', free: `₹${pricing.referralRequestCost}–${pricing.eliteReferralCost}/each`, pro: '3 FREE/month\nthen pay-per-use', highlight: true },
+                { feature: 'Open-to-Any Referral', free: `₹${pricing.openToAnyReferralCost}`, pro: `₹${pricing.proOtaDiscountPrice}`, highlight: true },
+                { feature: 'Resume Analyzer', free: `${pricing.aiResumeFreeUses} free`, pro: '✅ Unlimited', highlight: true },
+                { feature: 'Blind Review', free: `${pricing.blindReviewFreeUses || 1} free`, pro: '✅ Unlimited', highlight: true },
+                { feature: 'LinkedIn Optimizer', free: `${pricing.linkedInOptimizerFreeUses || 1} free`, pro: '✅ Unlimited', highlight: true },
+                { feature: 'AI Job Recommendations', free: `₹${pricing.aiJobsCost}`, pro: '✅ Always on', highlight: true },
+                { feature: 'Resume Builder', free: '1 template', pro: '✅ All templates', highlight: true },
+                { feature: 'Pro badge', free: '—', pro: '✅' },
+                { feature: 'Priority matching', free: '—', pro: '✅' },
+              ].map((row, i) => (
+                <View key={i} style={{ flexDirection: 'row', borderBottomWidth: i < 9 ? 1 : 0, borderBottomColor: colors.border + '60' }}>
+                  <View style={{ flex: 2, padding: 12, justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>{row.feature}</Text>
+                  </View>
+                  <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center' }}>{row.free}</Text>
+                  </View>
+                  <View style={{ flex: 1, padding: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D4A45A' + '15' }}>
+                    <Text style={{ fontSize: 12, fontWeight: row.highlight ? '700' : '500', color: row.highlight ? '#D4A45A' : colors.text, textAlign: 'center' }}>{row.pro}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
 
-            {/* ── Open to Any — Flagship ── */}
-            <View style={styles.openCard}>
-              <View style={styles.openCardInner}>
-                <View style={styles.pricingIconRow}>
-                  <View style={[styles.pricingIconCircle, { backgroundColor: colors.accentBg }]}>
-                    <Ionicons name="globe-outline" size={24} color={colors.accent} />
-                  </View>
-                  <Badge text="FLAGSHIP" color={colors.accent} bg={colors.accentBg} />
+            {/* ── Subscribe CTA or Active Plan ── */}
+            {subscription?.isPro ? (
+              <View style={{ backgroundColor: '#22c55e15', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 8, borderWidth: 1, borderColor: '#22c55e40' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#22c55e' }}>You're on Pro!</Text>
                 </View>
-
-                <Text style={styles.pricingLabel}>Open-to-Any Company</Text>
-                <Text style={styles.openPrice}>{fmt(pricing.openToAnyReferralCost)}</Text>
-                <Text style={styles.priceNote}>
-                  Your request is broadcast to referrers at every company on the platform.
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>
+                  {subscription.referralsRemaining}/{subscription.referralsIncluded} referrals left · {subscription.daysRemaining} days remaining
                 </Text>
-
-                <View style={{ marginTop: 12, gap: 8 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: colors.text }}>Referrers from multiple companies can refer you</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: colors.text }}>Pay once — get referred from Google, Microsoft & more</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: colors.text }}>Full refund to wallet if no one refers you</Text>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Ionicons name="checkmark-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
-                    <Text style={{ fontSize: 13, color: colors.text }}>Upgrade any existing request for the difference</Text>
-                  </View>
-                </View>
               </View>
-            </View>
-
-            {/* ── AI & Tools ── */}
-            <Text style={styles.sectionTitle}>AI & Career Tools</Text>
-            <View style={styles.card}>
-              <FeatureRow
-                icon="briefcase-outline"
-                label="Job Posting"
-                value="Free"
-                sub="Post and discover jobs at no cost"
-                colors={colors}
-              />
-              <FeatureRow
-                icon="document-text-outline"
-                label="AI Resume Analysis"
-                value="Free"
-                sub="Detailed feedback & score"
-                colors={colors}
-              />
-              <FeatureRow
-                icon="reader-outline"
-                label="Resume Templates"
-                value="Free"
-                sub="Professional ATS-friendly templates"
-                colors={colors}
-              />
-              <FeatureRow
-                icon="color-wand-outline"
-                label="AI Job Recommendations"
-                value={fmt(pricing.aiJobsCost)}
-                sub={`${pricing.aiAccessDurationDays}-day access`}
-                colors={colors}
-              />
-              <FeatureRow
-                icon="eye-outline"
-                label="Profile Views"
-                value={fmt(pricing.profileViewCost)}
-                sub={`${pricing.profileViewAccessDurationDays}-day access`}
-                colors={colors}
-              />
-            </View>
-
-            {/* ── Other Info ── */}
-            <View style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
-                <Text style={styles.infoText}>Hold-based billing — you're charged only when someone refers you. If no one picks up your request in 2 weeks, the hold is released.</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="infinite-outline" size={20} color={colors.primary} />
-                <Text style={styles.infoText}>Wallet credits never expire while your account is active.</Text>
-              </View>
-            </View>
-
-            {/* ── CTA ── */}
+            ) : (
             <TouchableOpacity
-              style={styles.ctaButton}
-              activeOpacity={0.8}
-              onPress={() => {
-                if (Platform.OS === 'web') {
-                  window.location.href = '/wallet/recharge';
-                } else {
-                  navigation.navigate('WalletRecharge');
-                }
-              }}
+              style={{ backgroundColor: '#D4A45A', paddingVertical: 16, borderRadius: 14, alignItems: 'center', marginBottom: 8, flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: subscribing ? 0.6 : 1 }}
+              onPress={() => handleSubscribe(selectedPlan)}
+              disabled={subscribing}
             >
+              {subscribing ? <ActivityIndicator size="small" color="#1a1a1a" /> : (
+                <>
+                  <Ionicons name="diamond" size={20} color="#1a1a1a" />
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#1a1a1a' }}>
+                    Get Pro — ₹{selectedPlan === 'monthly' ? pricing.proMonthlyPrice + '/month' : pricing.proSemiAnnualPrice + '/6 months'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+            )}
+            {!subscription?.isPro && (
+              <Text style={{ fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginBottom: 24 }}>Paid from wallet balance. Cancel anytime. No auto-renewal.</Text>
+            )}
+
+            {/* ── How it works (simplified) ── */}
+            <View style={{ borderRadius: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 20 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 12 }}>How referral billing works</Text>
+              {[
+                { icon: 'shield-checkmark-outline', text: 'Free users: Money is held (not charged) until someone refers you. Auto-refund if no one picks up in 2 weeks.' },
+                { icon: 'diamond-outline', text: 'Pro users: 3 referrals included. Used instantly — no holds needed. Additional referrals charged normally.' },
+                { icon: 'wallet-outline', text: 'Wallet credits never expire while your account is active.' },
+              ].map((item, i) => (
+                <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: i < 2 ? 10 : 0, gap: 10 }}>
+                  <Ionicons name={item.icon} size={18} color={colors.primary} style={{ marginTop: 2 }} />
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, flex: 1, lineHeight: 18 }}>{item.text}</Text>
+                </View>
+              ))}
+            </View>
+
+            {/* ── Wallet CTA ── */}
+            <TouchableOpacity style={styles.ctaButton} activeOpacity={0.8}
+              onPress={() => navigation.navigate('WalletRecharge')}>
               <Ionicons name="wallet-outline" size={20} color={colors.white} />
               <Text style={styles.ctaText}>Add Money to Wallet</Text>
             </TouchableOpacity>
@@ -217,6 +226,18 @@ export default function PricingScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Insufficient balance modal for Pro subscription */}
+      <ConfirmPurchaseModal
+        visible={showInsufficientModal}
+        currentBalance={insufficientData.balance}
+        requiredAmount={insufficientData.needed}
+        contextType="generic"
+        itemName={`RefOpen Pro (${selectedPlan === 'monthly' ? '1 month' : '6 months'})`}
+        onProceed={() => { setShowInsufficientModal(false); handleSubscribe(selectedPlan); }}
+        onAddMoney={() => { setShowInsufficientModal(false); navigation.navigate('WalletRecharge'); }}
+        onCancel={() => setShowInsufficientModal(false)}
+      />
     </View>
   );
 }

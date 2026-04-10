@@ -1,8 +1,10 @@
 import React, { useMemo } from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { typography } from '../styles/theme';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 
 /**
  * Context-aware config for each purchase type.
@@ -13,9 +15,8 @@ const getContextConfig = (colors) => ({
     headerIcon: 'lock-closed',
     headerTitle: 'Request Referral',
     itemPrefix: 'Request referral for',
-    // Trust-first messaging
-    trustTitle: 'You only pay if you get referred',
-    trustPoints: ['Money is held, not charged upfront', 'Auto-released to wallet in 14 days if no referral'],
+    trustTitle: 'Only pay if referred • Auto-refund in 14 days',
+    trustPoints: [],
     amountVerb: 'reserved',
     amountNote: '',
     steps: [
@@ -135,14 +136,19 @@ export default function ConfirmPurchaseModal({
   onProceed,
   onCancel,
   onAddMoney,
+  onSubscribePro,
   contextType = 'generic',
   itemName = '',
   accessDays = null,
   isFree = false,
   extraInfo = '',
   originalPrice = null,
+  proCreditsRemaining = null,
 }) {
   const { colors } = useTheme();
+  const navigation = useNavigation();
+  const { subscription } = useSubscription();
+  const isPro = subscription?.isPro;
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const CONFIGS = useMemo(() => getContextConfig(colors), [colors]);
@@ -158,14 +164,21 @@ export default function ConfirmPurchaseModal({
     <Modal visible={visible} transparent onRequestClose={onCancel}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          {/* ── Header ─────────────────────────────────────── */}
-          <View style={styles.header}>
-            <Ionicons name={config.headerIcon} size={18} color={colors.textSecondary} />
-            <Text style={styles.headerTitle}>{config.headerTitle}</Text>
+          {/* ── Header ── */}
+          <View style={[styles.header, { justifyContent: 'space-between' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name={config.headerIcon} size={18} color={colors.textSecondary} />
+              <Text style={styles.headerTitle}>{config.headerTitle}</Text>
+            </View>
+            {isPro && (
+              <View style={{ backgroundColor: '#D4A45A', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 }}>{isFree ? 'FREE WITH PRO' : 'PRO'}</Text>
+              </View>
+            )}
           </View>
 
           <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-            {/* ── Item title ──────────────────────────────── */}
+            {/* ── Item title ── */}
             {displayTitle ? (
               <Text style={styles.itemTitle}>
                 {config.itemPrefix ? (
@@ -176,113 +189,113 @@ export default function ConfirmPurchaseModal({
               </Text>
             ) : null}
 
-            {/* ── Trust box (referral-specific) ────────────── */}
-            {config.trustTitle && (
-              <View style={styles.trustBox}>
-                <Text style={styles.trustTitle}>{config.trustTitle}</Text>
-                {config.trustPoints.map((pt, i) => (
-                  <View key={i} style={styles.trustSub}>
-                    <Text style={[styles.trustDot, { color: colors.success }]}>•</Text>
-                    <Text style={styles.trustText}>{pt}</Text>
-                  </View>
-                ))}
+            {/* ── Trust moved inside amount card ── */}
+
+            {/* ── FREE with Pro card ── */}
+            {isFree && isPro && (
+              <View style={[styles.amountCard, { borderColor: '#D4A45A40', backgroundColor: '#D4A45A10' }]}>
+                <Text style={{ fontSize: 20, fontWeight: '800', color: '#D4A45A' }}>FREE</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+                  Using 1 of {proCreditsRemaining} credits this month. No wallet charge.
+                </Text>
               </View>
             )}
 
-            {/* ── Amount card ─────────────────────────────── */}
+            {/* ── Amount + Balance (compact) — only when NOT free ── */}
             {!isFree && (
               <View style={styles.amountCard}>
-                {originalPrice && originalPrice > requiredAmount && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <Text style={{ fontSize: 16, color: colors.textSecondary, textDecorationLine: 'line-through' }}>₹{originalPrice}</Text>
-                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>₹{requiredAmount}</Text>
-                    <View style={{ backgroundColor: '#22C55E20', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#22C55E' }}>{Math.round((1 - requiredAmount / originalPrice) * 100)}% OFF</Text>
-                    </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>₹{requiredAmount}</Text>
+                    {extraInfo ? <Text style={{ fontSize: 12, color: colors.textSecondary }}>({extraInfo})</Text> : null}
                   </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={{ fontSize: 11, color: colors.textSecondary }}>Balance</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: insufficient ? colors.error : colors.success }}>₹{Number(currentBalance).toFixed(0)}</Text>
+                  </View>
+                </View>
+                {/* Trust line inside amount card */}
+                {config.trustTitle && (
+                  <Text style={{ fontSize: 12, color: colors.success, marginTop: 8 }}>✅ ₹{requiredAmount} held, not charged. Refunded if no one refers you.</Text>
                 )}
-                <View style={styles.amountRow}>
-                  <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-                  <Text style={styles.amountText}>
-                    ₹{requiredAmount} will be {config.amountVerb}
-                    {extraInfo ? <Text style={styles.amountLight}> ({extraInfo})</Text> : null}
-                    {config.amountNote ? <Text style={styles.amountLight}> {config.amountNote}</Text> : null}
-                  </Text>
-                </View>
-
-                <View style={styles.balanceRow}>
-                  <Text style={styles.balanceLabel}>Available Balance</Text>
-                  <Text style={[styles.balanceValue, insufficient && { color: colors.error }]}>
-                    ₹{Number(currentBalance).toFixed(0)}
-                  </Text>
-                </View>
-
                 {insufficient && (
-                  <View style={styles.addRow}>
-                    <Text style={styles.addText}>
-                      Add ₹{needToAdd} to continue{' '}
-                      {config.amountNote ? <Text style={styles.amountLight}>{config.amountNote}</Text> : null}
-                    </Text>
-                  </View>
+                  <Text style={{ fontSize: 12, color: colors.error, marginTop: 6 }}>Need ₹{needToAdd} more</Text>
+                )}
+                {/* Show when Pro but credits exhausted on specific referral */}
+                {isPro && contextType === 'referral' && !extraInfo && proCreditsRemaining === 0 && (
+                  <Text style={{ fontSize: 12, color: '#D4A45A', marginTop: 6 }}>0 free Pro credits left this month — using wallet</Text>
                 )}
               </View>
             )}
 
-            {/* ── Steps ───────────────────────────────────── */}
-            {config.steps.length > 0 && (
-              <View style={styles.steps}>
-                {config.steps.map((step, i) => (
-                  <View key={i} style={styles.stepRow}>
-                    <Ionicons name={step.icon} size={16} color={step.color} />
-                    <Text style={styles.stepText}>{step.text}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* ── Safety note ─────────────────────────────── */}
-            {config.safetyNote && (
-              <View style={styles.safetyBox}>
-                <Ionicons name="wallet-outline" size={16} color={colors.success} />
-                <Text style={styles.safetyText}>{config.safetyNote}</Text>
-              </View>
-            )}
-
-            {/* ── Access days note ────────────────────────── */}
+            {/* ── Access days ── */}
             {accessDays && (
-              <View style={styles.safetyBox}>
-                <Ionicons name="time-outline" size={16} color={colors.primary} />
-                <Text style={styles.safetyText}>{accessDays}-day access included</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Ionicons name="time-outline" size={14} color={colors.primary} />
+                <Text style={{ fontSize: 12, color: colors.textSecondary }}>{accessDays}-day access</Text>
               </View>
             )}
           </ScrollView>
 
           {/* ── CTA ───────────────────────────────────────── */}
           <View style={styles.footer}>
-            {insufficient ? (
+            {isFree && isPro ? (
+              /* ── Pro free credit: simple confirm ── */
+              <>
+                <TouchableOpacity style={[styles.btnPrimary, { backgroundColor: '#D4A45A' }]} onPress={onProceed} activeOpacity={0.85}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Ionicons name={config.proceedIcon} size={16} color="#1a1a1a" />
+                    <Text style={[styles.btnPrimaryText, { color: '#1a1a1a' }]}>{config.proceedText} — FREE</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnTextOnly} onPress={onCancel} activeOpacity={0.7}>
+                  <Text style={styles.btnTextOnlyText}>{config.cancelText}</Text>
+                </TouchableOpacity>
+              </>
+            ) : insufficient ? (
               <>
                 <TouchableOpacity style={styles.btnPrimary} onPress={onAddMoney} activeOpacity={0.85}>
                   <Text style={styles.btnPrimaryText}>{config.insufficientCta(needToAdd)}</Text>
                 </TouchableOpacity>
+                {!isPro && (contextType === 'referral' || contextType === 'tool' || contextType === 'ai-jobs') && (
+                  <TouchableOpacity
+                    style={{ width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D4A45A', marginTop: 8 }}
+                    onPress={() => { onCancel?.(); navigation.navigate('Pricing'); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a1a', textAlign: 'center' }}>
+                      {requiredAmount >= 400 ? 'Get this for ₹199 with Pro →' : contextType === 'referral' ? 'Get this FREE with Pro →' : 'Unlock with Pro →'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity style={styles.btnTextOnly} onPress={onCancel} activeOpacity={0.7}>
                   <Text style={styles.btnTextOnlyText}>{config.insufficientCancelText}</Text>
                 </TouchableOpacity>
               </>
             ) : (
-              <View style={styles.btnRow}>
-                <TouchableOpacity style={styles.btnCancel} onPress={onCancel} activeOpacity={0.7}>
-                  <Text style={styles.btnCancelText}>{config.cancelText}</Text>
+              <>
+                <TouchableOpacity style={styles.btnPrimary} onPress={onProceed} activeOpacity={0.85}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    <Ionicons name={config.proceedIcon} size={16} color="#fff" />
+                    <Text style={styles.btnPrimaryText}>{config.proceedText} · ₹{requiredAmount}</Text>
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.btnProceed} onPress={onProceed} activeOpacity={0.85}>
-                  <Ionicons name={config.proceedIcon} size={16} color="#fff" />
-                  <Text style={styles.btnProceedText}>{config.proceedText}</Text>
+                {!isPro && (contextType === 'referral' || contextType === 'tool' || contextType === 'ai-jobs') && (
+                  <TouchableOpacity
+                    style={{ width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#D4A45A', marginTop: 8 }}
+                    onPress={() => { onCancel?.(); navigation.navigate('Pricing'); }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a1a', textAlign: 'center' }}>
+                      {requiredAmount >= 400 ? 'Get this for ₹199 with Pro →' : contextType === 'referral' ? 'Get this FREE with Pro →' : 'Unlock with Pro →'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.btnTextOnly} onPress={onCancel} activeOpacity={0.7}>
+                  <Text style={styles.btnTextOnlyText}>{config.cancelText}</Text>
                 </TouchableOpacity>
-              </View>
+              </>
             )}
-            <TouchableOpacity style={styles.helpBtn} activeOpacity={0.6} onPress={() => { try { const { Linking } = require('react-native'); Linking.openURL('https://www.refopen.com/support'); } catch(e) {} }}>
-              <Ionicons name="help-circle-outline" size={14} color={colors.textSecondary} />
-              <Text style={styles.helpText}>Need Help?</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </View>

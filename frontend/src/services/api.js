@@ -3455,6 +3455,25 @@ if (!resumeId) {
       body: JSON.stringify({ status, reviewNotes }),
     });
   }
+
+  // ============================================================
+  // SUBSCRIPTION — RefOpen Pro
+  // ============================================================
+
+  async getSubscriptionStatus() {
+    return this.apiCall('/subscription/status');
+  }
+
+  async subscribeToPro(plan) {
+    return this.apiCall('/subscription/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ plan }),
+    });
+  }
+
+  async getSubscriptionConfig() {
+    return this.apiCall('/subscription/config');
+  }
 }
 
 export default new RefOpenAPI();

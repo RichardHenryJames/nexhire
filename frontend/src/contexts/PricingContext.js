@@ -39,6 +39,14 @@ const DEFAULT_PRICING = {
   // Resume Builder Premium
   resumeBuilderPremiumCost: 49,
   resumeBuilderPremiumDurationDays: 7,
+  // RefOpen Pro Subscription
+  proMonthlyPrice: 149,
+  proSemiAnnualPrice: 799,
+  proMonthlyReferrals: 3,
+  proOtaDiscountPrice: 199,
+  // Blind Review & LinkedIn Optimizer free uses
+  blindReviewFreeUses: 1,
+  linkedInOptimizerFreeUses: 1,
 };
 
 const PricingContext = createContext({

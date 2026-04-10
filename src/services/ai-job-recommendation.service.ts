@@ -54,10 +54,12 @@ export class AIJobRecommendationService {
       PricingService.getAIAccessDurationHours()
     ]);
     
-    // 1. Check if user has active AI access
-    const hasAccess = await this.hasActiveAIAccess(userId, aiJobsCost, aiAccessDuration);
+    // 1. Check if user has active AI access (or is Pro subscriber)
+    const { SubscriptionService } = await import('./subscription.service');
+    const isPro = await SubscriptionService.hasUnlimitedToolAccess(userId);
+    const hasAccess = isPro || await this.hasActiveAIAccess(userId, aiJobsCost, aiAccessDuration);
     
-    // 2. Only check/deduct wallet if no active access
+    // 2. Only check/deduct wallet if no active access and not Pro
     if (!hasAccess) {
       const wallet = await WalletService.getOrCreateWallet(userId);
       if (wallet.Balance < aiJobsCost) {

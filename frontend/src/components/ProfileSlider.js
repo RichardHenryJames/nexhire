@@ -22,6 +22,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { showToast } from './Toast';
 import refopenAPI from '../services/api';
 
@@ -31,6 +32,7 @@ const SLIDER_WIDTH = Math.min(SCREEN_WIDTH * 0.78, 340);
 export default function ProfileSlider({ visible, onClose }) {
   const { user, isEmployer, isJobSeeker, isAdmin, isVerifiedUser, isVerifiedReferrer, currentWork, logout, refreshVerificationStatus } = useAuth();
   const { colors, isDark, toggleTheme } = useTheme();
+  const { subscription } = useSubscription();
   const navigation = useNavigation();
   const slideAnim = useRef(new Animated.Value(-SLIDER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -461,6 +463,11 @@ export default function ProfileSlider({ visible, onClose }) {
                   color={colors.primary}
                   style={{ marginLeft: 6 }}
                 />
+              )}
+              {subscription?.isPro && (
+                <View style={{ marginLeft: 6, backgroundColor: '#D4A45A', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#1a1a1a', letterSpacing: 0.5 }}>PRO</Text>
+                </View>
               )}
               {isVerifiedReferrer && currentWork && (
                 <TouchableOpacity

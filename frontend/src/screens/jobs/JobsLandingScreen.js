@@ -565,6 +565,29 @@ export default function JobsLandingScreen({ navigation, route }) {
       {renderSection('Top MNC Jobs', 'business-outline', topMncJobs, { isFortune500: true }, loading)}
       {renderSection('Recent Jobs', 'time-outline', recentJobs, { sortBy: 'newest' }, loading)}
 
+      {/* Blind Review CTA — high conversion tool */}
+      {user && isJobSeeker && (
+        <TouchableOpacity
+          style={[styles.section, { flexDirection: 'row', alignItems: 'center', padding: isMobile ? 14 : 20, backgroundColor: '#f59e0b10', borderWidth: 1, borderColor: '#f59e0b30' }]}
+          onPress={() => navigation.navigate('BlindReview')}
+          activeOpacity={0.7}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#f59e0b20', justifyContent: 'center', alignItems: 'center' }}>
+            <Ionicons name="eye-outline" size={22} color="#f59e0b" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>Blind Review</Text>
+              <View style={{ backgroundColor: '#22c55e20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#22c55e' }}>FREE</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>Get anonymous feedback from employees at your dream companies</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#f59e0b" />
+        </TouchableOpacity>
+      )}
+
       {/* Browse all jobs CTA */}
       <TouchableOpacity
         style={[styles.browseAllBtn, { borderColor: colors.primary }]}
