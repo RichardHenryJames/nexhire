@@ -676,7 +676,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
             <>
               <Text style={{ fontSize: 16 }}>✨</Text>
               <Text style={styles.analyzeBtnText}>
-                {analyzing ? 'Analyzing...' : 'Analyze Resume'}
+                {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}
               </Text>
             </>
           )}

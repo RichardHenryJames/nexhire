@@ -247,7 +247,7 @@ export const getAdminDashboardUsers = withAuth(async (
       SELECT 
         u.UserID, u.FirstName, u.LastName, u.Email, u.Phone, u.UserType,
         u.IsActive, u.EmailVerified, u.CreatedAt, u.LastLoginAt, u.ProfilePictureURL,
-        u.IsVerifiedReferrer,
+        u.IsVerifiedReferrer, u.SubscriptionTier, u.SubscriptionExpiresAt,
         COUNT(DISTINCT ja.ApplicationID) AS ApplicationsCount,
         ISNULL(MAX(w.Balance), 0) AS WalletBalance,
         COUNT(DISTINCT rr.RequestID) AS ReferralsGiven,
@@ -267,7 +267,7 @@ export const getAdminDashboardUsers = withAuth(async (
       WHERE ${whereClause}
       GROUP BY u.UserID, u.FirstName, u.LastName, u.Email, u.Phone, u.UserType,
         u.IsActive, u.EmailVerified, u.CreatedAt, u.LastLoginAt, u.ProfilePictureURL,
-        u.IsVerifiedReferrer
+        u.IsVerifiedReferrer, u.SubscriptionTier, u.SubscriptionExpiresAt
       ${havingClause}
       ORDER BY u.CreatedAt DESC
       OFFSET @param${paramIndex} ROWS FETCH NEXT @param${paramIndex + 1} ROWS ONLY
@@ -286,7 +286,7 @@ export const getAdminDashboardUsers = withAuth(async (
         WHERE ${whereClause}
         GROUP BY u.UserID, u.FirstName, u.LastName, u.Email, u.Phone, u.UserType,
           u.IsActive, u.EmailVerified, u.CreatedAt, u.LastLoginAt, u.ProfilePictureURL,
-          u.IsVerifiedReferrer
+          u.IsVerifiedReferrer, u.SubscriptionTier, u.SubscriptionExpiresAt
         ${havingClause}
       ) AS filtered
     `;

@@ -1148,6 +1148,11 @@ export default function AdminDashboardScreen() {
                   <Text style={[styles.badgeText, { color: colors.accent }]}>Verified</Text>
                 </View>
               )}
+              {userData.SubscriptionTier === 'pro' && userData.SubscriptionExpiresAt && new Date(userData.SubscriptionExpiresAt) > new Date() && (
+                <View style={[styles.badge, { backgroundColor: '#D4A45A20', flexShrink: 0 }]}>
+                  <Text style={[styles.badgeText, { color: '#D4A45A', fontWeight: '800', letterSpacing: 0.5 }]}>PRO</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.userEmail}>{userData.Email}</Text>
             {userData.Phone && (
