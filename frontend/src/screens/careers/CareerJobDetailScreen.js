@@ -258,10 +258,11 @@ export default function CareerJobDetailScreen({ route, navigation }) {
   const STATUS_COLORS = { 'Submitted': '#3b82f6', 'Under Review': '#f59e0b', 'Shortlisted': '#22c55e', 'Interview': '#8b5cf6', 'Offered': '#06b6d4', 'Hired': '#10b981', 'On Hold': '#f97316', 'Rejected': '#ef4444' };
 
   const LogoLink = ({ children }) => {
+    const goHome = () => isPublicStack ? navigation.navigate('AboutUs') : navigation.navigate('Main');
     if (Platform.OS === 'web') {
-      return <a href="/" style={{ textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); navigation.navigate('Main'); }}>{children}</a>;
+      return <a href="/" style={{ textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); goHome(); }}>{children}</a>;
     }
-    return <TouchableOpacity onPress={() => navigation.navigate('Main')}>{children}</TouchableOpacity>;
+    return <TouchableOpacity onPress={goHome}>{children}</TouchableOpacity>;
   };
 
   const renderHeader = () => (

@@ -1,21 +1,27 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Linking } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../contexts/ThemeContext';
 
 export default function ComplianceFooter({ currentPage }) {
   const navigation = useNavigation();
+  const currentRoute = useRoute();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  // Detect if we're in the public stack (route name ends with 'Public' or is a root public screen)
+  const isPublicStack = currentRoute?.name?.endsWith('Public') || 
+    ['Terms', 'PrivacyPolicy', 'Disclaimer', 'AboutUs'].includes(currentRoute?.name);
 
   const links = [
     { id: 'terms', label: 'Terms & Conditions', screen: 'Terms' },
     { id: 'privacy', label: 'Privacy Policy', screen: 'PrivacyPolicy' },
     { id: 'disclaimer', label: 'Disclaimer', screen: 'Disclaimer' },
     { id: 'about', label: 'About Us', screen: 'AboutUs' },
-    { id: 'faq', label: 'FAQ', screen: 'FAQ' },
-    { id: 'blog', label: 'Career Blog', screen: 'Blog' },
-    { id: 'support', label: 'Help & Support', screen: 'Support' },
+    { id: 'faq', label: 'FAQ', screen: isPublicStack ? 'FAQPublic' : 'FAQ' },
+    { id: 'blog', label: 'Blog', screen: isPublicStack ? 'BlogPublic' : 'Blog' },
+    { id: 'careers', label: 'Careers', screen: isPublicStack ? 'CareersPublic' : 'Careers' },
+    { id: 'support', label: 'Help & Support', screen: isPublicStack ? 'SupportPublic' : 'Support' },
   ];
 
   const handleLinkPress = (screen) => {
