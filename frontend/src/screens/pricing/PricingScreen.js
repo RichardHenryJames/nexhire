@@ -19,6 +19,7 @@ import ComplianceFooter from '../../components/ComplianceFooter';
 import SubScreenHeader from '../../components/SubScreenHeader';
 import refopenAPI from '../../services/api';
 import { showToast } from '../../components/Toast';
+import ConfirmPurchaseModal from '../../components/ConfirmPurchaseModal';
 
 // ─── Helpers ───────────────────────────────────────────────
 const fmt = (v) => `₹${v}`;
@@ -66,6 +67,8 @@ export default function PricingScreen() {
   const styles = useMemo(() => createStyles(colors, responsive), [colors, responsive]);
   const [subscribing, setSubscribing] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('monthly');
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+  const [insufficientData, setInsufficientData] = useState({ needed: 0, balance: 0 });
 
   const handleSubscribe = useCallback(async (plan) => {
     if (!isAuthenticated) { navigation.navigate('Auth'); showToast('Please log in to subscribe', 'info'); return; }
@@ -76,22 +79,22 @@ export default function PricingScreen() {
         showToast(res.data?.message || 'Welcome to RefOpen Pro! 🎉', 'success');
         refreshSubscription();
       } else if (res?.errorCode === 'INSUFFICIENT_BALANCE') {
-        showToast(`Insufficient balance. Need ₹${plan === 'monthly' ? pricing.proMonthlyPrice : pricing.proSemiAnnualPrice}`, 'error');
-        navigation.navigate('WalletRecharge');
+        const needed = plan === 'monthly' ? pricing.proMonthlyPrice : pricing.proSemiAnnualPrice;
+        setInsufficientData({ needed, balance: res.data?.currentBalance || 0 });
+        setShowInsufficientModal(true);
       } else {
         showToast(res?.error || 'Failed to subscribe', 'error');
       }
     } catch (e) {
-      // 402 = insufficient balance — apiCall throws but data is in e.data
       if (e?.status === 402 || e?.data?.errorCode === 'INSUFFICIENT_BALANCE') {
         const needed = selectedPlan === 'monthly' ? pricing.proMonthlyPrice : pricing.proSemiAnnualPrice;
-        showToast(`Need ₹${needed} in wallet to subscribe. Please recharge.`, 'error');
-        navigation.navigate('WalletRecharge');
+        setInsufficientData({ needed, balance: e?.data?.data?.currentBalance || 0 });
+        setShowInsufficientModal(true);
       } else {
         showToast(e?.data?.error || e?.message || 'Failed to subscribe. Please try again.', 'error');
       }
     } finally { setSubscribing(false); }
-  }, [isAuthenticated, navigation, pricing]);
+  }, [isAuthenticated, navigation, pricing, selectedPlan]);
 
   const BRAND = '#4F46E5';
 
@@ -222,6 +225,18 @@ export default function PricingScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Insufficient balance modal for Pro subscription */}
+      <ConfirmPurchaseModal
+        visible={showInsufficientModal}
+        currentBalance={insufficientData.balance}
+        requiredAmount={insufficientData.needed}
+        contextType="generic"
+        itemName={`RefOpen Pro (${selectedPlan === 'monthly' ? '1 month' : '6 months'})`}
+        onProceed={() => { setShowInsufficientModal(false); handleSubscribe(selectedPlan); }}
+        onAddMoney={() => { setShowInsufficientModal(false); navigation.navigate('WalletRecharge'); }}
+        onCancel={() => setShowInsufficientModal(false)}
+      />
     </View>
   );
 }
