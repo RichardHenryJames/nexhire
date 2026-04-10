@@ -479,25 +479,25 @@ export default function ProfileSlider({ visible, onClose }) {
                     <CachedImage
                       source={{ uri: currentWork.LogoURL || currentWork.logoURL }}
                       style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 11,
+                        width: 18,
+                        height: 18,
+                        borderRadius: 9,
                         borderWidth: 1.5,
                         borderColor: colors.success,
                       }}
                     />
                   ) : (
                     <View style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 11,
+                      width: 18,
+                      height: 18,
+                      borderRadius: 9,
                       backgroundColor: colors.successBg,
                       borderWidth: 1.5,
                       borderColor: colors.success,
                       justifyContent: 'center',
                       alignItems: 'center',
                     }}>
-                      <Ionicons name="business" size={12} color={colors.success} />
+                      <Ionicons name="business" size={10} color={colors.success} />
                     </View>
                   )}
                 </TouchableOpacity>

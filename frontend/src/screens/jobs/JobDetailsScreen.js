@@ -98,6 +98,9 @@ const { jobId, fromReferralRequest } = route.params || {};
 
   // 🎉 NEW: Referral success overlay state
   const [showReferralSuccessOverlay, setShowReferralSuccessOverlay] = useState(false);
+
+  // 🚀 Post-apply referral upsell
+  const [showPostApplyUpsell, setShowPostApplyUpsell] = useState(false);
   const [referralCompanyName, setReferralCompanyName] = useState('');
   const [referralBroadcastTime, setReferralBroadcastTime] = useState(null);
   const [pendingReferralSuccess, setPendingReferralSuccess] = useState(false);
@@ -409,15 +412,14 @@ const { jobId, fromReferralRequest } = route.params || {};
       
       if (result.success) {
         setHasApplied(true);
-        showToast('Application submitted', 'success');
         invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST);
-        setTimeout(() => {
-          navigation.navigate('Jobs', { 
-            activeTab: 'openings', 
-            successMessage: `Application submitted for ${job.Title}`,
-            appliedJobId: jobId // 🔧 NEW: Pass jobId so JobsScreen can remove it from list
-          });
-        }, 1500); // Small delay to show toast
+        // Show referral upsell if job seeker and hasn't already referred
+        if (isJobSeeker && !hasReferred && !isOwnPostedJob) {
+          setShowPostApplyUpsell(true);
+        } else {
+          showToast('Application submitted', 'success');
+          setTimeout(() => navigation.goBack(), 1500);
+        }
         
       } else {
         if (result.error?.includes('No resume found')) {
@@ -463,15 +465,14 @@ const { jobId, fromReferralRequest } = route.params || {};
       const res = await refopenAPI.applyForJob(applicationData);
       if (res?.success) {
         setHasApplied(true);
-        showToast('Application submitted', 'success');
         invalidateCache(CACHE_KEYS.RECENT_APPLICATIONS, CACHE_KEYS.DASHBOARD_STATS, CACHE_KEYS.JOBS_LIST);
-        setTimeout(() => {
-          navigation.navigate('Jobs', { 
-            activeTab: 'openings', 
-            successMessage: `Application submitted for ${job.Title}`,
-            appliedJobId: jobId // 🔧 NEW: Pass jobId so JobsScreen can remove it from list
-          });
-        }, 1500);
+        // Show referral upsell if job seeker and hasn't already referred
+        if (isJobSeeker && !hasReferred && !isOwnPostedJob) {
+          setShowPostApplyUpsell(true);
+        } else {
+          showToast('Application submitted', 'success');
+          setTimeout(() => navigation.goBack(), 1500);
+        }
         
       } else {
         showToast('Failed to submit application. Please try again.', 'error');
