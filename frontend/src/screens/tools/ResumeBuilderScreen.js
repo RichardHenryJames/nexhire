@@ -1365,7 +1365,7 @@ export default function ResumeBuilderScreen({ navigation, route }) {
           visible={showPremiumModal}
           currentBalance={walletBalance}
           requiredAmount={pricing.resumeBuilderPremiumCost || 49}
-          contextType="generic"
+          contextType="tool"
           itemName={`${templates.find(t => t.Slug === currentTemplateSlug)?.Name || 'Premium'} template — ${pricing.resumeBuilderPremiumDurationDays || 7} days access`}
           onProceed={async () => { setShowPremiumModal(false); await handlePurchasePremium(); }}
           onAddMoney={() => { setShowPremiumModal(false); navigation.navigate('WalletRecharge'); }}

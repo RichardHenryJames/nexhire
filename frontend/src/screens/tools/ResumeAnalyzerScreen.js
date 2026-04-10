@@ -1156,7 +1156,7 @@ export default function ResumeAnalyzerScreen({ navigation, route }) {
           visible={showConfirmModal}
           currentBalance={walletBalance}
           requiredAmount={analysisCost}
-          contextType="generic"
+          contextType="tool"
           itemName="Resume Analysis"
           onProceed={async () => {
             setShowConfirmModal(false);
