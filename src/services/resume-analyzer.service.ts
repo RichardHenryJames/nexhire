@@ -1070,7 +1070,7 @@ ANALYSIS RULES:
 - weakVerbs: list ALL weak/passive verbs found (e.g. "helped", "responsible for", "worked on", "assisted", "involved in", "participated")
 - weaknesses: find AT LEAST 3. Every resume has weaknesses. If you can't find any, you're not looking hard enough.`;
 
-    // Call AI via common layer (Gemini primary for resume analysis, Groq fallback)
+    // Call AI via common layer (Gemini primary for resume analysis — stricter, more calibrated scoring)
     const aiResult = await AIService.call({
       prompt,
       groqApiKey: GROQ_API_KEY,
@@ -1078,12 +1078,21 @@ ANALYSIS RULES:
       options: {
         temperature: 0.3,
         maxTokens: 8192,
-        providerOrder: ['groq', 'gemini'],
+        providerOrder: ['gemini', 'groq'],
       },
     });
 
     const result = this.parseAIResponse(aiResult.text);
     result.aiModel = aiResult.model;
+
+    // Model calibration: Groq (llama) tends to inflate scores by ~20-30 points vs Gemini
+    // When Groq is used as fallback, apply a deflation factor to align with Gemini's stricter scoring
+    if (aiResult.provider === 'groq' && result.matchScore > 50) {
+      const originalScore = result.matchScore;
+      result.matchScore = Math.round(result.matchScore * 0.75); // Deflate by 25%
+      console.log(`[ResumeAnalyzer] Groq score calibrated: ${originalScore} → ${result.matchScore} (deflated 25%)`);
+    }
+
     return result;
   }
   
